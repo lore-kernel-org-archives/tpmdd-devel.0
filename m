@@ -1,71 +1,75 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3 3/7] tpm_tis: Do not fall back to a
- hardcoded address for TPM2
-Date: Sun, 20 Dec 2015 14:34:34 +0200
-Message-ID: <20151220123434.GA8232@intel.com>
-References: <1450376600-6970-1-git-send-email-jgunthorpe@obsidianresearch.com>
-	<1450376600-6970-4-git-send-email-jgunthorpe@obsidianresearch.com>
-	<20151218093432.GA10581@intel.com>
-	<20151218165127.GC7354@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: [GIT PULL] tpmdd updates for Linux 4.5
+Date: Mon, 21 Dec 2015 10:42:58 +0200
+Message-ID: <20151221084258.GA3101@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20151218165127.GC7354-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: Martin Wilck <Martin.Wilck-RJz4owOZxyXQFUHtdCDX3A@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, g@intel.com, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Uwe =?iso-8859-1?Q?Kleine-K=F6nig?= <u.kleine-koenig-bIcnvbaLZ9MEGnE8C9+IrQ@public.gmane.org>
+Sender: owner-linux-security-module@vger.kernel.org
+To: James Morris <jmorris@namei.org>
+Cc: linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Dec 18, 2015 at 09:51:27AM -0700, Jason Gunthorpe wrote:
-> On Fri, Dec 18, 2015 at 11:34:32AM +0200, Jarkko Sakkinen wrote:
-> > > +	st = acpi_get_table(ACPI_SIG_TPM2, 1,
-> > > +			    (struct acpi_table_header **) &tbl);
-> > > +	if (ACPI_FAILURE(st) || tbl->header.length < sizeof(*tbl)) {
-> > > +		dev_err(&acpi_dev->dev,
-> > > +			FW_BUG "failed to get TPM2 ACPI table\n");
-> > > +		return -EINVAL;
-> > > +	}
-> > > +
-> > > +	if (tbl->start_method != ACPI_TPM2_MEMORY_MAPPED)
-> > >  		return -ENODEV;
-> > >  
-> > >  	INIT_LIST_HEAD(&resources);
-> > > @@ -996,6 +978,12 @@ static int tpm_tis_acpi_init(struct acpi_device *acpi_dev)
-> > >  
-> > >  	acpi_dev_free_resource_list(&resources);
-> > >  
-> > > +	if (tpm_info.start == 0 && tpm_info.len == 0) {
-> > > +		dev_err(&acpi_dev->dev,
-> > > +			FW_BUG "TPM2 ACPI table does not define a memory resource\n");
-> > > +		return -EINVAL;
-> > > +	}
-> > > +
-> > 
-> > I guess this the only relevant change in this patch? You should propose
-> > removal of is_fifo() as a separate patch if that makes sense. This patch
-> > is now doing orthogonal things.
-> 
-> No, the return code changes are relevant too, and are why is_fifo was
-> best un-inlined.
-> 
-> The patch is fixing all the ACPI data validatation in one go, not just
-> the resource range, the description notes this.
+Hi
 
-Got you. I think I'm good with this patch.
+Here are tpmdd updates for Linux 4.5. Sorry I didn't send this already
+last week but I had to hold until I get ack from Peter and Mimi before
+doing anything. Patches are quite well baked for a while now with the
+exception of small fix from Stefan to tpm_ibmvtpm, which I considered
+trivial enough to be included.
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-
-> Jason
+Thanks, hope I did this right and apologies for the delay.
 
 /Jarkko
 
-------------------------------------------------------------------------------
+The following changes since commit ebd68df3f24b318d391d15c458d6f43f340ba36a:
+
+  Sync to Linus v4.4-rc2 for LSM developers. (2015-11-23 22:46:28 +1100)
+
+are available in the git repository at:
+
+  https://github.com/jsakkine/linux-tpmdd.git tags/tpmdd-next-20151221
+
+for you to fetch changes up to 5beb0c435bdde35a09376566b0e28f7df87c9f68:
+
+  keys, trusted: seal with a TPM2 authorization policy (2015-12-20 15:27:13 +0200)
+
+----------------------------------------------------------------
+tpmdd updates for Linux 4.5
+
+----------------------------------------------------------------
+Jarkko Sakkinen (3):
+      keys, trusted: fix: *do not* allow duplicate key options
+      keys, trusted: select hash algorithm for TPM2 chips
+      keys, trusted: seal with a TPM2 authorization policy
+
+Jason Gunthorpe (6):
+      tpm_tis: Use devm_free_irq not free_irq
+      tpm_tis: Ensure interrupts are disabled when the driver starts
+      tpm: rework tpm_get_timeouts()
+      tpm_tis: Get rid of the duplicate IRQ probing code
+      tpm_tis: Refactor the interrupt setup
+      tpm_tis: Tighten IRQ auto-probing
+
+Martin Wilck (1):
+      tpm_tis: further simplify calculation of ordinal duration
+
+Stefan Berger (1):
+      tpm_ibmvtpm: properly handle interrupted packet receptions
+
+ Documentation/security/keys-trusted-encrypted.txt |  31 ++-
+ crypto/hash_info.c                                |   2 +
+ drivers/char/tpm/tpm-interface.c                  |  23 +-
+ drivers/char/tpm/tpm.h                            |  11 +-
+ drivers/char/tpm/tpm2-cmd.c                       |  60 ++++-
+ drivers/char/tpm/tpm_crb.c                        |  14 +-
+ drivers/char/tpm/tpm_ibmvtpm.c                    |  22 +-
+ drivers/char/tpm/tpm_ibmvtpm.h                    |   1 +
+ drivers/char/tpm/tpm_tis.c                        | 256 +++++++++-------------
+ include/crypto/hash_info.h                        |   3 +
+ include/keys/trusted-type.h                       |   5 +
+ include/uapi/linux/hash_info.h                    |   1 +
+ security/keys/Kconfig                             |   1 +
+ security/keys/trusted.c                           |  56 ++++-
+ 14 files changed, 300 insertions(+), 186 deletions(-)
