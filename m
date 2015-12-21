@@ -1,75 +1,110 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [GIT PULL] tpmdd updates for Linux 4.5
-Date: Mon, 21 Dec 2015 10:42:58 +0200
-Message-ID: <20151221084258.GA3101@intel.com>
+From: "Fuchs, Andreas" <andreas.fuchs-iXjGqz/onsDSyEMIgutvibNAH6kLmebB@public.gmane.org>
+Subject: Re: Question on Linux TSS architecture design (kernel
+ vs. user space access)
+Date: Mon, 21 Dec 2015 13:22:04 +0000
+Message-ID: <9F48E1A823B03B4790B7E6E69430724DA586A57C@EXCH2010B.sit.fraunhofer.de>
+References: <201512161804.tBGI47vu000331@d01av02.pok.ibm.com>
+	<C5A28EF7B98F574C85C70238C8E9ECC04E69407545@ABGEX74E.FSC.NET>
+	<201512171523.tBHFNlJ6013434@d03av03.boulder.ibm.com>
+	<9F48E1A823B03B4790B7E6E69430724DA58648F1@EXCH2010A.sit.fraunhofer.de>
+	<201512171620.tBHGK3GE030569@d03av04.boulder.ibm.com>
+	<9F48E1A823B03B4790B7E6E69430724DA586493C@EXCH2010A.sit.fraunhofer.de>
+	<C5A28EF7B98F574C85C70238C8E9ECC04E6940754C@ABGEX74E.FSC.NET>
+	<20151218105148.GA12882@intel.com> <20151218105323.GB12882@intel.com>
+	<C5A28EF7B98F574C85C70238C8E9ECC04E6940754D@ABGEX74E.FSC.NET>
+	<20151218114131.GA3287@intel.com>,<n5144n$1ug$1@ger.gmane.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-Sender: owner-linux-security-module@vger.kernel.org
-To: James Morris <jmorris@namei.org>
-Cc: linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <n5144n$1ug$1@ger.gmane.org>
+Content-Language: en-US
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi
+Let me emphasise this even more. It would be greate to have a kernel-space TPM
+Resource Manager (everybody thinks to agree), but it would also bit a big module
+and a big programming investment.
 
-Here are tpmdd updates for Linux 4.5. Sorry I didn't send this already
-last week but I had to hold until I get ack from Peter and Mimi before
-doing anything. Patches are quite well baked for a while now with the
-exception of small fix from Stefan to tpm_ibmvtpm, which I considered
-trivial enough to be included.
+I ask the tpmdd-maintainers to check (reconcile with parent subsystem
+maintainers) if a 3-5 kLoC module would be generally acceptable for a 
+TPM-ResourceManager?
 
-Thanks, hope I did this right and apologies for the delay.
+The advantages would be to have some actual full access to all of TPM from
+within the kernel (including access to sessions without hacks); e.g.
+TrustedKeyrings and ecryptfs come to mind.
+With a userspace-RM we need some hacks to have sessions run because of the
+ungaping-problem (see earlier mail). It's also way cleaner.
 
-/Jarkko
+Also we wind up with a light-RM inside the kernel anyways, so it might be worth
+going full instead. Going with the hacked approach we are assuming some
+limitations on kernel accesses to the TPM.  With the full RM inside the kernel
+there are no limitations, i.e. the RM is future proof as more kernel and app
+level uses of the TPM are added.
 
-The following changes since commit ebd68df3f24b318d391d15c458d6f43f340ba36a:
 
-  Sync to Linus v4.4-rc2 for LSM developers. (2015-11-23 22:46:28 +1100)
+In case there was a positive signal, I'd be willing to contribute to the RM development.
 
-are available in the git repository at:
+Proposed roadmap:
+- Gather interested developers (both from Kernel as well as TSSes)
+- Prepare a feature-architecture (to be added to kernel-doc)
+   Includes behavior of e.g. fd-fork, fd-passing, etc
+   Also see the TCG-Draft on RMs: 
+   http://www.trustedcomputinggroup.org/resources/tss_tab_and_resource_manager
+   New in-Kernel tpm-interface
+- Sketch out software architecture
+   includes layered system, hook-based, ....
+- Do the patches coordinated (to prevent having multiple implementation efforts)
 
-  https://github.com/jsakkine/linux-tpmdd.git tags/tpmdd-next-20151221
+So please, Jarkko, Peter, Marcel, James, Greg K-H (I think that's the list),
+would there be the chance for a signal / tendency by one of you ?
 
-for you to fetch changes up to 5beb0c435bdde35a09376566b0e28f7df87c9f68:
+Many interessted parties need this before proceeding because of the significant
+amount of work involved.
 
-  keys, trusted: seal with a TPM2 authorization policy (2015-12-20 15:27:13 +0200)
+________________________________________
+From: Ken Goldman [kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org]
+Sent: Friday, December 18, 2015 15:10
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Subject: Re: [tpmdd-devel] Question on Linux TSS architecture design (kernel vs. user space access)
 
-----------------------------------------------------------------
-tpmdd updates for Linux 4.5
+On 12/18/2015 6:41 AM, Jarkko Sakkinen wrote:
+>
+> For me this discussion seems a bit paralyzed. If one wants to do
+> something for the issue, one should send a patch or patches and then we
+> can see how elegant the solution is and how much it does or does not
+> interfere the user space. That's why enumerated the technical
+> constraints for TPM2 in my previous responses and otherwise have been
+> quite passive. I'm not too interested on this "philosophical" side.
 
-----------------------------------------------------------------
-Jarkko Sakkinen (3):
-      keys, trusted: fix: *do not* allow duplicate key options
-      keys, trusted: select hash algorithm for TPM2 chips
-      keys, trusted: seal with a TPM2 authorization policy
+As a developer, the philosophical side is #1 in importance.
 
-Jason Gunthorpe (6):
-      tpm_tis: Use devm_free_irq not free_irq
-      tpm_tis: Ensure interrupts are disabled when the driver starts
-      tpm: rework tpm_get_timeouts()
-      tpm_tis: Get rid of the duplicate IRQ probing code
-      tpm_tis: Refactor the interrupt setup
-      tpm_tis: Tighten IRQ auto-probing
+A resource manager isn't a little patch.  It's a large, complex project
+which will take perhaps 6 months to code and test.  No one wants to
+spend those months and then have the code rejected for philosophical
+reasons.
 
-Martin Wilck (1):
-      tpm_tis: further simplify calculation of ordinal duration
+If the community agrees that a RM in the kernel will be accepted if the
+code is of good quality and well tested, we can do it.
 
-Stefan Berger (1):
-      tpm_ibmvtpm: properly handle interrupted packet receptions
+If the community won't accept the code under any conditions, tell us
+now.  We'll fall back on the user space resource manager, the limited
+resource manager in the kernel, and all the hacks required to have them
+work together.
 
- Documentation/security/keys-trusted-encrypted.txt |  31 ++-
- crypto/hash_info.c                                |   2 +
- drivers/char/tpm/tpm-interface.c                  |  23 +-
- drivers/char/tpm/tpm.h                            |  11 +-
- drivers/char/tpm/tpm2-cmd.c                       |  60 ++++-
- drivers/char/tpm/tpm_crb.c                        |  14 +-
- drivers/char/tpm/tpm_ibmvtpm.c                    |  22 +-
- drivers/char/tpm/tpm_ibmvtpm.h                    |   1 +
- drivers/char/tpm/tpm_tis.c                        | 256 +++++++++-------------
- include/crypto/hash_info.h                        |   3 +
- include/keys/trusted-type.h                       |   5 +
- include/uapi/linux/hash_info.h                    |   1 +
- security/keys/Kconfig                             |   1 +
- security/keys/trusted.c                           |  56 ++++-
- 14 files changed, 300 insertions(+), 186 deletions(-)
+
+------------------------------------------------------------------------------
+_______________________________________________
+tpmdd-devel mailing list
+tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+
+------------------------------------------------------------------------------
