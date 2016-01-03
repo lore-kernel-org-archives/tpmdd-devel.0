@@ -1,16 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3 6/7] tpm_crb: Drop
-	le32_to_cpu(ioread32(..))
-Date: Sun, 3 Jan 2016 19:28:01 +0200
-Message-ID: <20160103172801.GE4155@intel.com>
+Subject: Re: [PATCH v3 7/7] tpm_crb: Use devm_ioremap_resource
+Date: Sun, 3 Jan 2016 19:32:13 +0200
+Message-ID: <20160103173213.GF4155@intel.com>
 References: <1450376600-6970-1-git-send-email-jgunthorpe@obsidianresearch.com>
-	<1450376600-6970-7-git-send-email-jgunthorpe@obsidianresearch.com>
+	<1450376600-6970-8-git-send-email-jgunthorpe@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1450376600-6970-7-git-send-email-jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <1450376600-6970-8-git-send-email-jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,92 +22,237 @@ To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.or
 Cc: Martin Wilck <Martin.Wilck-RJz4owOZxyXQFUHtdCDX3A@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Uwe =?iso-8859-1?Q?Kleine-K=F6nig?= <u.kleine-koenig-bIcnvbaLZ9MEGnE8C9+IrQ@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Dec 17, 2015 at 11:23:19AM -0700, Jason Gunthorpe wrote:
-> ioread32 and readl are defined to read from PCI style memory, ie little
-> endian and return the result in host order. On platforms where a
-> swap is required ioread32/readl do the swap internally (eg see ppc).
+On Thu, Dec 17, 2015 at 11:23:20AM -0700, Jason Gunthorpe wrote:
+> To support the force mode in tpm_tis we need to use resource locking
+> in tpm_crb as well, via devm_ioremap_resource.
+> 
+> The light restructuring better aligns crb and tis and makes it easier
+> to see the that new changes make sense.
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+This patch mixes two items: restructing and actual change.
+
+It might make the code cleaner but this patch harder to accept because
+it contains more code changes are therefore more risks of regressions.
+Tested code is better than clean code.
+
+You should propose clean ups on smaller scale (patches) and not and not
+hidden into other changes.
 
 /Jarkko
 
+> 
 > Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 > Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 > ---
->  drivers/char/tpm/tpm_crb.c | 22 +++++++++++-----------
->  1 file changed, 11 insertions(+), 11 deletions(-)
+>  drivers/char/tpm/tpm_crb.c | 157 +++++++++++++++++++++++++++++++--------------
+>  1 file changed, 108 insertions(+), 49 deletions(-)
 > 
 > diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> index 8dd70696ebe8..0237006dc4d8 100644
+> index 0237006dc4d8..1f844cc63016 100644
 > --- a/drivers/char/tpm/tpm_crb.c
 > +++ b/drivers/char/tpm/tpm_crb.c
-> @@ -89,7 +89,7 @@ static u8 crb_status(struct tpm_chip *chip)
->  	struct crb_priv *priv = chip->vendor.priv;
->  	u8 sts = 0;
+> @@ -77,6 +77,8 @@ enum crb_flags {
 >  
-> -	if ((le32_to_cpu(ioread32(&priv->cca->start)) & CRB_START_INVOKE) !=
-> +	if ((ioread32(&priv->cca->start) & CRB_START_INVOKE) !=
->  	    CRB_START_INVOKE)
->  		sts |= CRB_STS_COMPLETE;
+>  struct crb_priv {
+>  	unsigned int flags;
+> +	struct resource res;
+> +	void __iomem *iobase;
+>  	struct crb_control_area __iomem *cca;
+>  	u8 __iomem *cmd;
+>  	u8 __iomem *rsp;
+> @@ -196,22 +198,121 @@ static const struct tpm_class_ops tpm_crb = {
+>  	.req_complete_val = CRB_STS_COMPLETE,
+>  };
 >  
-> @@ -105,7 +105,7 @@ static int crb_recv(struct tpm_chip *chip, u8 *buf, size_t count)
->  	if (count < 6)
->  		return -EIO;
->  
-> -	if (le32_to_cpu(ioread32(&priv->cca->sts)) & CRB_CA_STS_ERROR)
-> +	if (ioread32(&priv->cca->sts) & CRB_CA_STS_ERROR)
->  		return -EIO;
->  
->  	memcpy_fromio(buf, priv->rsp, 6);
-> @@ -141,11 +141,11 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
->  	struct crb_priv *priv = chip->vendor.priv;
->  	int rc = 0;
->  
-> -	if (len > le32_to_cpu(ioread32(&priv->cca->cmd_size))) {
-> +	if (len > ioread32(&priv->cca->cmd_size)) {
->  		dev_err(&chip->dev,
->  			"invalid command count value %x %zx\n",
->  			(unsigned int) len,
-> -			(size_t) le32_to_cpu(ioread32(&priv->cca->cmd_size)));
-> +			(size_t) ioread32(&priv->cca->cmd_size));
->  		return -E2BIG;
->  	}
->  
-> @@ -181,7 +181,7 @@ static void crb_cancel(struct tpm_chip *chip)
->  static bool crb_req_canceled(struct tpm_chip *chip, u8 status)
+> -static int crb_acpi_add(struct acpi_device *device)
+> +static int crb_init(struct acpi_device *device, struct crb_priv *priv)
 >  {
->  	struct crb_priv *priv = chip->vendor.priv;
-> -	u32 cancel = le32_to_cpu(ioread32(&priv->cca->cancel));
-> +	u32 cancel = ioread32(&priv->cca->cancel);
->  
->  	return (cancel & CRB_CANCEL_INVOKE) == CRB_CANCEL_INVOKE;
->  }
-> @@ -251,10 +251,10 @@ static int crb_acpi_add(struct acpi_device *device)
->  		return -ENOMEM;
->  	}
->  
-> -	pa = ((u64) le32_to_cpu(ioread32(&priv->cca->cmd_pa_high)) << 32) |
-> -		(u64) le32_to_cpu(ioread32(&priv->cca->cmd_pa_low));
-> -	priv->cmd = devm_ioremap_nocache(dev, pa,
-> -					 ioread32(&priv->cca->cmd_size));
+>  	struct tpm_chip *chip;
+> +	int rc;
+> +
+> +	chip = tpmm_chip_alloc(&device->dev, &tpm_crb);
+> +	if (IS_ERR(chip))
+> +		return PTR_ERR(chip);
+> +
+> +	chip->vendor.priv = priv;
+> +	chip->acpi_dev_handle = device->handle;
+> +	chip->flags = TPM_CHIP_FLAG_TPM2;
+> +
+> +	rc = tpm_get_timeouts(chip);
+> +	if (rc)
+> +		return rc;
+> +
+> +	rc = tpm2_do_selftest(chip);
+> +	if (rc)
+> +		return rc;
+> +
+> +	return tpm_chip_register(chip);
+> +}
+> +
+> +static int crb_check_resource(struct acpi_resource *ares, void *data)
+> +{
+> +	struct crb_priv *priv = data;
+> +	struct resource res;
+> +
+> +	if (acpi_dev_resource_memory(ares, &res))
+> +		priv->res = res;
+> +
+> +	return 1;
+> +}
+> +
+> +static void __iomem *crb_access(struct device *dev, struct crb_priv *priv,
+> +				u64 start, u32 size)
+> +{
+> +	struct resource tmp = {};
+> +
+> +	tmp.start = start;
+> +	tmp.end = start + size - 1;
+> +	tmp.flags = IORESOURCE_MEM;
+> +
+> +	/* Detect a 64 bit address on a 32 bit system */
+> +	if (start != tmp.start)
+> +		return ERR_PTR(-EINVAL);
+> +
+> +	if (!resource_contains(&priv->res, &tmp)) {
+> +		dev_err(dev,
+> +			FW_BUG "TPM2 ACPI sub resource %pR is not in the device's region of %pR\n",
+> +			&tmp, &priv->res);
+> +		return ERR_PTR(-EINVAL);
+> +	}
+> +
+> +	return priv->iobase + (tmp.start - priv->res.start);
+> +}
+> +
+> +static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+> +		      struct acpi_table_tpm2 *buf)
+> +{
+> +	struct list_head resources;
+> +	struct device *dev = &device->dev;
+> +	u64 pa;
+> +	int ret;
+> +
+> +	INIT_LIST_HEAD(&resources);
+> +	ret = acpi_dev_get_resources(device, &resources, crb_check_resource,
+> +				     priv);
+> +	if (ret < 0)
+> +		return ret;
+> +	acpi_dev_free_resource_list(&resources);
+> +
+> +	if (resource_type(&priv->res) != IORESOURCE_MEM) {
+> +		dev_err(dev,
+> +			FW_BUG "TPM2 ACPI table does not define a memory resource\n");
+> +		return -EINVAL;
+> +	}
+> +
+> +	priv->iobase = devm_ioremap_resource(dev, &priv->res);
+> +	if (IS_ERR(priv->iobase))
+> +		return PTR_ERR(priv->iobase);
+> +
+> +	priv->cca = crb_access(dev, priv, buf->control_address, 0x1000);
+> +	if (IS_ERR(priv->cca))
+> +		return PTR_ERR(priv->cca);
+> +
 > +	pa = ((u64)ioread32(&priv->cca->cmd_pa_high) << 32) |
 > +	     (u64)ioread32(&priv->cca->cmd_pa_low);
-> +	priv->cmd =
-> +	    devm_ioremap_nocache(dev, pa, ioread32(&priv->cca->cmd_size));
->  	if (!priv->cmd) {
->  		dev_err(dev, "ioremap of the command buffer failed\n");
->  		return -ENOMEM;
-> @@ -262,8 +262,8 @@ static int crb_acpi_add(struct acpi_device *device)
+> +	priv->cmd = crb_access(dev, priv, pa, ioread32(&priv->cca->cmd_size));
+> +	if (IS_ERR(priv->cmd))
+> +		return PTR_ERR(priv->cmd);
+> +
+> +	memcpy_fromio(&pa, &priv->cca->rsp_pa, 8);
+> +	pa = le64_to_cpu(pa);
+> +	priv->rsp = crb_access(dev, priv, pa, ioread32(&priv->cca->rsp_size));
+> +	if (IS_ERR(priv->rsp))
+> +		return PTR_ERR(priv->rsp);
+> +	return 0;
+> +}
+> +
+> +static int crb_acpi_add(struct acpi_device *device)
+> +{
+>  	struct acpi_table_tpm2 *buf;
+>  	struct crb_priv *priv;
+>  	struct device *dev = &device->dev;
+>  	acpi_status status;
+>  	u32 sm;
+> -	u64 pa;
+>  	int rc;
 >  
->  	memcpy_fromio(&pa, &priv->cca->rsp_pa, 8);
->  	pa = le64_to_cpu(pa);
-> -	priv->rsp = devm_ioremap_nocache(dev, pa,
-> -					 ioread32(&priv->cca->rsp_size));
-> +	priv->rsp =
-> +	    devm_ioremap_nocache(dev, pa, ioread32(&priv->cca->rsp_size));
->  	if (!priv->rsp) {
->  		dev_err(dev, "ioremap of the response buffer failed\n");
+>  	status = acpi_get_table(ACPI_SIG_TPM2, 1,
+>  				(struct acpi_table_header **) &buf);
+>  	if (ACPI_FAILURE(status) || buf->header.length < sizeof(*buf)) {
+>  		dev_err(dev, FW_BUG "failed to get TPM2 ACPI table\n");
+> -		return -ENODEV;
+> +		return -EINVAL;
+>  	}
+>  
+>  	/* Should the FIFO driver handle this? */
+> @@ -219,18 +320,9 @@ static int crb_acpi_add(struct acpi_device *device)
+>  	if (sm == ACPI_TPM2_MEMORY_MAPPED)
+>  		return -ENODEV;
+>  
+> -	chip = tpmm_chip_alloc(dev, &tpm_crb);
+> -	if (IS_ERR(chip))
+> -		return PTR_ERR(chip);
+> -
+> -	chip->flags = TPM_CHIP_FLAG_TPM2;
+> -
+> -	priv = (struct crb_priv *) devm_kzalloc(dev, sizeof(struct crb_priv),
+> -						GFP_KERNEL);
+> -	if (!priv) {
+> -		dev_err(dev, "failed to devm_kzalloc for private data\n");
+> +	priv = devm_kzalloc(dev, sizeof(struct crb_priv), GFP_KERNEL);
+> +	if (!priv)
 >  		return -ENOMEM;
+> -	}
+>  
+>  	/* The reason for the extra quirk is that the PTT in 4th Gen Core CPUs
+>  	 * report only ACPI start but in practice seems to require both
+> @@ -244,44 +336,11 @@ static int crb_acpi_add(struct acpi_device *device)
+>  	    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
+>  		priv->flags |= CRB_FL_ACPI_START;
+>  
+> -	priv->cca = (struct crb_control_area __iomem *)
+> -		devm_ioremap_nocache(dev, buf->control_address, 0x1000);
+> -	if (!priv->cca) {
+> -		dev_err(dev, "ioremap of the control area failed\n");
+> -		return -ENOMEM;
+> -	}
+> -
+> -	pa = ((u64)ioread32(&priv->cca->cmd_pa_high) << 32) |
+> -	     (u64)ioread32(&priv->cca->cmd_pa_low);
+> -	priv->cmd =
+> -	    devm_ioremap_nocache(dev, pa, ioread32(&priv->cca->cmd_size));
+> -	if (!priv->cmd) {
+> -		dev_err(dev, "ioremap of the command buffer failed\n");
+> -		return -ENOMEM;
+> -	}
+> -
+> -	memcpy_fromio(&pa, &priv->cca->rsp_pa, 8);
+> -	pa = le64_to_cpu(pa);
+> -	priv->rsp =
+> -	    devm_ioremap_nocache(dev, pa, ioread32(&priv->cca->rsp_size));
+> -	if (!priv->rsp) {
+> -		dev_err(dev, "ioremap of the response buffer failed\n");
+> -		return -ENOMEM;
+> -	}
+> -
+> -	chip->vendor.priv = priv;
+> -
+> -	rc = tpm_get_timeouts(chip);
+> -	if (rc)
+> -		return rc;
+> -
+> -	chip->acpi_dev_handle = device->handle;
+> -
+> -	rc = tpm2_do_selftest(chip);
+> +	rc = crb_map_io(device, priv, buf);
+>  	if (rc)
+>  		return rc;
+>  
+> -	return tpm_chip_register(chip);
+> +	return crb_init(device, priv);
+>  }
+>  
+>  static int crb_acpi_remove(struct acpi_device *device)
 > -- 
 > 2.1.4
 > 
