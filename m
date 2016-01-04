@@ -1,52 +1,34 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v3 2/7] tpm_tis: Disable interrupt auto
- probing on a per-device basis
-Date: Mon, 4 Jan 2016 11:24:42 -0700
-Message-ID: <20160104182442.GC20016@obsidianresearch.com>
+From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Subject: Re: [PATCH v3 5/7] tpm_tis: Clean up the force=1 module parameter
+Date: Mon, 4 Jan 2016 11:27:53 -0700
+Message-ID: <20160104182753.GD20016@obsidianresearch.com>
 References: <1450376600-6970-1-git-send-email-jgunthorpe@obsidianresearch.com>
-	<1450376600-6970-3-git-send-email-jgunthorpe@obsidianresearch.com>
-	<20160103172040.GB4155@intel.com>
+ <1450376600-6970-6-git-send-email-jgunthorpe@obsidianresearch.com>
+ <20160103172650.GD4155@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20160103172040.GB4155-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: Martin Wilck <Martin.Wilck-RJz4owOZxyXQFUHtdCDX3A@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Uwe =?iso-8859-1?Q?Kleine-K=F6nig?= <u.kleine-koenig-bIcnvbaLZ9MEGnE8C9+IrQ@public.gmane.org>
+In-Reply-To: <20160103172650.GD4155@intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, Martin Wilck <Martin.Wilck@ts.fujitsu.com>, Peter Huewe <peterhuewe@gmx.de>, Uwe =?iso-8859-1?Q?Kleine-K=F6nig?= <u.kleine-koenig@pengutronix.de>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Jan 03, 2016 at 07:20:40PM +0200, Jarkko Sakkinen wrote:
-> On Thu, Dec 17, 2015 at 11:23:15AM -0700, Jason Gunthorpe wrote:
-> > Instead of clearing the global interrupts flag when any device
-> > does not have an interrupt just pass -1 through tpm_info.irq.
-> > 
-> > The only thing that asks for autoprobing is the force=1 path.
+On Sun, Jan 03, 2016 at 07:26:50PM +0200, Jarkko Sakkinen wrote:
+> > @@ -695,8 +685,8 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+> >  #endif
+> >  
+> >  	chip->vendor.iobase = devm_ioremap_resource(dev, &tpm_info->res);
+> > -	if (!chip->vendor.iobase)
+> > -		return -EIO;
+> > +	if (IS_ERR(chip->vendor.iobase))
+> > +		return PTR_ERR(chip->vendor.iobase);
 > 
-> Sorry for my ignorance but what does this patch help? Why interrupts
-> flag is not enough?
+> Isn't this a regression in the descendig patch in this series?
 
-It is wrong for a driver's probe function to change global state, and
-very wrong to change a module option.
+Oh yes, good catch.
 
-> > Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> > Tested-by: Wilck, Martin <martin.wilck-RJz4owOZxyXQFUHtdCDX3A@public.gmane.org>
-> > Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> 
-> Did I already give Tested-by's for this series (I did for those that
-> went into v4.5 pull request)?
-
-You said you tested the crb stuff, which is this series... Did you
-test something else?
+The fix from Martin got rebased onto the wrong patch by accident.
 
 Jason
-
-------------------------------------------------------------------------------
