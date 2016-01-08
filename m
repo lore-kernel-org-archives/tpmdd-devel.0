@@ -1,8 +1,7 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: [PATCH v4 2/7] tpm_tis: Disable interrupt auto
-	probing on a per-device basis
-Date: Thu,  7 Jan 2016 17:36:21 -0700
-Message-ID: <1452213386-21460-3-git-send-email-jgunthorpe@obsidianresearch.com>
+Subject: [PATCH v4 4/7] tpm_tis: Use devm_ioremap_resource
+Date: Thu,  7 Jan 2016 17:36:23 -0700
+Message-ID: <1452213386-21460-5-git-send-email-jgunthorpe@obsidianresearch.com>
 References: <1452213386-21460-1-git-send-email-jgunthorpe@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,84 +19,104 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Instead of clearing the global interrupts flag when any device
-does not have an interrupt just pass -1 through tpm_info.irq.
+This does a request_resource under the covers which means tis holds a
+lock on the memory range it is using so other drivers cannot grab it.
+When doing probing it is important to ensure that other drivers are
+not using the same range before tis starts touching it.
 
-The only thing that asks for autoprobing is the force=1 path.
+To do this flow the actual struct resource from the device right
+through to devm_ioremap_resource. This ensures all the proper resource
+meta-data is carried down.
 
 Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Tested-by: Wilck, Martin <martin.wilck-RJz4owOZxyXQFUHtdCDX3A@public.gmane.org>
 Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm_tis.c | 18 ++++++++++--------
- 1 file changed, 10 insertions(+), 8 deletions(-)
+ drivers/char/tpm/tpm_tis.c | 33 ++++++++++++++++++---------------
+ 1 file changed, 18 insertions(+), 15 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index 304323bdcaaa..fecd27b45fd1 100644
+index b2b31f5418ca..399c39e16a5c 100644
 --- a/drivers/char/tpm/tpm_tis.c
 +++ b/drivers/char/tpm/tpm_tis.c
-@@ -69,7 +69,11 @@ enum tis_defaults {
+@@ -67,8 +67,7 @@ enum tis_defaults {
+ };
+ 
  struct tpm_info {
- 	unsigned long start;
- 	unsigned long len;
--	unsigned int irq;
-+	/* irq > 0 means: use irq $irq;
-+	 * irq = 0 means: autoprobe for an irq;
-+	 * irq = -1 means: no irq support
-+	 */
-+	int irq;
+-	unsigned long start;
+-	unsigned long len;
++	struct resource res;
+ 	/* irq > 0 means: use irq $irq;
+ 	 * irq = 0 means: autoprobe for an irq;
+ 	 * irq = -1 means: no irq support
+@@ -77,8 +76,11 @@ struct tpm_info {
  };
  
  static struct tpm_info tis_default_info = {
-@@ -807,7 +811,7 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
- 	/* INTERRUPT Setup */
- 	init_waitqueue_head(&chip->vendor.read_queue);
- 	init_waitqueue_head(&chip->vendor.int_queue);
--	if (interrupts) {
-+	if (interrupts && tpm_info->irq != -1) {
- 		if (tpm_info->irq) {
- 			tpm_tis_probe_irq_single(chip, intmask, IRQF_SHARED,
- 						 tpm_info->irq);
-@@ -895,9 +899,9 @@ static SIMPLE_DEV_PM_OPS(tpm_tis_pm, tpm_pm_suspend, tpm_tis_resume);
+-	.start = TIS_MEM_BASE,
+-	.len = TIS_MEM_LEN,
++	.res = {
++		.start = TIS_MEM_BASE,
++		.end = TIS_MEM_BASE + TIS_MEM_LEN - 1,
++		.flags = IORESOURCE_MEM,
++	},
+ 	.irq = 0,
+ };
  
- #ifdef CONFIG_PNP
- static int tpm_tis_pnp_init(struct pnp_dev *pnp_dev,
--				      const struct pnp_device_id *pnp_id)
-+			    const struct pnp_device_id *pnp_id)
+@@ -692,9 +694,9 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+ 	chip->acpi_dev_handle = acpi_dev_handle;
+ #endif
+ 
+-	chip->vendor.iobase = devm_ioremap(dev, tpm_info->start, tpm_info->len);
+-	if (!chip->vendor.iobase)
+-		return -EIO;
++	chip->vendor.iobase = devm_ioremap_resource(dev, &tpm_info->res);
++	if (IS_ERR(chip->vendor.iobase))
++		return PTR_ERR(chip->vendor.iobase);
+ 
+ 	/* Maximum timeouts */
+ 	chip->vendor.timeout_a = TIS_TIMEOUT_A_MAX;
+@@ -875,9 +877,12 @@ static int tpm_tis_pnp_init(struct pnp_dev *pnp_dev,
  {
--	struct tpm_info tpm_info = tis_default_info;
-+	struct tpm_info tpm_info = {};
+ 	struct tpm_info tpm_info = {};
  	acpi_handle acpi_dev_handle = NULL;
++	struct resource *res;
  
- 	tpm_info.start = pnp_mem_start(pnp_dev, 0);
-@@ -906,7 +910,7 @@ static int tpm_tis_pnp_init(struct pnp_dev *pnp_dev,
+-	tpm_info.start = pnp_mem_start(pnp_dev, 0);
+-	tpm_info.len = pnp_mem_len(pnp_dev, 0);
++	res = pnp_get_resource(pnp_dev, IORESOURCE_MEM, 0);
++	if (!res)
++		return -ENODEV;
++	tpm_info.res = *res;
+ 
  	if (pnp_irq_valid(pnp_dev, 0))
  		tpm_info.irq = pnp_irq(pnp_dev, 0);
- 	else
--		interrupts = false;
-+		tpm_info.irq = -1;
+@@ -940,12 +945,10 @@ static int tpm_check_resource(struct acpi_resource *ares, void *data)
+ 	struct tpm_info *tpm_info = (struct tpm_info *) data;
+ 	struct resource res;
  
- #ifdef CONFIG_ACPI
- 	if (pnp_acpi_device(pnp_dev)) {
-@@ -984,6 +988,7 @@ static int tpm_tis_acpi_init(struct acpi_device *acpi_dev)
- 		return -ENODEV;
+-	if (acpi_dev_resource_interrupt(ares, 0, &res)) {
++	if (acpi_dev_resource_interrupt(ares, 0, &res))
+ 		tpm_info->irq = res.start;
+-	} else if (acpi_dev_resource_memory(ares, &res)) {
+-		tpm_info->start = res.start;
+-		tpm_info->len = resource_size(&res);
+-	}
++	else if (acpi_dev_resource_memory(ares, &res))
++		tpm_info->res = res;
  
- 	INIT_LIST_HEAD(&resources);
-+	tpm_info.irq = -1;
- 	ret = acpi_dev_get_resources(acpi_dev, &resources, tpm_check_resource,
- 				     &tpm_info);
- 	if (ret < 0)
-@@ -991,9 +996,6 @@ static int tpm_tis_acpi_init(struct acpi_device *acpi_dev)
+ 	return 1;
+ }
+@@ -978,7 +981,7 @@ static int tpm_tis_acpi_init(struct acpi_device *acpi_dev)
  
  	acpi_dev_free_resource_list(&resources);
  
--	if (!tpm_info.irq)
--		interrupts = false;
--
- 	if (is_itpm(acpi_dev))
- 		itpm = true;
- 
+-	if (tpm_info.start == 0 && tpm_info.len == 0) {
++	if (resource_type(&tpm_info.res) != IORESOURCE_MEM) {
+ 		dev_err(&acpi_dev->dev,
+ 			FW_BUG "TPM2 ACPI table does not define a memory resource\n");
+ 		return -EINVAL;
 -- 
 2.1.4
 
