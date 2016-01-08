@@ -1,14 +1,12 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: [PATCH v4 5/7] tpm_tis: Clean up the force=1 module
+Subject: [PATCH v4 0/7] tpm_tis: Clean up force module
 	parameter
-Date: Thu,  7 Jan 2016 17:36:24 -0700
-Message-ID: <1452213386-21460-6-git-send-email-jgunthorpe@obsidianresearch.com>
-References: <1452213386-21460-1-git-send-email-jgunthorpe@obsidianresearch.com>
+Date: Thu,  7 Jan 2016 17:36:19 -0700
+Message-ID: <1452213386-21460-1-git-send-email-jgunthorpe@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1452213386-21460-1-git-send-email-jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,286 +18,48 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The TPM core has long assumed that every device has a driver attached,
-however the force path was attaching the TPM core outside of a driver
-context. This isn't generally reliable as the user could detatch the
-driver using sysfs or something, but commit b8b2c7d845d5 ("base/platform:
-assert that dev_pm_domain callbacks are called unconditionally")
-forced the issue by leaving the driver pointer NULL if there is
-no probe.
+Drive the force=1 flow through the driver core. There are two main reasons to do this:
+ 1) To enable tpm_tis for OF environments requires a platform_device anyhow, so
+    the force_device needs to be re-used for them.
+ 2) Recent changes in the core code break the assumption that a driver will be
+    'attached' to things created through platform_device_register_simple,
+    which causes the tpm core to blow up.
 
-Rework the TPM setup to create a platform device with resources and
-then allow the driver core to naturally bind and probe it through the
-normal mechanisms. All this structure is needed anyhow to enable TPM
-for OF environments.
+To make force probing reliable this also fixes both tpm_tis and tpm_crb to
+properly use request_region to lock the TPM iomemory against multiple access.
 
-Finally, since the entire flow is changing convert the init/exit to use
-the modern ifdef-less coding style when possible
+v4:
+- Alter the commit message for using the common ACPI definitions (Jarkko)
+- Move the misplaced error check hunk from patch #4 to #3 (Jarkko)
 
-Reported-by: "Wilck, Martin" <martin.wilck-RJz4owOZxyXQFUHtdCDX3A@public.gmane.org>
-Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Tested-by: Wilck, Martin <martin.wilck-RJz4owOZxyXQFUHtdCDX3A@public.gmane.org>
-Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
----
- drivers/char/tpm/tpm_tis.c | 169 ++++++++++++++++++++++++++++-----------------
- 1 file changed, 104 insertions(+), 65 deletions(-)
+v3:
+- Fix some bugs in getting the struct resource for tpm_tis (Martin Wilck)
+- Include tpm_crb in the request_resource cleanup as well, tpm_tis and tpm_crb
+  tend to use the same address ranges so both should have locking for safety
+- ACPI and endianness cleanups in both drivers
 
-diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index 399c39e16a5c..12aa96a69b6c 100644
---- a/drivers/char/tpm/tpm_tis.c
-+++ b/drivers/char/tpm/tpm_tis.c
-@@ -60,7 +60,6 @@ enum tis_int_flags {
- };
- 
- enum tis_defaults {
--	TIS_MEM_BASE = 0xFED40000,
- 	TIS_MEM_LEN = 0x5000,
- 	TIS_SHORT_TIMEOUT = 750,	/* ms */
- 	TIS_LONG_TIMEOUT = 2000,	/* 2 sec */
-@@ -75,15 +74,6 @@ struct tpm_info {
- 	int irq;
- };
- 
--static struct tpm_info tis_default_info = {
--	.res = {
--		.start = TIS_MEM_BASE,
--		.end = TIS_MEM_BASE + TIS_MEM_LEN - 1,
--		.flags = IORESOURCE_MEM,
--	},
--	.irq = 0,
--};
--
- /* Some timeout values are needed before it is known whether the chip is
-  * TPM 1.0 or TPM 2.0.
-  */
-@@ -825,7 +815,6 @@ out_err:
- 	return rc;
- }
- 
--#ifdef CONFIG_PM_SLEEP
- static void tpm_tis_reenable_interrupts(struct tpm_chip *chip)
- {
- 	u32 intmask;
-@@ -867,11 +856,9 @@ static int tpm_tis_resume(struct device *dev)
- 
- 	return 0;
- }
--#endif
- 
- static SIMPLE_DEV_PM_OPS(tpm_tis_pm, tpm_pm_suspend, tpm_tis_resume);
- 
--#ifdef CONFIG_PNP
- static int tpm_tis_pnp_init(struct pnp_dev *pnp_dev,
- 			    const struct pnp_device_id *pnp_id)
- {
-@@ -889,14 +876,12 @@ static int tpm_tis_pnp_init(struct pnp_dev *pnp_dev,
- 	else
- 		tpm_info.irq = -1;
- 
--#ifdef CONFIG_ACPI
- 	if (pnp_acpi_device(pnp_dev)) {
- 		if (is_itpm(pnp_acpi_device(pnp_dev)))
- 			itpm = true;
- 
--		acpi_dev_handle = pnp_acpi_device(pnp_dev)->handle;
-+		acpi_dev_handle = ACPI_HANDLE(&pnp_dev->dev);
- 	}
--#endif
- 
- 	return tpm_tis_init(&pnp_dev->dev, &tpm_info, acpi_dev_handle);
- }
-@@ -937,7 +922,6 @@ static struct pnp_driver tis_pnp_driver = {
- module_param_string(hid, tpm_pnp_tbl[TIS_HID_USR_IDX].id,
- 		    sizeof(tpm_pnp_tbl[TIS_HID_USR_IDX].id), 0444);
- MODULE_PARM_DESC(hid, "Set additional specific HID for this driver to probe");
--#endif
- 
- #ifdef CONFIG_ACPI
- static int tpm_check_resource(struct acpi_resource *ares, void *data)
-@@ -1024,80 +1008,135 @@ static struct acpi_driver tis_acpi_driver = {
- };
- #endif
- 
-+static struct platform_device *force_pdev;
-+
-+static int tpm_tis_plat_probe(struct platform_device *pdev)
-+{
-+	struct tpm_info tpm_info = {};
-+	struct resource *res;
-+
-+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-+	if (res == NULL) {
-+		dev_err(&pdev->dev, "no memory resource defined\n");
-+		return -ENODEV;
-+	}
-+	tpm_info.res = *res;
-+
-+	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-+	if (res) {
-+		tpm_info.irq = res->start;
-+	} else {
-+		if (pdev == force_pdev)
-+			tpm_info.irq = -1;
-+		else
-+			/* When forcing auto probe the IRQ */
-+			tpm_info.irq = 0;
-+	}
-+
-+	return tpm_tis_init(&pdev->dev, &tpm_info, NULL);
-+}
-+
-+static int tpm_tis_plat_remove(struct platform_device *pdev)
-+{
-+	struct tpm_chip *chip = dev_get_drvdata(&pdev->dev);
-+
-+	tpm_chip_unregister(chip);
-+	tpm_tis_remove(chip);
-+
-+	return 0;
-+}
-+
- static struct platform_driver tis_drv = {
-+	.probe = tpm_tis_plat_probe,
-+	.remove = tpm_tis_plat_remove,
- 	.driver = {
- 		.name		= "tpm_tis",
- 		.pm		= &tpm_tis_pm,
- 	},
- };
- 
--static struct platform_device *pdev;
--
- static bool force;
-+#ifdef CONFIG_X86
- module_param(force, bool, 0444);
- MODULE_PARM_DESC(force, "Force device probe rather than using ACPI entry");
-+#endif
-+
-+static int tpm_tis_force_device(void)
-+{
-+	struct platform_device *pdev;
-+	static const struct resource x86_resources[] = {
-+		{
-+			.start = 0xFED40000,
-+			.end = 0xFED40000 + TIS_MEM_LEN - 1,
-+			.flags = IORESOURCE_MEM,
-+		},
-+	};
-+
-+	if (!force)
-+		return 0;
-+
-+	/* The driver core will match the name tpm_tis of the device to
-+	 * the tpm_tis platform driver and complete the setup via
-+	 * tpm_tis_plat_probe
-+	 */
-+	pdev = platform_device_register_simple("tpm_tis", -1, x86_resources,
-+					       ARRAY_SIZE(x86_resources));
-+	if (IS_ERR(pdev))
-+		return PTR_ERR(pdev);
-+	force_pdev = pdev;
-+
-+	return 0;
-+}
-+
- static int __init init_tis(void)
- {
- 	int rc;
--#ifdef CONFIG_PNP
--	if (!force) {
--		rc = pnp_register_driver(&tis_pnp_driver);
--		if (rc)
--			return rc;
--	}
--#endif
-+
-+	rc = tpm_tis_force_device();
-+	if (rc)
-+		goto err_force;
-+
-+	rc = platform_driver_register(&tis_drv);
-+	if (rc)
-+		goto err_platform;
-+
- #ifdef CONFIG_ACPI
--	if (!force) {
--		rc = acpi_bus_register_driver(&tis_acpi_driver);
--		if (rc) {
--#ifdef CONFIG_PNP
--			pnp_unregister_driver(&tis_pnp_driver);
--#endif
--			return rc;
--		}
--	}
-+	rc = acpi_bus_register_driver(&tis_acpi_driver);
-+	if (rc)
-+		goto err_acpi;
- #endif
--	if (!force)
--		return 0;
- 
--	rc = platform_driver_register(&tis_drv);
--	if (rc < 0)
--		return rc;
--	pdev = platform_device_register_simple("tpm_tis", -1, NULL, 0);
--	if (IS_ERR(pdev)) {
--		rc = PTR_ERR(pdev);
--		goto err_dev;
-+	if (IS_ENABLED(CONFIG_PNP)) {
-+		rc = pnp_register_driver(&tis_pnp_driver);
-+		if (rc)
-+			goto err_pnp;
- 	}
--	rc = tpm_tis_init(&pdev->dev, &tis_default_info, NULL);
--	if (rc)
--		goto err_init;
-+
- 	return 0;
--err_init:
--	platform_device_unregister(pdev);
--err_dev:
--	platform_driver_unregister(&tis_drv);
-+
-+err_pnp:
-+#ifdef CONFIG_ACPI
-+	acpi_bus_unregister_driver(&tis_acpi_driver);
-+err_acpi:
-+#endif
-+	platform_device_unregister(force_pdev);
-+err_platform:
-+	if (force_pdev)
-+		platform_device_unregister(force_pdev);
-+err_force:
- 	return rc;
- }
- 
- static void __exit cleanup_tis(void)
- {
--	struct tpm_chip *chip;
--#if defined(CONFIG_PNP) || defined(CONFIG_ACPI)
--	if (!force) {
-+	pnp_unregister_driver(&tis_pnp_driver);
- #ifdef CONFIG_ACPI
--		acpi_bus_unregister_driver(&tis_acpi_driver);
--#endif
--#ifdef CONFIG_PNP
--		pnp_unregister_driver(&tis_pnp_driver);
--#endif
--		return;
--	}
-+	acpi_bus_unregister_driver(&tis_acpi_driver);
- #endif
--	chip = dev_get_drvdata(&pdev->dev);
--	tpm_chip_unregister(chip);
--	tpm_tis_remove(chip);
--	platform_device_unregister(pdev);
- 	platform_driver_unregister(&tis_drv);
-+
-+	if (force_pdev)
-+		platform_device_unregister(force_pdev);
- }
- 
- module_init(init_tis);
+v2:
+ - Make sure we request the mem resource in tpm_tis to avoid double-loading
+   the driver
+ - Re-order the init sequence so that a forced platform device gets first crack at
+   loading, and excludes the other mechanisms via the above
+ - Checkpatch clean
+ - Gotos renamed
+
+Jason Gunthorpe (7):
+  tpm_crb: Use the common ACPI definition of struct acpi_tpm2
+  tpm_tis: Disable interrupt auto probing on a per-device basis
+  tpm_tis: Do not fall back to a hardcoded address for TPM2
+  tpm_tis: Use devm_ioremap_resource
+  tpm_tis: Clean up the force=1 module parameter
+  tpm_crb: Drop le32_to_cpu(ioread32(..))
+  tpm_crb: Use devm_ioremap_resource
+
+ drivers/char/tpm/tpm.h     |   7 --
+ drivers/char/tpm/tpm_crb.c | 196 +++++++++++++++++++++-------------
+ drivers/char/tpm/tpm_tis.c | 254 +++++++++++++++++++++++++--------------------
+ 3 files changed, 264 insertions(+), 193 deletions(-)
+
 -- 
 2.1.4
 
