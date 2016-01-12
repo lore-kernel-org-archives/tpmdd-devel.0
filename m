@@ -1,66 +1,39 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v4 0/7] tpm_tis: Clean up force module parameter
-Date: Fri, 8 Jan 2016 17:12:21 +0200
-Message-ID: <20160108151221.GB2218@intel.com>
-References: <1452213386-21460-1-git-send-email-jgunthorpe@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Fixes for Linux 4.5
+Date: Tue, 12 Jan 2016 09:13:24 +0200
+Message-ID: <20160112071324.GA16305@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1452213386-21460-1-git-send-email-jgunthorpe@obsidianresearch.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jan 07, 2016 at 05:36:19PM -0700, Jason Gunthorpe wrote:
-> Drive the force=1 flow through the driver core. There are two main reasons to do this:
->  1) To enable tpm_tis for OF environments requires a platform_device anyhow, so
->     the force_device needs to be re-used for them.
->  2) Recent changes in the core code break the assumption that a driver will be
->     'attached' to things created through platform_device_register_simple,
->     which causes the tpm core to blow up.
-> 
-> To make force probing reliable this also fixes both tpm_tis and tpm_crb to
-> properly use request_region to lock the TPM iomemory against multiple access.
+Hi
 
-Applied. Thank you.
+Could you check the patches that have been authored by you that they
+are as you would expect them to be before I tag and merge to my next
+branch:
+
+https://github.com/jsakkine/linux-tpmdd/commits/master
+
+Thanks.
 
 /Jarkko
 
-> 
-> v4:
-> - Alter the commit message for using the common ACPI definitions (Jarkko)
-> - Move the misplaced error check hunk from patch #4 to #3 (Jarkko)
-> 
-> v3:
-> - Fix some bugs in getting the struct resource for tpm_tis (Martin Wilck)
-> - Include tpm_crb in the request_resource cleanup as well, tpm_tis and tpm_crb
->   tend to use the same address ranges so both should have locking for safety
-> - ACPI and endianness cleanups in both drivers
-> 
-> v2:
->  - Make sure we request the mem resource in tpm_tis to avoid double-loading
->    the driver
->  - Re-order the init sequence so that a forced platform device gets first crack at
->    loading, and excludes the other mechanisms via the above
->  - Checkpatch clean
->  - Gotos renamed
-> 
-> Jason Gunthorpe (7):
->   tpm_crb: Use the common ACPI definition of struct acpi_tpm2
->   tpm_tis: Disable interrupt auto probing on a per-device basis
->   tpm_tis: Do not fall back to a hardcoded address for TPM2
->   tpm_tis: Use devm_ioremap_resource
->   tpm_tis: Clean up the force=1 module parameter
->   tpm_crb: Drop le32_to_cpu(ioread32(..))
->   tpm_crb: Use devm_ioremap_resource
-> 
->  drivers/char/tpm/tpm.h     |   7 --
->  drivers/char/tpm/tpm_crb.c | 196 +++++++++++++++++++++-------------
->  drivers/char/tpm/tpm_tis.c | 254 +++++++++++++++++++++++++--------------------
->  3 files changed, 264 insertions(+), 193 deletions(-)
-> 
-> -- 
-> 2.1.4
-> 
+------------------------------------------------------------------------------
+Site24x7 APM Insight: Get Deep Visibility into Application Performance
+APM + Mobile APM + RUM: Monitor 3 App instances at just $35/Month
+Monitor end-to-end web transactions and take corrective actions now
+Troubleshoot faster and improve end-user experience. Signup Now!
+http://pubads.g.doubleclick.net/gampad/clk?id=267308311&iu=/4140
