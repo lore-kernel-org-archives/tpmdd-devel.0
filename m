@@ -1,8 +1,8 @@
 From: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: [RFC PATCH 2/4] Allow to provide a name pattern of
-	the device
-Date: Thu, 14 Jan 2016 11:01:56 -0500
-Message-ID: <1452787318-29610-3-git-send-email-stefanb@us.ibm.com>
+Subject: [RFC PATCH 1/4] New flags for TPM chip avoiding
+	filesystem registrations
+Date: Thu, 14 Jan 2016 11:01:55 -0500
+Message-ID: <1452787318-29610-2-git-send-email-stefanb@us.ibm.com>
 References: <1452787318-29610-1-git-send-email-stefanb@us.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -23,100 +23,61 @@ List-Id: tpmdd-devel@lists.sourceforge.net
 
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 
-Introduce tpmm_chip_alloc_pattern that takes an additional parameter
-of the device's name pattern. All existing devices use "tpm%d".
+Introduce 2 new flags that prevent the registration of TPM devices
+with sysfs and securityfs. None of the exising devices set these flags.
 
 Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 ---
- drivers/char/tpm/tpm-chip.c | 28 ++++++++++++++++++++++++----
- drivers/char/tpm/tpm.h      |  6 +++++-
- 2 files changed, 29 insertions(+), 5 deletions(-)
+ drivers/char/tpm/tpm-chip.c | 14 +++++++++-----
+ drivers/char/tpm/tpm.h      |  2 ++
+ 2 files changed, 11 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index f2da376..d98fcd9 100644
+index fbd75c5..f2da376 100644
 --- a/drivers/char/tpm/tpm-chip.c
 +++ b/drivers/char/tpm/tpm-chip.c
-@@ -76,17 +76,20 @@ static void tpm_dev_release(struct device *dev)
+@@ -182,11 +182,14 @@ static int tpm1_chip_register(struct tpm_chip *chip)
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+ 		return 0;
+ 
+-	rc = tpm_sysfs_add_device(chip);
+-	if (rc)
+-		return rc;
++	if (!(chip->flags & TPM_CHIP_FLAG_NO_SYSFS)) {
++		rc = tpm_sysfs_add_device(chip);
++		if (rc)
++			return rc;
++	}
+ 
+-	chip->bios_dir = tpm_bios_log_setup(chip->devname);
++	if (!(chip->flags & TPM_CHIP_FLAG_NO_LOG))
++		chip->bios_dir = tpm_bios_log_setup(chip->devname);
+ 
+ 	return 0;
+ }
+@@ -199,7 +202,8 @@ static void tpm1_chip_unregister(struct tpm_chip *chip)
+ 	if (chip->bios_dir)
+ 		tpm_bios_log_teardown(chip->bios_dir);
+ 
+-	tpm_sysfs_del_device(chip);
++	if (!(chip->flags & TPM_CHIP_FLAG_NO_SYSFS))
++		tpm_sysfs_del_device(chip);
  }
  
- /**
-- * tpmm_chip_alloc() - allocate a new struct tpm_chip instance
-+ * tpmm_chip_alloc_pattern() - allocate a new struct tpm_chip instance
-+ *   and use the given pattern for naming the device
-  * @dev: device to which the chip is associated
-  * @ops: struct tpm_class_ops instance
-+ * @pattern: name pattern of the device
-  *
-  * Allocates a new struct tpm_chip instance and assigns a free
-  * device number for it. Caller does not have to worry about
-  * freeing the allocated resources. When the devices is removed
-  * devres calls tpmm_chip_remove() to do the job.
-  */
--struct tpm_chip *tpmm_chip_alloc(struct device *dev,
--				 const struct tpm_class_ops *ops)
-+struct tpm_chip *tpmm_chip_alloc_pattern(struct device *dev,
-+				         const struct tpm_class_ops *ops,
-+				         const char *pattern)
- {
- 	struct tpm_chip *chip;
- 
-@@ -111,7 +114,7 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
- 
- 	set_bit(chip->dev_num, dev_mask);
- 
--	scnprintf(chip->devname, sizeof(chip->devname), "tpm%d", chip->dev_num);
-+	scnprintf(chip->devname, sizeof(chip->devname), pattern, chip->dev_num);
- 
- 	chip->pdev = dev;
- 
-@@ -139,6 +142,23 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
- 
- 	return chip;
- }
-+EXPORT_SYMBOL_GPL(tpmm_chip_alloc_pattern);
-+
-+/**
-+ * tpmm_chip_alloc() - allocate a new struct tpm_chip instance
-+ * @dev: device to which the chip is associated
-+ * @ops: struct tpm_class_ops instance
-+ *
-+ * Allocates a new struct tpm_chip instance and assigns a free
-+ * device number for it. Caller does not have to worry about
-+ * freeing the allocated resources. When the devices is removed
-+ * devres calls tpmm_chip_remove() to do the job.
-+ */
-+struct tpm_chip *tpmm_chip_alloc(struct device *dev,
-+				 const struct tpm_class_ops *ops)
-+{
-+    return tpmm_chip_alloc_pattern(dev, ops, "tpm%d");
-+}
- EXPORT_SYMBOL_GPL(tpmm_chip_alloc);
- 
- static int tpm_dev_add_device(struct tpm_chip *chip)
+ /*
 diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index dfa755b..c95b26e 100644
+index a4257a3..dfa755b 100644
 --- a/drivers/char/tpm/tpm.h
 +++ b/drivers/char/tpm/tpm.h
-@@ -181,7 +181,7 @@ struct tpm_chip {
- 	unsigned int flags;
+@@ -168,6 +168,8 @@ struct tpm_vendor_specific {
+ enum tpm_chip_flags {
+ 	TPM_CHIP_FLAG_REGISTERED	= BIT(0),
+ 	TPM_CHIP_FLAG_TPM2		= BIT(1),
++	TPM_CHIP_FLAG_NO_SYSFS		= BIT(3),
++	TPM_CHIP_FLAG_NO_LOG		= BIT(4),
+ };
  
- 	int dev_num;		/* /dev/tpm# */
--	char devname[7];
-+	char devname[10];
- 	unsigned long is_open;	/* only one allowed */
- 	int time_expired;
- 
-@@ -517,6 +517,10 @@ extern int wait_for_tpm_stat(struct tpm_chip *, u8, unsigned long,
- struct tpm_chip *tpm_chip_find_get(int chip_num);
- extern struct tpm_chip *tpmm_chip_alloc(struct device *dev,
- 				       const struct tpm_class_ops *ops);
-+extern struct tpm_chip *tpmm_chip_alloc_pattern(
-+				       struct device *dev,
-+				       const struct tpm_class_ops *ops,
-+				       const char *pattern);
- extern int tpm_chip_register(struct tpm_chip *chip);
- extern void tpm_chip_unregister(struct tpm_chip *chip);
- 
+ struct tpm_chip {
 -- 
 2.4.3
 
