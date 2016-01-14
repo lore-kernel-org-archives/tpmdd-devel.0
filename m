@@ -1,14 +1,11 @@
 From: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: [RFC PATCH 1/4] New flags for TPM chip avoiding
-	filesystem registrations
-Date: Thu, 14 Jan 2016 11:01:55 -0500
-Message-ID: <1452787318-29610-2-git-send-email-stefanb@us.ibm.com>
-References: <1452787318-29610-1-git-send-email-stefanb@us.ibm.com>
+Subject: [RFC PATCH 0/4] Multi-instance vTPM driver
+Date: Thu, 14 Jan 2016 11:01:54 -0500
+Message-ID: <1452787318-29610-1-git-send-email-stefanb@us.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1452787318-29610-1-git-send-email-stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,66 +15,49 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org
+Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, Stefan Berger <stefanb-0rqouEpbLJlpnrxNGchxj0EOCMrvLtNR@public.gmane.org>, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+From: Stefan Berger <stefanb-0rqouEpbLJlpnrxNGchxj0EOCMrvLtNR@public.gmane.org>
 
-Introduce 2 new flags that prevent the registration of TPM devices
-with sysfs and securityfs. None of the exising devices set these flags.
+The following series of patches implements a multi-instance vTPM driver
+that can dynamically create TPM 'server' and client device pairs.
 
-Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
----
- drivers/char/tpm/tpm-chip.c | 14 +++++++++-----
- drivers/char/tpm/tpm.h      |  2 ++
- 2 files changed, 11 insertions(+), 5 deletions(-)
+Using ioctl's on the provided /dev/vtpmx, a server and a client
+side vTPM device can be created. The server side offers a /dev/vtpms%d
+device and a TPM emulator must be started on it to listen for TPM commands
+that are written to /dev/vtpmc%d, which is created by the core TPM driver.
 
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index fbd75c5..f2da376 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -182,11 +182,14 @@ static int tpm1_chip_register(struct tpm_chip *chip)
- 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
- 		return 0;
- 
--	rc = tpm_sysfs_add_device(chip);
--	if (rc)
--		return rc;
-+	if (!(chip->flags & TPM_CHIP_FLAG_NO_SYSFS)) {
-+		rc = tpm_sysfs_add_device(chip);
-+		if (rc)
-+			return rc;
-+	}
- 
--	chip->bios_dir = tpm_bios_log_setup(chip->devname);
-+	if (!(chip->flags & TPM_CHIP_FLAG_NO_LOG))
-+		chip->bios_dir = tpm_bios_log_setup(chip->devname);
- 
- 	return 0;
- }
-@@ -199,7 +202,8 @@ static void tpm1_chip_unregister(struct tpm_chip *chip)
- 	if (chip->bios_dir)
- 		tpm_bios_log_teardown(chip->bios_dir);
- 
--	tpm_sysfs_del_device(chip);
-+	if (!(chip->flags & TPM_CHIP_FLAG_NO_SYSFS))
-+		tpm_sysfs_del_device(chip);
- }
- 
- /*
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index a4257a3..dfa755b 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -168,6 +168,8 @@ struct tpm_vendor_specific {
- enum tpm_chip_flags {
- 	TPM_CHIP_FLAG_REGISTERED	= BIT(0),
- 	TPM_CHIP_FLAG_TPM2		= BIT(1),
-+	TPM_CHIP_FLAG_NO_SYSFS		= BIT(3),
-+	TPM_CHIP_FLAG_NO_LOG		= BIT(4),
- };
- 
- struct tpm_chip {
+The primary goal of this series of patches is enabling vTPM for containers
+and hooking them up to a (future) namespaced IMA. However, the driver can
+also be used for simulating a hardware TPM on the host.
+
+The last patch provides a test program for controlling device pairs.
+
+   Stefan
+
+
+Stefan Berger (4):
+  New flags for TPM chip avoiding filesystem registrations
+  Allow to provide a name pattern of the device
+  Implement driver for supporting multiple emulated TPMs
+  A test program for vTPM device creation
+
+ drivers/char/tpm/Kconfig    |  10 +
+ drivers/char/tpm/Makefile   |   1 +
+ drivers/char/tpm/tpm-chip.c |  42 ++-
+ drivers/char/tpm/tpm-vtpm.c | 855 ++++++++++++++++++++++++++++++++++++++++++++
+ drivers/char/tpm/tpm-vtpm.h |  58 +++
+ drivers/char/tpm/tpm.h      |   8 +-
+ include/uapi/linux/Kbuild   |   1 +
+ include/uapi/linux/vtpm.h   |  52 +++
+ vtpmctrl.c                  | 369 +++++++++++++++++++
+ 9 files changed, 1386 insertions(+), 10 deletions(-)
+ create mode 100644 drivers/char/tpm/tpm-vtpm.c
+ create mode 100644 drivers/char/tpm/tpm-vtpm.h
+ create mode 100644 include/uapi/linux/vtpm.h
+ create mode 100644 vtpmctrl.c
+
 -- 
 2.4.3
 
