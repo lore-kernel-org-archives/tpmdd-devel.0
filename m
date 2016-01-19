@@ -1,15 +1,18 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Subject: Re: [RFC PATCH 0/4] Multi-instance vTPM driver
-Date: Wed, 20 Jan 2016 00:59:42 +0200
-Message-ID: <20160119225941.GA5426@intel.com>
+Date: Tue, 19 Jan 2016 16:04:56 -0700
+Message-ID: <20160119230456.GB31745@obsidianresearch.com>
 References: <1452787318-29610-1-git-send-email-stefanb@us.ibm.com>
 	<20160119174400.GA7616@obsidianresearch.com>
+	<201601191753.u0JHrku2031608@d01av01.pok.ibm.com>
+	<20160119180802.GA8038@obsidianresearch.com>
+	<201601191818.u0JIIExQ010843@d03av04.boulder.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160119174400.GA7616-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <201601191818.u0JIIExQ010843-2xHzGjyANq4+UXBhvPuGgqsjOiXwFzmk@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,36 +21,39 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+To: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
 Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, Stefan Berger <stefanb-0rqouEpbLJlpnrxNGchxj0EOCMrvLtNR@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jan 19, 2016 at 10:44:00AM -0700, Jason Gunthorpe wrote:
-> On Thu, Jan 14, 2016 at 11:01:54AM -0500, Stefan Berger wrote:
-> 
-> > The primary goal of this series of patches is enabling vTPM for containers
-> > and hooking them up to a (future) namespaced IMA. However, the driver can
-> > also be used for simulating a hardware TPM on the host.
-> 
-> If we go down the road of doing the kernel-side tpm resource
-> management this series seems like a kludgy way to enable tpm
-> namespaces? A future resource manager could be name space aware and
-> keep everything sane.
+On Tue, Jan 19, 2016 at 01:18:08PM -0500, Stefan Berger wrote:
+>    Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote on 01/19/2016
+>    01:08:02 PM:
+>    >
+>    > On Tue, Jan 19, 2016 at 12:53:40PM -0500, Stefan Berger wrote:
+>    > >    This series has absolutely nothing to do with resource
+>    > >    management.
+>    >
+>    > Sure the patch doesn't, but the proposed application does.
+>    >
+>    > Linux namespaces is all about resource management.
+>    The resource manager that's been discussed on the list is something
+>    different, though, right?
 
-I'm not sure what you are talking about but I'll give couple of use
-cases where I see the value.
+No, I meant that discussion.
 
-This feature is something we are already using in daily basis for
-running TPM tests inside VMs with David's patch, which provides
-equivalent functionality.
+A completed TPM resource manager would be very close to supporting a
+'tpm namespace'.
 
-Another example would be a software TPM running in ring-3 for example
-implemented with a technology such as Intel SGX that you could connect
-by using a feature like this.
+Ie per-ns virtualizing of the SRK with would be trivial.
 
-> Jason
+Access control would already be done out of the box as a consequence
+of the process-to-process isolation the resource manager would need to
+perform.
 
-/Jarkko
+Not sure about PCRS, I guess that depends on how that could work. Not
+sure it makes alot of sense in TPM 1.2 at least...
+
+Jason
 
 ------------------------------------------------------------------------------
 Site24x7 APM Insight: Get Deep Visibility into Application Performance
