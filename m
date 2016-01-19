@@ -1,12 +1,20 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [GIT PULL] tpmdd fixes for Linux 4.5
-Date: Wed, 20 Jan 2016 01:39:03 +0200
-Message-ID: <20160119233903.GA12337@intel.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [RFC PATCH 0/4] Multi-instance vTPM driver
+Date: Tue, 19 Jan 2016 16:42:51 -0700
+Message-ID: <20160119234251.GA3652@obsidianresearch.com>
+References: <1452787318-29610-1-git-send-email-stefanb@us.ibm.com>
+	<20160119174400.GA7616@obsidianresearch.com>
+	<201601191753.u0JHrku2031608@d01av01.pok.ibm.com>
+	<20160119180802.GA8038@obsidianresearch.com>
+	<201601191818.u0JIIExQ010843@d03av04.boulder.ibm.com>
+	<20160119230456.GB31745@obsidianresearch.com>
+	<201601192315.u0JNFGkm029862@d01av04.pok.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
+In-Reply-To: <201601192315.u0JNFGkm029862-YREtIfBy6dDImUpY6SP3GEEOCMrvLtNR@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -15,56 +23,62 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: James Morris <jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, Stefan Berger <stefanb-0rqouEpbLJlpnrxNGchxj0EOCMrvLtNR@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org, Kenneth Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi James,
+On Tue, Jan 19, 2016 at 06:15:09PM -0500, Stefan Berger wrote:
 
-This pull request contains three small cleanups, a bug fix for policy
-based sealing, a bug fix for attach/detach of the platform device for
-tpm_tis and resource locking for tpm_tis and tpm_crb.
+>    > Ie per-ns virtualizing of the SRK with would be trivial.
+>    If someone takes ownership of the TPM 1.2 a password is associated with
+>    the ownership and the SRK. How do you virtualize commands that need the
+>    SRK password when a user wants to create a key where the SRK is the
+>    parent? Does the resource manager now have to know the SRK password and
+>    inject it into commands where the SRK password seems necessary ?
 
-/Jarkko
+When the TPM namespace is created the creator is responsible for
+loading the virtual SRK into the TPM, so that agent would need the
+physical owner password.
 
-The following changes since commit 607259e17b37017e9ec0249a8b0a7d8b76b572aa:
+The kernel resource manager would deny access to the real SRK and swap
+the well known SRK key handle for the key handle from above.
 
-  Merge branch 'next' of git://git.kernel.org/pub/scm/linux/kernel/git/zohar/linux-integrity into ra-next (2016-01-10 21:52:17 +1100)
+IIRC in alot of cases the virtual owner password can be become the
+virtual SRK password and in the reamining cases the kernel can just
+enforce a virtual owner password.
 
-are available in the git repository at:
+>    > Access control would already be done out of the box as a consequence
+>    > of the process-to-process isolation the resource manager would need to
+>    > perform.
 
-  https://github.com/jsakkine/linux-tpmdd.git tags/tpmdd-next-20160120
+>    Would that be a single hardware TPM for possibly hundreds of containers
+>    on a system? How well does that scale?
 
-for you to fetch changes up to bb76f9ba498881ed57444fa2a7b5aafd66c207ba:
+I am just talking about how to extend the resource manager to provide
+namespace semantics.
 
-  tpm_crb: Use devm_ioremap_resource (2016-01-20 01:28:51 +0200)
+The resource manager would run over any existing kernel supported TPM,
+so there is conceptually no problem with plugging in a software TPM
+(or many) and then exporting that to the namespace - if that is what
+the application requires.
 
-----------------------------------------------------------------
-tpmdd fixes for Linux 4.5
+>    Besides that a namespaced IMA will want to maintain an isolated list of
+>    measurements per IMA namespace and ideally wants to extend measurements
+>    into PCR 10 of a vTPM that is associated with that namespace.
 
-----------------------------------------------------------------
-Jarkko Sakkinen (1):
-      tpm: fix checks for policy digest existence in tpm2_seal_trusted()
+Can a PCR be virtualized? I can't recall if an unlocked one can be
+loaded to a known value. That would be best, just swap PCR 10 in and
+out depending on the ns making the request.
 
-Jason Gunthorpe (7):
-      tpm_crb: Use the common ACPI definition of struct acpi_tpm2
-      tpm_tis: Disable interrupt auto probing on a per-device basis
-      tpm_tis: Do not fall back to a hardcoded address for TPM2
-      tpm_tis: Use devm_ioremap_resource
-      tpm_tis: Clean up the force=1 module parameter
-      tpm_crb: Drop le32_to_cpu(ioread32(..))
-      tpm_crb: Use devm_ioremap_resource
+IMA is supposed to protect against changes in boot, so the ideal world
+would have a container use a PCR set that was HW measured from boot
+and includes the software stack running out side the container and
+then the stack inside the container.
 
-Jerry Snitselaar (1):
-      tpm: remove unneeded include of actbl2.h
+I can't think of an obvious way to do that if the entire TPM is
+software.
 
- drivers/char/tpm/tpm.h      |   7 --
- drivers/char/tpm/tpm2-cmd.c |  12 +--
- drivers/char/tpm/tpm_crb.c  | 194 ++++++++++++++++++++-------------
- drivers/char/tpm/tpm_tis.c  | 255 +++++++++++++++++++++++++-------------------
- include/keys/trusted-type.h |   2 +-
- security/keys/trusted.c     |  11 +-
- 6 files changed, 272 insertions(+), 209 deletions(-)
+Jason
 
 ------------------------------------------------------------------------------
 Site24x7 APM Insight: Get Deep Visibility into Application Performance
