@@ -1,24 +1,16 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [RFC PATCH 3/4] Implement driver for supporting
- multiple emulated TPMs
-Date: Mon, 25 Jan 2016 11:10:46 -0700
-Message-ID: <20160125181046.GB28108@obsidianresearch.com>
-References: <20160121011701.GA20361@obsidianresearch.com>
-	<201601210301.u0L31h5r012187@d03av03.boulder.ibm.com>
-	<20160121032115.GA26266@obsidianresearch.com>
-	<201601210356.u0L3uP1n029818@d03av05.boulder.ibm.com>
-	<20160121174243.GD3064@obsidianresearch.com>
-	<201601211902.u0LJ2LbL001130@d03av01.boulder.ibm.com>
-	<20160121193049.GA31938@obsidianresearch.com>
-	<201601212151.u0LLpC93021986@d03av03.boulder.ibm.com>
-	<20160121221040.GA1630@obsidianresearch.com>
-	<56A2461C.7030607@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [RFC PATCH 0/4] Multi-instance vTPM driver
+Date: Mon, 25 Jan 2016 15:15:32 -0800
+Message-ID: <20160125231532.GA10732@intel.com>
+References: <1452787318-29610-1-git-send-email-stefanb@us.ibm.com>
+	<20160115101146.GA11987@intel.com>
+	<201601151302.u0FD2wGG003518@d03av03.boulder.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <56A2461C.7030607-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <201601151302.u0FD2wGG003518-MijUUJkLaQs+UXBhvPuGgqsjOiXwFzmk@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -27,54 +19,47 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, Stefan Berger <stefanb-0rqouEpbLJlpnrxNGchxj0EOCMrvLtNR@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jan 22, 2016 at 10:09:16AM -0500, Stefan Berger wrote:
-> Ok, so I guess the ioctl would take the PID of the created child as a
-> parameter (how else to identify it?). The kernel would find that child,
-> check that the calling parent is indeed the parent of the child, and if
-> everything looks good do the hook-up.
-
-That is one choice, it is worth reviewing what, eg, the net folks did
-for their API. They have already thought about this alot.
-
-> >Right, controlfd implies that only vtpms could be shared to a IMA
-> >namespace, which is a terrible API. This is another reason why
-> >reserved is a terrible API.
+On Fri, Jan 15, 2016 at 08:02:52AM -0500, Stefan Berger wrote:
+> Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote on 01/15/2016 05:11:46
+> AM:
 > 
-> Thanks for all feedback. I will eventually post v2. For now it's to be found
-> here:
+> >
+> > On Thu, Jan 14, 2016 at 11:01:54AM -0500, Stefan Berger wrote:
+> > > From: Stefan Berger <stefanb-0rqouEpbLJlpnrxNGchxj0EOCMrvLtNR@public.gmane.org>
+> > >
+> > > The following series of patches implements a multi-instance vTPM driver
+> > > that can dynamically create TPM 'server' and client device pairs.
+> > >
+> > > Using ioctl's on the provided /dev/vtpmx, a server and a client
+> > > side vTPM device can be created. The server side offers a /dev/vtpms%d
+> > > device and a TPM emulator must be started on it to listen for TPM commands
+> > > that are written to /dev/vtpmc%d, which is created by the core TPM driver.
+> > >
+> > > The primary goal of this series of patches is enabling vTPM for containers
+> > > and hooking them up to a (future) namespaced IMA. However, the driver can
+> > > also be used for simulating a hardware TPM on the host.
+> > >
+> > > The last patch provides a test program for controlling device pairs.
+> >
+> > I like the idea. Looking into this in more detail after the next pull
+> > request. Thanks!
 > 
-> https://github.com/stefanberger/linux
-> 
-> The branch is easy to find.
+> Thank you. I actually found some issues in the code yesterday, so I eventually
+> will need to repost.
+> I may put the latest on a public git repo in case someone wants to test.
 
-That looks much nicer, yes.
+I haven't yet reviewed the first version nor read the discussion you and
+Jason have had (except for some distinct emails). The main reasons is
+that I haven't received any feedback to some questions I've asked... One
+of the most important has been is there any documentation for vTPM?
 
-I'd also merge the tpm-vtpm.h into the .c file
+>    Stefan
 
-However, I'm still not sure this is right:
-
-+	vtpm_dev->chip = tpmm_chip_alloc(&vtpm_dev->dev, &vtpm_tpm_ops);
-
-The only issue is error unwind, the tpmm version assumes devm works
-for that, but the vtpm_dev will not be destroyed if the tpm attach
-fails, do devm is not appropriate.
-
-As I said before the tpmm stuff was a hack I did to make it easier to
-migrate the large number of drivers, core code should not be relying
-on devm like that... One good option here would be unwind that a bit
-and create a tpm_chip_alloc/tpm_chip_register flow that did not use
-devm at all. That could be fairly straight forward..
-
-Also, what is up with the _vtpm prefix on some functions? That doesn't
-seem aligned with the kernel style..
-
-And confused why there is a miscdev and a alloc_chrdev_region ?
-
-Jason
+/Jarkko
 
 ------------------------------------------------------------------------------
 Site24x7 APM Insight: Get Deep Visibility into Application Performance
