@@ -1,18 +1,24 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [RFC PATCH 0/4] Multi-instance vTPM driver
-Date: Mon, 25 Jan 2016 17:48:48 -0800
-Message-ID: <20160126014848.GA25892@intel.com>
-References: <1452787318-29610-1-git-send-email-stefanb@us.ibm.com>
-	<20160115101146.GA11987@intel.com>
-	<201601151302.u0FD2wGG003518@d03av03.boulder.ibm.com>
-	<20160125231532.GA10732@intel.com>
-	<201601260029.u0Q0T7Ek004865@d03av04.boulder.ibm.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [RFC PATCH 3/4] Implement driver for supporting
+ multiple emulated TPMs
+Date: Mon, 25 Jan 2016 20:19:19 -0700
+Message-ID: <20160126031919.GA24217@obsidianresearch.com>
+References: <20160121032115.GA26266@obsidianresearch.com>
+	<201601210356.u0L3uP1n029818@d03av05.boulder.ibm.com>
+	<20160121174243.GD3064@obsidianresearch.com>
+	<201601211902.u0LJ2LbL001130@d03av01.boulder.ibm.com>
+	<20160121193049.GA31938@obsidianresearch.com>
+	<201601212151.u0LLpC93021986@d03av03.boulder.ibm.com>
+	<20160121221040.GA1630@obsidianresearch.com>
+	<56A2461C.7030607@linux.vnet.ibm.com>
+	<20160125181046.GB28108@obsidianresearch.com>
+	<20160126014652.GB10732@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <201601260029.u0Q0T7Ek004865-2xHzGjyANq4+UXBhvPuGgqsjOiXwFzmk@public.gmane.org>
+In-Reply-To: <20160126014652.GB10732-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,73 +27,54 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, Stefan Berger <stefanb-0rqouEpbLJlpnrxNGchxj0EOCMrvLtNR@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jan 25, 2016 at 07:28:35PM -0500, Stefan Berger wrote:
-> Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote on 01/25/2016 06:15:32
-> PM:
+On Mon, Jan 25, 2016 at 05:46:52PM -0800, Jarkko Sakkinen wrote:
+> > The only issue is error unwind, the tpmm version assumes devm works
+> > for that, but the vtpm_dev will not be destroyed if the tpm attach
+> > fails, do devm is not appropriate.
 > 
-> >
-> > On Fri, Jan 15, 2016 at 08:02:52AM -0500, Stefan Berger wrote:
-> > > Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote on 01/15/
-> > 2016 05:11:46
-> > > AM:
-> > >
-> > > >
-> > > > On Thu, Jan 14, 2016 at 11:01:54AM -0500, Stefan Berger wrote:
-> > > > > From: Stefan Berger <stefanb-0rqouEpbLJlpnrxNGchxj0EOCMrvLtNR@public.gmane.org>
-> > > > >
-> > > > > The following series of patches implements a multi-instance vTPM driver
-> > > > > that can dynamically create TPM 'server' and client device pairs.
-> > > > >
-> > > > > Using ioctl's on the provided /dev/vtpmx, a server and a client
-> > > > > side vTPM device can be created. The server side offers a /dev/vtpms%d
-> > > > > device and a TPM emulator must be started on it to listen for
-> > TPM commands
-> > > > > that are written to /dev/vtpmc%d, which is created by the core
-> > TPM driver.
-> > > > >
-> > > > > The primary goal of this series of patches is enabling vTPM
-> > for containers
-> > > > > and hooking them up to a (future) namespaced IMA. However, thedriver
-> can
-> > > > > also be used for simulating a hardware TPM on the host.
-> > > > >
-> > > > > The last patch provides a test program for controlling device pairs.
-> > > >
-> > > > I like the idea. Looking into this in more detail after the next pull
-> > > > request. Thanks!
-> > >
-> > > Thank you. I actually found some issues in the code yesterday, so
-> > I eventually
-> > > will need to repost.
-> > > I may put the latest on a public git repo in case someone wants to test.
-> >
-> > I haven't yet reviewed the first version nor read the discussion you and
-> > Jason have had (except for some distinct emails). The main reasons is
-> > that I haven't received any feedback to some questions I've asked... One
-> > of the most important has been is there any documentation for vTPM?
-> 
-> If necessary I can add documentation for the vTPM driver to the patch.
-> 
-> Otherwise there are man pages in this project here that at least explain the
-> command line parameters and tools for the vTPM.
-> 
-> https://github.com/stefanberger/swtpm/blob/master/man/man8
-> 
-> example:
-> 
-> https://github.com/stefanberger/swtpm/blob/master/man/man8/swtpm.pod
+> At the moment tpmm_chip_alloc() does not use devm for anything. Are you
+> speaking about stuff that happens between alloc and register as some of
+> the drivers use devm to associate resources to pdev at that point?
 
-Sorry this was my bad! I haven't had chance to read the patches before
-today. I got a good understanding how  it is done by reading the source
-and am now in the process of compiling it.
+Ugh, well I missed that when you made those patches.
 
->     Stefan
+You need to put the devm back ASAP, as it is all the drivers now have
+broken error handling. eg
 
-/Jarkko
+static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+                        acpi_handle acpi_dev_handle)
+[..]
+        chip = tpmm_chip_alloc(dev, &tpm_tis);
+[..]
+        if (IS_ERR(chip))
+	        return PTR_ERR(chip);
+			
+Obviously leaks chip.
+
+The function is called tpmm_ specifically because it is supposed to
+use devm resource unwind, it was a big mistake to remove the devm and
+not rename the function or update the comments.
+
+With the change to use a struct device the devm action should have
+been a device_put to pair with the device_initialize.
+
+> > As I said before the tpmm stuff was a hack I did to make it easier to
+> > migrate the large number of drivers, core code should not be relying
+> > on devm like that... One good option here would be unwind that a bit
+> > and create a tpm_chip_alloc/tpm_chip_register flow that did not use
+> > devm at all. That could be fairly straight forward..
+> 
+> AFAIK I implemented two phase initialization or are you talking about
+> something else?
+
+Right, I was confused because I wrote a different devm thing for TPM
+that I discarded when I did the first rework.
+
+Jason
 
 ------------------------------------------------------------------------------
 Site24x7 APM Insight: Get Deep Visibility into Application Performance
