@@ -1,124 +1,90 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [RFC PATCH 3/4] Implement driver for supporting
- multiple emulated TPMs
-Date: Wed, 27 Jan 2016 16:33:58 -0700
-Message-ID: <20160127233358.GA7608@obsidianresearch.com>
-References: <201601211902.u0LJ2LbL001130@d03av01.boulder.ibm.com>
-	<20160121193049.GA31938@obsidianresearch.com>
-	<201601212151.u0LLpC93021986@d03av03.boulder.ibm.com>
-	<20160121221040.GA1630@obsidianresearch.com>
-	<20160127031320.GC23863@intel.com>
-	<201601271242.u0RCgM0E031875@d03av05.boulder.ibm.com>
-	<20160127175839.GA31038@obsidianresearch.com>
-	<201601272158.u0RLwvIK005533@d01av01.pok.ibm.com>
-	<20160127222534.GB5520@obsidianresearch.com>
-	<201601272255.u0RMtuqY014120@d03av02.boulder.ibm.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <201601272255.u0RMtuqY014120-nNA/7dmquNI+UXBhvPuGgqsjOiXwFzmk@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH] tpm, tpm_crb: fix control area resource mapping
+Date: Thu, 28 Jan 2016 23:13:59 -0800
+Message-ID: <1454051639-15961-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Peter Huewe <peterhuewe@gmx.de>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jan 27, 2016 at 05:55:50PM -0500, Stefan Berger wrote:
->    > be very strongly controlled, 'enough namespaces' is not a sufficient
->    > criteria!
+Control area does not always fall in the range of memory resource given
+by the ACPI object. This patch fixes the issue by ioremapping the
+buffers if this is the case.
 
->    Isolation should be a criteria and isolation becomes better with more
->    namespaces enabled.
+Fixes: bb76f9ba49 ("tpm_crb: Use devm_ioremap_resource")
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+---
+ drivers/char/tpm/tpm_crb.c | 36 ++++++++++++++++--------------------
+ 1 file changed, 16 insertions(+), 20 deletions(-)
 
-Yes, but IMA needs complete isolation, not just 'better' isolation.
-
-> That way one can run any program inside the set of namespaces and
-> not harm the host or any other namespaces / containers.
-
-No, that is not how namespaces work at the kernel level, they don't
-provide isolation until after userspace configures the isolation
-features.
-
-Or said another way, it is not better than CAP_ADMIN, because anyone
-with CAP_ADMIN could create namespaces and manipulate them from user
-space in a way that can substantially defeat IMA.
-
-Do not assume 'docker' is the thing doing this. Assume
-'hostile-docker' is involved and make a scheme that doesn't totally
-break IMAs security promise.
-
-For instance I could use hostile-docker to create all the namespaces,
-including IMA, then drop in eth0 and bind mount /, and run software
-that does something hostile to eth0 - and I think that is totally
-contry to the guarentee a system running IMA should
-provide. Specifically that CAP_ADMIN should not be able to opt out of
-IMA.
-
->    > Hmm, well, it certainly seems to be a lot of what is required,
->    > and like a much better direction than trying to use namespaces.
-
->    I don't agree. We want to allow users to run the own IMA appraisal
->    policy. For that files need to be signed and the user's key passed to
->    the IMA namespace. To enable that we need per-file file signatures, not
->    some single label that works across all files in a filesystem. IMA's
->    appraisal mode just doesn't work this way.
-
-Isn't that exactly what SElinux is trying to do? The SElinux problem
-is 'allow users to run their own SELinux policy'. Just like IMA,
-SELinux has per-file attributes that have a user security label. IMA
-has a per-file user signature in the attribute instead.
-
-So, for IMA you'd do
-
- .. make mount namespace ..
- mount --bind /.../container/fs -o ima_namespace=foo /
-
-After which all accesses to / would use the IMA policy namespace foo,
-and read the signature from the attribute in the filesystem.
-
-I'm not sure it is better than doing it at clone, but it doesn't seem
-out of line.
-
->    I am not sure whether SELinux labeling alone provides enough
->    isolation.
-
-Nor am I, but maybe there is a way forward like that.
-
-While with namespaces I can tell you right now, there can be no easy
-solution that would be better than testing CAP_ADMIN :|
-
->    And it's likely not just the label that's important but all the rules
->    that go with it to determine what a process can do and what not. How do
->    you even evaluate that from inside the kernel that it's worthy an IMA
->    namespace?
-
-When IMA is turned on user space tells the kernel these details?
-
-So the restriction kernel side becomes
- 1) The user space has told the kernel something about SELinux
-     security labels for use with IMA
- 2) The mount option contains an IMA namespace and the SELinux label compatible
-    with #1
-Then allow the IMA namespace to be used for that mount
-
-At least that way it something strong that can be reasoned about.. And
-is opt-out by default.
-
-Anyhow just brainstorming for you..
-
-Jason
-
-------------------------------------------------------------------------------
-Site24x7 APM Insight: Get Deep Visibility into Application Performance
-APM + Mobile APM + RUM: Monitor 3 App instances at just $35/Month
-Monitor end-to-end web transactions and take corrective actions now
-Troubleshoot faster and improve end-user experience. Signup Now!
-http://pubads.g.doubleclick.net/gampad/clk?id=267308311&iu=/4140
+diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+index 8e46e40..a9688c7 100644
+--- a/drivers/char/tpm/tpm_crb.c
++++ b/drivers/char/tpm/tpm_crb.c
+@@ -233,27 +233,23 @@ static int crb_check_resource(struct acpi_resource *ares, void *data)
+ 	return 1;
+ }
+ 
+-static void __iomem *crb_access(struct device *dev, struct crb_priv *priv,
+-				u64 start, u32 size)
++static void __iomem *crb_map_res(struct device *dev, struct crb_priv *priv,
++				 u64 start, u32 size)
+ {
+-	struct resource tmp = {};
+-
+-	tmp.start = start;
+-	tmp.end = start + size - 1;
+-	tmp.flags = IORESOURCE_MEM;
++	struct resource new_res = {
++		.start	= start,
++		.end	= size - 1,
++		.flags	= IORESOURCE_MEM,
++	};
+ 
+ 	/* Detect a 64 bit address on a 32 bit system */
+-	if (start != tmp.start)
++	if (start != new_res.start)
+ 		return ERR_PTR(-EINVAL);
+ 
+-	if (!resource_contains(&priv->res, &tmp)) {
+-		dev_err(dev,
+-			FW_BUG "TPM2 ACPI sub resource %pR is not in the device's region of %pR\n",
+-			&tmp, &priv->res);
+-		return ERR_PTR(-EINVAL);
+-	}
++	if (!resource_contains(&priv->res, &new_res))
++		return devm_ioremap_resource(dev, &new_res);
+ 
+-	return priv->iobase + (tmp.start - priv->res.start);
++	return priv->iobase + (new_res.start - priv->res.start);
+ }
+ 
+ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+@@ -281,19 +277,19 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+ 	if (IS_ERR(priv->iobase))
+ 		return PTR_ERR(priv->iobase);
+ 
+-	priv->cca = crb_access(dev, priv, buf->control_address, 0x1000);
++	priv->cca = crb_map_res(dev, priv, buf->control_address, 0x1000);
+ 	if (IS_ERR(priv->cca))
+ 		return PTR_ERR(priv->cca);
+ 
+-	pa = ((u64)ioread32(&priv->cca->cmd_pa_high) << 32) |
+-	     (u64)ioread32(&priv->cca->cmd_pa_low);
+-	priv->cmd = crb_access(dev, priv, pa, ioread32(&priv->cca->cmd_size));
++	pa = ((u64) ioread32(&priv->cca->cmd_pa_high) << 32) |
++	      (u64) ioread32(&priv->cca->cmd_pa_low);
++	priv->cmd = crb_map_res(dev, priv, pa, ioread32(&priv->cca->cmd_size));
+ 	if (IS_ERR(priv->cmd))
+ 		return PTR_ERR(priv->cmd);
+ 
+ 	memcpy_fromio(&pa, &priv->cca->rsp_pa, 8);
+ 	pa = le64_to_cpu(pa);
+-	priv->rsp = crb_access(dev, priv, pa, ioread32(&priv->cca->rsp_size));
++	priv->rsp = crb_map_res(dev, priv, pa, ioread32(&priv->cca->rsp_size));
+ 	return PTR_ERR_OR_ZERO(priv->rsp);
+ }
+ 
+-- 
+2.7.0.rc3
