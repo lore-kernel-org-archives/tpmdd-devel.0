@@ -1,7 +1,7 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: About devm_ioremap_resource()
-Date: Wed, 3 Feb 2016 14:55:19 -0800
-Message-ID: <20160203225519.GA8647@intel.com>
+Subject: resource sanity fails on ioremap
+Date: Wed, 3 Feb 2016 15:37:01 -0800
+Message-ID: <20160203233701.GA10585@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
@@ -15,24 +15,21 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: jethro-LmnypSVwBK6EVqv0pETR8A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
 Hi
 
-I have couple of concerns with tpm_crb changes made for 4.5:
+I've been investigating this bug:
 
-* I used devm_ioremap_nocache() to disable WB. This does not
-  matter when one has ACPI start as it goes through SMM and caches are
-  flushed. It might be a problem with a CRB start only TPM device. How does
-  devm_ioremap_resource address this?
-* I'm a bit puzzled with that function. Why there exists ioremaps that
-  do not add stuff to a resource tree and those that do? Maybe you have
-  a deeper understanding in this area could enlighten me since you did
-  the commit.
+https://bugzilla.kernel.org/show_bug.cgi?id=111511
 
-Thanks!
+In all the machines that I've tried tpm_crb this does not occur on 4.4
+kernel and still the ioremapped buffers do interleave. It looks as if
+something that is not tpm_crb added that memory area to iomem_resource
+because 4.4 driver uses ioremap_nocache() and does not add anything to
+the resource tree.
 
 /Jarkko
 
