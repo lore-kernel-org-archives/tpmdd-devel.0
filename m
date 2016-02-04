@@ -1,14 +1,17 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: About devm_ioremap_resource()
-Date: Wed, 3 Feb 2016 17:31:08 -0700
-Message-ID: <20160204003108.GA26123@obsidianresearch.com>
-References: <20160203225519.GA8647@intel.com>
+Subject: Re: [PATCH] tpm: fix rollback/cleanup before
+ tpm_chip_register()
+Date: Wed, 3 Feb 2016 17:34:37 -0700
+Message-ID: <20160204003437.GB26123@obsidianresearch.com>
+References: <1454205942-13033-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<20160202231353.GA32711@obsidianresearch.com>
+	<20160203160235.GA15567@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160203225519.GA8647-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20160203160235.GA15567-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,39 +21,65 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Feb 03, 2016 at 02:55:19PM -0800, Jarkko Sakkinen wrote:
-> Hi
+On Wed, Feb 03, 2016 at 08:02:35AM -0800, Jarkko Sakkinen wrote:
+
+> Would s/the platform device/the parent device/ be better?
+
+Yes
+
+> > > +	/* Associate character device with the platform device only after
+> > > +	 * it is properly initialized.
+> > > +	 */
+> > > +	dev_set_drvdata(pdev, chip);
+> > > +	devm_add_action(pdev, (void (*)(void *)) tpm_dev_release,
+> > > &chip->dev);
+> > 
+> > No, a release function can never be called naked. The action needs
+> > to do put_device, which is the error unwind for device_initialize().
 > 
-> I have couple of concerns with tpm_crb changes made for 4.5:
+> Got it (already from your first comment)!
 > 
-> * I used devm_ioremap_nocache() to disable WB. This does not
->   matter when one has ACPI start as it goes through SMM and caches are
->   flushed. It might be a problem with a CRB start only TPM device. How does
->   devm_ioremap_resource address this?
+> What does "called naked" even mean? I just don't understand the
+> english here and want to be sure that I understand what you are saying
+> and not make false assumptions.
 
-ioremap_nocache and ioremap() are the same thing, the former is just
-more descriptive.
+'called naked' would refer to just open coding a call to
+tpm_dev_release, using it as a devm_add_action is the same as open
+coding.
 
-devm_ioremap_resource calls ioremap which does ioremap_nocache.
+The function must only ever be called by put_device.
 
-Resources are assumed to be memory mapped registers, and are always
-handled appropriately.
+> > > @@ -162,7 +165,10 @@ static int tpm_add_char_device(struct tpm_chip *chip)
+> > >  			MINOR(chip->dev.devt), rc);
+> > >  
+> > >  		cdev_del(&chip->cdev);
+> > > -		return rc;
+> > > +	} else {
+> > > +		devm_remove_action(chip->dev.parent,
+> > > +				   (void (*)(void *)) tpm_dev_release,
+> > > +				   &chip->dev);
+> > 
+> > This is in the wrong place, the devm should be canceled only if
+> > tpm_chip_register returns success, at that point the caller's contract
+> > is to guarentee a call to tpm_chip_unregister, and
+> > tpm_chip_unregister does the put_device that calls the release
+> > function.
+> 
+> rc == 0 at that point i.e. success. I don't see the problem here.
 
-> * I'm a bit puzzled with that function. Why there exists ioremaps that
->   do not add stuff to a resource tree and those that do? Maybe you have
->   a deeper understanding in this area could enlighten me since you did
->   the commit.
+It should not be in tpm_add_char_device
 
-The resource tree and mapping are different things, not all drivers
-can use the resource tree all the time, but certainly the majority of
-drivers should be using it, hence the devm helper to do both.
+I'm also not completely sure about the error handling around
+tpm_register - if it fails the tpm_chip should not be destroyed, and I
+think it does..
 
-When you see a ioremap without resource handling in a driver it is
-probably a mistake, and if it isn't, IMHO there should be a comment
-discussing why this driver cannot lock the resource region.
+It would probably be ideal to just rely on devm to always do the final
+put_device and avoid the devm_remove_action entirely. I think this
+means a get_device will be needed in tpm_register after device_add ?
+Didn't look closely at how all the refs balance.
 
 Jason
 
