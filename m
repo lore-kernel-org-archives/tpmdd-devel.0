@@ -1,76 +1,84 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: resource sanity fails on ioremap
-Date: Fri, 5 Feb 2016 08:47:04 -0800
-Message-ID: <20160205164704.GA8112@intel.com>
-References: <20160203233701.GA10585@intel.com>
-	<20160204234947.GA20269@obsidianresearch.com>
-	<20160205040500.GA7708@intel.com>
-	<20160205050850.GA23820@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [PATCH] tpm: fix rollback/cleanup before
+ tpm_chip_register()
+Date: Fri, 5 Feb 2016 08:49:40 -0800
+Message-ID: <20160205164940.GB8112@intel.com>
+References: <1454205942-13033-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+ <20160202231353.GA32711@obsidianresearch.com>
+ <20160203160235.GA15567@intel.com>
+ <20160204003437.GB26123@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <stable-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20160205050850.GA23820-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: jethro-LmnypSVwBK6EVqv0pETR8A@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <20160204003437.GB26123@obsidianresearch.com>
+Sender: stable-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, stable@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Feb 04, 2016 at 10:08:50PM -0700, Jason Gunthorpe wrote:
-> On Thu, Feb 04, 2016 at 08:05:00PM -0800, Jarkko Sakkinen wrote:
+On Wed, Feb 03, 2016 at 05:34:37PM -0700, Jason Gunthorpe wrote:
+> On Wed, Feb 03, 2016 at 08:02:35AM -0800, Jarkko Sakkinen wrote:
 > 
-> > 4.4 does not use devm_ioremap_resource(). That is why this is
-> > confusing. If that was the kernel from my master branch, then this
-> > would make sense.
+> > Would s/the platform device/the parent device/ be better?
 > 
-> It makes sense, the MSFT resource is created by the kernel when it
-> parses the ACPI tables.
+> Yes
 > 
-> devm_ioremap_resource creates a child resource of the above owned by
-> the driver.
+> > > > +	/* Associate character device with the platform device only after
+> > > > +	 * it is properly initialized.
+> > > > +	 */
+> > > > +	dev_set_drvdata(pdev, chip);
+> > > > +	devm_add_action(pdev, (void (*)(void *)) tpm_dev_release,
+> > > > &chip->dev);
+> > > 
+> > > No, a release function can never be called naked. The action needs
+> > > to do put_device, which is the error unwind for device_initialize().
+> > 
+> > Got it (already from your first comment)!
+> > 
+> > What does "called naked" even mean? I just don't understand the
+> > english here and want to be sure that I understand what you are saying
+> > and not make false assumptions.
 > 
-> Eg, a PCI example:
+> 'called naked' would refer to just open coding a call to
+> tpm_dev_release, using it as a devm_add_action is the same as open
+> coding.
 > 
-> $ cat /proc/iomem
->     d0000000-d0003fff : 0000:06:00.0
->           d0000000-d0003fff : r8169
+> The function must only ever be called by put_device.
 > 
-> 0000:06:00.0 is created by parsing the BAR, it always exists,
-> equivalent to the MSFT resource
+> > > > @@ -162,7 +165,10 @@ static int tpm_add_char_device(struct tpm_chip *chip)
+> > > >  			MINOR(chip->dev.devt), rc);
+> > > >  
+> > > >  		cdev_del(&chip->cdev);
+> > > > -		return rc;
+> > > > +	} else {
+> > > > +		devm_remove_action(chip->dev.parent,
+> > > > +				   (void (*)(void *)) tpm_dev_release,
+> > > > +				   &chip->dev);
+> > > 
+> > > This is in the wrong place, the devm should be canceled only if
+> > > tpm_chip_register returns success, at that point the caller's contract
+> > > is to guarentee a call to tpm_chip_unregister, and
+> > > tpm_chip_unregister does the put_device that calls the release
+> > > function.
+> > 
+> > rc == 0 at that point i.e. success. I don't see the problem here.
 > 
-> r8169 is created when the driver attaches to it, and serves to lock
-> the memory range from other drivers.
+> It should not be in tpm_add_char_device
 > 
-> tpm_crb works the same.
+> I'm also not completely sure about the error handling around
+> tpm_register - if it fails the tpm_chip should not be destroyed, and I
+> think it does..
 > 
-> ioremap complains if a mapping crosses any resource boundary, not
-> just driver created resources.
+> It would probably be ideal to just rely on devm to always do the final
+> put_device and avoid the devm_remove_action entirely. I think this
+> means a get_device will be needed in tpm_register after device_add ?
+> Didn't look closely at how all the refs balance.
 
-Right, thanks for the explanation and I'm able to reproduce it on my own
-work laptop now:
-
-[    0.708272] resource sanity check: requesting [mem
-0xfed10000-0xfed15fff], which spans more than pnp 00:01 [mem
-0xfed10000-0xfed13fff]
-[    0.708302]  [<ffffffff8108548a>] ? iomem_map_sanity_check+0xba/0xd0
-
-Luckily we have this fixed (in two commits) in 4.5.
+I'm OK with letting devm always do the job. Then there needs to be
+just dummy calback for release because the framework complains about
+it otherwise.
 
 > Jason
 
 /Jarkko
-
-------------------------------------------------------------------------------
-Site24x7 APM Insight: Get Deep Visibility into Application Performance
-APM + Mobile APM + RUM: Monitor 3 App instances at just $35/Month
-Monitor end-to-end web transactions and take corrective actions now
-Troubleshoot faster and improve end-user experience. Signup Now!
-http://pubads.g.doubleclick.net/gampad/clk?id=272487151&iu=/4140
