@@ -1,12 +1,14 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: buildroot env for tpmdd
-Date: Tue, 9 Feb 2016 05:57:32 +0200
-Message-ID: <20160209035732.GA357@intel.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH] tpm: fix the cleanup of struct tpm_chip
+Date: Mon, 8 Feb 2016 22:26:55 -0700
+Message-ID: <20160209052655.GA12657@obsidianresearch.com>
+References: <1454988630-27942-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
+In-Reply-To: <1454988630-27942-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -15,31 +17,20 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi
+On Tue, Feb 09, 2016 at 05:30:30AM +0200, Jarkko Sakkinen wrote:
+> If the initialization fails before tpm_chip_register(), put_device()
+> will be not called, which causes release callback not to be called.
+> This patch fixes the issue by adding put_device() to devres list of
+> the parent device.
 
-I'm in the process of building buildroot env for testing tpmdd:
+Erm, if you do this, then shouldn't the device_unregister change to
+device_del to keep the kref balanced?
 
-http://git.infradead.org/users/jjs/buildroot-tpmdd.git
-
-This is still very much WiP so except it to be rebased often.
-
-The idea is to be able to quickly create a kernel + working user space
-that lives inside initramfs for testing tpmdd and possibly creation
-image that you can write to USB stick for quick smoke testing.
-
-I'm also planning to have kdump support later on but it's not my first
-priority.
-
-This is useful for release testing for me and reproducing bugs in a
-predictable environment.
-
-Just thought that this might be of more general interest.
-
-BR,
-/Jarkko
+Jason
 
 ------------------------------------------------------------------------------
 Site24x7 APM Insight: Get Deep Visibility into Application Performance
