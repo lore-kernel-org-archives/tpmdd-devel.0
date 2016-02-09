@@ -1,8 +1,7 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH 01/12] tpm/st33zp24/spi: Remove
-	nbr_dummy_bytes variable usage
-Date: Tue,  9 Feb 2016 10:26:50 +0100
-Message-ID: <1455010021-21927-2-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH 06/12] tpm/st33zp24: Auto-select core module
+Date: Tue,  9 Feb 2016 10:26:55 +0100
+Message-ID: <1455010021-21927-7-git-send-email-christophe-h.ricard@st.com>
 References: <1455010021-21927-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,77 +20,54 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, peterhuewe-Mmb7MZpH
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-nbr_dummy_bytes variable could be easily replaced by phy->latency in
-st33zp24_spi_send and st33zp24_spi_recv.
+The core st33zp24 module is useless without either the I2C or the
+SPI access module. So hide NFC_ST_NCI and select it automatically
+if either TCG_TIS_ST33ZP24_I2C or TCG_TIS_ST33ZP24_SPI is selected.
+
+This avoids presenting TCG_TIS_ST33ZP24 when neither TCG_TIS_ST33ZP24_I2C
+nor TCG_TIS_ST33ZP24_SPI can be selected.
 
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 ---
- drivers/char/tpm/st33zp24/spi.c | 20 +++++++++-----------
- 1 file changed, 9 insertions(+), 11 deletions(-)
+ drivers/char/tpm/st33zp24/Kconfig | 11 +++++------
+ 1 file changed, 5 insertions(+), 6 deletions(-)
 
-diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
-index f974c94..74c5fcc 100644
---- a/drivers/char/tpm/st33zp24/spi.c
-+++ b/drivers/char/tpm/st33zp24/spi.c
-@@ -111,7 +111,7 @@ static int st33zp24_spi_send(void *phy_id, u8 tpm_register, u8 *tpm_data,
- 			     int tpm_size)
- {
- 	u8 data = 0;
--	int total_length = 0, nbr_dummy_bytes = 0, ret = 0;
-+	int total_length = 0, ret = 0;
- 	struct st33zp24_spi_phy *phy = phy_id;
- 	struct spi_device *dev = phy->spi_device;
- 	u8 *tx_buf = (u8 *)phy->spi_xfer.tx_buf;
-@@ -133,14 +133,13 @@ static int st33zp24_spi_send(void *phy_id, u8 tpm_register, u8 *tpm_data,
- 	memcpy(&tx_buf[total_length], tpm_data, tpm_size);
- 	total_length += tpm_size;
+diff --git a/drivers/char/tpm/st33zp24/Kconfig b/drivers/char/tpm/st33zp24/Kconfig
+index 19c0074..e74c6f2 100644
+--- a/drivers/char/tpm/st33zp24/Kconfig
++++ b/drivers/char/tpm/st33zp24/Kconfig
+@@ -1,6 +1,5 @@
+ config TCG_TIS_ST33ZP24
+-	tristate "STMicroelectronics TPM Interface Specification 1.2 Interface"
+-	depends on GPIOLIB || COMPILE_TEST
++	tristate
+ 	---help---
+ 	  STMicroelectronics ST33ZP24 core driver. It implements the core
+ 	  TPM1.2 logic and hooks into the TPM kernel APIs. Physical layers will
+@@ -10,9 +9,9 @@ config TCG_TIS_ST33ZP24
+ 	  tpm_st33zp24.
  
--	nbr_dummy_bytes = phy->latency;
--	memset(&tx_buf[total_length], TPM_DUMMY_BYTE, nbr_dummy_bytes);
-+	memset(&tx_buf[total_length], TPM_DUMMY_BYTE, phy->latency);
+ config TCG_TIS_ST33ZP24_I2C
+-	tristate "TPM 1.2 ST33ZP24 I2C support"
+-	depends on TCG_TIS_ST33ZP24
++	tristate "STMicroelectronics TPM Interface Specification 1.2 Interface (I2C)"
+ 	depends on I2C
++	select TCG_TIS_ST33ZP24
+ 	---help---
+ 	  This module adds support for the STMicroelectronics TPM security chip
+ 	  ST33ZP24 with i2c interface.
+@@ -20,9 +19,9 @@ config TCG_TIS_ST33ZP24_I2C
+ 	  called tpm_st33zp24_i2c.
  
--	phy->spi_xfer.len = total_length + nbr_dummy_bytes;
-+	phy->spi_xfer.len = total_length + phy->latency;
- 
- 	ret = spi_sync_transfer(dev, &phy->spi_xfer, 1);
- 	if (ret == 0)
--		ret = rx_buf[total_length + nbr_dummy_bytes - 1];
-+		ret = rx_buf[total_length + phy->latency - 1];
- 
- 	return st33zp24_status_to_errno(ret);
- } /* st33zp24_spi_send() */
-@@ -157,7 +156,7 @@ static int st33zp24_spi_send(void *phy_id, u8 tpm_register, u8 *tpm_data,
- static int read8_reg(void *phy_id, u8 tpm_register, u8 *tpm_data, int tpm_size)
- {
- 	u8 data = 0;
--	int total_length = 0, nbr_dummy_bytes, ret;
-+	int total_length = 0, ret;
- 	struct st33zp24_spi_phy *phy = phy_id;
- 	struct spi_device *dev = phy->spi_device;
- 	u8 *tx_buf = (u8 *)phy->spi_xfer.tx_buf;
-@@ -171,18 +170,17 @@ static int read8_reg(void *phy_id, u8 tpm_register, u8 *tpm_data, int tpm_size)
- 	memcpy(tx_buf + total_length, &data, sizeof(data));
- 	total_length++;
- 
--	nbr_dummy_bytes = phy->latency;
- 	memset(&tx_buf[total_length], TPM_DUMMY_BYTE,
--	       nbr_dummy_bytes + tpm_size);
-+	       phy->latency + tpm_size);
- 
--	phy->spi_xfer.len = total_length + nbr_dummy_bytes + tpm_size;
-+	phy->spi_xfer.len = total_length + phy->latency + tpm_size;
- 
- 	/* header + status byte + size of the data + status byte */
- 	ret = spi_sync_transfer(dev, &phy->spi_xfer, 1);
- 	if (tpm_size > 0 && ret == 0) {
--		ret = rx_buf[total_length + nbr_dummy_bytes - 1];
-+		ret = rx_buf[total_length + phy->latency - 1];
- 
--		memcpy(tpm_data, rx_buf + total_length + nbr_dummy_bytes,
-+		memcpy(tpm_data, rx_buf + total_length + phy->latency,
- 		       tpm_size);
- 	}
- 
+ config TCG_TIS_ST33ZP24_SPI
+-	tristate "TPM 1.2 ST33ZP24 SPI support"
+-	depends on TCG_TIS_ST33ZP24
++	tristate "STMicroelectronics TPM Interface Specification 1.2 Interface (SPI)"
+ 	depends on SPI
++	select TCG_TIS_ST33ZP24
+ 	---help---
+ 	  This module adds support for the STMicroelectronics TPM security chip
+ 	  ST33ZP24 with spi interface.
 -- 
 2.5.0
 
