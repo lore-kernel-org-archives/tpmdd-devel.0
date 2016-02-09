@@ -1,17 +1,15 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix the cleanup of struct tpm_chip
-Date: Tue, 9 Feb 2016 10:00:11 -0700
-Message-ID: <20160209170011.GC14611@obsidianresearch.com>
-References: <1454988630-27942-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<20160209052655.GA12657@obsidianresearch.com>
-	<20160209061951.GA29607@intel.com>
-	<20160209062735.GA25621@intel.com>
+Subject: Re: [PATCH] tpm_eventlog.c: fix
+	binary_bios_measurements
+Date: Tue, 9 Feb 2016 10:33:44 -0700
+Message-ID: <20160209173344.GA13615@obsidianresearch.com>
+References: <56B9C234.5050402@redhat.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160209062735.GA25621-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <56B9C234.5050402-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,37 +18,47 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Harald Hoyer <harald-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Feb 09, 2016 at 08:27:35AM +0200, Jarkko Sakkinen wrote:
-> On Tue, Feb 09, 2016 at 08:19:51AM +0200, Jarkko Sakkinen wrote:
-> > On Mon, Feb 08, 2016 at 10:26:55PM -0700, Jason Gunthorpe wrote:
-> > > On Tue, Feb 09, 2016 at 05:30:30AM +0200, Jarkko Sakkinen wrote:
-> > > > If the initialization fails before tpm_chip_register(), put_device()
-> > > > will be not called, which causes release callback not to be called.
-> > > > This patch fixes the issue by adding put_device() to devres list of
-> > > > the parent device.
-> > > 
-> > > Erm, if you do this, then shouldn't the device_unregister change to
-> > > device_del to keep the kref balanced?
-> > 
-> > Yes, it should. Weird, I added pr_info() (temporarily) to
-> > tpm_dev_release() and did occur only once and no crashes whatsoever.
+On Tue, Feb 09, 2016 at 11:40:52AM +0100, Harald Hoyer wrote:
 
-It is hard to make use after free show up in testing, testing does not
-replace actually auditing these sorts of things.
+> From 57558a66cfadd329cdf63570af7ad1d0fd61010f Mon Sep 17 00:00:00 2001
+> From: Harald Hoyer <harald-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+> Date: Sat, 6 Feb 2016 15:44:42 +0100
+> Subject: [PATCH] tpm_eventlog.c: fix binary_bios_measurements
+> 
+> commit 0cc698af36ff22295dce2f5e46b0cfe605789fa4 copied the event,
+> but
 
-> > Anyway, you're right.
-> 
-> Update:
-> 
-> https://github.com/jsakkine/linux-tpmdd/commit/a1aa547bbd2178628df798c27abaad073acb2441
-> 
-> I tested that the release gets called (as a sanity check).
+This should be a fixes line, see Documentation/
 
-Yeah,
+> without the event data, did an endian conversion on the size and tried
+> to output the event data from the copied version, which has only have
+> one byte of the data, resulting in garbage event data.
+> 
+> Signed-off-by: Harald Hoyer <harald-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+>  drivers/char/tpm/tpm_eventlog.c | 7 ++++++-
+>  1 file changed, 6 insertions(+), 1 deletion(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+> index bd72fb0..a21624f 100644
+> +++ b/drivers/char/tpm/tpm_eventlog.c
+> @@ -244,7 +244,12 @@ static int tpm_binary_bios_measurements_show(struct seq_file *m, void *v)
+>  
+>  	tempPtr = (char *)&temp_event;
+>  
+> -	for (i = 0; i < sizeof(struct tcpa_event) + temp_event.event_size; i++)
+> +	for (i = 0; i < sizeof(struct tcpa_event)-1 ; i++)
+> +		seq_putc(m, tempPtr[i]);
+> +
+> +	tempPtr = (char *)v;
+> +
+> +	for (i = sizeof(struct tcpa_event)-1; i < sizeof(struct tcpa_event) + temp_event.event_size; i++)
+>  		seq_putc(m, tempPtr[i]);
+
+Looks reasonable otherwise.
 
 Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 
