@@ -1,16 +1,15 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v5 4/5] Initialize TPM and get durations
- and timeouts
-Date: Mon, 8 Feb 2016 22:33:23 -0700
-Message-ID: <20160209053323.GD12657@obsidianresearch.com>
-References: <1454959628-30582-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<1454959628-30582-5-git-send-email-stefanb@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm: fix the cleanup of struct tpm_chip
+Date: Tue, 9 Feb 2016 08:19:51 +0200
+Message-ID: <20160209061951.GA29607@intel.com>
+References: <1454988630-27942-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<20160209052655.GA12657@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1454959628-30582-5-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <20160209052655.GA12657-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,24 +18,28 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Feb 08, 2016 at 02:27:07PM -0500, Stefan Berger wrote:
-> Add the retrieval of TPM 1.2 durations and timeouts. Since this requires
-> the startup of the TPM, do this for TPM 1.2 and TPM 2.
+On Mon, Feb 08, 2016 at 10:26:55PM -0700, Jason Gunthorpe wrote:
+> On Tue, Feb 09, 2016 at 05:30:30AM +0200, Jarkko Sakkinen wrote:
+> > If the initialization fails before tpm_chip_register(), put_device()
+> > will be not called, which causes release callback not to be called.
+> > This patch fixes the issue by adding put_device() to devres list of
+> > the parent device.
 > 
-> To not allow to interleave with commands from user space, so send the
-> TPM_Startup as the first command. The timeouts can then be gotten at any
-> later time, even interleaved with commands from user space.
+> Erm, if you do this, then shouldn't the device_unregister change to
+> device_del to keep the kref balanced?
 
-Do not call tpm_register until get_timeouts has completed and this
-will naturally be avoided the same way every other TPM driver does.
+Yes, it should. Weird, I added pr_info() (temporarily) to
+tpm_dev_release() and did occur only once and no crashes whatsoever.
 
-The long term goal is to move the get_timeouts call into tpm_register.
+Anyway, you're right.
 
-Jason
+> Jason
+
+/Jarkko
 
 ------------------------------------------------------------------------------
 Site24x7 APM Insight: Get Deep Visibility into Application Performance
