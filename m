@@ -1,15 +1,15 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v5 1/5] Implement tpm_chip_free
-Date: Mon, 8 Feb 2016 22:28:23 -0700
-Message-ID: <20160209052823.GB12657@obsidianresearch.com>
+Subject: Re: [PATCH v5 3/5] Make tpm_startup() available
+Date: Mon, 8 Feb 2016 22:29:57 -0700
+Message-ID: <20160209052957.GC12657@obsidianresearch.com>
 References: <1454959628-30582-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<1454959628-30582-2-git-send-email-stefanb@linux.vnet.ibm.com>
+	<1454959628-30582-4-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1454959628-30582-2-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1454959628-30582-4-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,12 +22,10 @@ To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Feb 08, 2016 at 02:27:04PM -0500, Stefan Berger wrote:
-> Implement the public function tpm_chip_free to undo tpmm_chip_alloc.
+On Mon, Feb 08, 2016 at 02:27:06PM -0500, Stefan Berger wrote:
+> Make tpm_startup() available for others to call.
 
-No, this is wrong, chip cannot be kfree'd like that.
-
-tpmm needs to rely on devm for cleanup.
+Why? Just call tpm_get_timeouts.
 
 Jason
 
