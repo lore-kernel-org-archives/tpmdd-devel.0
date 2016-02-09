@@ -1,16 +1,12 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix the cleanup of struct tpm_chip
-Date: Tue, 9 Feb 2016 08:27:35 +0200
-Message-ID: <20160209062735.GA25621@intel.com>
-References: <1454988630-27942-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<20160209052655.GA12657@obsidianresearch.com>
-	<20160209061951.GA29607@intel.com>
+From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Subject: [PATCH 00/12] tpm/st33zp24: Few code style and sanity
+	fixes + acpi device probing support
+Date: Tue,  9 Feb 2016 10:26:49 +0100
+Message-ID: <1455010021-21927-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20160209061951.GA29607-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,35 +15,48 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, peterhuewe-Mmb7MZpHnFY@public.gmane.org
+Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Feb 09, 2016 at 08:19:51AM +0200, Jarkko Sakkinen wrote:
-> On Mon, Feb 08, 2016 at 10:26:55PM -0700, Jason Gunthorpe wrote:
-> > On Tue, Feb 09, 2016 at 05:30:30AM +0200, Jarkko Sakkinen wrote:
-> > > If the initialization fails before tpm_chip_register(), put_device()
-> > > will be not called, which causes release callback not to be called.
-> > > This patch fixes the issue by adding put_device() to devres list of
-> > > the parent device.
-> > 
-> > Erm, if you do this, then shouldn't the device_unregister change to
-> > device_del to keep the kref balanced?
-> 
-> Yes, it should. Weird, I added pr_info() (temporarily) to
-> tpm_dev_release() and did occur only once and no crashes whatsoever.
-> 
-> Anyway, you're right.
+Hi Peter, Jarko,
 
-Update:
+Please find in the following serie:
+- a set of code style or sanity cleanup
+- acpi device probing support for i2c and spi phys.
 
-https://github.com/jsakkine/linux-tpmdd/commit/a1aa547bbd2178628df798c27abaad073acb2441
+This serie applies on top of jarkko tree:
+b64f343cb02b2a2a009b3805a8331425dd4a8611 tpm: fix rollback/cleanup before tpm_chip_register()
 
-I tested that the release gets called (as a sanity check).
+Best Regards
+Christophe 
 
-Ack?
+Christophe Ricard (12):
+  tpm/st33zp24/spi: Remove nbr_dummy_bytes variable usage
+  tpm/st33zp24/spi: Use functions name with st33zp24_spi_ prefix
+  tpm/st33zp24/spi: Remove useless use of memcpy.
+  tpm/st33zp24/spi: Remove field spi_xfer from st33zp24_spi_phy
+    structure
+  tpm/st33zp24: Remove unneeded CONFIG_OF switches
+  tpm/st33zp24: Auto-select core module
+  tpm/st33zp24/spi: Improve st33zp24_spi_evaluate_latency
+  tpm/st33zp24: Extend Copyright headers
+  tpm/st33zp24: Add support for acpi probing for i2c device.
+  tpm: st33zp24: Add support for acpi probing for spi device.
+  tpm/st33zp24/i2c: Change xxx_request_resources header
+  tpm/st33zp24/spi: Change xxx_request_resources header
 
-/Jarkko
+ drivers/char/tpm/st33zp24/Kconfig      |  11 +-
+ drivers/char/tpm/st33zp24/i2c.c        |  76 ++++++++++---
+ drivers/char/tpm/st33zp24/spi.c        | 190 ++++++++++++++++++++-------------
+ drivers/char/tpm/st33zp24/st33zp24.c   |   2 +-
+ drivers/char/tpm/st33zp24/st33zp24.h   |   2 +-
+ include/linux/platform_data/st33zp24.h |   2 +-
+ 6 files changed, 182 insertions(+), 101 deletions(-)
+
+-- 
+2.5.0
+
 
 ------------------------------------------------------------------------------
 Site24x7 APM Insight: Get Deep Visibility into Application Performance
