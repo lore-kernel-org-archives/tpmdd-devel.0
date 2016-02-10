@@ -1,15 +1,19 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm_eventlog.c: fix
-	binary_bios_measurements
-Date: Wed, 10 Feb 2016 05:54:04 +0200
-Message-ID: <20160210035404.GA7161@intel.com>
-References: <56B9C234.5050402@redhat.com>
+Subject: Re: [PATCH v5 4/5] Initialize TPM and get durations
+ and timeouts
+Date: Wed, 10 Feb 2016 05:56:20 +0200
+Message-ID: <20160210035620.GB7161@intel.com>
+References: <1454959628-30582-1-git-send-email-stefanb@linux.vnet.ibm.com>
+	<1454959628-30582-5-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20160209053323.GD12657@obsidianresearch.com>
+	<201602091626.u19GQpga021574@d01av02.pok.ibm.com>
+	<20160209165228.GA14611@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <56B9C234.5050402-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+In-Reply-To: <20160209165228.GA14611-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,63 +22,42 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Harald Hoyer <harald-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Feb 09, 2016 at 11:40:52AM +0100, Harald Hoyer wrote:
-> Find attached a patch for the tpm kernel driver, which is fixing
-> /sys/kernel/security/tpm0/binary_bios_measurements
+On Tue, Feb 09, 2016 at 09:52:28AM -0700, Jason Gunthorpe wrote:
+> On Tue, Feb 09, 2016 at 11:19:15AM -0500, Stefan Berger wrote:
+> > Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote on 02/09/2016 12:33:23
+> > AM:
+> > 
+> > 
+> > >
+> > > On Mon, Feb 08, 2016 at 02:27:07PM -0500, Stefan Berger wrote:
+> > > > Add the retrieval of TPM 1.2 durations and timeouts. Since this requires
+> > > > the startup of the TPM, do this for TPM 1.2 and TPM 2.
+> > > >
+> > > > To not allow to interleave with commands from user space, so send the
+> > > > TPM_Startup as the first command. The timeouts can then be gotten at any
+> > > > later time, even interleaved with commands from user space.
+> > >
+> > > Do not call tpm_register until get_timeouts has completed and this
+> > > will naturally be avoided the same way every other TPM driver does.
+> > 
+> > Getting the timeouts cannot complete before the TPM emulator has started, which
+> > in turn cannot start before the ioctl returns. We don't know whether user space
+> > starts a client first on /dev/tpm1 or the TPM emulator starts first on the file
+> > descriptor. We can control which command gets *queued* for the TPM emulator and
+> > that's what I am doing by having the kernel queue the startup command first.
 > 
-> Thanks!
-> 
-> Harald Hoyer
-> 
+> I keep saying this same solution - start a work queue just before the
+> ioctl returns and do the get_timeouts and registration in there.
 
-> From 57558a66cfadd329cdf63570af7ad1d0fd61010f Mon Sep 17 00:00:00 2001
-> From: Harald Hoyer <harald-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-> Date: Sat, 6 Feb 2016 15:44:42 +0100
-> Subject: [PATCH] tpm_eventlog.c: fix binary_bios_measurements
-> 
-> commit 0cc698af36ff22295dce2f5e46b0cfe605789fa4 copied the event, but
-> without the event data, did an endian conversion on the size and tried
-> to output the event data from the copied version, which has only have
-> one byte of the data, resulting in garbage event data.
-> 
-> Signed-off-by: Harald Hoyer <harald-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+*Maybe* it would be worth to check David's patch:
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-
-PS. Don't send a new patch. I can put the "Fixes:" tag in place.
+https://github.com/PeterHuewe/linux-tpmdd/commit/9329f13c403daf1f4bd1e715d2ba0866e089fb1d
 
 /Jarkko
-
-> ---
->  drivers/char/tpm/tpm_eventlog.c | 7 ++++++-
->  1 file changed, 6 insertions(+), 1 deletion(-)
-> 
-> diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-> index bd72fb0..a21624f 100644
-> --- a/drivers/char/tpm/tpm_eventlog.c
-> +++ b/drivers/char/tpm/tpm_eventlog.c
-> @@ -244,7 +244,12 @@ static int tpm_binary_bios_measurements_show(struct seq_file *m, void *v)
->  
->  	tempPtr = (char *)&temp_event;
->  
-> -	for (i = 0; i < sizeof(struct tcpa_event) + temp_event.event_size; i++)
-> +	for (i = 0; i < sizeof(struct tcpa_event)-1 ; i++)
-> +		seq_putc(m, tempPtr[i]);
-> +
-> +	tempPtr = (char *)v;
-> +
-> +	for (i = sizeof(struct tcpa_event)-1; i < sizeof(struct tcpa_event) + temp_event.event_size; i++)
->  		seq_putc(m, tempPtr[i]);
->  
->  	return 0;
-> -- 
-> 2.7.0
-> 
-
 
 ------------------------------------------------------------------------------
 Site24x7 APM Insight: Get Deep Visibility into Application Performance
