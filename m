@@ -1,24 +1,12 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v5 4/5] Initialize TPM and get durations
- and timeouts
-Date: Tue, 9 Feb 2016 12:36:21 -0700
-Message-ID: <20160209193621.GA6531@obsidianresearch.com>
-References: <1454959628-30582-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<1454959628-30582-5-git-send-email-stefanb@linux.vnet.ibm.com>
-	<20160209053323.GD12657@obsidianresearch.com>
-	<201602091626.u19GQpga021574@d01av02.pok.ibm.com>
-	<20160209165228.GA14611@obsidianresearch.com>
-	<201602091745.u19HjeEv001740@d03av02.boulder.ibm.com>
-	<20160209180152.GA17475@obsidianresearch.com>
-	<201602091812.u19ICTww018943@d03av01.boulder.ibm.com>
-	<20160209182013.GA19018@obsidianresearch.com>
-	<201602091922.u19JMQ6r025254@d03av05.boulder.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: [GIT PULL] tpmdd fixes for Linux 4.5 (updated)
+Date: Wed, 10 Feb 2016 05:48:04 +0200
+Message-ID: <20160210034804.GA5153@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <201602091922.u19JMQ6r025254-3MP/CPU4Muo+UXBhvPuGgqsjOiXwFzmk@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -27,23 +15,60 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org
+To: James Morris <jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Feb 09, 2016 at 02:22:21PM -0500, Stefan Berger wrote:
->    It doesn't seem right to simply close the file descriptor on the
->    process if something goes wrong. The process couldn't close() on it
->    since another thread could have gotten the same fd number for something
->    else. I haven't seen a file descriptor that one must not close() in
->    user space.
+Hi James,
 
-The kernel should never unilaterally close a fd, just make it
-permanently error, like a far-end closed socket. Read fails, write
-fails, and poll returns readable. User space will close it when it
-detects read failure.
+As we discussed I'm sending now a revised pull request with a couple
+of new fixes to the one that I sent with the tag:
 
-Jason
+  tags/tpmdd-next-20160120
+
+/Jarkko
+
+The following changes since commit 388f7b1d6e8ca06762e2454d28d6c3c55ad0fe95:
+
+  Linux 4.5-rc3 (2016-02-07 15:38:30 -0800)
+
+are available in the git repository at:
+
+  https://github.com/jsakkine/linux-tpmdd.git tags/tpmdd-next-20160210
+
+for you to fetch changes up to 8e0ee3c9faed7ca68807ea45141775856c438ac0:
+
+  tpm: fix the cleanup of struct tpm_chip (2016-02-10 04:12:08 +0200)
+
+----------------------------------------------------------------
+tpmdd fixes for Linux 4.5 (updated)
+
+----------------------------------------------------------------
+Jarkko Sakkinen (3):
+      tpm: fix checks for policy digest existence in tpm2_seal_trusted()
+      tpm: fix the rollback in tpm_chip_register()
+      tpm: fix the cleanup of struct tpm_chip
+
+Jason Gunthorpe (7):
+      tpm_crb: Use the common ACPI definition of struct acpi_tpm2
+      tpm_tis: Disable interrupt auto probing on a per-device basis
+      tpm_tis: Do not fall back to a hardcoded address for TPM2
+      tpm_tis: Use devm_ioremap_resource
+      tpm_tis: Clean up the force=1 module parameter
+      tpm_crb: Drop le32_to_cpu(ioread32(..))
+      tpm_crb: Use devm_ioremap_resource
+
+Jerry Snitselaar (1):
+      tpm: remove unneeded include of actbl2.h
+
+ drivers/char/tpm/tpm-chip.c |  14 +--
+ drivers/char/tpm/tpm.h      |   7 --
+ drivers/char/tpm/tpm2-cmd.c |  12 +--
+ drivers/char/tpm/tpm_crb.c  | 190 ++++++++++++++++++++-------------
+ drivers/char/tpm/tpm_tis.c  | 255 +++++++++++++++++++++++++-------------------
+ include/keys/trusted-type.h |   2 +-
+ security/keys/trusted.c     |  11 +-
+ 7 files changed, 276 insertions(+), 215 deletions(-)
 
 ------------------------------------------------------------------------------
 Site24x7 APM Insight: Get Deep Visibility into Application Performance
