@@ -1,21 +1,20 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v5 4/5] Initialize TPM and get durations
- and timeouts
-Date: Wed, 10 Feb 2016 10:12:37 +0200
-Message-ID: <20160210081237.GA5629@intel.com>
-References: <1454959628-30582-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<1454959628-30582-5-git-send-email-stefanb@linux.vnet.ibm.com>
-	<20160209053323.GD12657@obsidianresearch.com>
-	<201602091626.u19GQpga021574@d01av02.pok.ibm.com>
-	<20160209165228.GA14611@obsidianresearch.com>
-	<20160210035620.GB7161@intel.com>
-	<201602100515.u1A5FonT015847@d03av04.boulder.ibm.com>
+Subject: Re: resource sanity fails on ioremap
+Date: Wed, 10 Feb 2016 14:22:27 +0200
+Message-ID: <20160210122227.GA31734@intel.com>
+References: <20160203233701.GA10585@intel.com>
+	<20160204234947.GA20269@obsidianresearch.com>
+	<20160205040500.GA7708@intel.com>
+	<20160205050850.GA23820@obsidianresearch.com>
+	<20160205164704.GA8112@intel.com>
+	<20160205174258.GA29116@obsidianresearch.com>
+	<20160205192857.GA23523@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <201602100515.u1A5FonT015847-2xHzGjyANq4+UXBhvPuGgqsjOiXwFzmk@public.gmane.org>
+In-Reply-To: <20160205192857.GA23523-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -24,63 +23,39 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: jethro-LmnypSVwBK6EVqv0pETR8A@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Feb 10, 2016 at 12:15:44AM -0500, Stefan Berger wrote:
->    Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote on 02/09/2016
->    10:56:20 PM:
+On Fri, Feb 05, 2016 at 11:28:57AM -0800, Jarkko Sakkinen wrote:
+> On Fri, Feb 05, 2016 at 10:42:58AM -0700, Jason Gunthorpe wrote:
+> > On Fri, Feb 05, 2016 at 08:47:04AM -0800, Jarkko Sakkinen wrote:
+> > 
+> > > Right, thanks for the explanation and I'm able to reproduce it on my own
+> > > work laptop now:
+> > > 
+> > > [    0.708272] resource sanity check: requesting [mem
+> > > 0xfed10000-0xfed15fff], which spans more than pnp 00:01 [mem
+> > > 0xfed10000-0xfed13fff]
+> > > [    0.708302]  [<ffffffff8108548a>] ? iomem_map_sanity_check+0xba/0xd0
+> > > 
+> > > Luckily we have this fixed (in two commits) in 4.5.
+> > 
+> > We do? I don't recall seeing a commit that changes the 0x1000
 > 
->    >
->    > On Tue, Feb 09, 2016 at 09:52:28AM -0700, Jason Gunthorpe wrote:
->    > > On Tue, Feb 09, 2016 at 11:19:15AM -0500, Stefan Berger wrote:
->    > > > Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote on 02/
->    > 09/2016 12:33:23
->    > > > AM:
->    > > >
->    > > >
->    > > > >
->    > > > > On Mon, Feb 08, 2016 at 02:27:07PM -0500, Stefan Berger wrote:
->    > > > > > Add the retrieval of TPM 1.2 durations and timeouts. Since
->    > this requires
->    > > > > > the startup of the TPM, do this for TPM 1.2 and TPM 2.
->    > > > > >
->    > > > > > To not allow to interleave with commands from user space, so
->    send the
->    > > > > > TPM_Startup as the first command. The timeouts can then be
->    > gotten at any
->    > > > > > later time, even interleaved with commands from user space.
->    > > > >
->    > > > > Do not call tpm_register until get_timeouts has completed and this
->    > > > > will naturally be avoided the same way every other TPM driver
->    does.
->    > > >
->    > > > Getting the timeouts cannot complete before the TPM emulator has
->    > started, which
->    > > > in turn cannot start before the ioctl returns. We don't know
->    > whether user space
->    > > > starts a client first on /dev/tpm1 or the TPM emulator starts
->    > first on the file
->    > > > descriptor. We can control which command gets *queued* for the
->    > TPM emulator and
->    > > > that's what I am doing by having the kernel queue the startup
->    > command first.
->    > >
->    > > I keep saying this same solution - start a work queue just before the
->    > > ioctl returns and do the get_timeouts and registration in there.
->    >
->    > *Maybe* it would be worth to check David's patch:
->    >
->    > https://github.com/PeterHuewe/linux-tpmdd/commit/
->    > 9329f13c403daf1f4bd1e715d2ba0866e089fb1d
-> 
->    Redid that now.
-> 
->    https://github.com/stefanberger/linux/commit/83019eaab2cf5eb33f2665efdf9d2a117ed703b2
+> Ignore our fixes do not do anything to this. And it does not even occur
+> my laptop (that was a different case). Should think before pressing.
+> Apologies. I'll push a fix as soon to master.
 
-With very quick skim looks very similar, which is good because this
-approach is tested and known to work thanks to David.
+Actually this does make things right, doesn't it?
+
+https://github.com/jsakkine/linux-tpmdd/commit/1bd047be37d95bf65a219f4931215f71878ac060
+
+struct resource new_res = {
+	.start	= start,
+	.end	= start + size - 1,
+	.flags	= IORESOURCE_MEM,
+};
 
 /Jarkko
 
