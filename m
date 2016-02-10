@@ -1,12 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [GIT PULL] tpmdd fixes for Linux 4.5 (updated)
-Date: Wed, 10 Feb 2016 05:48:04 +0200
-Message-ID: <20160210034804.GA5153@intel.com>
+Subject: Re: [PATCH] tpm_eventlog.c: fix
+	binary_bios_measurements
+Date: Wed, 10 Feb 2016 05:54:04 +0200
+Message-ID: <20160210035404.GA7161@intel.com>
+References: <56B9C234.5050402@redhat.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
+In-Reply-To: <56B9C234.5050402-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -15,60 +18,63 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: James Morris <jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Harald Hoyer <harald-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi James,
+On Tue, Feb 09, 2016 at 11:40:52AM +0100, Harald Hoyer wrote:
+> Find attached a patch for the tpm kernel driver, which is fixing
+> /sys/kernel/security/tpm0/binary_bios_measurements
+> 
+> Thanks!
+> 
+> Harald Hoyer
+> 
 
-As we discussed I'm sending now a revised pull request with a couple
-of new fixes to the one that I sent with the tag:
+> From 57558a66cfadd329cdf63570af7ad1d0fd61010f Mon Sep 17 00:00:00 2001
+> From: Harald Hoyer <harald-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+> Date: Sat, 6 Feb 2016 15:44:42 +0100
+> Subject: [PATCH] tpm_eventlog.c: fix binary_bios_measurements
+> 
+> commit 0cc698af36ff22295dce2f5e46b0cfe605789fa4 copied the event, but
+> without the event data, did an endian conversion on the size and tried
+> to output the event data from the copied version, which has only have
+> one byte of the data, resulting in garbage event data.
+> 
+> Signed-off-by: Harald Hoyer <harald-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
 
-  tags/tpmdd-next-20160120
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+
+PS. Don't send a new patch. I can put the "Fixes:" tag in place.
 
 /Jarkko
 
-The following changes since commit 388f7b1d6e8ca06762e2454d28d6c3c55ad0fe95:
+> ---
+>  drivers/char/tpm/tpm_eventlog.c | 7 ++++++-
+>  1 file changed, 6 insertions(+), 1 deletion(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+> index bd72fb0..a21624f 100644
+> --- a/drivers/char/tpm/tpm_eventlog.c
+> +++ b/drivers/char/tpm/tpm_eventlog.c
+> @@ -244,7 +244,12 @@ static int tpm_binary_bios_measurements_show(struct seq_file *m, void *v)
+>  
+>  	tempPtr = (char *)&temp_event;
+>  
+> -	for (i = 0; i < sizeof(struct tcpa_event) + temp_event.event_size; i++)
+> +	for (i = 0; i < sizeof(struct tcpa_event)-1 ; i++)
+> +		seq_putc(m, tempPtr[i]);
+> +
+> +	tempPtr = (char *)v;
+> +
+> +	for (i = sizeof(struct tcpa_event)-1; i < sizeof(struct tcpa_event) + temp_event.event_size; i++)
+>  		seq_putc(m, tempPtr[i]);
+>  
+>  	return 0;
+> -- 
+> 2.7.0
+> 
 
-  Linux 4.5-rc3 (2016-02-07 15:38:30 -0800)
-
-are available in the git repository at:
-
-  https://github.com/jsakkine/linux-tpmdd.git tags/tpmdd-next-20160210
-
-for you to fetch changes up to 8e0ee3c9faed7ca68807ea45141775856c438ac0:
-
-  tpm: fix the cleanup of struct tpm_chip (2016-02-10 04:12:08 +0200)
-
-----------------------------------------------------------------
-tpmdd fixes for Linux 4.5 (updated)
-
-----------------------------------------------------------------
-Jarkko Sakkinen (3):
-      tpm: fix checks for policy digest existence in tpm2_seal_trusted()
-      tpm: fix the rollback in tpm_chip_register()
-      tpm: fix the cleanup of struct tpm_chip
-
-Jason Gunthorpe (7):
-      tpm_crb: Use the common ACPI definition of struct acpi_tpm2
-      tpm_tis: Disable interrupt auto probing on a per-device basis
-      tpm_tis: Do not fall back to a hardcoded address for TPM2
-      tpm_tis: Use devm_ioremap_resource
-      tpm_tis: Clean up the force=1 module parameter
-      tpm_crb: Drop le32_to_cpu(ioread32(..))
-      tpm_crb: Use devm_ioremap_resource
-
-Jerry Snitselaar (1):
-      tpm: remove unneeded include of actbl2.h
-
- drivers/char/tpm/tpm-chip.c |  14 +--
- drivers/char/tpm/tpm.h      |   7 --
- drivers/char/tpm/tpm2-cmd.c |  12 +--
- drivers/char/tpm/tpm_crb.c  | 190 ++++++++++++++++++++-------------
- drivers/char/tpm/tpm_tis.c  | 255 +++++++++++++++++++++++++-------------------
- include/keys/trusted-type.h |   2 +-
- security/keys/trusted.c     |  11 +-
- 7 files changed, 276 insertions(+), 215 deletions(-)
 
 ------------------------------------------------------------------------------
 Site24x7 APM Insight: Get Deep Visibility into Application Performance
