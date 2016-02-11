@@ -1,16 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 05/12] tpm/st33zp24: Remove unneeded
-	CONFIG_OF switches
-Date: Thu, 11 Feb 2016 16:10:07 +0200
-Message-ID: <20160211141007.GB4231@intel.com>
+Subject: Re: [PATCH 06/12] tpm/st33zp24: Auto-select core
+	module
+Date: Thu, 11 Feb 2016 16:18:59 +0200
+Message-ID: <20160211141859.GC4231@intel.com>
 References: <1455010021-21927-1-git-send-email-christophe-h.ricard@st.com>
-	<1455010021-21927-6-git-send-email-christophe-h.ricard@st.com>
+	<1455010021-21927-7-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1455010021-21927-6-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
+In-Reply-To: <1455010021-21927-7-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,102 +23,60 @@ To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Feb 09, 2016 at 10:26:54AM +0100, Christophe Ricard wrote:
-> DT headers already define NOOP routines when CONFIG_OF is not defined.
+On Tue, Feb 09, 2016 at 10:26:55AM +0100, Christophe Ricard wrote:
+> The core st33zp24 module is useless without either the I2C or the
+> SPI access module. So hide NFC_ST_NCI and select it automatically
+> if either TCG_TIS_ST33ZP24_I2C or TCG_TIS_ST33ZP24_SPI is selected.
+> 
+> This avoids presenting TCG_TIS_ST33ZP24 when neither TCG_TIS_ST33ZP24_I2C
+> nor TCG_TIS_ST33ZP24_SPI can be selected.
 > 
 > Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
-Yeah, I do actually read the diffs even though my replies are fairly
-monotonic. You can see it from varying times between replies :)
-Nothing bad to say. That's all.
-
 /Jarkko
 
 > ---
->  drivers/char/tpm/st33zp24/i2c.c | 9 ---------
->  drivers/char/tpm/st33zp24/spi.c | 9 ---------
->  2 files changed, 18 deletions(-)
+>  drivers/char/tpm/st33zp24/Kconfig | 11 +++++------
+>  1 file changed, 5 insertions(+), 6 deletions(-)
 > 
-> diff --git a/drivers/char/tpm/st33zp24/i2c.c b/drivers/char/tpm/st33zp24/i2c.c
-> index 309d276..a05fbd8 100644
-> --- a/drivers/char/tpm/st33zp24/i2c.c
-> +++ b/drivers/char/tpm/st33zp24/i2c.c
-> @@ -108,7 +108,6 @@ static const struct st33zp24_phy_ops i2c_phy_ops = {
->  	.recv = st33zp24_i2c_recv,
->  };
+> diff --git a/drivers/char/tpm/st33zp24/Kconfig b/drivers/char/tpm/st33zp24/Kconfig
+> index 19c0074..e74c6f2 100644
+> --- a/drivers/char/tpm/st33zp24/Kconfig
+> +++ b/drivers/char/tpm/st33zp24/Kconfig
+> @@ -1,6 +1,5 @@
+>  config TCG_TIS_ST33ZP24
+> -	tristate "STMicroelectronics TPM Interface Specification 1.2 Interface"
+> -	depends on GPIOLIB || COMPILE_TEST
+> +	tristate
+>  	---help---
+>  	  STMicroelectronics ST33ZP24 core driver. It implements the core
+>  	  TPM1.2 logic and hooks into the TPM kernel APIs. Physical layers will
+> @@ -10,9 +9,9 @@ config TCG_TIS_ST33ZP24
+>  	  tpm_st33zp24.
 >  
-> -#ifdef CONFIG_OF
->  static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
->  {
->  	struct device_node *pp;
-> @@ -146,12 +145,6 @@ static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
+>  config TCG_TIS_ST33ZP24_I2C
+> -	tristate "TPM 1.2 ST33ZP24 I2C support"
+> -	depends on TCG_TIS_ST33ZP24
+> +	tristate "STMicroelectronics TPM Interface Specification 1.2 Interface (I2C)"
+>  	depends on I2C
+> +	select TCG_TIS_ST33ZP24
+>  	---help---
+>  	  This module adds support for the STMicroelectronics TPM security chip
+>  	  ST33ZP24 with i2c interface.
+> @@ -20,9 +19,9 @@ config TCG_TIS_ST33ZP24_I2C
+>  	  called tpm_st33zp24_i2c.
 >  
->  	return 0;
->  }
-> -#else
-> -static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
-> -{
-> -	return -ENODEV;
-> -}
-> -#endif
->  
->  static int st33zp24_i2c_request_resources(struct i2c_client *client,
->  					  struct st33zp24_i2c_phy *phy)
-> @@ -245,13 +238,11 @@ static const struct i2c_device_id st33zp24_i2c_id[] = {
->  };
->  MODULE_DEVICE_TABLE(i2c, st33zp24_i2c_id);
->  
-> -#ifdef CONFIG_OF
->  static const struct of_device_id of_st33zp24_i2c_match[] = {
->  	{ .compatible = "st,st33zp24-i2c", },
->  	{}
->  };
->  MODULE_DEVICE_TABLE(of, of_st33zp24_i2c_match);
-> -#endif
->  
->  static SIMPLE_DEV_PM_OPS(st33zp24_i2c_ops, st33zp24_pm_suspend,
->  			 st33zp24_pm_resume);
-> diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
-> index 41c11c9..0af836a 100644
-> --- a/drivers/char/tpm/st33zp24/spi.c
-> +++ b/drivers/char/tpm/st33zp24/spi.c
-> @@ -221,7 +221,6 @@ static const struct st33zp24_phy_ops spi_phy_ops = {
->  	.recv = st33zp24_spi_recv,
->  };
->  
-> -#ifdef CONFIG_OF
->  static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
->  {
->  	struct device_node *pp;
-> @@ -259,12 +258,6 @@ static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
->  
->  	return 0;
->  }
-> -#else
-> -static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
-> -{
-> -	return -ENODEV;
-> -}
-> -#endif
->  
->  static int st33zp24_spi_request_resources(struct spi_device *dev,
->  					  struct st33zp24_spi_phy *phy)
-> @@ -357,13 +350,11 @@ static const struct spi_device_id st33zp24_spi_id[] = {
->  };
->  MODULE_DEVICE_TABLE(spi, st33zp24_spi_id);
->  
-> -#ifdef CONFIG_OF
->  static const struct of_device_id of_st33zp24_spi_match[] = {
->  	{ .compatible = "st,st33zp24-spi", },
->  	{}
->  };
->  MODULE_DEVICE_TABLE(of, of_st33zp24_spi_match);
-> -#endif
->  
->  static SIMPLE_DEV_PM_OPS(st33zp24_spi_ops, st33zp24_pm_suspend,
->  			 st33zp24_pm_resume);
+>  config TCG_TIS_ST33ZP24_SPI
+> -	tristate "TPM 1.2 ST33ZP24 SPI support"
+> -	depends on TCG_TIS_ST33ZP24
+> +	tristate "STMicroelectronics TPM Interface Specification 1.2 Interface (SPI)"
+>  	depends on SPI
+> +	select TCG_TIS_ST33ZP24
+>  	---help---
+>  	  This module adds support for the STMicroelectronics TPM security chip
+>  	  ST33ZP24 with spi interface.
 > -- 
 > 2.5.0
 > 
