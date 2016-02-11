@@ -1,16 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 08/12] tpm/st33zp24: Extend Copyright
-	headers
-Date: Thu, 11 Feb 2016 16:22:49 +0200
-Message-ID: <20160211142249.GE4231@intel.com>
+Subject: Re: [PATCH 09/12] tpm/st33zp24: Add support for acpi
+ probing for i2c device.
+Date: Thu, 11 Feb 2016 16:28:58 +0200
+Message-ID: <20160211142858.GF4231@intel.com>
 References: <1455010021-21927-1-git-send-email-christophe-h.ricard@st.com>
-	<1455010021-21927-9-git-send-email-christophe-h.ricard@st.com>
+	<1455010021-21927-10-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1455010021-21927-9-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
+In-Reply-To: <1455010021-21927-10-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,8 +23,43 @@ To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Feb 09, 2016 at 10:26:57AM +0100, Christophe Ricard wrote:
-> Extend copyright header to 2016
+On Tue, Feb 09, 2016 at 10:26:58AM +0100, Christophe Ricard wrote:
+> Add support for acpi probing. SMO3324 is used for st33zp24.
+> It has been tested with the following acpi node on Minnowboard:
+> 
+> Device (TPM1)
+> {
+> 	Name (_ADR, Zero)  // _ADR: Address
+> 	Name (_HID, "SMO3324")  // _HID: Hardware ID
+> 	Name (_CID, "SMO3324")  // _CID: Compatible ID
+> 	Name (_DDN, "SMO TPM")  // _DDN: DOS Device Name
+> 	Name (_UID, One)  // _UID: Unique ID
+> 	Method (_CRS, 0, NotSerialized)  // _CRS: Current Resource Settings
+> 	{
+> 		Name (SBUF, ResourceTemplate ()
+> 		{
+> 			I2cSerialBus (0x0013, ControllerInitiated, 400000,
+> 				      AddressingMode7Bit, "\\_SB.I2C7",
+> 				      0x00, ResourceConsumer, ,)
+> 			GpioInt (Edge, ActiveHigh, ExclusiveAndWake, PullNone, 0x0000,
+> 				 "\\_SB.GPO2", 0x00, ResourceConsumer, ,)
+> 			{   	// Pin list
+> 				0x0001
+> 			}
+> 			GpioIo (Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly,
+> 				"\\_SB.GPO2", 0x00, ResourceConsumer, ,)
+> 			{	// Pin list
+> 				0x0002,
+> 			}
+> 		})
+> 		Return (SBUF) /* \_SB_.I2C7.TPM1._CRS.SBUF */
+> 	}
+> 
+> 	Method (_STA, 0, NotSerialized)  // _STA: Status
+> 	{
+> 		Return (0x0F)
+> 	}
+> }
 > 
 > Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 
@@ -33,73 +68,100 @@ Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gman
 /Jarkko
 
 > ---
->  drivers/char/tpm/st33zp24/i2c.c        | 2 +-
->  drivers/char/tpm/st33zp24/spi.c        | 2 +-
->  drivers/char/tpm/st33zp24/st33zp24.c   | 2 +-
->  drivers/char/tpm/st33zp24/st33zp24.h   | 2 +-
->  include/linux/platform_data/st33zp24.h | 2 +-
->  5 files changed, 5 insertions(+), 5 deletions(-)
+>  drivers/char/tpm/st33zp24/i2c.c | 50 +++++++++++++++++++++++++++++++++++++++++
+>  1 file changed, 50 insertions(+)
 > 
 > diff --git a/drivers/char/tpm/st33zp24/i2c.c b/drivers/char/tpm/st33zp24/i2c.c
-> index a05fbd8..a49b6f1 100644
+> index a49b6f1..b20cc2b 100644
 > --- a/drivers/char/tpm/st33zp24/i2c.c
 > +++ b/drivers/char/tpm/st33zp24/i2c.c
-> @@ -1,6 +1,6 @@
->  /*
->   * STMicroelectronics TPM I2C Linux driver for TPM ST33ZP24
-> - * Copyright (C) 2009 - 2015 STMicroelectronics
-> + * Copyright (C) 2009 - 2016 STMicroelectronics
->   *
->   * This program is free software; you can redistribute it and/or modify
->   * it under the terms of the GNU General Public License as published by
-> diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
-> index 7cabf1d..34cdee1 100644
-> --- a/drivers/char/tpm/st33zp24/spi.c
-> +++ b/drivers/char/tpm/st33zp24/spi.c
-> @@ -1,6 +1,6 @@
->  /*
->   * STMicroelectronics TPM SPI Linux driver for TPM ST33ZP24
-> - * Copyright (C) 2009 - 2015  STMicroelectronics
-> + * Copyright (C) 2009 - 2016 STMicroelectronics
->   *
->   * This program is free software; you can redistribute it and/or modify
->   * it under the terms of the GNU General Public License as published by
-> diff --git a/drivers/char/tpm/st33zp24/st33zp24.c b/drivers/char/tpm/st33zp24/st33zp24.c
-> index 8d62678..944d279 100644
-> --- a/drivers/char/tpm/st33zp24/st33zp24.c
-> +++ b/drivers/char/tpm/st33zp24/st33zp24.c
-> @@ -1,6 +1,6 @@
->  /*
->   * STMicroelectronics TPM Linux driver for TPM ST33ZP24
-> - * Copyright (C) 2009 - 2015 STMicroelectronics
-> + * Copyright (C) 2009 - 2016 STMicroelectronics
->   *
->   * This program is free software; you can redistribute it and/or modify
->   * it under the terms of the GNU General Public License as published by
-> diff --git a/drivers/char/tpm/st33zp24/st33zp24.h b/drivers/char/tpm/st33zp24/st33zp24.h
-> index c207ceb..bcbd5ff 100644
-> --- a/drivers/char/tpm/st33zp24/st33zp24.h
-> +++ b/drivers/char/tpm/st33zp24/st33zp24.h
-> @@ -1,6 +1,6 @@
->  /*
->   * STMicroelectronics TPM Linux driver for TPM ST33ZP24
-> - * Copyright (C) 2009 - 2015  STMicroelectronics
-> + * Copyright (C) 2009 - 2016  STMicroelectronics
->   *
->   * This program is free software; you can redistribute it and/or modify it
->   * under the terms and conditions of the GNU General Public License,
-> diff --git a/include/linux/platform_data/st33zp24.h b/include/linux/platform_data/st33zp24.h
-> index 817dfdb..6f0fb6e 100644
-> --- a/include/linux/platform_data/st33zp24.h
-> +++ b/include/linux/platform_data/st33zp24.h
-> @@ -1,6 +1,6 @@
->  /*
->   * STMicroelectronics TPM Linux driver for TPM 1.2 ST33ZP24
-> - * Copyright (C) 2009 - 2015  STMicroelectronics
-> + * Copyright (C) 2009 - 2016  STMicroelectronics
->   *
->   * This program is free software; you can redistribute it and/or modify
->   * it under the terms of the GNU General Public License as published by
+> @@ -19,8 +19,10 @@
+>  #include <linux/module.h>
+>  #include <linux/i2c.h>
+>  #include <linux/gpio.h>
+> +#include <linux/gpio/consumer.h>
+>  #include <linux/of_irq.h>
+>  #include <linux/of_gpio.h>
+> +#include <linux/acpi.h>
+>  #include <linux/tpm.h>
+>  #include <linux/platform_data/st33zp24.h>
+>  
+> @@ -108,6 +110,43 @@ static const struct st33zp24_phy_ops i2c_phy_ops = {
+>  	.recv = st33zp24_i2c_recv,
+>  };
+>  
+> +static int st33zp24_i2c_acpi_request_resources(struct st33zp24_i2c_phy *phy)
+> +{
+> +	struct i2c_client *client = phy->client;
+> +	const struct acpi_device_id *id;
+> +	struct gpio_desc *gpiod_lpcpd;
+> +	struct device *dev;
+> +
+> +	if (!client)
+> +		return -EINVAL;
+> +
+> +	dev = &client->dev;
+> +
+> +	/* Match the struct device against a given list of ACPI IDs */
+> +	id = acpi_match_device(dev->driver->acpi_match_table, dev);
+> +	if (!id)
+> +		return -ENODEV;
+> +
+> +	/* Get LPCPD GPIO from ACPI */
+> +	gpiod_lpcpd = devm_gpiod_get_index(dev, "TPM IO LPCPD", 1,
+> +					   GPIOD_OUT_HIGH);
+> +	if (IS_ERR(gpiod_lpcpd)) {
+> +		dev_err(&client->dev,
+> +			"Failed to retrieve lpcpd-gpios from acpi.\n");
+> +		phy->io_lpcpd = -1;
+> +		/*
+> +		 * lpcpd pin is not specified. This is not an issue as
+> +		 * power management can be also managed by TPM specific
+> +		 * commands. So leave with a success status code.
+> +		 */
+> +		return 0;
+> +	}
+> +
+> +	phy->io_lpcpd = desc_to_gpio(gpiod_lpcpd);
+> +
+> +	return 0;
+> +}
+> +
+>  static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
+>  {
+>  	struct device_node *pp;
+> @@ -214,6 +253,10 @@ static int st33zp24_i2c_probe(struct i2c_client *client,
+>  		ret = st33zp24_i2c_request_resources(client, phy);
+>  		if (ret)
+>  			return ret;
+> +	} else if (ACPI_HANDLE(&client->dev)) {
+> +		ret = st33zp24_i2c_acpi_request_resources(phy);
+> +		if (ret)
+> +			return ret;
+>  	}
+>  
+>  	return st33zp24_probe(phy, &i2c_phy_ops, &client->dev, client->irq,
+> @@ -244,6 +287,12 @@ static const struct of_device_id of_st33zp24_i2c_match[] = {
+>  };
+>  MODULE_DEVICE_TABLE(of, of_st33zp24_i2c_match);
+>  
+> +static const struct acpi_device_id st33zp24_i2c_acpi_match[] = {
+> +	{"SMO3324"},
+> +	{}
+> +};
+> +MODULE_DEVICE_TABLE(acpi, st33zp24_i2c_acpi_match);
+> +
+>  static SIMPLE_DEV_PM_OPS(st33zp24_i2c_ops, st33zp24_pm_suspend,
+>  			 st33zp24_pm_resume);
+>  
+> @@ -252,6 +301,7 @@ static struct i2c_driver st33zp24_i2c_driver = {
+>  		.name = TPM_ST33_I2C,
+>  		.pm = &st33zp24_i2c_ops,
+>  		.of_match_table = of_match_ptr(of_st33zp24_i2c_match),
+> +		.acpi_match_table = ACPI_PTR(st33zp24_i2c_acpi_match),
+>  	},
+>  	.probe = st33zp24_i2c_probe,
+>  	.remove = st33zp24_i2c_remove,
 > -- 
 > 2.5.0
 > 
