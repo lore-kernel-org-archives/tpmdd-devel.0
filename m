@@ -1,24 +1,14 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+From: "Stefan Berger" <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
 Subject: Re: [PATCH v5 4/5] Initialize TPM and get durations
  and timeouts
-Date: Fri, 12 Feb 2016 15:46:42 -0700
-Message-ID: <20160212224642.GA4781@obsidianresearch.com>
-References: <20160211221822.GA16304@obsidianresearch.com>
-	<201602112226.u1BMQZ59031657@d01av02.pok.ibm.com>
-	<20160211235611.GB16304@obsidianresearch.com>
-	<201602120353.u1C3rYif023135@d01av05.pok.ibm.com>
-	<20160212184051.GB4289@obsidianresearch.com>
-	<201602122031.u1CKVIOp028400@d03av03.boulder.ibm.com>
-	<20160212203956.GB10540@obsidianresearch.com>
-	<201602122044.u1CKiMbR023495@d03av03.boulder.ibm.com>
-	<20160212211538.GA20737@obsidianresearch.com>
-	<201602122223.u1CMNKL2004615@d03av02.boulder.ibm.com>
+Date: Fri, 12 Feb 2016 17:47:11 -0500
+Message-ID: <201602122247.u1CMlEZa030908@d01av03.pok.ibm.com>
+References: <20160211194810.GA24211@obsidianresearch.com><201602112210.u1BMAYPe015452@d03av01.boulder.ibm.com><20160211221822.GA16304@obsidianresearch.com><201602112226.u1BMQZ59031657@d01av02.pok.ibm.com><20160211235611.GB16304@obsidianresearch.com><201602120353.u1C3rYif023135@d01av05.pok.ibm.com><20160212184051.GB4289@obsidianresearch.com><201602122031.u1CKVIOp028400@d03av03.boulder.ibm.com><20160212203956.GB10540@obsidianresearch.com><201602122044.u1CKiMbR023495@d03av03.boulder.ibm.com><20160212211538.GA20737@obsidianresearch.com>
+	<201602122223.u1CMNJXl023711@d01av01.pok.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: multipart/mixed; boundary="===============1591656412484089153=="
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <201602122223.u1CMNKL2004615-nNA/7dmquNI+UXBhvPuGgqsjOiXwFzmk@public.gmane.org>
+In-Reply-To: <201602122223.u1CMNJXl023711-4ZtxiNBBw+3ImUpY6SP3GEEOCMrvLtNR@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -31,62 +21,75 @@ To: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
 Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Feb 12, 2016 at 05:23:16PM -0500, Stefan Berger wrote:
 
->    > I don't see how that can happen. Looking at the tpm cdev, it is
+--===============1591656412484089153==
+Content-Type: multipart/alternative;
+	boundary="=_alternative 007D340A85257F57_="
 
->    Well, following my tests, it does happen.
 
-How are you testing for use-after-free bugs? Did you test the kapi
-interface? Did you get it in *exactly* the right configuration to
-cause this?
+--=_alternative 007D340A85257F57_=
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset="US-ASCII"
 
->    > So, we have a situation where tpm_unregister can return, release the
->    > kref on the vtpm and still have outstanding users, which will result
->    > in a use after-free.
+Stefan Berger/Watson/IBM@IBMUS wrote on 02/12/2016 05:23:16 PM:
 
->    Maybe you should give it a try ... I don't see these problems and any
->    change seems like ill-fixing it. What will be accessed after
->    tpm_unregister? The only case we have tpm_unregister is here:
+>=20
+> Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote on 02/12/
+> 2016 04:15:38 PM:
 
->    static void vtpm_delete_device_pair(structvtpm_dev *vtpm_dev)
->    {
->            tpm_chip_unregister(vtpm_dev->chip);
->            vtpm_fops_undo_open(vtpm_dev);
->            vtpm_delete_vtpm_dev(vtpm_dev);
->    }
+> >=20
+> > On Fri, Feb 12, 2016 at 03:44:14PM -0500, Stefan Berger wrote:
+> > >    What I observed is that both tpm=5Fchip and vtpm=5Fdev structuresa=
+re=20
+freed
+> > >    once the last one of two sides (/dev/tpmX or server side file
+> > >    descriptor) closes.
+> >=20
+> > Hmmm...
+> >=20
+> > I don't see how that can happen. Looking at the tpm cdev, it is
+>=20
+> Well, following my tests, it does happen.
 
->    followed by:
+Also I am zeroing tpm=5Fchip and vtpm=5Fdev structures before the free.=20
+Nothing bad happens in any combination of device opening / closing tests I =
 
->    static inline voidvtpm_delete_vtpm_dev(struct vtpm_dev *vtpm_dev)
->    {
->            put_device(&vtpm_dev->chip->dev); /* frees chip */
->            device_unregister(&vtpm_dev->dev); /* does put_device */
->    }
+did.
 
->    I don't see a problem with that.
+    Stefan
 
-device_unregister will put_device(vtpmt_dev) which will kfree it since
-no refs are left.
 
-tpm_chip is still alive because the cdev/kapi are still holding a ref
-on it.
+--=_alternative 007D340A85257F57_=
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset="US-ASCII"
 
-The cdev/kapi can still call vtpm_tpm_op_send which will then deref
-chip->priv which is the free'd vtpm_dev.
+<tt><font size=3D2>Stefan Berger/Watson/IBM@IBMUS wrote on 02/12/2016 05:23=
+:16
+PM:<br></font></tt><br><tt><font size=3D2>&gt; <br>&gt; Jason Gunthorpe &lt=
+;jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org&gt; wrote on 02/12/<br>&gt; 2016 04:15:38 =
+PM:<br><br>&gt; &gt; <br>&gt; &gt; On Fri, Feb 12, 2016 at 03:44:14PM -0500=
+, Stefan Berger wrote:<br>&gt; &gt; &gt; &nbsp; &nbsp;What I observed is th=
+at both tpm=5Fchip and vtpm=5Fdev
+structuresare freed<br>&gt; &gt; &gt; &nbsp; &nbsp;once the last one of two=
+ sides (/dev/tpmX or
+server side file<br>&gt; &gt; &gt; &nbsp; &nbsp;descriptor) closes.<br>&gt;=
+ &gt; <br>&gt; &gt; Hmmm...<br>&gt; &gt; <br>&gt; &gt; I don't see how that=
+ can happen. Looking at the tpm cdev, it
+is<br>&gt; <br>&gt; Well, following my tests, it does happen.</font></tt><b=
+r><br><tt><font size=3D2>Also I am zeroing tpm=5Fchip and vtpm=5Fdev struct=
+ures
+before the free. Nothing bad happens in any combination of device opening
+/ closing tests I did.</font></tt><br><br><tt><font size=3D2>&nbsp; &nbsp; =
+Stefan</font></tt><BR>
+--=_alternative 007D340A85257F57_=--
 
-Any attempt to test for this scenario is very likely to hit the
-STATE_OPENED_BIT test and exit without crashing. However that is just
-a user-after free getting lucky. Testing is not a substitute for
-proper analysis.
 
-Show me an analysis of what in cdev/kapi is holding the kref on
-vtpm_dev if you still think this can't happen.
 
-As I said, the only kref the tpm core takes on vtpm_dev is dropped
-by tpm_chip_unregister.
-
-Jason
+--===============1591656412484089153==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
 
 ------------------------------------------------------------------------------
 Site24x7 APM Insight: Get Deep Visibility into Application Performance
@@ -94,3 +97,15 @@ APM + Mobile APM + RUM: Monitor 3 App instances at just $35/Month
 Monitor end-to-end web transactions and take corrective actions now
 Troubleshoot faster and improve end-user experience. Signup Now!
 http://pubads.g.doubleclick.net/gampad/clk?id=272487151&iu=/4140
+--===============1591656412484089153==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
+
+_______________________________________________
+tpmdd-devel mailing list
+tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+
+--===============1591656412484089153==--
