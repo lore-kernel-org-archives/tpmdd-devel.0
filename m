@@ -1,14 +1,11 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: [PATCH 1/3] tpm: Hold the kref during
-	tpm_chip_find_get
-Date: Fri, 12 Feb 2016 17:04:29 -0700
-Message-ID: <1455321871-28296-2-git-send-email-jgunthorpe@obsidianresearch.com>
-References: <1455321871-28296-1-git-send-email-jgunthorpe@obsidianresearch.com>
+Subject: [PATCH 0/3] Various struct device cleanups
+Date: Fri, 12 Feb 2016 17:04:28 -0700
+Message-ID: <1455321871-28296-1-git-send-email-jgunthorpe@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1455321871-28296-1-git-send-email-jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,40 +17,36 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This was missed during the struct device conversion, we
-need to hold a kref on the chip to make sure it isn't freed.
+These little clean ups were missed during the struct device conversion of
+tpm_chip. There were noticed when looking at Stefan's vtpm patch sets.
 
-Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
----
- drivers/char/tpm/tpm-chip.c | 2 ++
- drivers/char/tpm/tpm.h      | 1 +
- 2 files changed, 3 insertions(+)
+Nothing very significant
+ - Add some missing krefs
+ - Replace chip->devname with dev_name
+ - Replace chip->pdev with chip->dev.parent
 
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index 45cc39aabeee..ae2fed8a162b 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -53,6 +53,8 @@ struct tpm_chip *tpm_chip_find_get(int chip_num)
- 			chip = pos;
- 			break;
- 		}
-+
-+		get_device(&chip->dev);
- 	}
- 	rcu_read_unlock();
- 	return chip;
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 542a80cbfd9c..f6ba79d91857 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -207,6 +207,7 @@ struct tpm_chip {
- static inline void tpm_chip_put(struct tpm_chip *chip)
- {
- 	module_put(chip->pdev->driver->owner);
-+	put_device(&chip->dev);
- }
- 
- static inline int tpm_read_index(int base, int index)
+Jason Gunthorpe (3):
+  tpm: Hold the kref during tpm_chip_find_get
+  tpm: Get rid of chip->pdev
+  tpm: Get rid of devname
+
+ drivers/char/tpm/tpm-chip.c         | 34 +++++++++++++++++++---------------
+ drivers/char/tpm/tpm-dev.c          |  4 +---
+ drivers/char/tpm/tpm-interface.c    | 30 ++++++++++++++++--------------
+ drivers/char/tpm/tpm-sysfs.c        |  6 +++---
+ drivers/char/tpm/tpm.h              |  5 ++---
+ drivers/char/tpm/tpm2-cmd.c         |  8 ++++----
+ drivers/char/tpm/tpm_atmel.c        | 14 +++++++-------
+ drivers/char/tpm/tpm_eventlog.c     |  2 +-
+ drivers/char/tpm/tpm_eventlog.h     |  2 +-
+ drivers/char/tpm/tpm_i2c_atmel.c    | 16 ++++++++--------
+ drivers/char/tpm/tpm_i2c_infineon.c |  6 +++---
+ drivers/char/tpm/tpm_i2c_nuvoton.c  | 28 ++++++++++++++--------------
+ drivers/char/tpm/tpm_infineon.c     | 22 +++++++++++-----------
+ drivers/char/tpm/tpm_nsc.c          | 20 ++++++++++----------
+ drivers/char/tpm/tpm_tis.c          | 18 +++++++++---------
+ 15 files changed, 109 insertions(+), 106 deletions(-)
+
 -- 
 2.1.4
 
