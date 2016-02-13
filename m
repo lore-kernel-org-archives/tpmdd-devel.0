@@ -1,14 +1,14 @@
-From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH 2/3] tpm: Get rid of chip->pdev
-Date: Sat, 13 Feb 2016 10:39:11 -0500
-Message-ID: <56BF4E1F.2030208@linux.vnet.ibm.com>
-References: <1455321871-28296-1-git-send-email-jgunthorpe@obsidianresearch.com>
-	<1455321871-28296-3-git-send-email-jgunthorpe@obsidianresearch.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH 1/3] tpm: Hold the kref during
+	tpm_chip_find_get
+Date: Sat, 13 Feb 2016 08:45:59 -0700
+Message-ID: <fc8d20c0-0732-49e6-b05f-6f37d933a18f@email.android.com>
+References: <20160213100818.GA12607@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1455321871-28296-3-git-send-email-jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <20160213100818.GA12607-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,42 +17,58 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 02/12/2016 07:04 PM, Jason Gunthorpe wrote:
-> This is a hold over from before the struct device conversion.
->
-> - All prints should be using &chip->dev, which is the Linux
->    standard. This changes prints to use tpm0 as the device name,
->    not the PnP/etc ID.
-> - The few places involving sysfs/modules that really do need the
->    parent just use chip->dev.parent instead
-> - We no longer need to get_device(pdev) in any places since it is no
->    longer used by any of the code. The kref on the parent is held
->    by the device core during device_add and dropped in device_del
->
-> Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> ---
-
-> @@ -347,8 +347,8 @@ static int i2c_nuvoton_recv(struct tpm_chip *chip, u8 *buf, size_t count)
->    */
->   static int i2c_nuvoton_send(struct tpm_chip *chip, u8 *buf, size_t len)
->   {
-> -	struct device *dev = chip->pdev;
-> -	struct i2c_client *client = to_i2c_client(dev);
-> +	struct device *dev = &chip->dev;
-This looks wrong or are you fixing a bug here? chip->dev.parent ?
-> +	struct i2c_client *client = to_i2c_client(chip->dev.parent);
-
-Does this need to be replaced ?
-
-     Stefan
-
-
-------------------------------------------------------------------------------
-Site24x7 APM Insight: Get Deep Visibility into Application Performance
-APM + Mobile APM + RUM: Monitor 3 App instances at just $35/Month
-Monitor end-to-end web transactions and take corrective actions now
-Troubleshoot faster and improve end-user experience. Signup Now!
-http://pubads.g.doubleclick.net/gampad/clk?id=272487151&iu=/4140
+SGkgSmFya2tvLAoKSSBmb3VuZCBhIGJ1ZyBpbiB0aGlzIGxhc3QgbmlnaHQsIHBsZWFzZSBob2xk
+IG9mZi4KCkphc29uCgoKT24gRmViIDEzLCAyMDE2IDM6MDggQU0sIEphcmtrbyBTYWtraW5lbiA8
+amFya2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbT4gd3JvdGU6Cj4KPiBPbiBGcmksIEZlYiAx
+MiwgMjAxNiBhdCAwNTowNDoyOVBNIC0wNzAwLCBKYXNvbiBHdW50aG9ycGUgd3JvdGU6IAo+ID4g
+VGhpcyB3YXMgbWlzc2VkIGR1cmluZyB0aGUgc3RydWN0IGRldmljZSBjb252ZXJzaW9uLCB3ZSAK
+PiA+IG5lZWQgdG8gaG9sZCBhIGtyZWYgb24gdGhlIGNoaXAgdG8gbWFrZSBzdXJlIGl0IGlzbid0
+IGZyZWVkLiAKPiA+IAo+ID4gU2lnbmVkLW9mZi1ieTogSmFzb24gR3VudGhvcnBlIDxqZ3VudGhv
+cnBlQG9ic2lkaWFucmVzZWFyY2guY29tPiAKPgo+IFJldmlld2VkLWJ5OiBKYXJra28gU2Fra2lu
+ZW4gPGphcmtrby5zYWtraW5lbkBsaW51eC5pbnRlbC5jbT4gCj4KPiBGb3IgcmVzdCBvZiB0aGUg
+cGF0Y2hlcyBJJ2xsIGxvb2sgYXQgdGhlbSBwb3N0LXY0LjUuIEknbSBzdGlsbCB3YWl0aW5nIAo+
+IGZvciBteSBmaXJzdCBwdWxsIHJlcXVlc3QgY29udGFpbmluZyBmaXhlcyBmb3IgdGhhdCByZWxl
+YXNlIHRvIGJlIAo+IHRha2VuLiAKPgo+IEphbWVzLCB3b3VsZCBpdCBiZSBwb3NzaWJsZSB0byB0
+YWtlIHRoZSBwdWxsIHJlcXVlc3QgY29udGFpbmluZyBmaXhlcyAKPiBzb29uIHRoYXQgSSBvcmln
+aWFuYWxseSBzZW50IGFscmVhZHkgaW4gSmFuIGFuZCBiaXQgdXBkYXRlZCB2ZXJzaW9uIAo+IGZl
+dyBkYXlzIGFnbyBbMV0/IEkgc3RpbGwgaGF2ZSBvbmUgbW9yZSBwdWxsIHJlcXVlc3QgY29taW5n
+IGFmdGVyIHRoYXQuIEl0IHdpbGwgCj4gY29udGFpbiBvbmx5IGZldyBsaW5lIGNoYW5nZXM6IAo+
+Cj4gKiBNaXNzaW5nIHB1dF9kZXZpY2UoKSBpbiB0d28gcGxhY2VzLiAKPiAqIFRoZXJlIGlzIGEg
+c21hbGwgY2hhbmdlIHRvIEFCSSBiZWhhdmlvciAoSSdsbCBwb3N0IGl0IAo+IMKgIHNvb24pIG9m
+IHBvbGljeSBzZWFsaW5nIHNvIEkgcmVhbGx5IG5lZWQgaXQgZm9yIHRoaXMgcmVsZWFzZSBiZWNh
+dXNlIAo+IMKgIDQuNSBpcyB0aGUgZmlyc3QgcmVsZWFzZSBjb250YWluaW5nIHRoaXMgZmVhdHVy
+ZSBhbmQgSSBjYW5ub3QgY2hhbmdlIAo+IMKgIGl0IHdoZW4gdGhlIHJlbGVhc2UgaXMgdGFnZ2Vk
+LiAKPgo+IFRoYW5rIHlvdS4gCj4KPiBbMV0gaHR0cDovL3d3dy5nb3NzYW1lci10aHJlYWRzLmNv
+bS9saXN0cy9saW51eC9rZXJuZWwvMjM2NjkwMiAKPgo+IC9KYXJra28gCj4KPgo+ID4gLS0tIAo+
+ID7CoCBkcml2ZXJzL2NoYXIvdHBtL3RwbS1jaGlwLmMgfCAyICsrIAo+ID7CoCBkcml2ZXJzL2No
+YXIvdHBtL3RwbS5owqDCoMKgwqDCoCB8IDEgKyAKPiA+wqAgMiBmaWxlcyBjaGFuZ2VkLCAzIGlu
+c2VydGlvbnMoKykgCj4gPiAKPiA+IGRpZmYgLS1naXQgYS9kcml2ZXJzL2NoYXIvdHBtL3RwbS1j
+aGlwLmMgYi9kcml2ZXJzL2NoYXIvdHBtL3RwbS1jaGlwLmMgCj4gPiBpbmRleCA0NWNjMzlhYWJl
+ZWUuLmFlMmZlZDhhMTYyYiAxMDA2NDQgCj4gPiAtLS0gYS9kcml2ZXJzL2NoYXIvdHBtL3RwbS1j
+aGlwLmMgCj4gPiArKysgYi9kcml2ZXJzL2NoYXIvdHBtL3RwbS1jaGlwLmMgCj4gPiBAQCAtNTMs
+NiArNTMsOCBAQCBzdHJ1Y3QgdHBtX2NoaXAgKnRwbV9jaGlwX2ZpbmRfZ2V0KGludCBjaGlwX251
+bSkgCj4gPsKgIGNoaXAgPSBwb3M7IAo+ID7CoCBicmVhazsgCj4gPsKgIH0gCj4gPiArIAo+ID4g
+KyBnZXRfZGV2aWNlKCZjaGlwLT5kZXYpOyAKPiA+wqAgfSAKPiA+wqAgcmN1X3JlYWRfdW5sb2Nr
+KCk7IAo+ID7CoCByZXR1cm4gY2hpcDsgCj4gPiBkaWZmIC0tZ2l0IGEvZHJpdmVycy9jaGFyL3Rw
+bS90cG0uaCBiL2RyaXZlcnMvY2hhci90cG0vdHBtLmggCj4gPiBpbmRleCA1NDJhODBjYmZkOWMu
+LmY2YmE3OWQ5MTg1NyAxMDA2NDQgCj4gPiAtLS0gYS9kcml2ZXJzL2NoYXIvdHBtL3RwbS5oIAo+
+ID4gKysrIGIvZHJpdmVycy9jaGFyL3RwbS90cG0uaCAKPiA+IEBAIC0yMDcsNiArMjA3LDcgQEAg
+c3RydWN0IHRwbV9jaGlwIHsgCj4gPsKgIHN0YXRpYyBpbmxpbmUgdm9pZCB0cG1fY2hpcF9wdXQo
+c3RydWN0IHRwbV9jaGlwICpjaGlwKSAKPiA+wqAgeyAKPiA+wqAgbW9kdWxlX3B1dChjaGlwLT5w
+ZGV2LT5kcml2ZXItPm93bmVyKTsgCj4gPiArIHB1dF9kZXZpY2UoJmNoaXAtPmRldik7IAo+ID7C
+oCB9IAo+ID7CoCAKPiA+wqAgc3RhdGljIGlubGluZSBpbnQgdHBtX3JlYWRfaW5kZXgoaW50IGJh
+c2UsIGludCBpbmRleCkgCj4gPiAtLSAKPiA+IDIuMS40IAo+ID4gCi0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLQpTaXRlMjR4NyBBUE0gSW5zaWdodDogR2V0IERlZXAgVmlzaWJpbGl0eSBpbnRvIEFwcGxp
+Y2F0aW9uIFBlcmZvcm1hbmNlCkFQTSArIE1vYmlsZSBBUE0gKyBSVU06IE1vbml0b3IgMyBBcHAg
+aW5zdGFuY2VzIGF0IGp1c3QgJDM1L01vbnRoCk1vbml0b3IgZW5kLXRvLWVuZCB3ZWIgdHJhbnNh
+Y3Rpb25zIGFuZCB0YWtlIGNvcnJlY3RpdmUgYWN0aW9ucyBub3cKVHJvdWJsZXNob290IGZhc3Rl
+ciBhbmQgaW1wcm92ZSBlbmQtdXNlciBleHBlcmllbmNlLiBTaWdudXAgTm93IQpodHRwOi8vcHVi
+YWRzLmcuZG91YmxlY2xpY2submV0L2dhbXBhZC9jbGs/aWQ9MjcyNDg3MTUxJml1PS80MTQwCl9f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fCnRwbWRkLWRldmVs
+IG1haWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9s
+aXN0cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwK
