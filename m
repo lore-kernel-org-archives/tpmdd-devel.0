@@ -1,8 +1,8 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v2 04/12] tpm/st33zp24/spi: Remove field
-	spi_xfer from st33zp24_spi_phy structure
-Date: Sat, 13 Feb 2016 16:15:27 +0100
-Message-ID: <1455376535-9549-5-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH v2 05/12] tpm/st33zp24: Remove unneeded
+	CONFIG_OF switches
+Date: Sat, 13 Feb 2016 16:15:28 +0100
+Message-ID: <1455376535-9549-6-git-send-email-christophe-h.ricard@st.com>
 References: <1455376535-9549-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,116 +21,93 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, peterhuewe-Mmb7MZpH
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Remove spi_xfer from st33zp24_spi_phy structure and declare local spi_xfer
-when needed instead.
+DT headers already define NOOP routines when CONFIG_OF is not defined.
 
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 ---
- drivers/char/tpm/st33zp24/spi.c | 50 ++++++++++++++++++++---------------------
- 1 file changed, 25 insertions(+), 25 deletions(-)
+ drivers/char/tpm/st33zp24/i2c.c | 9 ---------
+ drivers/char/tpm/st33zp24/spi.c | 9 ---------
+ 2 files changed, 18 deletions(-)
 
+diff --git a/drivers/char/tpm/st33zp24/i2c.c b/drivers/char/tpm/st33zp24/i2c.c
+index 309d276..a05fbd8 100644
+--- a/drivers/char/tpm/st33zp24/i2c.c
++++ b/drivers/char/tpm/st33zp24/i2c.c
+@@ -108,7 +108,6 @@ static const struct st33zp24_phy_ops i2c_phy_ops = {
+ 	.recv = st33zp24_i2c_recv,
+ };
+ 
+-#ifdef CONFIG_OF
+ static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
+ {
+ 	struct device_node *pp;
+@@ -146,12 +145,6 @@ static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
+ 
+ 	return 0;
+ }
+-#else
+-static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
+-{
+-	return -ENODEV;
+-}
+-#endif
+ 
+ static int st33zp24_i2c_request_resources(struct i2c_client *client,
+ 					  struct st33zp24_i2c_phy *phy)
+@@ -245,13 +238,11 @@ static const struct i2c_device_id st33zp24_i2c_id[] = {
+ };
+ MODULE_DEVICE_TABLE(i2c, st33zp24_i2c_id);
+ 
+-#ifdef CONFIG_OF
+ static const struct of_device_id of_st33zp24_i2c_match[] = {
+ 	{ .compatible = "st,st33zp24-i2c", },
+ 	{}
+ };
+ MODULE_DEVICE_TABLE(of, of_st33zp24_i2c_match);
+-#endif
+ 
+ static SIMPLE_DEV_PM_OPS(st33zp24_i2c_ops, st33zp24_pm_suspend,
+ 			 st33zp24_pm_resume);
 diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
-index 08ffbfe..41c11c9 100644
+index 41c11c9..0af836a 100644
 --- a/drivers/char/tpm/st33zp24/spi.c
 +++ b/drivers/char/tpm/st33zp24/spi.c
-@@ -66,7 +66,7 @@
+@@ -221,7 +221,6 @@ static const struct st33zp24_phy_ops spi_phy_ops = {
+ 	.recv = st33zp24_spi_recv,
+ };
  
- struct st33zp24_spi_phy {
- 	struct spi_device *spi_device;
--	struct spi_transfer spi_xfer;
-+
- 	u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE];
- 	u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE];
+-#ifdef CONFIG_OF
+ static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
+ {
+ 	struct device_node *pp;
+@@ -259,12 +258,6 @@ static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
  
-@@ -113,28 +113,30 @@ static int st33zp24_spi_send(void *phy_id, u8 tpm_register, u8 *tpm_data,
- 	int total_length = 0, ret = 0;
- 	struct st33zp24_spi_phy *phy = phy_id;
- 	struct spi_device *dev = phy->spi_device;
--	u8 *tx_buf = (u8 *)phy->spi_xfer.tx_buf;
--	u8 *rx_buf = phy->spi_xfer.rx_buf;
-+	struct spi_transfer spi_xfer = {
-+		.tx_buf = phy->tx_buf,
-+		.rx_buf = phy->rx_buf,
-+	};
+ 	return 0;
+ }
+-#else
+-static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
+-{
+-	return -ENODEV;
+-}
+-#endif
  
- 	/* Pre-Header */
--	tx_buf[total_length++] = TPM_WRITE_DIRECTION | LOCALITY0;
--	tx_buf[total_length++] = tpm_register;
-+	phy->tx_buf[total_length++] = TPM_WRITE_DIRECTION | LOCALITY0;
-+	phy->tx_buf[total_length++] = tpm_register;
+ static int st33zp24_spi_request_resources(struct spi_device *dev,
+ 					  struct st33zp24_spi_phy *phy)
+@@ -357,13 +350,11 @@ static const struct spi_device_id st33zp24_spi_id[] = {
+ };
+ MODULE_DEVICE_TABLE(spi, st33zp24_spi_id);
  
- 	if (tpm_size > 0 && tpm_register == TPM_DATA_FIFO) {
--		tx_buf[total_length++] = tpm_size >> 8;
--		tx_buf[total_length++] = tpm_size;
-+		phy->tx_buf[total_length++] = tpm_size >> 8;
-+		phy->tx_buf[total_length++] = tpm_size;
- 	}
+-#ifdef CONFIG_OF
+ static const struct of_device_id of_st33zp24_spi_match[] = {
+ 	{ .compatible = "st,st33zp24-spi", },
+ 	{}
+ };
+ MODULE_DEVICE_TABLE(of, of_st33zp24_spi_match);
+-#endif
  
--	memcpy(&tx_buf[total_length], tpm_data, tpm_size);
-+	memcpy(&phy->tx_buf[total_length], tpm_data, tpm_size);
- 	total_length += tpm_size;
- 
--	memset(&tx_buf[total_length], TPM_DUMMY_BYTE, phy->latency);
-+	memset(&phy->tx_buf[total_length], TPM_DUMMY_BYTE, phy->latency);
- 
--	phy->spi_xfer.len = total_length + phy->latency;
-+	spi_xfer.len = total_length + phy->latency;
- 
--	ret = spi_sync_transfer(dev, &phy->spi_xfer, 1);
-+	ret = spi_sync_transfer(dev, &spi_xfer, 1);
- 	if (ret == 0)
--		ret = rx_buf[total_length + phy->latency - 1];
-+		ret = phy->rx_buf[total_length + phy->latency - 1];
- 
- 	return st33zp24_status_to_errno(ret);
- } /* st33zp24_spi_send() */
-@@ -154,24 +156,25 @@ static int st33zp24_spi_read8_reg(void *phy_id, u8 tpm_register, u8 *tpm_data,
- 	int total_length = 0, ret;
- 	struct st33zp24_spi_phy *phy = phy_id;
- 	struct spi_device *dev = phy->spi_device;
--	u8 *tx_buf = (u8 *)phy->spi_xfer.tx_buf;
--	u8 *rx_buf = phy->spi_xfer.rx_buf;
-+	struct spi_transfer spi_xfer = {
-+		.tx_buf = phy->tx_buf,
-+		.rx_buf = phy->rx_buf,
-+	};
- 
- 	/* Pre-Header */
--	tx_buf[total_length++] = LOCALITY0;
--	tx_buf[total_length++] = tpm_register;
-+	phy->tx_buf[total_length++] = LOCALITY0;
-+	phy->tx_buf[total_length++] = tpm_register;
- 
--	memset(&tx_buf[total_length], TPM_DUMMY_BYTE,
--	       phy->latency + tpm_size);
-+	memset(&phy->tx_buf[total_length], TPM_DUMMY_BYTE, phy->latency + tpm_size);
- 
--	phy->spi_xfer.len = total_length + phy->latency + tpm_size;
-+	spi_xfer.len = total_length + phy->latency + tpm_size;
- 
- 	/* header + status byte + size of the data + status byte */
--	ret = spi_sync_transfer(dev, &phy->spi_xfer, 1);
-+	ret = spi_sync_transfer(dev, &spi_xfer, 1);
- 	if (tpm_size > 0 && ret == 0) {
--		ret = rx_buf[total_length + phy->latency - 1];
-+		ret = phy->rx_buf[total_length + phy->latency - 1];
- 
--		memcpy(tpm_data, rx_buf + total_length + phy->latency,
-+		memcpy(tpm_data, phy->rx_buf + total_length + phy->latency,
- 		       tpm_size);
- 	}
- 
-@@ -328,9 +331,6 @@ static int st33zp24_spi_probe(struct spi_device *dev)
- 			return ret;
- 	}
- 
--	phy->spi_xfer.tx_buf = phy->tx_buf;
--	phy->spi_xfer.rx_buf = phy->rx_buf;
--
- 	phy->latency = st33zp24_spi_evaluate_latency(phy);
- 	if (phy->latency <= 0)
- 		return -ENODEV;
+ static SIMPLE_DEV_PM_OPS(st33zp24_spi_ops, st33zp24_pm_suspend,
+ 			 st33zp24_pm_resume);
 -- 
 2.5.0
 
