@@ -1,7 +1,8 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v2 06/12] tpm/st33zp24: Auto-select core module
-Date: Sat, 13 Feb 2016 16:15:29 +0100
-Message-ID: <1455376535-9549-7-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH v2 07/12] tpm/st33zp24/spi: Improve
+	st33zp24_spi_evaluate_latency
+Date: Sat, 13 Feb 2016 16:15:30 +0100
+Message-ID: <1455376535-9549-8-git-send-email-christophe-h.ricard@st.com>
 References: <1455376535-9549-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,55 +21,31 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, peterhuewe-Mmb7MZpH
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The core st33zp24 module is useless without either the I2C or the
-SPI access module. So hide NFC_ST_NCI and select it automatically
-if either TCG_TIS_ST33ZP24_I2C or TCG_TIS_ST33ZP24_SPI is selected.
-
-This avoids presenting TCG_TIS_ST33ZP24 when neither TCG_TIS_ST33ZP24_I2C
-nor TCG_TIS_ST33ZP24_SPI can be selected.
+Add check in st33zp24_spi_evaluate_latency helping to diagnose if the chip
+is present or in a bad state.
 
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 ---
- drivers/char/tpm/st33zp24/Kconfig | 11 +++++------
- 1 file changed, 5 insertions(+), 6 deletions(-)
+ drivers/char/tpm/st33zp24/spi.c | 5 +++++
+ 1 file changed, 5 insertions(+)
 
-diff --git a/drivers/char/tpm/st33zp24/Kconfig b/drivers/char/tpm/st33zp24/Kconfig
-index 19c0074..e74c6f2 100644
---- a/drivers/char/tpm/st33zp24/Kconfig
-+++ b/drivers/char/tpm/st33zp24/Kconfig
-@@ -1,6 +1,5 @@
- config TCG_TIS_ST33ZP24
--	tristate "STMicroelectronics TPM Interface Specification 1.2 Interface"
--	depends on GPIOLIB || COMPILE_TEST
-+	tristate
- 	---help---
- 	  STMicroelectronics ST33ZP24 core driver. It implements the core
- 	  TPM1.2 logic and hooks into the TPM kernel APIs. Physical layers will
-@@ -10,9 +9,9 @@ config TCG_TIS_ST33ZP24
- 	  tpm_st33zp24.
+diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
+index 0af836a..7cabf1d 100644
+--- a/drivers/char/tpm/st33zp24/spi.c
++++ b/drivers/char/tpm/st33zp24/spi.c
+@@ -213,6 +213,11 @@ static int st33zp24_spi_evaluate_latency(void *phy_id)
+ 						&data, 1);
+ 		latency++;
+ 	}
++	if (status < 0)
++		return status;
++	if (latency == MAX_SPI_LATENCY)
++		return -ENODEV;
++
+ 	return latency - 1;
+ } /* evaluate_latency() */
  
- config TCG_TIS_ST33ZP24_I2C
--	tristate "TPM 1.2 ST33ZP24 I2C support"
--	depends on TCG_TIS_ST33ZP24
-+	tristate "STMicroelectronics TPM Interface Specification 1.2 Interface (I2C)"
- 	depends on I2C
-+	select TCG_TIS_ST33ZP24
- 	---help---
- 	  This module adds support for the STMicroelectronics TPM security chip
- 	  ST33ZP24 with i2c interface.
-@@ -20,9 +19,9 @@ config TCG_TIS_ST33ZP24_I2C
- 	  called tpm_st33zp24_i2c.
- 
- config TCG_TIS_ST33ZP24_SPI
--	tristate "TPM 1.2 ST33ZP24 SPI support"
--	depends on TCG_TIS_ST33ZP24
-+	tristate "STMicroelectronics TPM Interface Specification 1.2 Interface (SPI)"
- 	depends on SPI
-+	select TCG_TIS_ST33ZP24
- 	---help---
- 	  This module adds support for the STMicroelectronics TPM security chip
- 	  ST33ZP24 with spi interface.
 -- 
 2.5.0
 
