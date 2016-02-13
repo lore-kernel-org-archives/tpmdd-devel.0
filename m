@@ -1,8 +1,8 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v2 10/12] tpm: st33zp24: Add support for acpi
-	probing for spi device.
-Date: Sat, 13 Feb 2016 16:15:33 +0100
-Message-ID: <1455376535-9549-11-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH v2 09/12] tpm/st33zp24: Add support for acpi
+	probing for i2c device.
+Date: Sat, 13 Feb 2016 16:15:32 +0100
+Message-ID: <1455376535-9549-10-git-send-email-christophe-h.ricard@st.com>
 References: <1455376535-9549-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -35,23 +35,23 @@ Device (TPM1)
 	{
 		Name (SBUF, ResourceTemplate ()
 		{
-			SpiSerialBus (0, PolarityLow, FourWireMode, 8,
-				      ControllerInitiated, 10000000, ClockPolarityLow,
-				      ClockPhaseFirst, "\\_SB.SPI1",
+			I2cSerialBus (0x0013, ControllerInitiated, 400000,
+				      AddressingMode7Bit, "\\_SB.I2C7",
 				      0x00, ResourceConsumer, ,)
 			GpioInt (Edge, ActiveHigh, ExclusiveAndWake, PullNone, 0x0000,
 				 "\\_SB.GPO2", 0x00, ResourceConsumer, ,)
-			{       // Pin list
+			{   	// Pin list
 				0x0001
 			}
 			GpioIo (Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly,
 				"\\_SB.GPO2", 0x00, ResourceConsumer, ,)
-			{       // Pin list
+			{	// Pin list
 				0x0002,
 			}
 		})
-		Return (SBUF) /* \_SB_.SPI1.TPM1._CRS.SBUF */
+		Return (SBUF) /* \_SB_.I2C7.TPM1._CRS.SBUF */
 	}
+
 	Method (_STA, 0, NotSerialized)  // _STA: Status
 	{
 		Return (0x0F)
@@ -61,16 +61,16 @@ Device (TPM1)
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 ---
- drivers/char/tpm/st33zp24/spi.c | 50 +++++++++++++++++++++++++++++++++++++++++
+ drivers/char/tpm/st33zp24/i2c.c | 50 +++++++++++++++++++++++++++++++++++++++++
  1 file changed, 50 insertions(+)
 
-diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
-index 34cdee1..b9b74ae 100644
---- a/drivers/char/tpm/st33zp24/spi.c
-+++ b/drivers/char/tpm/st33zp24/spi.c
+diff --git a/drivers/char/tpm/st33zp24/i2c.c b/drivers/char/tpm/st33zp24/i2c.c
+index a49b6f1..b20cc2b 100644
+--- a/drivers/char/tpm/st33zp24/i2c.c
++++ b/drivers/char/tpm/st33zp24/i2c.c
 @@ -19,8 +19,10 @@
  #include <linux/module.h>
- #include <linux/spi/spi.h>
+ #include <linux/i2c.h>
  #include <linux/gpio.h>
 +#include <linux/gpio/consumer.h>
  #include <linux/of_irq.h>
@@ -79,21 +79,21 @@ index 34cdee1..b9b74ae 100644
  #include <linux/tpm.h>
  #include <linux/platform_data/st33zp24.h>
  
-@@ -226,6 +228,43 @@ static const struct st33zp24_phy_ops spi_phy_ops = {
- 	.recv = st33zp24_spi_recv,
+@@ -108,6 +110,43 @@ static const struct st33zp24_phy_ops i2c_phy_ops = {
+ 	.recv = st33zp24_i2c_recv,
  };
  
-+static int st33zp24_spi_acpi_request_resources(struct st33zp24_i2c_phy *phy)
++static int st33zp24_i2c_acpi_request_resources(struct st33zp24_i2c_phy *phy)
 +{
-+	struct spi_device *spi_dev = phy->spi_device;
++	struct i2c_client *client = phy->client;
 +	const struct acpi_device_id *id;
 +	struct gpio_desc *gpiod_lpcpd;
 +	struct device *dev;
 +
-+	if (!spi_dev)
++	if (!client)
 +		return -EINVAL;
 +
-+	dev = &spi_dev->dev;
++	dev = &client->dev;
 +
 +	/* Match the struct device against a given list of ACPI IDs */
 +	id = acpi_match_device(dev->driver->acpi_match_table, dev);
@@ -120,41 +120,41 @@ index 34cdee1..b9b74ae 100644
 +	return 0;
 +}
 +
- static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
+ static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
  {
  	struct device_node *pp;
-@@ -327,6 +366,10 @@ static int st33zp24_spi_probe(struct spi_device *dev)
- 		ret = st33zp24_spi_request_resources(dev, phy);
+@@ -214,6 +253,10 @@ static int st33zp24_i2c_probe(struct i2c_client *client,
+ 		ret = st33zp24_i2c_request_resources(client, phy);
  		if (ret)
  			return ret;
-+	} else if (ACPI_HANDLE(&dev->dev)) {
-+		ret = st33zp24_spi_acpi_request_resources(phy);
++	} else if (ACPI_HANDLE(&client->dev)) {
++		ret = st33zp24_i2c_acpi_request_resources(phy);
 +		if (ret)
 +			return ret;
  	}
  
- 	phy->latency = st33zp24_spi_evaluate_latency(phy);
-@@ -361,6 +404,12 @@ static const struct of_device_id of_st33zp24_spi_match[] = {
+ 	return st33zp24_probe(phy, &i2c_phy_ops, &client->dev, client->irq,
+@@ -244,6 +287,12 @@ static const struct of_device_id of_st33zp24_i2c_match[] = {
  };
- MODULE_DEVICE_TABLE(of, of_st33zp24_spi_match);
+ MODULE_DEVICE_TABLE(of, of_st33zp24_i2c_match);
  
-+static const struct acpi_device_id st33zp24_spi_acpi_match[] = {
++static const struct acpi_device_id st33zp24_i2c_acpi_match[] = {
 +	{"SMO3324"},
 +	{}
 +};
-+MODULE_DEVICE_TABLE(acpi, st33zp24_spi_acpi_match);
++MODULE_DEVICE_TABLE(acpi, st33zp24_i2c_acpi_match);
 +
- static SIMPLE_DEV_PM_OPS(st33zp24_spi_ops, st33zp24_pm_suspend,
+ static SIMPLE_DEV_PM_OPS(st33zp24_i2c_ops, st33zp24_pm_suspend,
  			 st33zp24_pm_resume);
  
-@@ -369,6 +418,7 @@ static struct spi_driver st33zp24_spi_driver = {
- 		.name = TPM_ST33_SPI,
- 		.pm = &st33zp24_spi_ops,
- 		.of_match_table = of_match_ptr(of_st33zp24_spi_match),
-+		.acpi_match_table = ACPI_PTR(st33zp24_spi_acpi_match),
+@@ -252,6 +301,7 @@ static struct i2c_driver st33zp24_i2c_driver = {
+ 		.name = TPM_ST33_I2C,
+ 		.pm = &st33zp24_i2c_ops,
+ 		.of_match_table = of_match_ptr(of_st33zp24_i2c_match),
++		.acpi_match_table = ACPI_PTR(st33zp24_i2c_acpi_match),
  	},
- 	.probe = st33zp24_spi_probe,
- 	.remove = st33zp24_spi_remove,
+ 	.probe = st33zp24_i2c_probe,
+ 	.remove = st33zp24_i2c_remove,
 -- 
 2.5.0
 
