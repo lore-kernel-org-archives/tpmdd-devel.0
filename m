@@ -1,8 +1,8 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v2 05/12] tpm/st33zp24: Remove unneeded
-	CONFIG_OF switches
-Date: Sat, 13 Feb 2016 16:15:28 +0100
-Message-ID: <1455376535-9549-6-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH v2 08/12] tpm/st33zp24: Extend Copyright
+	headers
+Date: Sat, 13 Feb 2016 16:15:31 +0100
+Message-ID: <1455376535-9549-9-git-send-email-christophe-h.ricard@st.com>
 References: <1455376535-9549-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,93 +21,78 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, peterhuewe-Mmb7MZpH
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-DT headers already define NOOP routines when CONFIG_OF is not defined.
+Extend copyright header to 2016
 
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 ---
- drivers/char/tpm/st33zp24/i2c.c | 9 ---------
- drivers/char/tpm/st33zp24/spi.c | 9 ---------
- 2 files changed, 18 deletions(-)
+ drivers/char/tpm/st33zp24/i2c.c        | 2 +-
+ drivers/char/tpm/st33zp24/spi.c        | 2 +-
+ drivers/char/tpm/st33zp24/st33zp24.c   | 2 +-
+ drivers/char/tpm/st33zp24/st33zp24.h   | 2 +-
+ include/linux/platform_data/st33zp24.h | 2 +-
+ 5 files changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/char/tpm/st33zp24/i2c.c b/drivers/char/tpm/st33zp24/i2c.c
-index 309d276..a05fbd8 100644
+index a05fbd8..a49b6f1 100644
 --- a/drivers/char/tpm/st33zp24/i2c.c
 +++ b/drivers/char/tpm/st33zp24/i2c.c
-@@ -108,7 +108,6 @@ static const struct st33zp24_phy_ops i2c_phy_ops = {
- 	.recv = st33zp24_i2c_recv,
- };
- 
--#ifdef CONFIG_OF
- static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
- {
- 	struct device_node *pp;
-@@ -146,12 +145,6 @@ static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
- 
- 	return 0;
- }
--#else
--static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
--{
--	return -ENODEV;
--}
--#endif
- 
- static int st33zp24_i2c_request_resources(struct i2c_client *client,
- 					  struct st33zp24_i2c_phy *phy)
-@@ -245,13 +238,11 @@ static const struct i2c_device_id st33zp24_i2c_id[] = {
- };
- MODULE_DEVICE_TABLE(i2c, st33zp24_i2c_id);
- 
--#ifdef CONFIG_OF
- static const struct of_device_id of_st33zp24_i2c_match[] = {
- 	{ .compatible = "st,st33zp24-i2c", },
- 	{}
- };
- MODULE_DEVICE_TABLE(of, of_st33zp24_i2c_match);
--#endif
- 
- static SIMPLE_DEV_PM_OPS(st33zp24_i2c_ops, st33zp24_pm_suspend,
- 			 st33zp24_pm_resume);
+@@ -1,6 +1,6 @@
+ /*
+  * STMicroelectronics TPM I2C Linux driver for TPM ST33ZP24
+- * Copyright (C) 2009 - 2015 STMicroelectronics
++ * Copyright (C) 2009 - 2016 STMicroelectronics
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
 diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
-index 41c11c9..0af836a 100644
+index 7cabf1d..34cdee1 100644
 --- a/drivers/char/tpm/st33zp24/spi.c
 +++ b/drivers/char/tpm/st33zp24/spi.c
-@@ -221,7 +221,6 @@ static const struct st33zp24_phy_ops spi_phy_ops = {
- 	.recv = st33zp24_spi_recv,
- };
- 
--#ifdef CONFIG_OF
- static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
- {
- 	struct device_node *pp;
-@@ -259,12 +258,6 @@ static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
- 
- 	return 0;
- }
--#else
--static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
--{
--	return -ENODEV;
--}
--#endif
- 
- static int st33zp24_spi_request_resources(struct spi_device *dev,
- 					  struct st33zp24_spi_phy *phy)
-@@ -357,13 +350,11 @@ static const struct spi_device_id st33zp24_spi_id[] = {
- };
- MODULE_DEVICE_TABLE(spi, st33zp24_spi_id);
- 
--#ifdef CONFIG_OF
- static const struct of_device_id of_st33zp24_spi_match[] = {
- 	{ .compatible = "st,st33zp24-spi", },
- 	{}
- };
- MODULE_DEVICE_TABLE(of, of_st33zp24_spi_match);
--#endif
- 
- static SIMPLE_DEV_PM_OPS(st33zp24_spi_ops, st33zp24_pm_suspend,
- 			 st33zp24_pm_resume);
+@@ -1,6 +1,6 @@
+ /*
+  * STMicroelectronics TPM SPI Linux driver for TPM ST33ZP24
+- * Copyright (C) 2009 - 2015  STMicroelectronics
++ * Copyright (C) 2009 - 2016 STMicroelectronics
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+diff --git a/drivers/char/tpm/st33zp24/st33zp24.c b/drivers/char/tpm/st33zp24/st33zp24.c
+index 8d62678..944d279 100644
+--- a/drivers/char/tpm/st33zp24/st33zp24.c
++++ b/drivers/char/tpm/st33zp24/st33zp24.c
+@@ -1,6 +1,6 @@
+ /*
+  * STMicroelectronics TPM Linux driver for TPM ST33ZP24
+- * Copyright (C) 2009 - 2015 STMicroelectronics
++ * Copyright (C) 2009 - 2016 STMicroelectronics
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+diff --git a/drivers/char/tpm/st33zp24/st33zp24.h b/drivers/char/tpm/st33zp24/st33zp24.h
+index c207ceb..bcbd5ff 100644
+--- a/drivers/char/tpm/st33zp24/st33zp24.h
++++ b/drivers/char/tpm/st33zp24/st33zp24.h
+@@ -1,6 +1,6 @@
+ /*
+  * STMicroelectronics TPM Linux driver for TPM ST33ZP24
+- * Copyright (C) 2009 - 2015  STMicroelectronics
++ * Copyright (C) 2009 - 2016  STMicroelectronics
+  *
+  * This program is free software; you can redistribute it and/or modify it
+  * under the terms and conditions of the GNU General Public License,
+diff --git a/include/linux/platform_data/st33zp24.h b/include/linux/platform_data/st33zp24.h
+index 817dfdb..6f0fb6e 100644
+--- a/include/linux/platform_data/st33zp24.h
++++ b/include/linux/platform_data/st33zp24.h
+@@ -1,6 +1,6 @@
+ /*
+  * STMicroelectronics TPM Linux driver for TPM 1.2 ST33ZP24
+- * Copyright (C) 2009 - 2015  STMicroelectronics
++ * Copyright (C) 2009 - 2016  STMicroelectronics
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
 -- 
 2.5.0
 
