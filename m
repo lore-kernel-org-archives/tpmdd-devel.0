@@ -1,14 +1,14 @@
-From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v2 11/12] tpm/st33zp24/i2c: Change
-	xxx_request_resources header
-Date: Sat, 13 Feb 2016 16:15:34 +0100
-Message-ID: <1455376535-9549-12-git-send-email-christophe-h.ricard@st.com>
-References: <1455376535-9549-1-git-send-email-christophe-h.ricard@st.com>
+From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH 2/3] tpm: Get rid of chip->pdev
+Date: Sat, 13 Feb 2016 10:39:11 -0500
+Message-ID: <56BF4E1F.2030208@linux.vnet.ibm.com>
+References: <1455321871-28296-1-git-send-email-jgunthorpe@obsidianresearch.com>
+	<1455321871-28296-3-git-send-email-jgunthorpe@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1455376535-9549-1-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
+In-Reply-To: <1455321871-28296-3-git-send-email-jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,88 +17,37 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, peterhuewe-Mmb7MZpHnFY@public.gmane.org
-Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Simplify st33zp24_i2c_acpi_request_resources, st33zp24_i2c_of_request_resources
-and st33zp24_i2c_request_resources to have the same prototype and using
-i2c_get_clientdata.
+On 02/12/2016 07:04 PM, Jason Gunthorpe wrote:
+> This is a hold over from before the struct device conversion.
+>
+> - All prints should be using &chip->dev, which is the Linux
+>    standard. This changes prints to use tpm0 as the device name,
+>    not the PnP/etc ID.
+> - The few places involving sysfs/modules that really do need the
+>    parent just use chip->dev.parent instead
+> - We no longer need to get_device(pdev) in any places since it is no
+>    longer used by any of the code. The kref on the parent is held
+>    by the device core during device_add and dropped in device_del
+>
+> Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> ---
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
----
- drivers/char/tpm/st33zp24/i2c.c | 21 ++++++++++++---------
- 1 file changed, 12 insertions(+), 9 deletions(-)
+> @@ -347,8 +347,8 @@ static int i2c_nuvoton_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+>    */
+>   static int i2c_nuvoton_send(struct tpm_chip *chip, u8 *buf, size_t len)
+>   {
+> -	struct device *dev = chip->pdev;
+> -	struct i2c_client *client = to_i2c_client(dev);
+> +	struct device *dev = &chip->dev;
+This looks wrong or are you fixing a bug here? chip->dev.parent ?
+> +	struct i2c_client *client = to_i2c_client(chip->dev.parent);
 
-diff --git a/drivers/char/tpm/st33zp24/i2c.c b/drivers/char/tpm/st33zp24/i2c.c
-index b20cc2b..f179aad 100644
---- a/drivers/char/tpm/st33zp24/i2c.c
-+++ b/drivers/char/tpm/st33zp24/i2c.c
-@@ -110,9 +110,9 @@ static const struct st33zp24_phy_ops i2c_phy_ops = {
- 	.recv = st33zp24_i2c_recv,
- };
- 
--static int st33zp24_i2c_acpi_request_resources(struct st33zp24_i2c_phy *phy)
-+static int st33zp24_i2c_acpi_request_resources(struct i2c_client *client)
- {
--	struct i2c_client *client = phy->client;
-+	struct st33zp24_i2c_phy *phy = i2c_get_clientdata(client);
- 	const struct acpi_device_id *id;
- 	struct gpio_desc *gpiod_lpcpd;
- 	struct device *dev;
-@@ -147,10 +147,10 @@ static int st33zp24_i2c_acpi_request_resources(struct st33zp24_i2c_phy *phy)
- 	return 0;
- }
- 
--static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
-+static int st33zp24_i2c_of_request_resources(struct i2c_client *client)
- {
-+	struct st33zp24_i2c_phy *phy = i2c_get_clientdata(client);
- 	struct device_node *pp;
--	struct i2c_client *client = phy->client;
- 	int gpio;
- 	int ret;
- 
-@@ -185,10 +185,10 @@ static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
- 	return 0;
- }
- 
--static int st33zp24_i2c_request_resources(struct i2c_client *client,
--					  struct st33zp24_i2c_phy *phy)
-+static int st33zp24_i2c_request_resources(struct i2c_client *client)
- {
- 	struct st33zp24_platform_data *pdata;
-+	struct st33zp24_i2c_phy *phy = i2c_get_clientdata(client);
- 	int ret;
- 
- 	pdata = client->dev.platform_data;
-@@ -244,17 +244,20 @@ static int st33zp24_i2c_probe(struct i2c_client *client,
- 		return -ENOMEM;
- 
- 	phy->client = client;
-+
-+	i2c_set_clientdata(client, phy);
-+
- 	pdata = client->dev.platform_data;
- 	if (!pdata && client->dev.of_node) {
--		ret = st33zp24_i2c_of_request_resources(phy);
-+		ret = st33zp24_i2c_of_request_resources(client);
- 		if (ret)
- 			return ret;
- 	} else if (pdata) {
--		ret = st33zp24_i2c_request_resources(client, phy);
-+		ret = st33zp24_i2c_request_resources(client);
- 		if (ret)
- 			return ret;
- 	} else if (ACPI_HANDLE(&client->dev)) {
--		ret = st33zp24_i2c_acpi_request_resources(phy);
-+		ret = st33zp24_i2c_acpi_request_resources(client);
- 		if (ret)
- 			return ret;
- 	}
--- 
-2.5.0
+Does this need to be replaced ?
+
+     Stefan
 
 
 ------------------------------------------------------------------------------
