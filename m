@@ -1,20 +1,16 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Subject: Re: [PATCH 2/3] tpm: Get rid of chip->pdev
-Date: Sat, 13 Feb 2016 23:57:24 -0700
-Message-ID: <20160214065724.GD9551@obsidianresearch.com>
+Date: Sun, 14 Feb 2016 00:06:23 -0700
+Message-ID: <20160214070623.GE9551@obsidianresearch.com>
 References: <1455321871-28296-1-git-send-email-jgunthorpe@obsidianresearch.com>
 	<1455321871-28296-3-git-send-email-jgunthorpe@obsidianresearch.com>
-	<201602130037.u1D0bDEN029756@d01av04.pok.ibm.com>
-	<20160213011130.GA2547@obsidianresearch.com>
-	<201602130128.u1D1S2Xn006955@d01av05.pok.ibm.com>
-	<20160213033320.GA27869@obsidianresearch.com>
-	<20160214052414.GB8065@intel.com>
+	<56BF4E1F.2030208@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160214052414.GB8065-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <56BF4E1F.2030208-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,31 +19,31 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Feb 14, 2016 at 07:24:14AM +0200, Jarkko Sakkinen wrote:
-> > This should take care of it for all drivers including vtpm.
-> > 
-> > https://github.com/jgunthorpe/linux/commits/for-jarkko
-> > 
-> > At the very least this turns silent use after free into a null pointer
-> > oops.
-> > 
-> > We should also discuss if we want to continue to have the driver
-> > module locked while /dev/tpmX is open, that is no longer needed for
-> > corectness.
+On Sat, Feb 13, 2016 at 10:39:11AM -0500, Stefan Berger wrote:
+
+> >@@ -347,8 +347,8 @@ static int i2c_nuvoton_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+> >   */
+> >  static int i2c_nuvoton_send(struct tpm_chip *chip, u8 *buf, size_t len)
+> >  {
+> >-	struct device *dev = chip->pdev;
+> >-	struct i2c_client *client = to_i2c_client(dev);
+> >+	struct device *dev = &chip->dev;
+> This looks wrong or are you fixing a bug here? chip->dev.parent ?
+
+No, in this function dev is only used for dev_err/etc so it should be
+changed, like every other dev_err/etc call in this patch.
+
+Expect for this use:
+
+> >+	struct i2c_client *client = to_i2c_client(chip->dev.parent);
 > 
-> I'm happy the patch that was sent before although I didn't give it
-> Reviewed-by because it had couple of style errors. If those two
-> style errors are the *only* issues I can fix up them.
+> Does this need to be replaced ?
 
-This patch replaces the get/put_device patch entirely, if Stefan is
-happy with it we can just go ahead in this direction for 4.6
-
-There was also a 0day build error on the devname patch, so the whole
-series will be reposted.
+Which must stay as the parent.
 
 Jason
 
