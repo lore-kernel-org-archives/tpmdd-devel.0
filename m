@@ -1,17 +1,20 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH 1/3] tpm: Hold the kref during
-	tpm_chip_find_get
-Date: Sat, 13 Feb 2016 23:50:08 -0700
-Message-ID: <20160214065008.GC9551@obsidianresearch.com>
+Subject: Re: [PATCH 2/3] tpm: Get rid of chip->pdev
+Date: Sat, 13 Feb 2016 23:57:24 -0700
+Message-ID: <20160214065724.GD9551@obsidianresearch.com>
 References: <1455321871-28296-1-git-send-email-jgunthorpe@obsidianresearch.com>
-	<1455321871-28296-2-git-send-email-jgunthorpe@obsidianresearch.com>
-	<20160214045512.GA7777@intel.com>
+	<1455321871-28296-3-git-send-email-jgunthorpe@obsidianresearch.com>
+	<201602130037.u1D0bDEN029756@d01av04.pok.ibm.com>
+	<20160213011130.GA2547@obsidianresearch.com>
+	<201602130128.u1D1S2Xn006955@d01av05.pok.ibm.com>
+	<20160213033320.GA27869@obsidianresearch.com>
+	<20160214052414.GB8065@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160214045512.GA7777-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20160214052414.GB8065-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -24,43 +27,27 @@ To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Feb 14, 2016 at 06:55:12AM +0200, Jarkko Sakkinen wrote:
-> On Fri, Feb 12, 2016 at 05:04:29PM -0700, Jason Gunthorpe wrote:
-> > This was missed during the struct device conversion, we
-> > need to hold a kref on the chip to make sure it isn't freed.
+On Sun, Feb 14, 2016 at 07:24:14AM +0200, Jarkko Sakkinen wrote:
+> > This should take care of it for all drivers including vtpm.
 > > 
-> > Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> > https://github.com/jgunthorpe/linux/commits/for-jarkko
+> > 
+> > At the very least this turns silent use after free into a null pointer
+> > oops.
+> > 
+> > We should also discuss if we want to continue to have the driver
+> > module locked while /dev/tpmX is open, that is no longer needed for
+> > corectness.
 > 
-> I'm bit confused about this patch. What is the regression if this
-> needs
+> I'm happy the patch that was sent before although I didn't give it
+> Reviewed-by because it had couple of style errors. If those two
+> style errors are the *only* issues I can fix up them.
 
-The patch is simply totally broken, the placement of the get_device is
-wrong:
+This patch replaces the get/put_device patch entirely, if Stefan is
+happy with it we can just go ahead in this direction for 4.6
 
-> > @@ -53,6 +53,8 @@ struct tpm_chip *tpm_chip_find_get(int chip_num)
-> >  			chip = pos;
-> >  			break;
-> >  		}
-> > +
-> > +		get_device(&chip->dev);
-
-It needs to be moved up two lines before the break, into the if
-statement.
-
-As for the urgency - today the tpm core relies on module locking to
-try and prevent tpm_chip_unregister from racing with stuff like the
-above. That is totally broken in modern kernels, but it is what the
-core tries to do. Within that framework the get/put are not needed
-because of the module locking.
-
-The only time these additional get/put do anything is when we are
-racing with tpm_unregister, but if we are racing with unregister then
-there are much bigger problems and things will crash anyhow.
-
-So, this patch is just a tiny step.
-
-The revised version of this patch with the rw_sem attempts to address
-the complete race.
+There was also a 0day build error on the devname patch, so the whole
+series will be reposted.
 
 Jason
 
