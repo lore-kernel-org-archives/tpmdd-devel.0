@@ -1,66 +1,81 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v2 0/4] tpm: last minute critical fixes for Linux 4.5
-Date: Sun, 14 Feb 2016 05:30:30 +0200
-Message-ID: <20160214033030.GA5367@intel.com>
-References: <1455371228-20431-1-git-send-email-jarkko.sakkinen@linux.intel.com>
- <3032da9f-01c0-4c09-9acc-cc4fa3e41fa8@email.android.com>
- <20160214032712.GA3586@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH 1/3] tpm: Hold the kref during
+	tpm_chip_find_get
+Date: Sun, 14 Feb 2016 06:55:12 +0200
+Message-ID: <20160214045512.GA7777@intel.com>
+References: <1455321871-28296-1-git-send-email-jgunthorpe@obsidianresearch.com>
+	<1455321871-28296-2-git-send-email-jgunthorpe@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Transfer-Encoding: QUOTED-PRINTABLE
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160214032712.GA3586@intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: David Howells <dhowells@redhat.com>, Peter Huewe <peterhuewe@gmx.de>, tpmdd-devel@lists.sourceforge.net, Marcel Selhorst <tpmdd@selhorst.net>, linux-kernel@vger.kernel.org, jmorris@namei.org
+In-Reply-To: <1455321871-28296-2-git-send-email-jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Feb 14, 2016 at 05:27:12AM +0200, Jarkko Sakkinen wrote:
-> On Sat, Feb 13, 2016 at 02:55:56PM -0700, Jason Gunthorpe wrote:
-> > Hi Peter,=20
-> >=20
-> > Please don't grab my patch in this pull, it is broken.
->=20
-> Please send an updated fix. I'll check it through and include it to t=
-he
-> final pull request.
+On Fri, Feb 12, 2016 at 05:04:29PM -0700, Jason Gunthorpe wrote:
+> This was missed during the struct device conversion, we
+> need to hold a kref on the chip to make sure it isn't freed.
+> 
+> Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 
-I'm still waiting for James to pick my previous pull request so take
-your time and prepare an updated patch!
+I'm bit confused about this patch. What is the regression if this needs
+to be dropped from my last pull request for 4.5 (that is the only one
+I'm planning to include from this patch set, rest are definitely
+post-4.5)?
+
+If there is clear regression in this patch, I can do it. I didn't
+reproduce any.
 
 /Jarkko
 
-> > Thanks
-> > Jason
->=20
-> /Jarkko
->=20
-> >=20
-> > On Feb 13, 2016 6:47 AM, Jarkko Sakkinen <jarkko.sakkinen@linux.int=
-el.com> wrote:
-> > >
-> > > These are critical to get to Linux 4.5 in order to get the chip r=
-efcount=20
-> > > management stabilized and API/ABI for policy based sealing correc=
-t.=20
-> > >
-> > > Harald Hoyer (1):=20
-> > > =A0 tpm_eventlog.c: fix binary_bios_measurements=20
-> > >
-> > > Jarkko Sakkinen (2):=20
-> > > =A0 tpm: fix: keep auth session intact after unseal operation=20
-> > > =A0 tpm: fix: rollback when devm_add_action() fails=20
-> > >
-> > > Jason Gunthorpe (1):=20
-> > > =A0 tpm: Hold the kref during tpm_chip_find_get=20
-> > >
-> > > drivers/char/tpm/tpm-chip.c=A0=A0=A0=A0 |=A0 9 ++++++++-=20
-> > > drivers/char/tpm/tpm.h=A0=A0=A0=A0=A0=A0=A0=A0=A0 |=A0 1 +=20
-> > > drivers/char/tpm/tpm2-cmd.c=A0=A0=A0=A0 | 10 +++++++---=20
-> > > drivers/char/tpm/tpm_eventlog.c | 10 ++++++++--=20
-> > > 4 files changed, 24 insertions(+), 6 deletions(-)=20
-> > >
-> > > --=20
-> > > 2.7.0=20
-> > >
+> ---
+>  drivers/char/tpm/tpm-chip.c | 2 ++
+>  drivers/char/tpm/tpm.h      | 1 +
+>  2 files changed, 3 insertions(+)
+> 
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index 45cc39aabeee..ae2fed8a162b 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -53,6 +53,8 @@ struct tpm_chip *tpm_chip_find_get(int chip_num)
+>  			chip = pos;
+>  			break;
+>  		}
+> +
+> +		get_device(&chip->dev);
+>  	}
+>  	rcu_read_unlock();
+>  	return chip;
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 542a80cbfd9c..f6ba79d91857 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -207,6 +207,7 @@ struct tpm_chip {
+>  static inline void tpm_chip_put(struct tpm_chip *chip)
+>  {
+>  	module_put(chip->pdev->driver->owner);
+> +	put_device(&chip->dev);
+>  }
+>  
+>  static inline int tpm_read_index(int base, int index)
+> -- 
+> 2.1.4
+> 
+
+------------------------------------------------------------------------------
+Site24x7 APM Insight: Get Deep Visibility into Application Performance
+APM + Mobile APM + RUM: Monitor 3 App instances at just $35/Month
+Monitor end-to-end web transactions and take corrective actions now
+Troubleshoot faster and improve end-user experience. Signup Now!
+http://pubads.g.doubleclick.net/gampad/clk?id=272487151&iu=/4140
