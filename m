@@ -1,14 +1,16 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH v2 0/4] tpm: last minute critical fixes
 	for Linux 4.5
-Date: Sat, 13 Feb 2016 14:55:56 -0700
-Message-ID: <3032da9f-01c0-4c09-9acc-cc4fa3e41fa8@email.android.com>
+Date: Sun, 14 Feb 2016 05:27:12 +0200
+Message-ID: <20160214032712.GA3586@intel.com>
 References: <1455371228-20431-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<3032da9f-01c0-4c09-9acc-cc4fa3e41fa8@email.android.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="iso-8859-1"
+Content-Transfer-Encoding: quoted-printable
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1455371228-20431-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <3032da9f-01c0-4c09-9acc-cc4fa3e41fa8-2ueSQiBKiTY7tOexoI0I+QC/G2K4zDHf@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,33 +19,74 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org, David Howells <dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-SGkgUGV0ZXIsIAoKUGxlYXNlIGRvbid0IGdyYWIgbXkgcGF0Y2ggaW4gdGhpcyBwdWxsLCBpdCBp
-cyBicm9rZW4uCgpUaGFua3MKSmFzb24KCk9uIEZlYiAxMywgMjAxNiA2OjQ3IEFNLCBKYXJra28g
-U2Fra2luZW4gPGphcmtrby5zYWtraW5lbkBsaW51eC5pbnRlbC5jb20+IHdyb3RlOgo+Cj4gVGhl
-c2UgYXJlIGNyaXRpY2FsIHRvIGdldCB0byBMaW51eCA0LjUgaW4gb3JkZXIgdG8gZ2V0IHRoZSBj
-aGlwIHJlZmNvdW50IAo+IG1hbmFnZW1lbnQgc3RhYmlsaXplZCBhbmQgQVBJL0FCSSBmb3IgcG9s
-aWN5IGJhc2VkIHNlYWxpbmcgY29ycmVjdC4gCj4KPiBIYXJhbGQgSG95ZXIgKDEpOiAKPiDCoCB0
-cG1fZXZlbnRsb2cuYzogZml4IGJpbmFyeV9iaW9zX21lYXN1cmVtZW50cyAKPgo+IEphcmtrbyBT
-YWtraW5lbiAoMik6IAo+IMKgIHRwbTogZml4OiBrZWVwIGF1dGggc2Vzc2lvbiBpbnRhY3QgYWZ0
-ZXIgdW5zZWFsIG9wZXJhdGlvbiAKPiDCoCB0cG06IGZpeDogcm9sbGJhY2sgd2hlbiBkZXZtX2Fk
-ZF9hY3Rpb24oKSBmYWlscyAKPgo+IEphc29uIEd1bnRob3JwZSAoMSk6IAo+IMKgIHRwbTogSG9s
-ZCB0aGUga3JlZiBkdXJpbmcgdHBtX2NoaXBfZmluZF9nZXQgCj4KPiBkcml2ZXJzL2NoYXIvdHBt
-L3RwbS1jaGlwLmPCoMKgwqDCoCB8wqAgOSArKysrKysrKy0gCj4gZHJpdmVycy9jaGFyL3RwbS90
-cG0uaMKgwqDCoMKgwqDCoMKgwqDCoCB8wqAgMSArIAo+IGRyaXZlcnMvY2hhci90cG0vdHBtMi1j
-bWQuY8KgwqDCoMKgIHwgMTAgKysrKysrKy0tLSAKPiBkcml2ZXJzL2NoYXIvdHBtL3RwbV9ldmVu
-dGxvZy5jIHwgMTAgKysrKysrKystLSAKPiA0IGZpbGVzIGNoYW5nZWQsIDI0IGluc2VydGlvbnMo
-KyksIDYgZGVsZXRpb25zKC0pIAo+Cj4gLS0gCj4gMi43LjAgCj4KLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tClNpdGUyNHg3IEFQTSBJbnNpZ2h0OiBHZXQgRGVlcCBWaXNpYmlsaXR5IGludG8gQXBwbGlj
-YXRpb24gUGVyZm9ybWFuY2UKQVBNICsgTW9iaWxlIEFQTSArIFJVTTogTW9uaXRvciAzIEFwcCBp
-bnN0YW5jZXMgYXQganVzdCAkMzUvTW9udGgKTW9uaXRvciBlbmQtdG8tZW5kIHdlYiB0cmFuc2Fj
-dGlvbnMgYW5kIHRha2UgY29ycmVjdGl2ZSBhY3Rpb25zIG5vdwpUcm91Ymxlc2hvb3QgZmFzdGVy
-IGFuZCBpbXByb3ZlIGVuZC11c2VyIGV4cGVyaWVuY2UuIFNpZ251cCBOb3chCmh0dHA6Ly9wdWJh
-ZHMuZy5kb3VibGVjbGljay5uZXQvZ2FtcGFkL2Nsaz9pZD0yNzI0ODcxNTEmaXU9LzQxNDAKX19f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwg
-bWFpbGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xp
-c3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
+On Sat, Feb 13, 2016 at 02:55:56PM -0700, Jason Gunthorpe wrote:
+> Hi Peter, =
+
+> =
+
+> Please don't grab my patch in this pull, it is broken.
+
+Please send an updated fix. I'll check it through and include it to the
+final pull request.
+
+> Thanks
+> Jason
+
+/Jarkko
+
+> =
+
+> On Feb 13, 2016 6:47 AM, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org=
+> wrote:
+> >
+> > These are critical to get to Linux 4.5 in order to get the chip refcoun=
+t =
+
+> > management stabilized and API/ABI for policy based sealing correct. =
+
+> >
+> > Harald Hoyer (1): =
+
+> > =A0 tpm_eventlog.c: fix binary_bios_measurements =
+
+> >
+> > Jarkko Sakkinen (2): =
+
+> > =A0 tpm: fix: keep auth session intact after unseal operation =
+
+> > =A0 tpm: fix: rollback when devm_add_action() fails =
+
+> >
+> > Jason Gunthorpe (1): =
+
+> > =A0 tpm: Hold the kref during tpm_chip_find_get =
+
+> >
+> > drivers/char/tpm/tpm-chip.c=A0=A0=A0=A0 |=A0 9 ++++++++- =
+
+> > drivers/char/tpm/tpm.h=A0=A0=A0=A0=A0=A0=A0=A0=A0 |=A0 1 + =
+
+> > drivers/char/tpm/tpm2-cmd.c=A0=A0=A0=A0 | 10 +++++++--- =
+
+> > drivers/char/tpm/tpm_eventlog.c | 10 ++++++++-- =
+
+> > 4 files changed, 24 insertions(+), 6 deletions(-) =
+
+> >
+> > -- =
+
+> > 2.7.0 =
+
+> >
+
+---------------------------------------------------------------------------=
+---
+Site24x7 APM Insight: Get Deep Visibility into Application Performance
+APM + Mobile APM + RUM: Monitor 3 App instances at just $35/Month
+Monitor end-to-end web transactions and take corrective actions now
+Troubleshoot faster and improve end-user experience. Signup Now!
+http://pubads.g.doubleclick.net/gampad/clk?id=3D272487151&iu=3D/4140
