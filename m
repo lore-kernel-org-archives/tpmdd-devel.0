@@ -1,14 +1,13 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH 1/3] tpm: fix: keep auth session intact after
-	unseal operation
-Date: Mon, 15 Feb 2016 03:41:04 +0200
-Message-ID: <1455500466-11266-2-git-send-email-jarkko.sakkinen@linux.intel.com>
-References: <1455500466-11266-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+From: James Morris <jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
+Subject: Re: [GIT PULL] tpmdd fixes for Linux 4.5 (updated)
+Date: Mon, 15 Feb 2016 16:03:06 +1100 (AEDT)
+Message-ID: <alpine.LRH.2.20.1602151602470.25656@namei.org>
+References: <20160210034804.GA5153@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1455500466-11266-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+In-Reply-To: <20160210034804.GA5153-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,63 +16,37 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, David Howells <dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The behavior of policy based unseal operation is not consistent:
+On Wed, 10 Feb 2016, Jarkko Sakkinen wrote:
 
-* When there is an error in TPM2_Unseal operation, the session object
-  stays in the TPM transient memory.
-* When the unseal is successful, the TPM automatically removes the
-  session object.
+> Hi James,
+> 
+> As we discussed I'm sending now a revised pull request with a couple
+> of new fixes to the one that I sent with the tag:
+> 
+>   tags/tpmdd-next-20160120
+> 
+> /Jarkko
+> 
+> The following changes since commit 388f7b1d6e8ca06762e2454d28d6c3c55ad0fe95:
+> 
+>   Linux 4.5-rc3 (2016-02-07 15:38:30 -0800)
+> 
+> are available in the git repository at:
+> 
+>   https://github.com/jsakkine/linux-tpmdd.git tags/tpmdd-next-20160210
+> 
+> for you to fetch changes up to 8e0ee3c9faed7ca68807ea45141775856c438ac0:
 
-This patch sets the continueSession attribute to keep the session intact
-after a successful unseal operation thus making the behavior consistent.
+Pulled to next.
 
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Fixes: 5beb0c435b ("keys, trusted: seal with a TPM2 authorization policy")
----
- drivers/char/tpm/tpm2-cmd.c | 10 +++++++---
- 1 file changed, 7 insertions(+), 3 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 66e04b4..b28e4da 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -20,7 +20,11 @@
- #include <keys/trusted-type.h>
- 
- enum tpm2_object_attributes {
--	TPM2_ATTR_USER_WITH_AUTH	= BIT(6),
-+	TPM2_OA_USER_WITH_AUTH		= BIT(6),
-+};
-+
-+enum tpm2_session_attributes {
-+	TPM2_SA_CONTINUE_SESSION	= BIT(0),
- };
- 
- struct tpm2_startup_in {
-@@ -489,7 +493,7 @@ int tpm2_seal_trusted(struct tpm_chip *chip,
- 		tpm_buf_append(&buf, options->policydigest,
- 			       options->policydigest_len);
- 	} else {
--		tpm_buf_append_u32(&buf, TPM2_ATTR_USER_WITH_AUTH);
-+		tpm_buf_append_u32(&buf, TPM2_OA_USER_WITH_AUTH);
- 		tpm_buf_append_u16(&buf, 0);
- 	}
- 
-@@ -627,7 +631,7 @@ static int tpm2_unseal(struct tpm_chip *chip,
- 			     options->policyhandle ?
- 			     options->policyhandle : TPM2_RS_PW,
- 			     NULL /* nonce */, 0,
--			     0 /* session_attributes */,
-+			     TPM2_SA_CONTINUE_SESSION,
- 			     options->blobauth /* hmac */,
- 			     TPM_DIGEST_SIZE);
- 
 -- 
-2.7.0
+James Morris
+<jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
 
 
 ------------------------------------------------------------------------------
