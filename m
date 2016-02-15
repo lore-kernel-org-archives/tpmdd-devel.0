@@ -1,8 +1,8 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH 3/3] tpm_eventlog.c: fix
-	binary_bios_measurements
-Date: Mon, 15 Feb 2016 03:41:06 +0200
-Message-ID: <1455500466-11266-4-git-send-email-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH 2/3] tpm: fix: return rc when
+	devm_add_action() fails
+Date: Mon, 15 Feb 2016 03:41:05 +0200
+Message-ID: <1455500466-11266-3-git-send-email-jarkko.sakkinen@linux.intel.com>
 References: <1455500466-11266-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -18,46 +18,43 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, David Howells <dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-Cc: jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, Harald Hoyer <harald-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Harald Hoyer <harald-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Call put_device() and return error code if devm_add_action() fails.
 
-The commit 0cc698af36ff ("vTPM: support little endian guests") copied
-the event, but without the event data, did an endian conversion on the
-size and tried to output the event data from the copied version, which
-has only have one byte of the data, resulting in garbage event data.
-
-Signed-off-by: Harald Hoyer <harald-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-Fixes: 0cc698af36ff ("vTPM: support little endian guests")
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Reported-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Fixes: 8e0ee3c9faed ("tpm: fix the cleanup of struct tpm_chip")
 ---
- drivers/char/tpm/tpm_eventlog.c | 10 ++++++++--
- 1 file changed, 8 insertions(+), 2 deletions(-)
+ drivers/char/tpm/tpm-chip.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-index bd72fb0..27fc887 100644
---- a/drivers/char/tpm/tpm_eventlog.c
-+++ b/drivers/char/tpm/tpm_eventlog.c
-@@ -242,9 +242,15 @@ static int tpm_binary_bios_measurements_show(struct seq_file *m, void *v)
- 	temp_event.event_type = do_endian_conversion(event->event_type);
- 	temp_event.event_size = do_endian_conversion(event->event_size);
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 2521425..274dd01 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -88,6 +88,7 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
+ 				 const struct tpm_class_ops *ops)
+ {
+ 	struct tpm_chip *chip;
++	int rc;
  
--	tempPtr = (char *)&temp_event;
-+	tempPtr = (char *) &temp_event;
+ 	chip = kzalloc(sizeof(*chip), GFP_KERNEL);
+ 	if (chip == NULL)
+@@ -136,7 +137,11 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
+ 	chip->cdev.owner = chip->pdev->driver->owner;
+ 	chip->cdev.kobj.parent = &chip->dev.kobj;
  
--	for (i = 0; i < sizeof(struct tcpa_event) + temp_event.event_size; i++)
-+	for (i = 0; i < (sizeof(struct tcpa_event) - 1) ; i++)
-+		seq_putc(m, tempPtr[i]);
-+
-+	tempPtr = (char *) v;
-+
-+	for (i = (sizeof(struct tcpa_event) - 1);
-+	     i < (sizeof(struct tcpa_event) + temp_event.event_size); i++)
- 		seq_putc(m, tempPtr[i]);
+-	devm_add_action(dev, (void (*)(void *)) put_device, &chip->dev);
++	rc = devm_add_action(dev, (void (*)(void *)) put_device, &chip->dev);
++	if (rc) {
++		put_device(&chip->dev);
++		return ERR_PTR(rc);
++	}
  
- 	return 0;
+ 	return chip;
+ }
 -- 
 2.7.0
 
