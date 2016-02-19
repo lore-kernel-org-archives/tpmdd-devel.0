@@ -1,62 +1,60 @@
-From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: [PATCH v3 01/11] tpm: fix the cleanup of struct tpm_chip
-Date: Fri, 19 Feb 2016 07:41:58 -0500
-Message-ID: <1455885728-10315-2-git-send-email-stefanb@linux.vnet.ibm.com>
+From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH v3 05/11] tpm: Get rid of module locking
+Date: Fri, 19 Feb 2016 07:42:02 -0500
+Message-ID: <1455885728-10315-6-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1455885728-10315-1-git-send-email-stefanb@linux.vnet.ibm.com>
-Return-path: <stable-owner@vger.kernel.org>
-In-Reply-To: <1455885728-10315-1-git-send-email-stefanb@linux.vnet.ibm.com>
-Sender: stable-owner@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, stable@vger.kernel.org
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1455885728-10315-1-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Get rid of the locking of the module
 
-If the initialization fails before tpm_chip_register(), put_device()
-will be not called, which causes release callback not to be called.
-This patch fixes the issue by adding put_device() to devres list of
-the parent device.
-
-Fixes: 313d21eeab ("tpm: device class for tpm")
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-cc: stable@vger.kernel.org
+Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 ---
- drivers/char/tpm/tpm-chip.c | 9 ++++++++-
- 1 file changed, 8 insertions(+), 1 deletion(-)
+ drivers/char/tpm/tpm-chip.c | 4 ----
+ 1 file changed, 4 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index 45cc39a..ab32437 100644
+index 0561400..fe15637 100644
 --- a/drivers/char/tpm/tpm-chip.c
 +++ b/drivers/char/tpm/tpm-chip.c
-@@ -88,6 +88,7 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
- 				 const struct tpm_class_ops *ops)
+@@ -57,9 +57,6 @@ int tpm_try_get_ops(struct tpm_chip *chip)
+ 	if (!chip->ops)
+ 		goto out_lock;
+ 
+-	if (!try_module_get(chip->dev.parent->driver->owner))
+-		goto out_lock;
+-
+ 	return 0;
+ out_lock:
+ 	up_read(&chip->ops_sem);
+@@ -77,7 +74,6 @@ EXPORT_SYMBOL_GPL(tpm_try_get_ops);
+  */
+ void tpm_put_ops(struct tpm_chip *chip)
  {
- 	struct tpm_chip *chip;
-+	int err;
- 
- 	chip = kzalloc(sizeof(*chip), GFP_KERNEL);
- 	if (chip == NULL)
-@@ -136,6 +137,12 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
- 	chip->cdev.owner = chip->pdev->driver->owner;
- 	chip->cdev.kobj.parent = &chip->dev.kobj;
- 
-+	err = devm_add_action(dev, (void (*)(void *)) put_device, &chip->dev);
-+	if (err) {
-+		put_device(&chip->dev);
-+		return ERR_PTR(err);
-+	}
-+
- 	return chip;
+-	module_put(chip->dev.parent->driver->owner);
+ 	up_read(&chip->ops_sem);
+ 	put_device(&chip->dev);
  }
- EXPORT_SYMBOL_GPL(tpmm_chip_alloc);
-@@ -171,7 +178,7 @@ static int tpm_dev_add_device(struct tpm_chip *chip)
- static void tpm_dev_del_device(struct tpm_chip *chip)
- {
- 	cdev_del(&chip->cdev);
--	device_unregister(&chip->dev);
-+	device_del(&chip->dev);
- }
- 
- static int tpm1_chip_register(struct tpm_chip *chip)
 -- 
 2.4.3
+
+
+------------------------------------------------------------------------------
+Site24x7 APM Insight: Get Deep Visibility into Application Performance
+APM + Mobile APM + RUM: Monitor 3 App instances at just $35/Month
+Monitor end-to-end web transactions and take corrective actions now
+Troubleshoot faster and improve end-user experience. Signup Now!
+http://pubads.g.doubleclick.net/gampad/clk?id=272487151&iu=/4140
