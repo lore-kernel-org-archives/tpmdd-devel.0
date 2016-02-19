@@ -1,7 +1,8 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v3 03/11] tpm: Get rid of devname
-Date: Fri, 19 Feb 2016 07:42:00 -0500
-Message-ID: <1455885728-10315-4-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v3 11/11] A test program for vTPM device
+	creation
+Date: Fri, 19 Feb 2016 07:42:08 -0500
+Message-ID: <1455885728-10315-12-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1455885728-10315-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -19,156 +20,206 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+This patch provides a program that is for testing purposes only.
 
-Now that we have a proper struct device just use dev_name() to
-access this value instead of keeping two copies.
+Build it using the following commands:
 
-Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+make headers_install ARCH=x86_64  INSTALL_HDR_PATH=/usr
+
+gcc vtpmctrl.c -o vtpmctrl
+
+To use it:
+
+To create a device pair and have vtpmctrl listen for commands, display
+them and respond with TPM success messages do:
+
+#> ./vtpmctrl
+Created TPM device /dev/tpm0; vTPM device has fd 4, major/minor = 10/224.
+
+In another shell do
+
+#> exec 100<>/dev/tpm0
+#> /bin/echo -en '\x00\xc1\x00\x00\x00\x0a\x00\x00\x00\x00' >&100
+#> od -t x1 <&100
+00000000 00 c4 00 00 00 0a 00 00 00 00
+00000012
+#> exec 100>&-
+
+Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 ---
- drivers/char/tpm/tpm-chip.c        | 16 ++++++++++------
- drivers/char/tpm/tpm.h             |  1 -
- drivers/char/tpm/tpm_eventlog.c    |  2 +-
- drivers/char/tpm/tpm_eventlog.h    |  2 +-
- drivers/char/tpm/tpm_i2c_nuvoton.c |  2 +-
- drivers/char/tpm/tpm_tis.c         |  4 ++--
- 6 files changed, 15 insertions(+), 12 deletions(-)
+ vtpmctrl.c | 163 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 163 insertions(+)
+ create mode 100644 vtpmctrl.c
 
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index 5ed9bed..5df0149 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -111,8 +111,6 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
- 
- 	set_bit(chip->dev_num, dev_mask);
- 
--	scnprintf(chip->devname, sizeof(chip->devname), "tpm%d", chip->dev_num);
--
- 	dev_set_drvdata(dev, chip);
- 
- 	chip->dev.class = tpm_class;
-@@ -127,7 +125,9 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
- 	else
- 		chip->dev.devt = MKDEV(MAJOR(tpm_devt), chip->dev_num);
- 
--	dev_set_name(&chip->dev, "%s", chip->devname);
-+	err = dev_set_name(&chip->dev, "tpm%d", chip->dev_num);
-+	if (err)
-+		goto out;
- 
- 	device_initialize(&chip->dev);
- 
-@@ -142,6 +142,10 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
- 	}
- 
- 	return chip;
+diff --git a/vtpmctrl.c b/vtpmctrl.c
+new file mode 100644
+index 0000000..6f3c860
+--- /dev/null
++++ b/vtpmctrl.c
+@@ -0,0 +1,163 @@
++/*
++ * vtpmctrl.c -- Linux vTPM driver control program
++ *
++ * (c) Copyright IBM Corporation 2015.
++ *
++ * Author: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
++ *
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are
++ * met:
++ *
++ * Redistributions of source code must retain the above copyright notice,
++ * this list of conditions and the following disclaimer.
++ *
++ * Redistributions in binary form must reproduce the above copyright
++ * notice, this list of conditions and the following disclaimer in the
++ * documentation and/or other materials provided with the distribution.
++ *
++ * Neither the names of the IBM Corporation nor the names of its
++ * contributors may be used to endorse or promote products derived from
++ * this software without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
 +
-+out:
-+	put_device(&chip->dev);
-+	return ERR_PTR(err);
- }
- EXPORT_SYMBOL_GPL(tpmm_chip_alloc);
- 
-@@ -153,7 +157,7 @@ static int tpm_dev_add_device(struct tpm_chip *chip)
- 	if (rc) {
- 		dev_err(&chip->dev,
- 			"unable to cdev_add() %s, major %d, minor %d, err=%d\n",
--			chip->devname, MAJOR(chip->dev.devt),
-+			dev_name(&chip->dev), MAJOR(chip->dev.devt),
- 			MINOR(chip->dev.devt), rc);
- 
- 		device_unregister(&chip->dev);
-@@ -164,7 +168,7 @@ static int tpm_dev_add_device(struct tpm_chip *chip)
- 	if (rc) {
- 		dev_err(&chip->dev,
- 			"unable to device_register() %s, major %d, minor %d, err=%d\n",
--			chip->devname, MAJOR(chip->dev.devt),
-+			dev_name(&chip->dev), MAJOR(chip->dev.devt),
- 			MINOR(chip->dev.devt), rc);
- 
- 		return rc;
-@@ -190,7 +194,7 @@ static int tpm1_chip_register(struct tpm_chip *chip)
- 	if (rc)
- 		return rc;
- 
--	chip->bios_dir = tpm_bios_log_setup(chip->devname);
-+	chip->bios_dir = tpm_bios_log_setup(dev_name(&chip->dev));
- 
- 	return 0;
- }
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 1ce6547..31d9a8e 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -178,7 +178,6 @@ struct tpm_chip {
- 	unsigned int flags;
- 
- 	int dev_num;		/* /dev/tpm# */
--	char devname[7];
- 	unsigned long is_open;	/* only one allowed */
- 	int time_expired;
- 
-diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-index bd72fb0..49e5097 100644
---- a/drivers/char/tpm/tpm_eventlog.c
-+++ b/drivers/char/tpm/tpm_eventlog.c
-@@ -397,7 +397,7 @@ static int is_bad(void *p)
- 	return 0;
- }
- 
--struct dentry **tpm_bios_log_setup(char *name)
-+struct dentry **tpm_bios_log_setup(const char *name)
- {
- 	struct dentry **ret = NULL, *tpm_dir, *bin_file, *ascii_file;
- 
-diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
-index 267bfbd..cc9672f 100644
---- a/drivers/char/tpm/tpm_eventlog.h
-+++ b/drivers/char/tpm/tpm_eventlog.h
-@@ -77,7 +77,7 @@ int read_log(struct tpm_bios_log *log);
- 
- #if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
- 	defined(CONFIG_ACPI)
--extern struct dentry **tpm_bios_log_setup(char *);
-+extern struct dentry **tpm_bios_log_setup(const char *);
- extern void tpm_bios_log_teardown(struct dentry **);
- #else
- static inline struct dentry **tpm_bios_log_setup(char *name)
-diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
-index a1e1474..d61d43f 100644
---- a/drivers/char/tpm/tpm_i2c_nuvoton.c
-+++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
-@@ -560,7 +560,7 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
- 		rc = devm_request_irq(dev, chip->vendor.irq,
- 				      i2c_nuvoton_int_handler,
- 				      IRQF_TRIGGER_LOW,
--				      chip->devname,
-+				      dev_name(&chip->dev),
- 				      chip);
- 		if (rc) {
- 			dev_err(dev, "%s() Unable to request irq: %d for use\n",
-diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index 0b5fc41..37f3d44 100644
---- a/drivers/char/tpm/tpm_tis.c
-+++ b/drivers/char/tpm/tpm_tis.c
-@@ -765,7 +765,7 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
- 				 TPM_INT_VECTOR(chip->vendor.locality));
- 			if (devm_request_irq
- 			    (dev, i, tis_int_probe, IRQF_SHARED,
--			     chip->devname, chip) != 0) {
-+			     dev_name(&chip->dev), chip) != 0) {
- 				dev_info(&chip->dev,
- 					 "Unable to request irq: %d for probe\n",
- 					 i);
-@@ -817,7 +817,7 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
- 			 TPM_INT_VECTOR(chip->vendor.locality));
- 		if (devm_request_irq
- 		    (dev, chip->vendor.irq, tis_int_handler, IRQF_SHARED,
--		     chip->devname, chip) != 0) {
-+		     dev_name(&chip->dev), chip) != 0) {
- 			dev_info(&chip->dev,
- 				 "Unable to request irq: %d for use\n",
- 				 chip->vendor.irq);
++
++#include <linux/vtpm.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <sys/ioctl.h>
++#include <unistd.h>
++#include <fcntl.h>
++#include <errno.h>
++#include <string.h>
++#include <endian.h>
++#include <stdint.h>
++
++int vtpmctrl_create(void)
++{
++	int fd, n, option, li, serverfd, nn;
++	struct vtpm_new_pair vtpm_new_pair = {
++		.flags = 0,
++	};
++	char tpmdev[16];
++	unsigned char buffer[4096];
++	const unsigned char tpm_startup_resp[] = {
++		0x00, 0xc4, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00
++	};
++	const unsigned char timeout_req[] = {
++		0x00, 0xc1, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00, 0x65,
++		0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
++		0x01, 0x15
++	};
++	const unsigned char timeout_res[] = {
++		0x00, 0xc4, 0x00, 0x00, 0x00, 0x1e, 0x00, 0x00, 0x00, 0x00,
++		0x00, 0x00, 0x00, 0x00,
++		0x00, 0x01, 0x00, 0x00,
++		0x00, 0x02, 0x00, 0x00,
++		0x00, 0x03, 0x00, 0x00,
++		0x00, 0x04, 0x00, 0x00,
++	};
++	const unsigned char duration_req[] = {
++		0x00, 0xc1, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00, 0x65,
++		0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
++		0x01, 0x20
++	};
++	const unsigned char duration_res[] = {
++		0x00, 0xc4, 0x00, 0x00, 0x00, 0x1a, 0x00, 0x00, 0x00, 0x00,
++		0x00, 0x00, 0x00, 0x00,
++		0x00, 0x01, 0x00, 0x00,
++		0x00, 0x02, 0x00, 0x00,
++		0x00, 0x03, 0x00, 0x00,
++	};
++	uint32_t ordinal;
++
++	fd = open("/dev/vtpmx", O_RDWR);
++	if (fd < 0) {
++		perror("Could not open /dev/vtpmx");
++		return 1;
++	}
++
++	n = ioctl(fd, VTPM_NEW_DEV, &vtpm_new_pair);
++	if (n != 0) {
++		perror("ioctl to create dev pair failed");
++		close(fd);
++		return 1;
++	}
++
++	snprintf(tpmdev, sizeof(tpmdev), "/dev/tpm%u",
++		 vtpm_new_pair.tpm_dev_num);
++
++	serverfd = vtpm_new_pair.fd;
++
++	printf("Created TPM device %s; vTPM device has fd %d, "
++	       "major/minor = %u/%u.\n",
++	       tpmdev, serverfd, vtpm_new_pair.major, vtpm_new_pair.minor);
++
++	close(fd);
++
++	while (1) {
++		n = read(serverfd, buffer, sizeof(buffer));
++		if (n > 0) {
++			printf("Request with %d bytes:\n", n);
++			nn = 0;
++			while (nn < n) {
++				printf("0x%02x ", buffer[nn]);
++				nn++;
++				if (nn % 16 == 0)
++					printf("\n");
++			}
++			printf("\n");
++			ordinal = be32toh(*(uint32_t *)&(buffer[6]));
++			switch (ordinal) {
++			case 0x99:
++				n = write(serverfd, tpm_startup_resp, sizeof(tpm_startup_resp));
++				break;
++			case 0x65:
++				if (!memcmp(timeout_req, buffer, sizeof(timeout_req))) {
++					n = write(serverfd, timeout_res, sizeof(timeout_res));
++
++				} else if (!memcmp(duration_req, buffer, sizeof(duration_req))) {
++					n = write(serverfd, duration_res, sizeof(duration_res));
++				} else {
++					n = write(serverfd, tpm_startup_resp, sizeof(tpm_startup_resp));
++				}
++				break;
++			default:
++				n = write(serverfd, tpm_startup_resp, sizeof(tpm_startup_resp));
++				break;
++			}
++			if (n < 0) {
++				printf("Error from writing the response: %s\n",
++				       strerror(errno));
++				break;
++			} else {
++				printf("Sent response with %d bytes.\n", n);
++			}
++		} else {
++			break;
++		}
++	}
++
++	return 0;
++}
++
++int main(int argc, char *argv[])
++{
++	return vtpmctrl_create();
++}
 -- 
 2.4.3
 
