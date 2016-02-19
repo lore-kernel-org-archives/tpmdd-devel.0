@@ -1,8 +1,7 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v3 10/11] tpm: Initialize TPM and get
-	durations and timeouts
-Date: Fri, 19 Feb 2016 07:42:07 -0500
-Message-ID: <1455885728-10315-11-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v3 03/11] tpm: Get rid of devname
+Date: Fri, 19 Feb 2016 07:42:00 -0500
+Message-ID: <1455885728-10315-4-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1455885728-10315-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,180 +19,156 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Add the retrieval of TPM 1.2 durations and timeouts. Since this requires
-the startup of the TPM, do this for TPM 1.2 and TPM 2.
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 
-Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Now that we have a proper struct device just use dev_name() to
+access this value instead of keeping two copies.
+
+Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 ---
- drivers/char/tpm/tpm-vtpm.c | 85 ++++++++++++++++++++++++++++++++++++++++-----
- 1 file changed, 76 insertions(+), 9 deletions(-)
+ drivers/char/tpm/tpm-chip.c        | 16 ++++++++++------
+ drivers/char/tpm/tpm.h             |  1 -
+ drivers/char/tpm/tpm_eventlog.c    |  2 +-
+ drivers/char/tpm/tpm_eventlog.h    |  2 +-
+ drivers/char/tpm/tpm_i2c_nuvoton.c |  2 +-
+ drivers/char/tpm/tpm_tis.c         |  4 ++--
+ 6 files changed, 15 insertions(+), 12 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm-vtpm.c b/drivers/char/tpm/tpm-vtpm.c
-index 823c94a..fc2fe53 100644
---- a/drivers/char/tpm/tpm-vtpm.c
-+++ b/drivers/char/tpm/tpm-vtpm.c
-@@ -45,8 +45,11 @@ struct vtpm_dev {
- 	size_t req_len;              /* length of queued TPM request */
- 	size_t resp_len;             /* length of queued TPM response */
- 	u8 buffer[TPM_BUFSIZE];      /* request/response buffer */
-+
-+	struct work_struct work;     /* task that retrieves TPM timeouts */
- };
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 5ed9bed..5df0149 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -111,8 +111,6 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
  
-+static struct workqueue_struct *workqueue;
+ 	set_bit(chip->dev_num, dev_mask);
  
- static void vtpm_delete_device_pair(struct vtpm_dev *vtpm_dev);
- 
-@@ -67,6 +70,9 @@ static ssize_t vtpm_fops_read(struct file *filp, char __user *buf,
- 	size_t len;
- 	int sig, rc;
- 
-+	if (!test_bit(STATE_OPENED_BIT, &vtpm_dev->state))
-+		return -EPIPE;
-+
- 	sig = wait_event_interruptible(vtpm_dev->wq, vtpm_dev->req_len != 0);
- 	if (sig)
- 		return -EINTR;
-@@ -107,6 +113,9 @@ static ssize_t vtpm_fops_write(struct file *filp, const char __user *buf,
- {
- 	struct vtpm_dev *vtpm_dev = filp->private_data;
- 
-+	if (!test_bit(STATE_OPENED_BIT, &vtpm_dev->state))
-+		return -EPIPE;
-+
- 	if (count > sizeof(vtpm_dev->buffer) ||
- 	    !test_bit(STATE_WAIT_RESPONSE_BIT, &vtpm_dev->state))
- 		return -EIO;
-@@ -147,6 +156,8 @@ static unsigned int vtpm_fops_poll(struct file *filp, poll_table *wait)
- 	ret = POLLOUT;
- 	if (vtpm_dev->req_len)
- 		ret |= POLLIN | POLLRDNORM;
-+	if (!test_bit(STATE_OPENED_BIT, &vtpm_dev->state))
-+		ret |= POLLHUP;
- 
- 	return ret;
- }
-@@ -320,6 +331,54 @@ static const struct tpm_class_ops vtpm_tpm_ops = {
- };
- 
- /*
-+ * Code related to the startup of the TPM 2 and startup of TPM 1.2 +
-+ * retrieval of timeouts and durations.
-+ */
-+
-+static void vtpm_dev_work(struct work_struct *work)
-+{
-+	struct vtpm_dev *vtpm_dev = container_of(work, struct vtpm_dev, work);
-+	int rc;
-+
-+	if (vtpm_dev->flags & VTPM_FLAG_TPM2)
-+		rc = tpm2_startup(vtpm_dev->chip, TPM2_SU_CLEAR);
-+	else
-+		rc = tpm_get_timeouts(vtpm_dev->chip);
-+
-+	if (rc)
-+		goto err;
-+
-+	rc = tpm_chip_register(vtpm_dev->chip);
-+	if (rc)
-+		goto err;
-+
-+	return;
-+
-+err:
-+	vtpm_fops_undo_open(vtpm_dev);
-+}
-+
-+/*
-+ * vtpm_dev_work_stop: make sure the work has finished
-+ *
-+ * This function is useful when user space closed the fd
-+ * while the driver still determines timeouts.
-+ */
-+static void vtpm_dev_work_stop(struct vtpm_dev *vtpm_dev)
-+{
-+	vtpm_fops_undo_open(vtpm_dev);
-+	flush_work(&vtpm_dev->work);
-+}
-+
-+/*
-+ * vtpm_dev_work_start: Schedule the work for TPM 1.2 & 2 initialization
-+ */
-+static inline void vtpm_dev_work_start(struct vtpm_dev *vtpm_dev)
-+{
-+	queue_work(workqueue, &vtpm_dev->work);
-+}
-+
-+/*
-  * Code related to creation and deletion of device pairs
-  */
- static struct vtpm_dev *vtpm_create_vtpm_dev(void)
-@@ -334,6 +393,7 @@ static struct vtpm_dev *vtpm_create_vtpm_dev(void)
- 
- 	init_waitqueue_head(&vtpm_dev->wq);
- 	spin_lock_init(&vtpm_dev->buf_lock);
-+	INIT_WORK(&vtpm_dev->work, vtpm_dev_work);
- 
- 	chip = tpm_chip_alloc(NULL, &vtpm_tpm_ops);
- 	if (IS_ERR(chip)) {
-@@ -401,9 +461,7 @@ static struct file *vtpm_create_device_pair(
- 	if (vtpm_dev->flags & VTPM_FLAG_TPM2)
- 		vtpm_dev->chip->flags |= TPM_CHIP_FLAG_TPM2;
- 
--	rc = tpm_chip_register(vtpm_dev->chip);
--	if (rc)
--		goto err_vtpm_fput;
-+	vtpm_dev_work_start(vtpm_dev);
- 
- 	vtpm_new_pair->fd = fd;
- 	vtpm_new_pair->major = MAJOR(vtpm_dev->chip->dev.devt);
-@@ -412,12 +470,6 @@ static struct file *vtpm_create_device_pair(
- 
- 	return file;
- 
--err_vtpm_fput:
--	put_unused_fd(fd);
--	fput(file);
+-	scnprintf(chip->devname, sizeof(chip->devname), "tpm%d", chip->dev_num);
 -
--	return ERR_PTR(rc);
--
- err_put_unused_fd:
- 	put_unused_fd(fd);
+ 	dev_set_drvdata(dev, chip);
  
-@@ -432,6 +484,8 @@ err_delete_vtpm_dev:
-  */
- static void vtpm_delete_device_pair(struct vtpm_dev *vtpm_dev)
- {
-+	vtpm_dev_work_stop(vtpm_dev);
-+
- 	tpm_chip_unregister(vtpm_dev->chip);
+ 	chip->dev.class = tpm_class;
+@@ -127,7 +125,9 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
+ 	else
+ 		chip->dev.devt = MKDEV(MAJOR(tpm_devt), chip->dev_num);
  
- 	vtpm_fops_undo_open(vtpm_dev);
-@@ -526,11 +580,24 @@ static int __init vtpm_module_init(void)
- 		return rc;
+-	dev_set_name(&chip->dev, "%s", chip->devname);
++	err = dev_set_name(&chip->dev, "tpm%d", chip->dev_num);
++	if (err)
++		goto out;
+ 
+ 	device_initialize(&chip->dev);
+ 
+@@ -142,6 +142,10 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
  	}
  
-+	workqueue = create_workqueue("tpm-vtpm");
-+	if (!workqueue) {
-+		pr_err("couldn't create workqueue\n");
-+		rc = -ENOMEM;
-+		goto err_vtpmx_cleanup;
-+	}
+ 	return chip;
 +
++out:
++	put_device(&chip->dev);
++	return ERR_PTR(err);
+ }
+ EXPORT_SYMBOL_GPL(tpmm_chip_alloc);
+ 
+@@ -153,7 +157,7 @@ static int tpm_dev_add_device(struct tpm_chip *chip)
+ 	if (rc) {
+ 		dev_err(&chip->dev,
+ 			"unable to cdev_add() %s, major %d, minor %d, err=%d\n",
+-			chip->devname, MAJOR(chip->dev.devt),
++			dev_name(&chip->dev), MAJOR(chip->dev.devt),
+ 			MINOR(chip->dev.devt), rc);
+ 
+ 		device_unregister(&chip->dev);
+@@ -164,7 +168,7 @@ static int tpm_dev_add_device(struct tpm_chip *chip)
+ 	if (rc) {
+ 		dev_err(&chip->dev,
+ 			"unable to device_register() %s, major %d, minor %d, err=%d\n",
+-			chip->devname, MAJOR(chip->dev.devt),
++			dev_name(&chip->dev), MAJOR(chip->dev.devt),
+ 			MINOR(chip->dev.devt), rc);
+ 
+ 		return rc;
+@@ -190,7 +194,7 @@ static int tpm1_chip_register(struct tpm_chip *chip)
+ 	if (rc)
+ 		return rc;
+ 
+-	chip->bios_dir = tpm_bios_log_setup(chip->devname);
++	chip->bios_dir = tpm_bios_log_setup(dev_name(&chip->dev));
+ 
  	return 0;
-+
-+err_vtpmx_cleanup:
-+	vtpmx_cleanup();
-+
-+	return rc;
+ }
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 1ce6547..31d9a8e 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -178,7 +178,6 @@ struct tpm_chip {
+ 	unsigned int flags;
+ 
+ 	int dev_num;		/* /dev/tpm# */
+-	char devname[7];
+ 	unsigned long is_open;	/* only one allowed */
+ 	int time_expired;
+ 
+diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+index bd72fb0..49e5097 100644
+--- a/drivers/char/tpm/tpm_eventlog.c
++++ b/drivers/char/tpm/tpm_eventlog.c
+@@ -397,7 +397,7 @@ static int is_bad(void *p)
+ 	return 0;
  }
  
- static void __exit vtpm_module_exit(void)
+-struct dentry **tpm_bios_log_setup(char *name)
++struct dentry **tpm_bios_log_setup(const char *name)
  {
-+	destroy_workqueue(workqueue);
- 	vtpmx_cleanup();
- }
+ 	struct dentry **ret = NULL, *tpm_dir, *bin_file, *ascii_file;
  
+diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
+index 267bfbd..cc9672f 100644
+--- a/drivers/char/tpm/tpm_eventlog.h
++++ b/drivers/char/tpm/tpm_eventlog.h
+@@ -77,7 +77,7 @@ int read_log(struct tpm_bios_log *log);
+ 
+ #if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
+ 	defined(CONFIG_ACPI)
+-extern struct dentry **tpm_bios_log_setup(char *);
++extern struct dentry **tpm_bios_log_setup(const char *);
+ extern void tpm_bios_log_teardown(struct dentry **);
+ #else
+ static inline struct dentry **tpm_bios_log_setup(char *name)
+diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
+index a1e1474..d61d43f 100644
+--- a/drivers/char/tpm/tpm_i2c_nuvoton.c
++++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
+@@ -560,7 +560,7 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
+ 		rc = devm_request_irq(dev, chip->vendor.irq,
+ 				      i2c_nuvoton_int_handler,
+ 				      IRQF_TRIGGER_LOW,
+-				      chip->devname,
++				      dev_name(&chip->dev),
+ 				      chip);
+ 		if (rc) {
+ 			dev_err(dev, "%s() Unable to request irq: %d for use\n",
+diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+index 0b5fc41..37f3d44 100644
+--- a/drivers/char/tpm/tpm_tis.c
++++ b/drivers/char/tpm/tpm_tis.c
+@@ -765,7 +765,7 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+ 				 TPM_INT_VECTOR(chip->vendor.locality));
+ 			if (devm_request_irq
+ 			    (dev, i, tis_int_probe, IRQF_SHARED,
+-			     chip->devname, chip) != 0) {
++			     dev_name(&chip->dev), chip) != 0) {
+ 				dev_info(&chip->dev,
+ 					 "Unable to request irq: %d for probe\n",
+ 					 i);
+@@ -817,7 +817,7 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+ 			 TPM_INT_VECTOR(chip->vendor.locality));
+ 		if (devm_request_irq
+ 		    (dev, chip->vendor.irq, tis_int_handler, IRQF_SHARED,
+-		     chip->devname, chip) != 0) {
++		     dev_name(&chip->dev), chip) != 0) {
+ 			dev_info(&chip->dev,
+ 				 "Unable to request irq: %d for use\n",
+ 				 chip->vendor.irq);
 -- 
 2.4.3
 
