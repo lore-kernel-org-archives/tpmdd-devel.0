@@ -1,44 +1,57 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH] tpm_crb: fix bad name pointer usage with
- struct resource
-Date: Sat, 20 Feb 2016 10:04:22 +0200
-Message-ID: <20160220080422.GA6833@intel.com>
-References: <1455668874-13261-1-git-send-email-jarkko.sakkinen@linux.intel.com>
- <20160217045219.GA26086@obsidianresearch.com>
- <20160217093623.GA9831@intel.com>
- <20160217142016.GA6951@intel.com>
- <20160218173140.GA5899@obsidianresearch.com>
- <20160219150606.GB7474@intel.com>
- <20160219174434.GA15013@obsidianresearch.com>
+Subject: [GIT PULL] remaining tpmdd fixes for Linux 4.5
+Date: Sat, 20 Feb 2016 10:17:05 +0200
+Message-ID: <20160220081705.GA12981@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20160219174434.GA15013@obsidianresearch.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+Sender: owner-linux-security-module@vger.kernel.org
+To: James Morris <jmorris@namei.org>
+Cc: linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Feb 19, 2016 at 10:44:34AM -0700, Jason Gunthorpe wrote:
-> On Fri, Feb 19, 2016 at 05:06:06PM +0200, Jarkko Sakkinen wrote:
-> 
-> > Can you quickly check the two top-most patches:
-> > 
-> > https://github.com/jsakkine/linux-tpmdd/commits/master
-> 
-> Drop the change to crb_map_res, the memset is not needed.
+Hi James,
 
-Left-over from when I tried to catch the issue. Removed.
+I'm sorry for the late pull request for 4.5. The reason for this was
+the latency in my previous one. I picked with care the absolutely
+critical fixes so that we can make a sound tpmdd release.
 
-> The shutdown change is probably OK for a rc fix, but it is still wrong.
-> The shutdown has to be done inside the code after the core has removed
-> all access to the tpm but before it has torn down so much that the
-> driver doesn't work anymore.
+I really hope you can still pick these as one of them is absolutely
+critical to get authorization policy sealing API right (kernel keeps
+it finger out of user space created objects).
 
-I made the modifications you asked and run my smoke tests. Can I apply
-your Reviewed-by's?
-
-> Jason
-
+BR,
 /Jarkko
+
+The following changes since commit 8e0ee3c9faed7ca68807ea45141775856c438ac0:
+
+  tpm: fix the cleanup of struct tpm_chip (2016-02-10 04:12:08 +0200)
+
+are available in the git repository at:
+
+  https://github.com/jsakkine/linux-tpmdd.git tags/tpmdd-next-20160220
+
+for you to fetch changes up to 99cda8cb4639de81cde785b5bab9bc52e916e594:
+
+  tpm_crb: tpm2_shutdown() must be called before tpm_chip_unregister() (2016-02-20 09:59:33 +0200)
+
+----------------------------------------------------------------
+remaining tpmdd fixes for Linux 4.5
+
+----------------------------------------------------------------
+Harald Hoyer (1):
+      tpm_eventlog.c: fix binary_bios_measurements
+
+Jarkko Sakkinen (4):
+      tpm: fix: set continueSession attribute for the unseal operation
+      tpm: fix: return rc when devm_add_action() fails
+      tpm_crb/tis: fix: use dev_name() for /proc/iomem
+      tpm_crb: tpm2_shutdown() must be called before tpm_chip_unregister()
+
+ drivers/char/tpm/tpm-chip.c     |  7 ++++++-
+ drivers/char/tpm/tpm2-cmd.c     | 10 +++++++---
+ drivers/char/tpm/tpm_crb.c      |  8 +++++---
+ drivers/char/tpm/tpm_eventlog.c | 14 ++++++++++----
+ drivers/char/tpm/tpm_tis.c      |  4 +++-
+ 5 files changed, 31 insertions(+), 12 deletions(-)
