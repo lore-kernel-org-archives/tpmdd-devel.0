@@ -1,16 +1,15 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [GIT PULL] remaining tpmdd fixes for Linux 4.5
-Date: Mon, 22 Feb 2016 10:52:45 -0700
-Message-ID: <20160222175245.GA22828@obsidianresearch.com>
-References: <20160220081705.GA12981@intel.com>
-	<alpine.LRH.2.20.1602221255210.4918@namei.org>
-	<20160222145023.GA28365@intel.com>
+Subject: Re: [PATCH v3 03/11] tpm: Get rid of devname
+Date: Mon, 22 Feb 2016 11:19:29 -0700
+Message-ID: <20160222181929.GB22088@obsidianresearch.com>
+References: <1455885728-10315-1-git-send-email-stefanb@linux.vnet.ibm.com>
+	<1455885728-10315-4-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160222145023.GA28365-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <1455885728-10315-4-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,20 +18,30 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: James Morris <jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Wilck-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org
+To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Feb 22, 2016 at 04:50:23PM +0200, Jarkko Sakkinen wrote:
+On Fri, Feb 19, 2016 at 07:42:00AM -0500, Stefan Berger wrote:
+>  
+> -	dev_set_name(&chip->dev, "%s", chip->devname);
+> +	err = dev_set_name(&chip->dev, "tpm%d", chip->dev_num);
+> +	if (err)
+> +		goto out;
+>  
+>  	device_initialize(&chip->dev);
+>  
+> @@ -142,6 +142,10 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
+>  	}
+>  
+>  	return chip;
+> +
+> +out:
+> +	put_device(&chip->dev);
+> +	return ERR_PTR(err);
 
-> I already pushed a fix to my master for this issue:
-> 
-> https://github.com/jsakkine/linux-tpmdd/commit/6386544ad7bceb3d0248b85da29d4d99eebe9161
-
-The goal is to reduce the number of #ifdef'd code segments so we have
-fewer problems in future with a large .config test matrix.
-
-I'd rather see a __maybe_unused annotation instead.
+Oops, something went wrong here in all the rebasing - dev_set_name has
+to be after devince_initialize.
 
 Jason
 
