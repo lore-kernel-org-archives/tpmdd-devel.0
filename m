@@ -1,175 +1,57 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3 06/11] tpm: Split out the devm stuff
- from tpmm_chip_alloc
-Date: Mon, 22 Feb 2016 23:14:14 +0200
-Message-ID: <20160222211414.GC3310@intel.com>
-References: <1455885728-10315-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<1455885728-10315-7-git-send-email-stefanb@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [GIT PULL] remaining tpmdd fixes for Linux 4.5
+Date: Mon, 22 Feb 2016 23:23:20 +0200
+Message-ID: <20160222212320.GA6733@intel.com>
+References: <20160220081705.GA12981@intel.com>
+ <alpine.LRH.2.20.1602221255210.4918@namei.org>
+ <20160222145023.GA28365@intel.com>
+ <20160222175245.GA22828@obsidianresearch.com>
+ <20160222190828.GA32231@intel.com>
+ <20160222191148.GG22088@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1455885728-10315-7-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <20160222191148.GG22088@obsidianresearch.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: James Morris <jmorris@namei.org>, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, Wilck@intel.com, Martin <martin.wilck@ts.fujitsu.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Feb 19, 2016 at 07:42:03AM -0500, Stefan Berger wrote:
-> From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+On Mon, Feb 22, 2016 at 12:11:48PM -0700, Jason Gunthorpe wrote:
+> On Mon, Feb 22, 2016 at 09:08:28PM +0200, Jarkko Sakkinen wrote:
+> > On Mon, Feb 22, 2016 at 10:52:45AM -0700, Jason Gunthorpe wrote:
+> > > On Mon, Feb 22, 2016 at 04:50:23PM +0200, Jarkko Sakkinen wrote:
+> > > 
+> > > > I already pushed a fix to my master for this issue:
+> > > > 
+> > > > https://github.com/jsakkine/linux-tpmdd/commit/6386544ad7bceb3d0248b85da29d4d99eebe9161
+> > > 
+> > > The goal is to reduce the number of #ifdef'd code segments so we have
+> > > fewer problems in future with a large .config test matrix.
+> > > 
+> > > I'd rather see a __maybe_unused annotation instead.
+> > 
+> > Agreed that it's a better form but at this point it's probably revert
+> > the breaking change and move to that later on. Otherwise, I don't see
+> > reason not to include the patch that you authored to the release. I've
+> > used it in my test kernels for quite some time now and it has worked
+> > without issues.
+> > 
+> > I sent my fix for review now.
 > 
-> tpm_chip_alloc becomes a typical subsystem allocate call.
+> A warning with some kconfigs is very minor, we can take the time to
+> fix it properly for 4.6.
 
-Maybe a more verbose commit message?
+I don't see any problem adding those too ifdefs back for 4.5 release.
 
-> 
-> Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> ---
->  drivers/char/tpm/tpm-chip.c | 57 +++++++++++++++++++++++++++++++--------------
->  drivers/char/tpm/tpm.h      |  4 +++-
->  2 files changed, 42 insertions(+), 19 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> index fe15637..2270e47 100644
-> --- a/drivers/char/tpm/tpm-chip.c
-> +++ b/drivers/char/tpm/tpm-chip.c
-> @@ -120,17 +120,17 @@ static void tpm_dev_release(struct device *dev)
->  }
->  
->  /**
-> - * tpmm_chip_alloc() - allocate a new struct tpm_chip instance
-> - * @dev: device to which the chip is associated
-> + * tpm_chip_alloc() - allocate a new struct tpm_chip instance
-> + * @pdev: device to which the chip is associated
-> + *        At this point pdev mst be initialized, but does not have to
-> + *        be registered
->   * @ops: struct tpm_class_ops instance
->   *
->   * Allocates a new struct tpm_chip instance and assigns a free
-> - * device number for it. Caller does not have to worry about
-> - * freeing the allocated resources. When the devices is removed
-> - * devres calls tpmm_chip_remove() to do the job.
-> + * device number for it. Must be paired with put_device(&chip->dev).
->   */
-> -struct tpm_chip *tpmm_chip_alloc(struct device *dev,
-> -				 const struct tpm_class_ops *ops)
-> +struct tpm_chip *tpm_chip_alloc(struct device *dev,
-> +				const struct tpm_class_ops *ops)
->  {
->  	struct tpm_chip *chip;
->  	int err;
-> @@ -143,10 +143,10 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
->  	mutex_init(&chip->tpm_mutex);
->  	INIT_LIST_HEAD(&chip->list);
->  
-> -	chip->ops = ops;
-> -
->  	spin_lock(&driver_lock);
->  	chip->dev_num = find_first_zero_bit(dev_mask, TPM_NUM_DEVICES);
-> +	if (chip->dev_num < TPM_NUM_DEVICES)
-> +		set_bit(chip->dev_num, dev_mask);
+> I am surprised the 0day -next builds/etc didn't notice this - Jarkko is
+> your tree included in that process somehow? (sorry, I don't remember
+> the details)
 
-I guess this change should a separate patch.
+It has been and I've received notifications from there from time to
+time about my master branch and fixed issues accordingly.
 
->  	spin_unlock(&driver_lock);
->  
->  	if (chip->dev_num >= TPM_NUM_DEVICES) {
-> @@ -155,9 +155,9 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
->  		return ERR_PTR(-ENOMEM);
->  	}
->  
-> -	set_bit(chip->dev_num, dev_mask);
-> +	chip->ops = ops;
->  
-> -	dev_set_drvdata(dev, chip);
-> +	device_initialize(&chip->dev);
->  
->  	chip->dev.class = tpm_class;
->  	chip->dev.release = tpm_dev_release;
-> @@ -175,23 +175,44 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
->  	if (err)
->  		goto out;
->  
-> -	device_initialize(&chip->dev);
-> -
->  	cdev_init(&chip->cdev, &tpm_fops);
->  	chip->cdev.owner = dev->driver->owner;
->  	chip->cdev.kobj.parent = &chip->dev.kobj;
->  
-> -	err = devm_add_action(dev, (void (*)(void *)) put_device, &chip->dev);
-> +	return chip;
-> +
-> +out:
-> +	put_device(&chip->dev);
-> +	return ERR_PTR(err);
-> +}
-> +EXPORT_SYMBOL_GPL(tpm_chip_alloc);
-> +
-> +/**
-> + * tpmm_chip_alloc() - allocate a new struct tpm_chip instance
-> + * @pdev: parent device to which the chip is associated
-> + * @ops: struct tpm_class_ops instance
-> + *
-> + * Same as tpm_chip_alloc except devm is used to do the put_device
-> + */
-> +struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
-> +				 const struct tpm_class_ops *ops)
-> +{
-> +	struct tpm_chip *chip;
-> +	int err;
-> +
-> +	chip = tpm_chip_alloc(pdev, ops);
-> +	if (IS_ERR(chip))
-> +		return chip;
-> +
-> +	err = devm_add_action(pdev, (void (*)(void *)) put_device, &chip->dev);
->  	if (err) {
->  		put_device(&chip->dev);
->  		return ERR_PTR(err);
->  	}
->  
-> -	return chip;
-> +	dev_set_drvdata(pdev, chip);
->  
-> -out:
-> -	put_device(&chip->dev);
-> -	return ERR_PTR(err);
-> +	return chip;
->  }
->  EXPORT_SYMBOL_GPL(tpmm_chip_alloc);
->  
-> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> index 2a8373e..25efe8f 100644
-> --- a/drivers/char/tpm/tpm.h
-> +++ b/drivers/char/tpm/tpm.h
-> @@ -515,7 +515,9 @@ struct tpm_chip *tpm_chip_find_get(int chip_num);
->  __must_check int tpm_try_get_ops(struct tpm_chip *chip);
->  void tpm_put_ops(struct tpm_chip *chip);
->  
-> -extern struct tpm_chip *tpmm_chip_alloc(struct device *dev,
-> +extern struct tpm_chip *tpm_chip_alloc(struct device *dev,
-> +				       const struct tpm_class_ops *ops);
-> +extern struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
->  				       const struct tpm_class_ops *ops);
->  extern int tpm_chip_register(struct tpm_chip *chip);
->  extern void tpm_chip_unregister(struct tpm_chip *chip);
-> -- 
-> 2.4.3
-> 
+> Jason
 
 /Jarkko
-
-------------------------------------------------------------------------------
-Site24x7 APM Insight: Get Deep Visibility into Application Performance
-APM + Mobile APM + RUM: Monitor 3 App instances at just $35/Month
-Monitor end-to-end web transactions and take corrective actions now
-Troubleshoot faster and improve end-user experience. Signup Now!
-http://pubads.g.doubleclick.net/gampad/clk?id=272487151&iu=/4140
