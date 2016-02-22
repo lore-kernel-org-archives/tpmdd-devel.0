@@ -1,17 +1,16 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v3 06/11] tpm: Split out the devm stuff
- from tpmm_chip_alloc
-Date: Mon, 22 Feb 2016 15:13:28 -0700
-Message-ID: <20160222221328.GA27228@obsidianresearch.com>
+Subject: Re: [PATCH v3 05/11] tpm: Get rid of module locking
+Date: Mon, 22 Feb 2016 15:15:05 -0700
+Message-ID: <20160222221505.GB27228@obsidianresearch.com>
 References: <1455885728-10315-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<1455885728-10315-7-git-send-email-stefanb@linux.vnet.ibm.com>
-	<20160222211414.GC3310@intel.com>
+	<1455885728-10315-6-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20160222211141.GB3310@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160222211414.GC3310-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20160222211141.GB3310-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -24,28 +23,19 @@ To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Feb 22, 2016 at 11:14:14PM +0200, Jarkko Sakkinen wrote:
-> On Fri, Feb 19, 2016 at 07:42:03AM -0500, Stefan Berger wrote:
-> > From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+On Mon, Feb 22, 2016 at 11:11:41PM +0200, Jarkko Sakkinen wrote:
+> On Fri, Feb 19, 2016 at 07:42:02AM -0500, Stefan Berger wrote:
+> > Get rid of the locking of the module
 > > 
-> > tpm_chip_alloc becomes a typical subsystem allocate call.
+> > Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 > 
-> Maybe a more verbose commit message?
+> I tend to think that this should have been part of the previous patch
+> with the description in the commit message why the RW-semaphore gives
+> the needed guarantees.
 
-What more do you want to say?
-
-> >  	spin_lock(&driver_lock);
-> >  	chip->dev_num = find_first_zero_bit(dev_mask, TPM_NUM_DEVICES);
-> > +	if (chip->dev_num < TPM_NUM_DEVICES)
-> > +		set_bit(chip->dev_num, dev_mask);
-> 
-> I guess this change should a separate patch.
-
-Hurm, Stefan? This was not in the patch I sent you? This hunk looks
-incomplete to me, and replaced by the IDR stuff anyhow. Drop it?
-
-You need to put your Signed-off-by on patches you make notable changes
-to, this one would qualify
+Module locking is user visible (no longer prevents rmmod), and Stefan
+wrote this code so it deserves it's own patch. The ops changes are not
+user visible.
 
 Jason
 
