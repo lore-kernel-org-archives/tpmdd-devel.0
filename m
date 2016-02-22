@@ -1,48 +1,69 @@
-From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [GIT PULL] remaining tpmdd fixes for Linux 4.5
-Date: Mon, 22 Feb 2016 12:11:48 -0700
-Message-ID: <20160222191148.GG22088@obsidianresearch.com>
-References: <20160220081705.GA12981@intel.com>
- <alpine.LRH.2.20.1602221255210.4918@namei.org>
- <20160222145023.GA28365@intel.com>
- <20160222175245.GA22828@obsidianresearch.com>
- <20160222190828.GA32231@intel.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH v3 08/11] tpm: Introduce
+	TPM_CHIP_FLAG_VIRTUAL
+Date: Mon, 22 Feb 2016 12:19:22 -0700
+Message-ID: <20160222191922.GH22088@obsidianresearch.com>
+References: <1455885728-10315-1-git-send-email-stefanb@linux.vnet.ibm.com>
+	<1455885728-10315-9-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160222190828.GA32231@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: James Morris <jmorris@namei.org>, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, Wilck@intel.com, Martin <martin.wilck@ts.fujitsu.com>
+In-Reply-To: <1455885728-10315-9-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Feb 22, 2016 at 09:08:28PM +0200, Jarkko Sakkinen wrote:
-> On Mon, Feb 22, 2016 at 10:52:45AM -0700, Jason Gunthorpe wrote:
-> > On Mon, Feb 22, 2016 at 04:50:23PM +0200, Jarkko Sakkinen wrote:
-> > 
-> > > I already pushed a fix to my master for this issue:
-> > > 
-> > > https://github.com/jsakkine/linux-tpmdd/commit/6386544ad7bceb3d0248b85da29d4d99eebe9161
-> > 
-> > The goal is to reduce the number of #ifdef'd code segments so we have
-> > fewer problems in future with a large .config test matrix.
-> > 
-> > I'd rather see a __maybe_unused annotation instead.
-> 
-> Agreed that it's a better form but at this point it's probably revert
-> the breaking change and move to that later on. Otherwise, I don't see
-> reason not to include the patch that you authored to the release. I've
-> used it in my test kernels for quite some time now and it has worked
-> without issues.
-> 
-> I sent my fix for review now.
+On Fri, Feb 19, 2016 at 07:42:05AM -0500, Stefan Berger wrote:
 
-A warning with some kconfigs is very minor, we can take the time to
-fix it properly for 4.6.
+>  	cdev_init(&chip->cdev, &tpm_fops);
+> -	chip->cdev.owner = dev->driver->owner;
 
-I am surprised the 0day -next builds/etc didn't notice this - Jarkko is
-your tree included in that process somehow? (sorry, I don't remember
-the details)
+Shouldn't this be:
+
+	chip->cdev.owner = THIS_MODULE;
+
+?
+
+Please drop this hunk into the 'tpm: Get rid of module locking' patch
+
+> +
+> +	if (!(chip->flags & TPM_CHIP_FLAG_VIRTUAL))
+> +		err = sysfs_create_group(&chip->dev.parent->kobj,
+> +					 &tpm_dev_group);
+> +	else
+> +		chip->groups[chip->groups_cnt++] = &tpm_dev_group;
+
+For other reviewers: The intent here is to make another patch that
+moves the main sysfs to only use groups with symlinks link ppi does
+now.
+
+Does sysfs work with vtpm? I am worried about dev_get_drvdata here
+(and other places):
+
+ static ssize_t durations_show(struct device *dev, struct device_attribute *attr,
+                               char *buf)
+ {
+        struct tpm_chip *chip = dev_get_drvdata(dev);
+
+There is only one dev_set_drvdata and it does not apply to chip->dev.
+
+Ultimately this should change to container_of like ppi does.
 
 Jason
+
+------------------------------------------------------------------------------
+Site24x7 APM Insight: Get Deep Visibility into Application Performance
+APM + Mobile APM + RUM: Monitor 3 App instances at just $35/Month
+Monitor end-to-end web transactions and take corrective actions now
+Troubleshoot faster and improve end-user experience. Signup Now!
+http://pubads.g.doubleclick.net/gampad/clk?id=272487151&iu=/4140
