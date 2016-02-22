@@ -1,57 +1,82 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [GIT PULL] remaining tpmdd fixes for Linux 4.5
-Date: Sat, 20 Feb 2016 10:17:05 +0200
-Message-ID: <20160220081705.GA12981@intel.com>
+From: James Morris <jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
+Subject: Re: [GIT PULL] remaining tpmdd fixes for Linux 4.5
+Date: Mon, 22 Feb 2016 12:56:53 +1100 (AEDT)
+Message-ID: <alpine.LRH.2.20.1602221255210.4918@namei.org>
+References: <20160220081705.GA12981@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-Sender: owner-linux-security-module@vger.kernel.org
-To: James Morris <jmorris@namei.org>
-Cc: linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+Content-Type: multipart/mixed; BOUNDARY="1665246916-765228243-1456106213=:4918"
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20160220081705.GA12981-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi James,
+  This message is in MIME format.  The first part should be readable text,
+  while the remaining parts are likely unreadable without MIME-aware tools.
 
-I'm sorry for the late pull request for 4.5. The reason for this was
-the latency in my previous one. I picked with care the absolutely
-critical fixes so that we can make a sound tpmdd release.
+--1665246916-765228243-1456106213=:4918
+Content-Type: text/plain; charset=ISO-8859-7
+Content-Transfer-Encoding: quoted-printable
+X-MIME-Autoconverted: from 8bit to quoted-printable by namei.org id
+	u1M1urlh005387
 
-I really hope you can still pick these as one of them is absolutely
-critical to get authorization policy sealing API right (kernel keeps
-it finger out of user space created objects).
+On Sat, 20 Feb 2016, Jarkko Sakkinen wrote:
 
-BR,
-/Jarkko
+> Hi James,
+>=20
+> I'm sorry for the late pull request for 4.5. The reason for this was
+> the latency in my previous one. I picked with care the absolutely
+> critical fixes so that we can make a sound tpmdd release.
+>=20
+> I really hope you can still pick these as one of them is absolutely
+> critical to get authorization policy sealing API right (kernel keeps
+> it finger out of user space created objects).
 
-The following changes since commit 8e0ee3c9faed7ca68807ea45141775856c438ac0:
+Pushed to next for more testing and review.
 
-  tpm: fix the cleanup of struct tpm_chip (2016-02-10 04:12:08 +0200)
+This really is getting too late in the development cycle for so many=20
+fixes.  It means the code was not ready to be merged in the first place.
 
-are available in the git repository at:
+Also, any idea why I'm seeing this:
 
-  https://github.com/jsakkine/linux-tpmdd.git tags/tpmdd-next-20160220
+drivers/char/tpm/tpm_tis.c:838: warning: =A1tpm_tis_resume=A2 defined but=
+ not=20
+used
 
-for you to fetch changes up to 99cda8cb4639de81cde785b5bab9bc52e916e594:
 
-  tpm_crb: tpm2_shutdown() must be called before tpm_chip_unregister() (2016-02-20 09:59:33 +0200)
+--=20
+James Morris
+<jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
 
-----------------------------------------------------------------
-remaining tpmdd fixes for Linux 4.5
+--1665246916-765228243-1456106213=:4918
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
 
-----------------------------------------------------------------
-Harald Hoyer (1):
-      tpm_eventlog.c: fix binary_bios_measurements
+------------------------------------------------------------------------------
+Site24x7 APM Insight: Get Deep Visibility into Application Performance
+APM + Mobile APM + RUM: Monitor 3 App instances at just $35/Month
+Monitor end-to-end web transactions and take corrective actions now
+Troubleshoot faster and improve end-user experience. Signup Now!
+http://pubads.g.doubleclick.net/gampad/clk?id=272487151&iu=/4140
+--1665246916-765228243-1456106213=:4918
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
 
-Jarkko Sakkinen (4):
-      tpm: fix: set continueSession attribute for the unseal operation
-      tpm: fix: return rc when devm_add_action() fails
-      tpm_crb/tis: fix: use dev_name() for /proc/iomem
-      tpm_crb: tpm2_shutdown() must be called before tpm_chip_unregister()
+_______________________________________________
+tpmdd-devel mailing list
+tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
 
- drivers/char/tpm/tpm-chip.c     |  7 ++++++-
- drivers/char/tpm/tpm2-cmd.c     | 10 +++++++---
- drivers/char/tpm/tpm_crb.c      |  8 +++++---
- drivers/char/tpm/tpm_eventlog.c | 14 ++++++++++----
- drivers/char/tpm/tpm_tis.c      |  4 +++-
- 5 files changed, 31 insertions(+), 12 deletions(-)
+--1665246916-765228243-1456106213=:4918--
