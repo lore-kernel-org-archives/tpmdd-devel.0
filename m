@@ -1,17 +1,15 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v3 04/11] tpm: Provide strong locking for
-	device removal
-Date: Mon, 22 Feb 2016 15:20:17 -0700
-Message-ID: <20160222222017.GC27228@obsidianresearch.com>
-References: <1455885728-10315-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<1455885728-10315-5-git-send-email-stefanb@linux.vnet.ibm.com>
-	<20160222210844.GA3310@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v2 00/12] tpm/st33zp24: Few code style and
+ sanity fixes + acpi device probing support
+Date: Tue, 23 Feb 2016 01:56:39 +0200
+Message-ID: <20160222235639.GA7721@intel.com>
+References: <1455376535-9549-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160222210844.GA3310-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <1455376535-9549-1-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,62 +18,70 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Feb 22, 2016 at 11:08:59PM +0200, Jarkko Sakkinen wrote:
-> On Fri, Feb 19, 2016 at 07:42:01AM -0500, Stefan Berger wrote:
-> > From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> > 
-> > Add a read/write semaphore around the ops function pointers so
-> > ops can be set to null when the driver un-registers.
-> > 
-> > Previously the tpm core expected module locking to be enough to
-> > ensure that tpm_unregister could not be called during certain times,
-> > however that hasn't been sufficient for a long time.
+On Sat, Feb 13, 2016 at 04:15:23PM +0100, Christophe Ricard wrote:
+> Hi Peter, Jarko,
 > 
-> Could you be more concrete with the scenario? You could describe
-> a sequence of events where this could happen.
-
-echo 1 > /sys/.../remove
-
-Is basically the same as a module unload without requiring module
-unload. module locking cannot be relied upon for correctness like this
-ever since hot remove was added to the kernel.
-
-> > + * @chip: Chip to ref
-> > + *
-> > + * The caller must already have some kind of locking to ensure that chip is
+> Please find in the following serie:
+> - a set of code style or sanity cleanup
+> - acpi device probing support for i2c and spi phys.
 > 
-> What do you mean when you use the term "some kind of locking"?
-
-Eg the IDR lookup code uses a idr specific mutex. The char device uses
-a ref held by the cdev subsystem.
-
-> > +void tpm_put_ops(struct tpm_chip *chip)
-> > +{
-> > +	module_put(chip->dev.parent->driver->owner);
-> > +	up_read(&chip->ops_sem);
-> > +	put_device(&chip->dev);
-> > +}
-> > +EXPORT_SYMBOL_GPL(tpm_put_ops);
+> In v2, i have:
+> - Added Jarkko review
+> - Fixed a warning on patch 12
 > 
-> I'm just thinking is the try_module_get() and module_put() even
-> necessary after this change? You know that device is not unregistered
-> from chip->ops field, which is protected by that RW-semaphore.
+> This serie applies on top of jarkko tree:
+> b64f343cb02b2a2a009b3805a8331425dd4a8611 tpm: fix rollback/cleanup before tpm_chip_register()
 
-The module locking is not about correctness. Some subsystems will hold
-the module lock on their driver specifically to prevent rmmod as a
-hint to the user that the driver module is being used by an open
-/dev/tpmX for instance. Eg rtc does that.
+I've now applied the patches to my master branch:
 
-We need to decide if we want that for TPM or not. Orthogonal issue.
+* All of them have my Reviewed-by. For one patch I had to fix one style
+  error (one line was of over 80 characters).
+* Two of the patches have my Tested-by.
 
-I'm OK with getting rid of the module lock, TPM has a long lived
-user space daemon, rtc does not.
+Now I'm trying to get a Minnowboard so that I could test ACPI probing
+for I2C/SPI device. If that would work, then this seres would be ready
+for a pull request.
 
-Jason
+Can you check quickly check the applied patches to make sure that I
+didn't mess anything up? And perhaps compile my master and see if
+things work at run-time as well?
+
+> Best Regards
+> Christophe 
+
+/Jarkko
+
+> 
+> Christophe Ricard (12):
+>   tpm/st33zp24/spi: Remove nbr_dummy_bytes variable usage
+>   tpm/st33zp24/spi: Use functions name with st33zp24_spi_ prefix
+>   tpm/st33zp24/spi: Remove useless use of memcpy.
+>   tpm/st33zp24/spi: Remove field spi_xfer from st33zp24_spi_phy
+>     structure
+>   tpm/st33zp24: Remove unneeded CONFIG_OF switches
+>   tpm/st33zp24: Auto-select core module
+>   tpm/st33zp24/spi: Improve st33zp24_spi_evaluate_latency
+>   tpm/st33zp24: Extend Copyright headers
+>   tpm/st33zp24: Add support for acpi probing for i2c device.
+>   tpm: st33zp24: Add support for acpi probing for spi device.
+>   tpm/st33zp24/i2c: Change xxx_request_resources header
+>   tpm/st33zp24/spi: Change xxx_request_resources header
+> 
+>  drivers/char/tpm/st33zp24/Kconfig      |  11 +-
+>  drivers/char/tpm/st33zp24/i2c.c        |  76 ++++++++++---
+>  drivers/char/tpm/st33zp24/spi.c        | 190 ++++++++++++++++++++-------------
+>  drivers/char/tpm/st33zp24/st33zp24.c   |   2 +-
+>  drivers/char/tpm/st33zp24/st33zp24.h   |   2 +-
+>  include/linux/platform_data/st33zp24.h |   2 +-
+>  6 files changed, 182 insertions(+), 101 deletions(-)
+> 
+> -- 
+> 2.5.0
+> 
 
 ------------------------------------------------------------------------------
 Site24x7 APM Insight: Get Deep Visibility into Application Performance
