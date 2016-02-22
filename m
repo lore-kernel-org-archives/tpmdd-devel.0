@@ -1,18 +1,17 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v3 03/11] tpm: Get rid of devname
-Date: Mon, 22 Feb 2016 13:34:27 -0700
-Message-ID: <20160222203427.GA26909@obsidianresearch.com>
+Subject: Re: [PATCH v3 06/11] tpm: Split out the devm stuff
+ from tpmm_chip_alloc
+Date: Mon, 22 Feb 2016 15:13:28 -0700
+Message-ID: <20160222221328.GA27228@obsidianresearch.com>
 References: <1455885728-10315-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<1455885728-10315-4-git-send-email-stefanb@linux.vnet.ibm.com>
-	<20160222181929.GB22088@obsidianresearch.com>
-	<20160222194202.GC32667@intel.com>
-	<20160222195816.GL22088@obsidianresearch.com>
+	<1455885728-10315-7-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20160222211414.GC3310@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160222195816.GL22088-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <20160222211414.GC3310-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -25,23 +24,28 @@ To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Feb 22, 2016 at 12:58:16PM -0700, Jason Gunthorpe wrote:
-> On Mon, Feb 22, 2016 at 09:42:02PM +0200, Jarkko Sakkinen wrote:
-> > > Oops, something went wrong here in all the rebasing - dev_set_name has
-> > > to be after devince_initialize.
+On Mon, Feb 22, 2016 at 11:14:14PM +0200, Jarkko Sakkinen wrote:
+> On Fri, Feb 19, 2016 at 07:42:03AM -0500, Stefan Berger wrote:
+> > From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 > > 
-> > Why dev_set_name() cannot be called before device_initialize(). I see
-> > many drivers call it before device_register() like RTC driver just as
-> > an example:
+> > tpm_chip_alloc becomes a typical subsystem allocate call.
 > 
-> Yep, you are right, it still looks nicer with the init earlier, but
-> the later patch does that anyhow.
+> Maybe a more verbose commit message?
 
-Sorry, to be clear, the dev_set_name is OK, but the error unwind for
-it in this patch is not OK, it requires device_initialize to have been
-called.
+What more do you want to say?
 
-The change should still be made..
+> >  	spin_lock(&driver_lock);
+> >  	chip->dev_num = find_first_zero_bit(dev_mask, TPM_NUM_DEVICES);
+> > +	if (chip->dev_num < TPM_NUM_DEVICES)
+> > +		set_bit(chip->dev_num, dev_mask);
+> 
+> I guess this change should a separate patch.
+
+Hurm, Stefan? This was not in the patch I sent you? This hunk looks
+incomplete to me, and replaced by the IDR stuff anyhow. Drop it?
+
+You need to put your Signed-off-by on patches you make notable changes
+to, this one would qualify
 
 Jason
 
