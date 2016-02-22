@@ -1,15 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [GIT PULL] remaining tpmdd fixes for Linux 4.5
-Date: Mon, 22 Feb 2016 16:50:23 +0200
-Message-ID: <20160222145023.GA28365@intel.com>
-References: <20160220081705.GA12981@intel.com>
-	<alpine.LRH.2.20.1602221255210.4918@namei.org>
+Subject: Re: [PATCH v2 10/12] tpm: st33zp24: Add support for
+ acpi probing for spi device.
+Date: Mon, 22 Feb 2016 17:57:37 +0200
+Message-ID: <20160222155737.GA24416@intel.com>
+References: <1455376535-9549-1-git-send-email-christophe-h.ricard@st.com>
+	<1455376535-9549-11-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <alpine.LRH.2.20.1602221255210.4918-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
+In-Reply-To: <1455376535-9549-11-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,54 +19,161 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: James Morris <jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Wilck-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org
+To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gTW9uLCBGZWIgMjIsIDIwMTYgYXQgMTI6NTY6NTNQTSArMTEwMCwgSmFtZXMgTW9ycmlzIHdy
-b3RlOgo+IE9uIFNhdCwgMjAgRmViIDIwMTYsIEphcmtrbyBTYWtraW5lbiB3cm90ZToKPiAKPiA+
-IEhpIEphbWVzLAo+ID4gCj4gPiBJJ20gc29ycnkgZm9yIHRoZSBsYXRlIHB1bGwgcmVxdWVzdCBm
-b3IgNC41LiBUaGUgcmVhc29uIGZvciB0aGlzIHdhcwo+ID4gdGhlIGxhdGVuY3kgaW4gbXkgcHJl
-dmlvdXMgb25lLiBJIHBpY2tlZCB3aXRoIGNhcmUgdGhlIGFic29sdXRlbHkKPiA+IGNyaXRpY2Fs
-IGZpeGVzIHNvIHRoYXQgd2UgY2FuIG1ha2UgYSBzb3VuZCB0cG1kZCByZWxlYXNlLgo+ID4gCj4g
-PiBJIHJlYWxseSBob3BlIHlvdSBjYW4gc3RpbGwgcGljayB0aGVzZSBhcyBvbmUgb2YgdGhlbSBp
-cyBhYnNvbHV0ZWx5Cj4gPiBjcml0aWNhbCB0byBnZXQgYXV0aG9yaXphdGlvbiBwb2xpY3kgc2Vh
-bGluZyBBUEkgcmlnaHQgKGtlcm5lbCBrZWVwcwo+ID4gaXQgZmluZ2VyIG91dCBvZiB1c2VyIHNw
-YWNlIGNyZWF0ZWQgb2JqZWN0cykuCj4gCj4gUHVzaGVkIHRvIG5leHQgZm9yIG1vcmUgdGVzdGlu
-ZyBhbmQgcmV2aWV3Lgo+IAo+IFRoaXMgcmVhbGx5IGlzIGdldHRpbmcgdG9vIGxhdGUgaW4gdGhl
-IGRldmVsb3BtZW50IGN5Y2xlIGZvciBzbyBtYW55IAo+IGZpeGVzLiAgSXQgbWVhbnMgdGhlIGNv
-ZGUgd2FzIG5vdCByZWFkeSB0byBiZSBtZXJnZWQgaW4gdGhlIGZpcnN0IHBsYWNlLgoKSSBmdWxs
-eSBhZ3JlZSB3aGF0IHlvdSdyZSBzYXlpbmcuIEknbGwgbGVhcm4gdGhlIGxlc3NvbiBoZXJlIGFu
-ZCB0YWtlCmZhY3RvcnMgbW9yZSBjb25zZXJ2YXRpdmUgYXR0aXR1ZGUgZnJvbSBub3cgb24uIE5v
-IGV4Y3VzZXMuIEknbSBzb3JyeQphYm91dCB0aGlzLgoKUGFydGx5IHRoZSByZWFzb24gZm9yIHJl
-Y2VudCBpbmNyZWFzZSBpbiByZWdyZXNzaW9ucyBoYXMgYmVlbgppbmNyZWFzZWQgcmVhbC13b3Js
-ZCB1c2Ugb2YgVFBNMiBhbmQgdGh1cyBpc3N1ZXMgaGF2ZSBzdGFydGVkIHRvIHBvcAp1cCB0aGF0
-J3MgYSBsYW1lIGV4Y3VzZSBhbnl3YXkuCgo+IEFsc28sIGFueSBpZGVhIHdoeSBJJ20gc2VlaW5n
-IHRoaXM6Cj4gCj4gZHJpdmVycy9jaGFyL3RwbS90cG1fdGlzLmM6ODM4OiB3YXJuaW5nOiDigJh0
-cG1fdGlzX3Jlc3VtZeKAmSBkZWZpbmVkIGJ1dCBub3QgCj4gdXNlZAoKQmlzZWN0ZWQgdGhlIHBh
-dGNoOiAwMDE5NDgyNmU2YmUKCkRvIHlvdSB3YW50IG1lIHRvIHNlbmQgYSBwdWxsIHJlcXVlc3Qg
-Y29udGFpbmluZyBhIGZpeCBmb3IgdGhlIGJ1aWxkCndhcm5pbmcgb3IgcmV2ZXJ0aW5nIHRoZSB3
-aG9sZSBjb21taXQ/IE15IGNhbGwgd291bGQgYmUgdG8gYXBwbHkgdGhlCmZpeCBiZWNhdXNlIHRo
-aXMgY29tbWl0IGhhcyBiZWVuIHRlc3RlZCBib3RoIFRQTSAxLjIgYnkgTWFydGluIGFuZAp3aXRo
-IFRQTSAyLjAgYnkgbWUgYW5kIHRoaW5ncyBoYXZlIHdvcmtlZCB3ZWxsLgoKSSBjYW4gbGl2ZSB3
-aXRoIGVpdGhlciBvcHRpb24uCgpJIGFscmVhZHkgcHVzaGVkIGEgZml4IHRvIG15IG1hc3RlciBm
-b3IgdGhpcyBpc3N1ZToKCmh0dHBzOi8vZ2l0aHViLmNvbS9qc2Fra2luZS9saW51eC10cG1kZC9j
-b21taXQvNjM4NjU0NGFkN2JjZWIzZDAyNDhiODVkYTI5ZDRkOTllZWJlOTE2MQoKPiAtLSAKPiBK
-YW1lcyBNb3JyaXMKPiA8am1vcnJpc0BuYW1laS5vcmc+CgpJJ3ZlIGJlZW4gcmVjZW50bHkgd29y
-a2luZyBvbiBhIGN1c3RvbSBCUiBlbnZpcm9ubWVudCB0aGF0IGJ1bmRsZXMgbXkKbGF0ZXN0IG1h
-c3RlciB3aXRoIGluaXRyYW1mcyB1c2VyIHNwYWNlIFsxXS4gQXQgbWluaW11bSBJJ2xsIHN0YXJ0
-CnVzaW5nIHRoaXMgZW52aXJvbm1lbnQgdG8gY3JlYXRlIGJ1aWxkcyBvZiB0aGlzIGVudiB3aXRo
-IGFuZCB3aXRob3V0ClBNIGZvciByZWxlYXNlIHRlc3RpbmcgYW5kIHJ1biB0aGUgaW1hZ2VzIGJv
-dGggMS4yIGFuZCAyLjAgSFcuCgpUaGlzIHNob3VsZCBwcmV2ZW50IHRoZSB3YXJuaW5nIHlvdSBl
-eHBlcmllbmNlZCBuZXZlciBoYXBwZW5pbmcgYWdhaW4uCgpbMV0gIGh0dHA6Ly9naXQuaW5mcmFk
-ZWFkLm9yZy91c2Vycy9qanMvYnVpbGRyb290LXRwbWRkLmdpdAoKL0phcmtrbwoKLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tClNpdGUyNHg3IEFQTSBJbnNpZ2h0OiBHZXQgRGVlcCBWaXNpYmlsaXR5IGlu
-dG8gQXBwbGljYXRpb24gUGVyZm9ybWFuY2UKQVBNICsgTW9iaWxlIEFQTSArIFJVTTogTW9uaXRv
-ciAzIEFwcCBpbnN0YW5jZXMgYXQganVzdCAkMzUvTW9udGgKTW9uaXRvciBlbmQtdG8tZW5kIHdl
-YiB0cmFuc2FjdGlvbnMgYW5kIHRha2UgY29ycmVjdGl2ZSBhY3Rpb25zIG5vdwpUcm91Ymxlc2hv
-b3QgZmFzdGVyIGFuZCBpbXByb3ZlIGVuZC11c2VyIGV4cGVyaWVuY2UuIFNpZ251cCBOb3chCmh0
-dHA6Ly9wdWJhZHMuZy5kb3VibGVjbGljay5uZXQvZ2FtcGFkL2Nsaz9pZD0yNzI0ODcxNTEmaXU9
-LzQxNDAKX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBt
-ZGQtZGV2ZWwgbWFpbGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApo
-dHRwczovL2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
+On Sat, Feb 13, 2016 at 04:15:33PM +0100, Christophe Ricard wrote:
+> Add support for acpi probing. SMO3324 is used for st33zp24.
+> It has been tested with the following acpi node on Minnowboard:
+> 
+> Device (TPM1)
+> {
+> 	Name (_ADR, Zero)  // _ADR: Address
+> 	Name (_HID, "SMO3324")  // _HID: Hardware ID
+> 	Name (_CID, "SMO3324")  // _CID: Compatible ID
+> 	Name (_DDN, "SMO TPM")  // _DDN: DOS Device Name
+> 	Name (_UID, One)  // _UID: Unique ID
+> 	Method (_CRS, 0, NotSerialized)  // _CRS: Current Resource Settings
+> 	{
+> 		Name (SBUF, ResourceTemplate ()
+> 		{
+> 			SpiSerialBus (0, PolarityLow, FourWireMode, 8,
+> 				      ControllerInitiated, 10000000, ClockPolarityLow,
+> 				      ClockPhaseFirst, "\\_SB.SPI1",
+> 				      0x00, ResourceConsumer, ,)
+> 			GpioInt (Edge, ActiveHigh, ExclusiveAndWake, PullNone, 0x0000,
+> 				 "\\_SB.GPO2", 0x00, ResourceConsumer, ,)
+> 			{       // Pin list
+> 				0x0001
+> 			}
+> 			GpioIo (Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly,
+> 				"\\_SB.GPO2", 0x00, ResourceConsumer, ,)
+> 			{       // Pin list
+> 				0x0002,
+> 			}
+> 		})
+> 		Return (SBUF) /* \_SB_.SPI1.TPM1._CRS.SBUF */
+> 	}
+> 	Method (_STA, 0, NotSerialized)  // _STA: Status
+> 	{
+> 		Return (0x0F)
+> 	}
+> }
+> 
+> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
+
+Not applied this patch yet because I'm still trying to get my hands on
+the regular Minnowboard (not MAX). Tested-by's are greatly appreciated
+for this patch.
+
+I hope I get one this week so I can add my Tested-by.
+
+/Jarkko
+
+> ---
+>  drivers/char/tpm/st33zp24/spi.c | 50 +++++++++++++++++++++++++++++++++++++++++
+>  1 file changed, 50 insertions(+)
+> 
+> diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
+> index 34cdee1..b9b74ae 100644
+> --- a/drivers/char/tpm/st33zp24/spi.c
+> +++ b/drivers/char/tpm/st33zp24/spi.c
+> @@ -19,8 +19,10 @@
+>  #include <linux/module.h>
+>  #include <linux/spi/spi.h>
+>  #include <linux/gpio.h>
+> +#include <linux/gpio/consumer.h>
+>  #include <linux/of_irq.h>
+>  #include <linux/of_gpio.h>
+> +#include <linux/acpi.h>
+>  #include <linux/tpm.h>
+>  #include <linux/platform_data/st33zp24.h>
+>  
+> @@ -226,6 +228,43 @@ static const struct st33zp24_phy_ops spi_phy_ops = {
+>  	.recv = st33zp24_spi_recv,
+>  };
+>  
+> +static int st33zp24_spi_acpi_request_resources(struct st33zp24_i2c_phy *phy)
+> +{
+> +	struct spi_device *spi_dev = phy->spi_device;
+> +	const struct acpi_device_id *id;
+> +	struct gpio_desc *gpiod_lpcpd;
+> +	struct device *dev;
+> +
+> +	if (!spi_dev)
+> +		return -EINVAL;
+> +
+> +	dev = &spi_dev->dev;
+> +
+> +	/* Match the struct device against a given list of ACPI IDs */
+> +	id = acpi_match_device(dev->driver->acpi_match_table, dev);
+> +	if (!id)
+> +		return -ENODEV;
+> +
+> +	/* Get LPCPD GPIO from ACPI */
+> +	gpiod_lpcpd = devm_gpiod_get_index(dev, "TPM IO LPCPD", 1,
+> +					   GPIOD_OUT_HIGH);
+> +	if (IS_ERR(gpiod_lpcpd)) {
+> +		dev_err(&client->dev,
+> +			"Failed to retrieve lpcpd-gpios from acpi.\n");
+> +		phy->io_lpcpd = -1;
+> +		/*
+> +		 * lpcpd pin is not specified. This is not an issue as
+> +		 * power management can be also managed by TPM specific
+> +		 * commands. So leave with a success status code.
+> +		 */
+> +		return 0;
+> +	}
+> +
+> +	phy->io_lpcpd = desc_to_gpio(gpiod_lpcpd);
+> +
+> +	return 0;
+> +}
+> +
+>  static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
+>  {
+>  	struct device_node *pp;
+> @@ -327,6 +366,10 @@ static int st33zp24_spi_probe(struct spi_device *dev)
+>  		ret = st33zp24_spi_request_resources(dev, phy);
+>  		if (ret)
+>  			return ret;
+> +	} else if (ACPI_HANDLE(&dev->dev)) {
+> +		ret = st33zp24_spi_acpi_request_resources(phy);
+> +		if (ret)
+> +			return ret;
+>  	}
+>  
+>  	phy->latency = st33zp24_spi_evaluate_latency(phy);
+> @@ -361,6 +404,12 @@ static const struct of_device_id of_st33zp24_spi_match[] = {
+>  };
+>  MODULE_DEVICE_TABLE(of, of_st33zp24_spi_match);
+>  
+> +static const struct acpi_device_id st33zp24_spi_acpi_match[] = {
+> +	{"SMO3324"},
+> +	{}
+> +};
+> +MODULE_DEVICE_TABLE(acpi, st33zp24_spi_acpi_match);
+> +
+>  static SIMPLE_DEV_PM_OPS(st33zp24_spi_ops, st33zp24_pm_suspend,
+>  			 st33zp24_pm_resume);
+>  
+> @@ -369,6 +418,7 @@ static struct spi_driver st33zp24_spi_driver = {
+>  		.name = TPM_ST33_SPI,
+>  		.pm = &st33zp24_spi_ops,
+>  		.of_match_table = of_match_ptr(of_st33zp24_spi_match),
+> +		.acpi_match_table = ACPI_PTR(st33zp24_spi_acpi_match),
+>  	},
+>  	.probe = st33zp24_spi_probe,
+>  	.remove = st33zp24_spi_remove,
+> -- 
+> 2.5.0
+> 
+
+------------------------------------------------------------------------------
+Site24x7 APM Insight: Get Deep Visibility into Application Performance
+APM + Mobile APM + RUM: Monitor 3 App instances at just $35/Month
+Monitor end-to-end web transactions and take corrective actions now
+Troubleshoot faster and improve end-user experience. Signup Now!
+http://pubads.g.doubleclick.net/gampad/clk?id=272487151&iu=/4140
