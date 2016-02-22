@@ -1,12 +1,15 @@
-From: James Morris <jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [GIT PULL] remaining tpmdd fixes for Linux 4.5
-Date: Mon, 22 Feb 2016 12:56:53 +1100 (AEDT)
-Message-ID: <alpine.LRH.2.20.1602221255210.4918@namei.org>
+Date: Mon, 22 Feb 2016 16:50:23 +0200
+Message-ID: <20160222145023.GA28365@intel.com>
 References: <20160220081705.GA12981@intel.com>
+	<alpine.LRH.2.20.1602221255210.4918@namei.org>
 Mime-Version: 1.0
-Content-Type: multipart/mixed; BOUNDARY="1665246916-765228243-1456106213=:4918"
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160220081705.GA12981-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <alpine.LRH.2.20.1602221255210.4918-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -15,68 +18,54 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: James Morris <jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Wilck-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-  This message is in MIME format.  The first part should be readable text,
-  while the remaining parts are likely unreadable without MIME-aware tools.
-
---1665246916-765228243-1456106213=:4918
-Content-Type: text/plain; charset=ISO-8859-7
-Content-Transfer-Encoding: quoted-printable
-X-MIME-Autoconverted: from 8bit to quoted-printable by namei.org id
-	u1M1urlh005387
-
-On Sat, 20 Feb 2016, Jarkko Sakkinen wrote:
-
-> Hi James,
->=20
-> I'm sorry for the late pull request for 4.5. The reason for this was
-> the latency in my previous one. I picked with care the absolutely
-> critical fixes so that we can make a sound tpmdd release.
->=20
-> I really hope you can still pick these as one of them is absolutely
-> critical to get authorization policy sealing API right (kernel keeps
-> it finger out of user space created objects).
-
-Pushed to next for more testing and review.
-
-This really is getting too late in the development cycle for so many=20
-fixes.  It means the code was not ready to be merged in the first place.
-
-Also, any idea why I'm seeing this:
-
-drivers/char/tpm/tpm_tis.c:838: warning: =A1tpm_tis_resume=A2 defined but=
- not=20
-used
-
-
---=20
-James Morris
-<jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
-
---1665246916-765228243-1456106213=:4918
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-------------------------------------------------------------------------------
-Site24x7 APM Insight: Get Deep Visibility into Application Performance
-APM + Mobile APM + RUM: Monitor 3 App instances at just $35/Month
-Monitor end-to-end web transactions and take corrective actions now
-Troubleshoot faster and improve end-user experience. Signup Now!
-http://pubads.g.doubleclick.net/gampad/clk?id=272487151&iu=/4140
---1665246916-765228243-1456106213=:4918
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-_______________________________________________
-tpmdd-devel mailing list
-tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-
---1665246916-765228243-1456106213=:4918--
+T24gTW9uLCBGZWIgMjIsIDIwMTYgYXQgMTI6NTY6NTNQTSArMTEwMCwgSmFtZXMgTW9ycmlzIHdy
+b3RlOgo+IE9uIFNhdCwgMjAgRmViIDIwMTYsIEphcmtrbyBTYWtraW5lbiB3cm90ZToKPiAKPiA+
+IEhpIEphbWVzLAo+ID4gCj4gPiBJJ20gc29ycnkgZm9yIHRoZSBsYXRlIHB1bGwgcmVxdWVzdCBm
+b3IgNC41LiBUaGUgcmVhc29uIGZvciB0aGlzIHdhcwo+ID4gdGhlIGxhdGVuY3kgaW4gbXkgcHJl
+dmlvdXMgb25lLiBJIHBpY2tlZCB3aXRoIGNhcmUgdGhlIGFic29sdXRlbHkKPiA+IGNyaXRpY2Fs
+IGZpeGVzIHNvIHRoYXQgd2UgY2FuIG1ha2UgYSBzb3VuZCB0cG1kZCByZWxlYXNlLgo+ID4gCj4g
+PiBJIHJlYWxseSBob3BlIHlvdSBjYW4gc3RpbGwgcGljayB0aGVzZSBhcyBvbmUgb2YgdGhlbSBp
+cyBhYnNvbHV0ZWx5Cj4gPiBjcml0aWNhbCB0byBnZXQgYXV0aG9yaXphdGlvbiBwb2xpY3kgc2Vh
+bGluZyBBUEkgcmlnaHQgKGtlcm5lbCBrZWVwcwo+ID4gaXQgZmluZ2VyIG91dCBvZiB1c2VyIHNw
+YWNlIGNyZWF0ZWQgb2JqZWN0cykuCj4gCj4gUHVzaGVkIHRvIG5leHQgZm9yIG1vcmUgdGVzdGlu
+ZyBhbmQgcmV2aWV3Lgo+IAo+IFRoaXMgcmVhbGx5IGlzIGdldHRpbmcgdG9vIGxhdGUgaW4gdGhl
+IGRldmVsb3BtZW50IGN5Y2xlIGZvciBzbyBtYW55IAo+IGZpeGVzLiAgSXQgbWVhbnMgdGhlIGNv
+ZGUgd2FzIG5vdCByZWFkeSB0byBiZSBtZXJnZWQgaW4gdGhlIGZpcnN0IHBsYWNlLgoKSSBmdWxs
+eSBhZ3JlZSB3aGF0IHlvdSdyZSBzYXlpbmcuIEknbGwgbGVhcm4gdGhlIGxlc3NvbiBoZXJlIGFu
+ZCB0YWtlCmZhY3RvcnMgbW9yZSBjb25zZXJ2YXRpdmUgYXR0aXR1ZGUgZnJvbSBub3cgb24uIE5v
+IGV4Y3VzZXMuIEknbSBzb3JyeQphYm91dCB0aGlzLgoKUGFydGx5IHRoZSByZWFzb24gZm9yIHJl
+Y2VudCBpbmNyZWFzZSBpbiByZWdyZXNzaW9ucyBoYXMgYmVlbgppbmNyZWFzZWQgcmVhbC13b3Js
+ZCB1c2Ugb2YgVFBNMiBhbmQgdGh1cyBpc3N1ZXMgaGF2ZSBzdGFydGVkIHRvIHBvcAp1cCB0aGF0
+J3MgYSBsYW1lIGV4Y3VzZSBhbnl3YXkuCgo+IEFsc28sIGFueSBpZGVhIHdoeSBJJ20gc2VlaW5n
+IHRoaXM6Cj4gCj4gZHJpdmVycy9jaGFyL3RwbS90cG1fdGlzLmM6ODM4OiB3YXJuaW5nOiDigJh0
+cG1fdGlzX3Jlc3VtZeKAmSBkZWZpbmVkIGJ1dCBub3QgCj4gdXNlZAoKQmlzZWN0ZWQgdGhlIHBh
+dGNoOiAwMDE5NDgyNmU2YmUKCkRvIHlvdSB3YW50IG1lIHRvIHNlbmQgYSBwdWxsIHJlcXVlc3Qg
+Y29udGFpbmluZyBhIGZpeCBmb3IgdGhlIGJ1aWxkCndhcm5pbmcgb3IgcmV2ZXJ0aW5nIHRoZSB3
+aG9sZSBjb21taXQ/IE15IGNhbGwgd291bGQgYmUgdG8gYXBwbHkgdGhlCmZpeCBiZWNhdXNlIHRo
+aXMgY29tbWl0IGhhcyBiZWVuIHRlc3RlZCBib3RoIFRQTSAxLjIgYnkgTWFydGluIGFuZAp3aXRo
+IFRQTSAyLjAgYnkgbWUgYW5kIHRoaW5ncyBoYXZlIHdvcmtlZCB3ZWxsLgoKSSBjYW4gbGl2ZSB3
+aXRoIGVpdGhlciBvcHRpb24uCgpJIGFscmVhZHkgcHVzaGVkIGEgZml4IHRvIG15IG1hc3RlciBm
+b3IgdGhpcyBpc3N1ZToKCmh0dHBzOi8vZ2l0aHViLmNvbS9qc2Fra2luZS9saW51eC10cG1kZC9j
+b21taXQvNjM4NjU0NGFkN2JjZWIzZDAyNDhiODVkYTI5ZDRkOTllZWJlOTE2MQoKPiAtLSAKPiBK
+YW1lcyBNb3JyaXMKPiA8am1vcnJpc0BuYW1laS5vcmc+CgpJJ3ZlIGJlZW4gcmVjZW50bHkgd29y
+a2luZyBvbiBhIGN1c3RvbSBCUiBlbnZpcm9ubWVudCB0aGF0IGJ1bmRsZXMgbXkKbGF0ZXN0IG1h
+c3RlciB3aXRoIGluaXRyYW1mcyB1c2VyIHNwYWNlIFsxXS4gQXQgbWluaW11bSBJJ2xsIHN0YXJ0
+CnVzaW5nIHRoaXMgZW52aXJvbm1lbnQgdG8gY3JlYXRlIGJ1aWxkcyBvZiB0aGlzIGVudiB3aXRo
+IGFuZCB3aXRob3V0ClBNIGZvciByZWxlYXNlIHRlc3RpbmcgYW5kIHJ1biB0aGUgaW1hZ2VzIGJv
+dGggMS4yIGFuZCAyLjAgSFcuCgpUaGlzIHNob3VsZCBwcmV2ZW50IHRoZSB3YXJuaW5nIHlvdSBl
+eHBlcmllbmNlZCBuZXZlciBoYXBwZW5pbmcgYWdhaW4uCgpbMV0gIGh0dHA6Ly9naXQuaW5mcmFk
+ZWFkLm9yZy91c2Vycy9qanMvYnVpbGRyb290LXRwbWRkLmdpdAoKL0phcmtrbwoKLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tClNpdGUyNHg3IEFQTSBJbnNpZ2h0OiBHZXQgRGVlcCBWaXNpYmlsaXR5IGlu
+dG8gQXBwbGljYXRpb24gUGVyZm9ybWFuY2UKQVBNICsgTW9iaWxlIEFQTSArIFJVTTogTW9uaXRv
+ciAzIEFwcCBpbnN0YW5jZXMgYXQganVzdCAkMzUvTW9udGgKTW9uaXRvciBlbmQtdG8tZW5kIHdl
+YiB0cmFuc2FjdGlvbnMgYW5kIHRha2UgY29ycmVjdGl2ZSBhY3Rpb25zIG5vdwpUcm91Ymxlc2hv
+b3QgZmFzdGVyIGFuZCBpbXByb3ZlIGVuZC11c2VyIGV4cGVyaWVuY2UuIFNpZ251cCBOb3chCmh0
+dHA6Ly9wdWJhZHMuZy5kb3VibGVjbGljay5uZXQvZ2FtcGFkL2Nsaz9pZD0yNzI0ODcxNTEmaXU9
+LzQxNDAKX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBt
+ZGQtZGV2ZWwgbWFpbGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApo
+dHRwczovL2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
