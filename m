@@ -1,57 +1,53 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [GIT PULL] remaining tpmdd fixes for Linux 4.5
-Date: Mon, 22 Feb 2016 23:23:20 +0200
-Message-ID: <20160222212320.GA6733@intel.com>
-References: <20160220081705.GA12981@intel.com>
- <alpine.LRH.2.20.1602221255210.4918@namei.org>
- <20160222145023.GA28365@intel.com>
- <20160222175245.GA22828@obsidianresearch.com>
- <20160222190828.GA32231@intel.com>
- <20160222191148.GG22088@obsidianresearch.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH v3 03/11] tpm: Get rid of devname
+Date: Mon, 22 Feb 2016 13:34:27 -0700
+Message-ID: <20160222203427.GA26909@obsidianresearch.com>
+References: <1455885728-10315-1-git-send-email-stefanb@linux.vnet.ibm.com>
+	<1455885728-10315-4-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20160222181929.GB22088@obsidianresearch.com>
+	<20160222194202.GC32667@intel.com>
+	<20160222195816.GL22088@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160222191148.GG22088@obsidianresearch.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: James Morris <jmorris@namei.org>, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, Wilck@intel.com, Martin <martin.wilck@ts.fujitsu.com>
+In-Reply-To: <20160222195816.GL22088-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Feb 22, 2016 at 12:11:48PM -0700, Jason Gunthorpe wrote:
-> On Mon, Feb 22, 2016 at 09:08:28PM +0200, Jarkko Sakkinen wrote:
-> > On Mon, Feb 22, 2016 at 10:52:45AM -0700, Jason Gunthorpe wrote:
-> > > On Mon, Feb 22, 2016 at 04:50:23PM +0200, Jarkko Sakkinen wrote:
-> > > 
-> > > > I already pushed a fix to my master for this issue:
-> > > > 
-> > > > https://github.com/jsakkine/linux-tpmdd/commit/6386544ad7bceb3d0248b85da29d4d99eebe9161
-> > > 
-> > > The goal is to reduce the number of #ifdef'd code segments so we have
-> > > fewer problems in future with a large .config test matrix.
-> > > 
-> > > I'd rather see a __maybe_unused annotation instead.
+On Mon, Feb 22, 2016 at 12:58:16PM -0700, Jason Gunthorpe wrote:
+> On Mon, Feb 22, 2016 at 09:42:02PM +0200, Jarkko Sakkinen wrote:
+> > > Oops, something went wrong here in all the rebasing - dev_set_name has
+> > > to be after devince_initialize.
 > > 
-> > Agreed that it's a better form but at this point it's probably revert
-> > the breaking change and move to that later on. Otherwise, I don't see
-> > reason not to include the patch that you authored to the release. I've
-> > used it in my test kernels for quite some time now and it has worked
-> > without issues.
-> > 
-> > I sent my fix for review now.
+> > Why dev_set_name() cannot be called before device_initialize(). I see
+> > many drivers call it before device_register() like RTC driver just as
+> > an example:
 > 
-> A warning with some kconfigs is very minor, we can take the time to
-> fix it properly for 4.6.
+> Yep, you are right, it still looks nicer with the init earlier, but
+> the later patch does that anyhow.
 
-I don't see any problem adding those too ifdefs back for 4.5 release.
+Sorry, to be clear, the dev_set_name is OK, but the error unwind for
+it in this patch is not OK, it requires device_initialize to have been
+called.
 
-> I am surprised the 0day -next builds/etc didn't notice this - Jarkko is
-> your tree included in that process somehow? (sorry, I don't remember
-> the details)
+The change should still be made..
 
-It has been and I've received notifications from there from time to
-time about my master branch and fixed issues accordingly.
+Jason
 
-> Jason
-
-/Jarkko
+------------------------------------------------------------------------------
+Site24x7 APM Insight: Get Deep Visibility into Application Performance
+APM + Mobile APM + RUM: Monitor 3 App instances at just $35/Month
+Monitor end-to-end web transactions and take corrective actions now
+Troubleshoot faster and improve end-user experience. Signup Now!
+http://pubads.g.doubleclick.net/gampad/clk?id=272487151&iu=/4140
