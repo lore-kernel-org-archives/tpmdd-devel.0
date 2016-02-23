@@ -1,8 +1,8 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v3 05/12] tpm/st33zp24: Remove unneeded
-	CONFIG_OF switches
-Date: Tue, 23 Feb 2016 22:25:44 +0100
-Message-ID: <1456262751-12096-6-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH v3 07/12] tpm/st33zp24/spi: Improve
+	st33zp24_spi_evaluate_latency
+Date: Tue, 23 Feb 2016 22:25:46 +0100
+Message-ID: <1456262751-12096-8-git-send-email-christophe-h.ricard@st.com>
 References: <1456262751-12096-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,97 +21,31 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, peterhuewe-Mmb7MZpH
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-DT headers already define NOOP routines when CONFIG_OF is not defined.
-
-[jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org: I tested that the driver compiles
- without warnings and errors with and without CONFIG_OF flag.]
+Add check in st33zp24_spi_evaluate_latency helping to diagnose if the chip
+is present or in a bad state.
 
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
-Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/st33zp24/i2c.c | 9 ---------
- drivers/char/tpm/st33zp24/spi.c | 9 ---------
- 2 files changed, 18 deletions(-)
+ drivers/char/tpm/st33zp24/spi.c | 5 +++++
+ 1 file changed, 5 insertions(+)
 
-diff --git a/drivers/char/tpm/st33zp24/i2c.c b/drivers/char/tpm/st33zp24/i2c.c
-index 309d276..a05fbd8 100644
---- a/drivers/char/tpm/st33zp24/i2c.c
-+++ b/drivers/char/tpm/st33zp24/i2c.c
-@@ -108,7 +108,6 @@ static const struct st33zp24_phy_ops i2c_phy_ops = {
- 	.recv = st33zp24_i2c_recv,
- };
- 
--#ifdef CONFIG_OF
- static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
- {
- 	struct device_node *pp;
-@@ -146,12 +145,6 @@ static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
- 
- 	return 0;
- }
--#else
--static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
--{
--	return -ENODEV;
--}
--#endif
- 
- static int st33zp24_i2c_request_resources(struct i2c_client *client,
- 					  struct st33zp24_i2c_phy *phy)
-@@ -245,13 +238,11 @@ static const struct i2c_device_id st33zp24_i2c_id[] = {
- };
- MODULE_DEVICE_TABLE(i2c, st33zp24_i2c_id);
- 
--#ifdef CONFIG_OF
- static const struct of_device_id of_st33zp24_i2c_match[] = {
- 	{ .compatible = "st,st33zp24-i2c", },
- 	{}
- };
- MODULE_DEVICE_TABLE(of, of_st33zp24_i2c_match);
--#endif
- 
- static SIMPLE_DEV_PM_OPS(st33zp24_i2c_ops, st33zp24_pm_suspend,
- 			 st33zp24_pm_resume);
 diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
-index f851053..08e6bf5 100644
+index 08e6bf5..a2ef8ec 100644
 --- a/drivers/char/tpm/st33zp24/spi.c
 +++ b/drivers/char/tpm/st33zp24/spi.c
-@@ -222,7 +222,6 @@ static const struct st33zp24_phy_ops spi_phy_ops = {
- 	.recv = st33zp24_spi_recv,
- };
+@@ -214,6 +214,11 @@ static int st33zp24_spi_evaluate_latency(void *phy_id)
+ 						&data, 1);
+ 		latency++;
+ 	}
++	if (status < 0)
++		return status;
++	if (latency == MAX_SPI_LATENCY)
++		return -ENODEV;
++
+ 	return latency - 1;
+ } /* evaluate_latency() */
  
--#ifdef CONFIG_OF
- static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
- {
- 	struct device_node *pp;
-@@ -260,12 +259,6 @@ static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
- 
- 	return 0;
- }
--#else
--static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
--{
--	return -ENODEV;
--}
--#endif
- 
- static int st33zp24_spi_request_resources(struct spi_device *dev,
- 					  struct st33zp24_spi_phy *phy)
-@@ -358,13 +351,11 @@ static const struct spi_device_id st33zp24_spi_id[] = {
- };
- MODULE_DEVICE_TABLE(spi, st33zp24_spi_id);
- 
--#ifdef CONFIG_OF
- static const struct of_device_id of_st33zp24_spi_match[] = {
- 	{ .compatible = "st,st33zp24-spi", },
- 	{}
- };
- MODULE_DEVICE_TABLE(of, of_st33zp24_spi_match);
--#endif
- 
- static SIMPLE_DEV_PM_OPS(st33zp24_spi_ops, st33zp24_pm_suspend,
- 			 st33zp24_pm_resume);
 -- 
 2.5.0
 
