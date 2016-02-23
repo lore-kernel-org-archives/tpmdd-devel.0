@@ -1,20 +1,18 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH v3 04/11] tpm: Provide strong locking for
 	device removal
-Date: Tue, 23 Feb 2016 22:36:49 +0200
-Message-ID: <20160223203649.GA17165@intel.com>
+Date: Tue, 23 Feb 2016 22:43:02 +0200
+Message-ID: <20160223204302.GA17368@intel.com>
 References: <1455885728-10315-1-git-send-email-stefanb@linux.vnet.ibm.com>
 	<1455885728-10315-5-git-send-email-stefanb@linux.vnet.ibm.com>
 	<20160222210844.GA3310@intel.com>
 	<20160222222017.GC27228@obsidianresearch.com>
-	<20160223194014.GA5241@intel.com>
-	<20160223195246.GC389@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160223195246.GC389-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <20160222222017.GC27228-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -27,24 +25,26 @@ To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.or
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Feb 23, 2016 at 12:52:46PM -0700, Jason Gunthorpe wrote:
-> On Tue, Feb 23, 2016 at 09:40:14PM +0200, Jarkko Sakkinen wrote:
+On Mon, Feb 22, 2016 at 03:20:17PM -0700, Jason Gunthorpe wrote:
+> > I'm just thinking is the try_module_get() and module_put() even
+> > necessary after this change? You know that device is not unregistered
+> > from chip->ops field, which is protected by that RW-semaphore.
 > 
-> > > echo 1 > /sys/.../remove
-> > > 
-> > > Is basically the same as a module unload without requiring module
-> > > unload. module locking cannot be relied upon for correctness like this
-> > > ever since hot remove was added to the kernel.
-> > 
-> > The 'remove' file applies only to PCI devices AFAIK.
+> The module locking is not about correctness. Some subsystems will hold
+> the module lock on their driver specifically to prevent rmmod as a
+> hint to the user that the driver module is being used by an open
+> /dev/tpmX for instance. Eg rtc does that.
 > 
-> Not only, PCI has remove but many other bus types do too, eg i2c, spi,
-> openfirmware, etc can all be hot-removed in various ways.
+> We need to decide if we want that for TPM or not. Orthogonal issue.
 > 
-> As a general subsystem core tpm cannot assume it's drivers are only
-> using non-hotplugable devices.
+> I'm OK with getting rid of the module lock, TPM has a long lived
+> user space daemon, rtc does not.
 
-Right, various ways, got confused from a concrete example :)
+You might want to use TPM without a daemon on small embedded devices
+but on the other hand in these use cases the environment is fairly
+well controlled. I'm not sure which side to take.
+
+> Jason
 
 /Jarkko
 
