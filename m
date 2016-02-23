@@ -1,8 +1,8 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v3 01/12] tpm/st33zp24/spi: Remove
-	nbr_dummy_bytes variable usage
-Date: Tue, 23 Feb 2016 22:25:40 +0100
-Message-ID: <1456262751-12096-2-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH v3 09/12] tpm/st33zp24: Add support for acpi
+	probing for i2c device.
+Date: Tue, 23 Feb 2016 22:25:48 +0100
+Message-ID: <1456262751-12096-10-git-send-email-christophe-h.ricard@st.com>
 References: <1456262751-12096-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,78 +21,140 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, peterhuewe-Mmb7MZpH
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-nbr_dummy_bytes variable could be easily replaced by phy->latency in
-st33zp24_spi_send and st33zp24_spi_recv.
+Add support for acpi probing. SMO3324 is used for st33zp24.
+It has been tested with the following acpi node on Minnowboard:
+
+Device (TPM1)
+{
+	Name (_ADR, Zero)  // _ADR: Address
+	Name (_HID, "SMO3324")  // _HID: Hardware ID
+	Name (_CID, "SMO3324")  // _CID: Compatible ID
+	Name (_DDN, "SMO TPM")  // _DDN: DOS Device Name
+	Name (_UID, One)  // _UID: Unique ID
+	Method (_CRS, 0, NotSerialized)  // _CRS: Current Resource Settings
+	{
+		Name (SBUF, ResourceTemplate ()
+		{
+			I2cSerialBus (0x0013, ControllerInitiated, 400000,
+				      AddressingMode7Bit, "\\_SB.I2C7",
+				      0x00, ResourceConsumer, ,)
+			GpioInt (Edge, ActiveHigh, ExclusiveAndWake, PullNone, 0x0000,
+				 "\\_SB.GPO2", 0x00, ResourceConsumer, ,)
+			{   	// Pin list
+				0x0001
+			}
+			GpioIo (Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly,
+				"\\_SB.GPO2", 0x00, ResourceConsumer, ,)
+			{	// Pin list
+				0x0002,
+			}
+		})
+		Return (SBUF) /* \_SB_.I2C7.TPM1._CRS.SBUF */
+	}
+
+	Method (_STA, 0, NotSerialized)  // _STA: Status
+	{
+		Return (0x0F)
+	}
+}
 
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 ---
- drivers/char/tpm/st33zp24/spi.c | 20 +++++++++-----------
- 1 file changed, 9 insertions(+), 11 deletions(-)
+ drivers/char/tpm/st33zp24/i2c.c | 50 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 50 insertions(+)
 
-diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
-index f974c94..74c5fcc 100644
---- a/drivers/char/tpm/st33zp24/spi.c
-+++ b/drivers/char/tpm/st33zp24/spi.c
-@@ -111,7 +111,7 @@ static int st33zp24_spi_send(void *phy_id, u8 tpm_register, u8 *tpm_data,
- 			     int tpm_size)
+diff --git a/drivers/char/tpm/st33zp24/i2c.c b/drivers/char/tpm/st33zp24/i2c.c
+index a49b6f1..b20cc2b 100644
+--- a/drivers/char/tpm/st33zp24/i2c.c
++++ b/drivers/char/tpm/st33zp24/i2c.c
+@@ -19,8 +19,10 @@
+ #include <linux/module.h>
+ #include <linux/i2c.h>
+ #include <linux/gpio.h>
++#include <linux/gpio/consumer.h>
+ #include <linux/of_irq.h>
+ #include <linux/of_gpio.h>
++#include <linux/acpi.h>
+ #include <linux/tpm.h>
+ #include <linux/platform_data/st33zp24.h>
+ 
+@@ -108,6 +110,43 @@ static const struct st33zp24_phy_ops i2c_phy_ops = {
+ 	.recv = st33zp24_i2c_recv,
+ };
+ 
++static int st33zp24_i2c_acpi_request_resources(struct st33zp24_i2c_phy *phy)
++{
++	struct i2c_client *client = phy->client;
++	const struct acpi_device_id *id;
++	struct gpio_desc *gpiod_lpcpd;
++	struct device *dev;
++
++	if (!client)
++		return -EINVAL;
++
++	dev = &client->dev;
++
++	/* Match the struct device against a given list of ACPI IDs */
++	id = acpi_match_device(dev->driver->acpi_match_table, dev);
++	if (!id)
++		return -ENODEV;
++
++	/* Get LPCPD GPIO from ACPI */
++	gpiod_lpcpd = devm_gpiod_get_index(dev, "TPM IO LPCPD", 1,
++					   GPIOD_OUT_HIGH);
++	if (IS_ERR(gpiod_lpcpd)) {
++		dev_err(&client->dev,
++			"Failed to retrieve lpcpd-gpios from acpi.\n");
++		phy->io_lpcpd = -1;
++		/*
++		 * lpcpd pin is not specified. This is not an issue as
++		 * power management can be also managed by TPM specific
++		 * commands. So leave with a success status code.
++		 */
++		return 0;
++	}
++
++	phy->io_lpcpd = desc_to_gpio(gpiod_lpcpd);
++
++	return 0;
++}
++
+ static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
  {
- 	u8 data = 0;
--	int total_length = 0, nbr_dummy_bytes = 0, ret = 0;
-+	int total_length = 0, ret = 0;
- 	struct st33zp24_spi_phy *phy = phy_id;
- 	struct spi_device *dev = phy->spi_device;
- 	u8 *tx_buf = (u8 *)phy->spi_xfer.tx_buf;
-@@ -133,14 +133,13 @@ static int st33zp24_spi_send(void *phy_id, u8 tpm_register, u8 *tpm_data,
- 	memcpy(&tx_buf[total_length], tpm_data, tpm_size);
- 	total_length += tpm_size;
- 
--	nbr_dummy_bytes = phy->latency;
--	memset(&tx_buf[total_length], TPM_DUMMY_BYTE, nbr_dummy_bytes);
-+	memset(&tx_buf[total_length], TPM_DUMMY_BYTE, phy->latency);
- 
--	phy->spi_xfer.len = total_length + nbr_dummy_bytes;
-+	phy->spi_xfer.len = total_length + phy->latency;
- 
- 	ret = spi_sync_transfer(dev, &phy->spi_xfer, 1);
- 	if (ret == 0)
--		ret = rx_buf[total_length + nbr_dummy_bytes - 1];
-+		ret = rx_buf[total_length + phy->latency - 1];
- 
- 	return st33zp24_status_to_errno(ret);
- } /* st33zp24_spi_send() */
-@@ -157,7 +156,7 @@ static int st33zp24_spi_send(void *phy_id, u8 tpm_register, u8 *tpm_data,
- static int read8_reg(void *phy_id, u8 tpm_register, u8 *tpm_data, int tpm_size)
- {
- 	u8 data = 0;
--	int total_length = 0, nbr_dummy_bytes, ret;
-+	int total_length = 0, ret;
- 	struct st33zp24_spi_phy *phy = phy_id;
- 	struct spi_device *dev = phy->spi_device;
- 	u8 *tx_buf = (u8 *)phy->spi_xfer.tx_buf;
-@@ -171,18 +170,17 @@ static int read8_reg(void *phy_id, u8 tpm_register, u8 *tpm_data, int tpm_size)
- 	memcpy(tx_buf + total_length, &data, sizeof(data));
- 	total_length++;
- 
--	nbr_dummy_bytes = phy->latency;
- 	memset(&tx_buf[total_length], TPM_DUMMY_BYTE,
--	       nbr_dummy_bytes + tpm_size);
-+	       phy->latency + tpm_size);
- 
--	phy->spi_xfer.len = total_length + nbr_dummy_bytes + tpm_size;
-+	phy->spi_xfer.len = total_length + phy->latency + tpm_size;
- 
- 	/* header + status byte + size of the data + status byte */
- 	ret = spi_sync_transfer(dev, &phy->spi_xfer, 1);
- 	if (tpm_size > 0 && ret == 0) {
--		ret = rx_buf[total_length + nbr_dummy_bytes - 1];
-+		ret = rx_buf[total_length + phy->latency - 1];
- 
--		memcpy(tpm_data, rx_buf + total_length + nbr_dummy_bytes,
-+		memcpy(tpm_data, rx_buf + total_length + phy->latency,
- 		       tpm_size);
+ 	struct device_node *pp;
+@@ -214,6 +253,10 @@ static int st33zp24_i2c_probe(struct i2c_client *client,
+ 		ret = st33zp24_i2c_request_resources(client, phy);
+ 		if (ret)
+ 			return ret;
++	} else if (ACPI_HANDLE(&client->dev)) {
++		ret = st33zp24_i2c_acpi_request_resources(phy);
++		if (ret)
++			return ret;
  	}
  
+ 	return st33zp24_probe(phy, &i2c_phy_ops, &client->dev, client->irq,
+@@ -244,6 +287,12 @@ static const struct of_device_id of_st33zp24_i2c_match[] = {
+ };
+ MODULE_DEVICE_TABLE(of, of_st33zp24_i2c_match);
+ 
++static const struct acpi_device_id st33zp24_i2c_acpi_match[] = {
++	{"SMO3324"},
++	{}
++};
++MODULE_DEVICE_TABLE(acpi, st33zp24_i2c_acpi_match);
++
+ static SIMPLE_DEV_PM_OPS(st33zp24_i2c_ops, st33zp24_pm_suspend,
+ 			 st33zp24_pm_resume);
+ 
+@@ -252,6 +301,7 @@ static struct i2c_driver st33zp24_i2c_driver = {
+ 		.name = TPM_ST33_I2C,
+ 		.pm = &st33zp24_i2c_ops,
+ 		.of_match_table = of_match_ptr(of_st33zp24_i2c_match),
++		.acpi_match_table = ACPI_PTR(st33zp24_i2c_acpi_match),
+ 	},
+ 	.probe = st33zp24_i2c_probe,
+ 	.remove = st33zp24_i2c_remove,
 -- 
 2.5.0
 
