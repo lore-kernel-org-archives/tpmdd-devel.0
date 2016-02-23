@@ -1,8 +1,8 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v3 12/12] tpm/st33zp24/spi: Change
+Subject: [PATCH v3 11/12] tpm/st33zp24/i2c: Change
 	xxx_request_resources header
-Date: Tue, 23 Feb 2016 22:25:51 +0100
-Message-ID: <1456262751-12096-13-git-send-email-christophe-h.ricard@st.com>
+Date: Tue, 23 Feb 2016 22:25:50 +0100
+Message-ID: <1456262751-12096-12-git-send-email-christophe-h.ricard@st.com>
 References: <1456262751-12096-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,107 +21,79 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, peterhuewe-Mmb7MZpH
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Simplify st33zp24_spi_acpi_request_resources, st33zp24_spi_of_request_resources
-and st33zp24_spi_request_resources to have the same prototype and using
-spi_get_drvdata.
+Simplify st33zp24_i2c_acpi_request_resources, st33zp24_i2c_of_request_resources
+and st33zp24_i2c_request_resources to have the same prototype and using
+i2c_get_clientdata.
 
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 ---
- drivers/char/tpm/st33zp24/spi.c | 31 +++++++++++++++++--------------
- 1 file changed, 17 insertions(+), 14 deletions(-)
+ drivers/char/tpm/st33zp24/i2c.c | 21 ++++++++++++---------
+ 1 file changed, 12 insertions(+), 9 deletions(-)
 
-diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
-index 173db72..6be51ac 100644
---- a/drivers/char/tpm/st33zp24/spi.c
-+++ b/drivers/char/tpm/st33zp24/spi.c
-@@ -229,9 +229,9 @@ static const struct st33zp24_phy_ops spi_phy_ops = {
- 	.recv = st33zp24_spi_recv,
+diff --git a/drivers/char/tpm/st33zp24/i2c.c b/drivers/char/tpm/st33zp24/i2c.c
+index b20cc2b..f179aad 100644
+--- a/drivers/char/tpm/st33zp24/i2c.c
++++ b/drivers/char/tpm/st33zp24/i2c.c
+@@ -110,9 +110,9 @@ static const struct st33zp24_phy_ops i2c_phy_ops = {
+ 	.recv = st33zp24_i2c_recv,
  };
  
--static int st33zp24_spi_acpi_request_resources(struct st33zp24_spi_phy *phy)
-+static int st33zp24_spi_acpi_request_resources(struct spi_device *spi_dev)
+-static int st33zp24_i2c_acpi_request_resources(struct st33zp24_i2c_phy *phy)
++static int st33zp24_i2c_acpi_request_resources(struct i2c_client *client)
  {
--	struct spi_device *spi_dev = phy->spi_device;
-+	struct st33zp24_spi_phy *phy = spi_get_drvdata(spi_dev);
+-	struct i2c_client *client = phy->client;
++	struct st33zp24_i2c_phy *phy = i2c_get_clientdata(client);
  	const struct acpi_device_id *id;
  	struct gpio_desc *gpiod_lpcpd;
  	struct device *dev;
-@@ -265,23 +265,23 @@ static int st33zp24_spi_acpi_request_resources(struct st33zp24_spi_phy *phy)
+@@ -147,10 +147,10 @@ static int st33zp24_i2c_acpi_request_resources(struct st33zp24_i2c_phy *phy)
  	return 0;
  }
  
--static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
-+static int st33zp24_spi_of_request_resources(struct spi_device *spi_dev)
+-static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
++static int st33zp24_i2c_of_request_resources(struct i2c_client *client)
  {
-+	struct st33zp24_spi_phy *phy = spi_get_drvdata(spi_dev);
++	struct st33zp24_i2c_phy *phy = i2c_get_clientdata(client);
  	struct device_node *pp;
--	struct spi_device *dev = phy->spi_device;
+-	struct i2c_client *client = phy->client;
  	int gpio;
  	int ret;
  
--	pp = dev->dev.of_node;
-+	pp = spi_dev->dev.of_node;
- 	if (!pp) {
--		dev_err(&dev->dev, "No platform data\n");
-+		dev_err(&spi_dev->dev, "No platform data\n");
- 		return -ENODEV;
- 	}
- 
- 	/* Get GPIO from device tree */
- 	gpio = of_get_named_gpio(pp, "lpcpd-gpios", 0);
- 	if (gpio < 0) {
--		dev_err(&dev->dev,
-+		dev_err(&spi_dev->dev,
- 			"Failed to retrieve lpcpd-gpios from dts.\n");
- 		phy->io_lpcpd = -1;
- 		/*
-@@ -292,10 +292,10 @@ static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
- 		return 0;
- 	}
- 	/* GPIO request and configuration */
--	ret = devm_gpio_request_one(&dev->dev, gpio,
-+	ret = devm_gpio_request_one(&spi_dev->dev, gpio,
- 			GPIOF_OUT_INIT_HIGH, "TPM IO LPCPD");
- 	if (ret) {
--		dev_err(&dev->dev, "Failed to request lpcpd pin\n");
-+		dev_err(&spi_dev->dev, "Failed to request lpcpd pin\n");
- 		return -ENODEV;
- 	}
- 	phy->io_lpcpd = gpio;
-@@ -303,9 +303,9 @@ static int st33zp24_spi_of_request_resources(struct st33zp24_spi_phy *phy)
+@@ -185,10 +185,10 @@ static int st33zp24_i2c_of_request_resources(struct st33zp24_i2c_phy *phy)
  	return 0;
  }
  
--static int st33zp24_spi_request_resources(struct spi_device *dev,
--					  struct st33zp24_spi_phy *phy)
-+static int st33zp24_spi_request_resources(struct spi_device *dev)
+-static int st33zp24_i2c_request_resources(struct i2c_client *client,
+-					  struct st33zp24_i2c_phy *phy)
++static int st33zp24_i2c_request_resources(struct i2c_client *client)
  {
-+	struct st33zp24_spi_phy *phy = spi_get_drvdata(dev);
  	struct st33zp24_platform_data *pdata;
++	struct st33zp24_i2c_phy *phy = i2c_get_clientdata(client);
  	int ret;
  
-@@ -357,17 +357,20 @@ static int st33zp24_spi_probe(struct spi_device *dev)
+ 	pdata = client->dev.platform_data;
+@@ -244,17 +244,20 @@ static int st33zp24_i2c_probe(struct i2c_client *client,
  		return -ENOMEM;
  
- 	phy->spi_device = dev;
+ 	phy->client = client;
 +
-+	spi_set_drvdata(dev, phy);
++	i2c_set_clientdata(client, phy);
 +
- 	pdata = dev->dev.platform_data;
- 	if (!pdata && dev->dev.of_node) {
--		ret = st33zp24_spi_of_request_resources(phy);
-+		ret = st33zp24_spi_of_request_resources(dev);
+ 	pdata = client->dev.platform_data;
+ 	if (!pdata && client->dev.of_node) {
+-		ret = st33zp24_i2c_of_request_resources(phy);
++		ret = st33zp24_i2c_of_request_resources(client);
  		if (ret)
  			return ret;
  	} else if (pdata) {
--		ret = st33zp24_spi_request_resources(dev, phy);
-+		ret = st33zp24_spi_request_resources(dev);
+-		ret = st33zp24_i2c_request_resources(client, phy);
++		ret = st33zp24_i2c_request_resources(client);
  		if (ret)
  			return ret;
- 	} else if (ACPI_HANDLE(&dev->dev)) {
--		ret = st33zp24_spi_acpi_request_resources(phy);
-+		ret = st33zp24_spi_acpi_request_resources(dev);
+ 	} else if (ACPI_HANDLE(&client->dev)) {
+-		ret = st33zp24_i2c_acpi_request_resources(phy);
++		ret = st33zp24_i2c_acpi_request_resources(client);
  		if (ret)
  			return ret;
  	}
