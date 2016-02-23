@@ -1,15 +1,13 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 00/12] tpm/st33zp24: Few code style and
- sanity fixes + acpi device probing support
-Date: Tue, 23 Feb 2016 01:56:39 +0200
-Message-ID: <20160222235639.GA7721@intel.com>
-References: <1455376535-9549-1-git-send-email-christophe-h.ricard@st.com>
+From: "Stefan Berger" <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Subject: Re: [PATCH v3 03/11] tpm: Get rid of devname
+Date: Mon, 22 Feb 2016 19:22:56 -0500
+Message-ID: <201602230023.u1N0NO69020368@d03av05.boulder.ibm.com>
+References: <1455885728-10315-1-git-send-email-stefanb@linux.vnet.ibm.com><1455885728-10315-4-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20160222181929.GB22088@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: multipart/mixed; boundary="===============8091002323149278748=="
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1455376535-9549-1-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
+In-Reply-To: <20160222181929.GB22088-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,70 +16,95 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat, Feb 13, 2016 at 04:15:23PM +0100, Christophe Ricard wrote:
-> Hi Peter, Jarko,
-> 
-> Please find in the following serie:
-> - a set of code style or sanity cleanup
-> - acpi device probing support for i2c and spi phys.
-> 
-> In v2, i have:
-> - Added Jarkko review
-> - Fixed a warning on patch 12
-> 
-> This serie applies on top of jarkko tree:
-> b64f343cb02b2a2a009b3805a8331425dd4a8611 tpm: fix rollback/cleanup before tpm_chip_register()
 
-I've now applied the patches to my master branch:
+--===============8091002323149278748==
+Content-Type: multipart/alternative;
+	boundary="=_alternative 0002223D85257F62_="
 
-* All of them have my Reviewed-by. For one patch I had to fix one style
-  error (one line was of over 80 characters).
-* Two of the patches have my Tested-by.
 
-Now I'm trying to get a Minnowboard so that I could test ACPI probing
-for I2C/SPI device. If that would work, then this seres would be ready
-for a pull request.
+--=_alternative 0002223D85257F62_=
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset="US-ASCII"
 
-Can you check quickly check the applied patches to make sure that I
-didn't mess anything up? And perhaps compile my master and see if
-things work at run-time as well?
+Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote on 02/22/2016=20
+01:19:29 PM:
 
-> Best Regards
-> Christophe 
+> From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+> Date: 02/22/2016 01:20 PM
+> Subject: Re: [tpmdd-devel] [PATCH v3 03/11] tpm: Get rid of devname
+>=20
+> On Fri, Feb 19, 2016 at 07:42:00AM -0500, Stefan Berger wrote:
+> >=20
+> > -   dev=5Fset=5Fname(&chip->dev, "%s", chip->devname);
+> > +   err =3D dev=5Fset=5Fname(&chip->dev, "tpm%d", chip->dev=5Fnum);
+> > +   if (err)
+> > +      goto out;
+> >=20
+> >     device=5Finitialize(&chip->dev);
+> >=20
+> > @@ -142,6 +142,10 @@ struct tpm=5Fchip *tpmm=5Fchip=5Falloc(struct devi=
+ce=20
+*dev,
+> >     }
+> >=20
+> >     return chip;
+> > +
+> > +out:
+> > +   put=5Fdevice(&chip->dev);
+> > +   return ERR=5FPTR(err);
+>=20
+> Oops, something went wrong here in all the rebasing - dev=5Fset=5Fname has
+> to be after devince=5Finitialize.
 
-/Jarkko
+dev=5Fset=5Fname is now after device=5Finitialize.
 
-> 
-> Christophe Ricard (12):
->   tpm/st33zp24/spi: Remove nbr_dummy_bytes variable usage
->   tpm/st33zp24/spi: Use functions name with st33zp24_spi_ prefix
->   tpm/st33zp24/spi: Remove useless use of memcpy.
->   tpm/st33zp24/spi: Remove field spi_xfer from st33zp24_spi_phy
->     structure
->   tpm/st33zp24: Remove unneeded CONFIG_OF switches
->   tpm/st33zp24: Auto-select core module
->   tpm/st33zp24/spi: Improve st33zp24_spi_evaluate_latency
->   tpm/st33zp24: Extend Copyright headers
->   tpm/st33zp24: Add support for acpi probing for i2c device.
->   tpm: st33zp24: Add support for acpi probing for spi device.
->   tpm/st33zp24/i2c: Change xxx_request_resources header
->   tpm/st33zp24/spi: Change xxx_request_resources header
-> 
->  drivers/char/tpm/st33zp24/Kconfig      |  11 +-
->  drivers/char/tpm/st33zp24/i2c.c        |  76 ++++++++++---
->  drivers/char/tpm/st33zp24/spi.c        | 190 ++++++++++++++++++++-------------
->  drivers/char/tpm/st33zp24/st33zp24.c   |   2 +-
->  drivers/char/tpm/st33zp24/st33zp24.h   |   2 +-
->  include/linux/platform_data/st33zp24.h |   2 +-
->  6 files changed, 182 insertions(+), 101 deletions(-)
-> 
-> -- 
-> 2.5.0
-> 
+   Stefan
+
+
+
+--=_alternative 0002223D85257F62_=
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset="US-ASCII"
+
+<tt><font size=3D2>Jason Gunthorpe &lt;jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org&gt;
+wrote on 02/22/2016 01:19:29 PM:<br><br>&gt; From: Jason Gunthorpe &lt;jgun=
+thorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org&gt;</font></tt><br><tt><font size=3D2>&gt; To: =
+Stefan Berger &lt;stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org&gt;</font></tt><br><tt><font s=
+ize=3D2>&gt; Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org</font></tt><br><tt><font=
+ size=3D2>&gt; Date: 02/22/2016 01:20 PM</font></tt><br><tt><font size=3D2>=
+&gt; Subject: Re: [tpmdd-devel] [PATCH v3 03/11] tpm:
+Get rid of devname</font></tt><br><tt><font size=3D2>&gt; <br>&gt; On Fri, =
+Feb 19, 2016 at 07:42:00AM -0500, Stefan Berger wrote:<br>&gt; &gt; &nbsp;<=
+br>&gt; &gt; - &nbsp; dev=5Fset=5Fname(&amp;chip-&gt;dev, &quot;%s&quot;, c=
+hip-&gt;devname);<br>&gt; &gt; + &nbsp; err =3D dev=5Fset=5Fname(&amp;chip-=
+&gt;dev, &quot;tpm%d&quot;,
+chip-&gt;dev=5Fnum);<br>&gt; &gt; + &nbsp; if (err)<br>&gt; &gt; + &nbsp; &=
+nbsp; &nbsp;goto out;<br>&gt; &gt; &nbsp;<br>&gt; &gt; &nbsp; &nbsp; device=
+=5Finitialize(&amp;chip-&gt;dev);<br>&gt; &gt; &nbsp;<br>&gt; &gt; @@ -142,=
+6 +142,10 @@ struct tpm=5Fchip *tpmm=5Fchip=5Falloc(struct
+device *dev,<br>&gt; &gt; &nbsp; &nbsp; }<br>&gt; &gt; &nbsp;<br>&gt; &gt; =
+&nbsp; &nbsp; return chip;<br>&gt; &gt; +<br>&gt; &gt; +out:<br>&gt; &gt; +=
+ &nbsp; put=5Fdevice(&amp;chip-&gt;dev);<br>&gt; &gt; + &nbsp; return ERR=
+=5FPTR(err);<br>&gt; <br>&gt; Oops, something went wrong here in all the re=
+basing - dev=5Fset=5Fname
+has<br>&gt; to be after devince=5Finitialize.</font></tt><br><br><tt><font =
+size=3D2>dev=5Fset=5Fname is now after device=5Finitialize.</font></tt><br>=
+<br><tt><font size=3D2>&nbsp; &nbsp;Stefan</font></tt><br><BR>
+--=_alternative 0002223D85257F62_=--
+
+
+
+--===============8091002323149278748==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
 
 ------------------------------------------------------------------------------
 Site24x7 APM Insight: Get Deep Visibility into Application Performance
@@ -89,3 +112,15 @@ APM + Mobile APM + RUM: Monitor 3 App instances at just $35/Month
 Monitor end-to-end web transactions and take corrective actions now
 Troubleshoot faster and improve end-user experience. Signup Now!
 http://pubads.g.doubleclick.net/gampad/clk?id=272487151&iu=/4140
+--===============8091002323149278748==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
+
+_______________________________________________
+tpmdd-devel mailing list
+tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+
+--===============8091002323149278748==--
