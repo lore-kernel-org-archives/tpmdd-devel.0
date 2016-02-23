@@ -1,14 +1,12 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v3 04/12] tpm/st33zp24/spi: Remove field
-	spi_xfer from st33zp24_spi_phy structure
-Date: Tue, 23 Feb 2016 22:25:43 +0100
-Message-ID: <1456262751-12096-5-git-send-email-christophe-h.ricard@st.com>
-References: <1456262751-12096-1-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH v3 00/12] tpm/st33zp24: Few code style and
+	sanity fixes + acpi device probing support
+Date: Tue, 23 Feb 2016 22:25:39 +0100
+Message-ID: <1456262751-12096-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1456262751-12096-1-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,116 +19,50 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, peterhuewe-Mmb7MZpH
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Remove spi_xfer from st33zp24_spi_phy structure and declare local spi_xfer
-when needed instead.
+Hi Jarkko,
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
----
- drivers/char/tpm/st33zp24/spi.c | 49 +++++++++++++++++++++--------------------
- 1 file changed, 25 insertions(+), 24 deletions(-)
+kbuild robot feedbacks few issues with patch 10 & 12. I am sending back the whole series again.
 
-diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
-index 08ffbfe..f851053 100644
---- a/drivers/char/tpm/st33zp24/spi.c
-+++ b/drivers/char/tpm/st33zp24/spi.c
-@@ -66,7 +66,7 @@
- 
- struct st33zp24_spi_phy {
- 	struct spi_device *spi_device;
--	struct spi_transfer spi_xfer;
-+
- 	u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE];
- 	u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE];
- 
-@@ -113,28 +113,30 @@ static int st33zp24_spi_send(void *phy_id, u8 tpm_register, u8 *tpm_data,
- 	int total_length = 0, ret = 0;
- 	struct st33zp24_spi_phy *phy = phy_id;
- 	struct spi_device *dev = phy->spi_device;
--	u8 *tx_buf = (u8 *)phy->spi_xfer.tx_buf;
--	u8 *rx_buf = phy->spi_xfer.rx_buf;
-+	struct spi_transfer spi_xfer = {
-+		.tx_buf = phy->tx_buf,
-+		.rx_buf = phy->rx_buf,
-+	};
- 
- 	/* Pre-Header */
--	tx_buf[total_length++] = TPM_WRITE_DIRECTION | LOCALITY0;
--	tx_buf[total_length++] = tpm_register;
-+	phy->tx_buf[total_length++] = TPM_WRITE_DIRECTION | LOCALITY0;
-+	phy->tx_buf[total_length++] = tpm_register;
- 
- 	if (tpm_size > 0 && tpm_register == TPM_DATA_FIFO) {
--		tx_buf[total_length++] = tpm_size >> 8;
--		tx_buf[total_length++] = tpm_size;
-+		phy->tx_buf[total_length++] = tpm_size >> 8;
-+		phy->tx_buf[total_length++] = tpm_size;
- 	}
- 
--	memcpy(&tx_buf[total_length], tpm_data, tpm_size);
-+	memcpy(&phy->tx_buf[total_length], tpm_data, tpm_size);
- 	total_length += tpm_size;
- 
--	memset(&tx_buf[total_length], TPM_DUMMY_BYTE, phy->latency);
-+	memset(&phy->tx_buf[total_length], TPM_DUMMY_BYTE, phy->latency);
- 
--	phy->spi_xfer.len = total_length + phy->latency;
-+	spi_xfer.len = total_length + phy->latency;
- 
--	ret = spi_sync_transfer(dev, &phy->spi_xfer, 1);
-+	ret = spi_sync_transfer(dev, &spi_xfer, 1);
- 	if (ret == 0)
--		ret = rx_buf[total_length + phy->latency - 1];
-+		ret = phy->rx_buf[total_length + phy->latency - 1];
- 
- 	return st33zp24_status_to_errno(ret);
- } /* st33zp24_spi_send() */
-@@ -154,24 +156,26 @@ static int st33zp24_spi_read8_reg(void *phy_id, u8 tpm_register, u8 *tpm_data,
- 	int total_length = 0, ret;
- 	struct st33zp24_spi_phy *phy = phy_id;
- 	struct spi_device *dev = phy->spi_device;
--	u8 *tx_buf = (u8 *)phy->spi_xfer.tx_buf;
--	u8 *rx_buf = phy->spi_xfer.rx_buf;
-+	struct spi_transfer spi_xfer = {
-+		.tx_buf = phy->tx_buf,
-+		.rx_buf = phy->rx_buf,
-+	};
- 
- 	/* Pre-Header */
--	tx_buf[total_length++] = LOCALITY0;
--	tx_buf[total_length++] = tpm_register;
-+	phy->tx_buf[total_length++] = LOCALITY0;
-+	phy->tx_buf[total_length++] = tpm_register;
- 
--	memset(&tx_buf[total_length], TPM_DUMMY_BYTE,
-+	memset(&phy->tx_buf[total_length], TPM_DUMMY_BYTE,
- 	       phy->latency + tpm_size);
- 
--	phy->spi_xfer.len = total_length + phy->latency + tpm_size;
-+	spi_xfer.len = total_length + phy->latency + tpm_size;
- 
- 	/* header + status byte + size of the data + status byte */
--	ret = spi_sync_transfer(dev, &phy->spi_xfer, 1);
-+	ret = spi_sync_transfer(dev, &spi_xfer, 1);
- 	if (tpm_size > 0 && ret == 0) {
--		ret = rx_buf[total_length + phy->latency - 1];
-+		ret = phy->rx_buf[total_length + phy->latency - 1];
- 
--		memcpy(tpm_data, rx_buf + total_length + phy->latency,
-+		memcpy(tpm_data, phy->rx_buf + total_length + phy->latency,
- 		       tpm_size);
- 	}
- 
-@@ -328,9 +332,6 @@ static int st33zp24_spi_probe(struct spi_device *dev)
- 			return ret;
- 	}
- 
--	phy->spi_xfer.tx_buf = phy->tx_buf;
--	phy->spi_xfer.rx_buf = phy->rx_buf;
--
- 	phy->latency = st33zp24_spi_evaluate_latency(phy);
- 	if (phy->latency <= 0)
- 		return -ENODEV;
+- a set of code style or sanity cleanup
+- acpi device probing support for i2c and spi phys.
+
+In v2, i have:
+- Added Jarkko review
+- Fixed a warning on patch 12
+
+In v3, i have fixed few errors reported by kbuild robot on patch 10 & 12.
+Those are coming from mistakes on side. Sorry :(.
+I have rebased this work using patches already present in your master branch.
+
+This patch serie applies on top of:
+tpm_tis: fix build warning with tpm_tis_resume 6386544ad7bceb3d0248b85da29d4d99eebe9161
+
+Best Regards
+Christophe
+
+Christophe Ricard (12):
+  tpm/st33zp24/spi: Remove nbr_dummy_bytes variable usage
+  tpm/st33zp24/spi: Use functions name with st33zp24_spi_ prefix
+  tpm/st33zp24/spi: Remove useless use of memcpy.
+  tpm/st33zp24/spi: Remove field spi_xfer from st33zp24_spi_phy
+    structure
+  tpm/st33zp24: Remove unneeded CONFIG_OF switches
+  tpm/st33zp24: Auto-select core module
+  tpm/st33zp24/spi: Improve st33zp24_spi_evaluate_latency
+  tpm/st33zp24: Extend Copyright headers
+  tpm/st33zp24: Add support for acpi probing for i2c device.
+  tpm: st33zp24: Add support for acpi probing for spi device.
+  tpm/st33zp24/i2c: Change xxx_request_resources header
+  tpm/st33zp24/spi: Change xxx_request_resources header
+
+ drivers/char/tpm/st33zp24/Kconfig      |  11 +-
+ drivers/char/tpm/st33zp24/i2c.c        |  76 ++++++++++---
+ drivers/char/tpm/st33zp24/spi.c        | 190 ++++++++++++++++++++-------------
+ drivers/char/tpm/st33zp24/st33zp24.c   |   2 +-
+ drivers/char/tpm/st33zp24/st33zp24.h   |   2 +-
+ include/linux/platform_data/st33zp24.h |   2 +-
+ 6 files changed, 182 insertions(+), 101 deletions(-)
+
 -- 
 2.5.0
 
