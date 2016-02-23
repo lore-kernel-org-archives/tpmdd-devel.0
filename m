@@ -1,8 +1,7 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v3 08/12] tpm/st33zp24: Extend Copyright
-	headers
-Date: Tue, 23 Feb 2016 22:25:47 +0100
-Message-ID: <1456262751-12096-9-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH v3 06/12] tpm/st33zp24: Auto-select core module
+Date: Tue, 23 Feb 2016 22:25:45 +0100
+Message-ID: <1456262751-12096-7-git-send-email-christophe-h.ricard@st.com>
 References: <1456262751-12096-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,78 +20,56 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, peterhuewe-Mmb7MZpH
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Extend copyright header to 2016
+The core st33zp24 module is useless without either the I2C or the
+SPI access module. So hide NFC_ST_NCI and select it automatically
+if either TCG_TIS_ST33ZP24_I2C or TCG_TIS_ST33ZP24_SPI is selected.
+
+This avoids presenting TCG_TIS_ST33ZP24 when neither TCG_TIS_ST33ZP24_I2C
+nor TCG_TIS_ST33ZP24_SPI can be selected.
 
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
+Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/st33zp24/i2c.c        | 2 +-
- drivers/char/tpm/st33zp24/spi.c        | 2 +-
- drivers/char/tpm/st33zp24/st33zp24.c   | 2 +-
- drivers/char/tpm/st33zp24/st33zp24.h   | 2 +-
- include/linux/platform_data/st33zp24.h | 2 +-
- 5 files changed, 5 insertions(+), 5 deletions(-)
+ drivers/char/tpm/st33zp24/Kconfig | 11 +++++------
+ 1 file changed, 5 insertions(+), 6 deletions(-)
 
-diff --git a/drivers/char/tpm/st33zp24/i2c.c b/drivers/char/tpm/st33zp24/i2c.c
-index a05fbd8..a49b6f1 100644
---- a/drivers/char/tpm/st33zp24/i2c.c
-+++ b/drivers/char/tpm/st33zp24/i2c.c
-@@ -1,6 +1,6 @@
- /*
-  * STMicroelectronics TPM I2C Linux driver for TPM ST33ZP24
-- * Copyright (C) 2009 - 2015 STMicroelectronics
-+ * Copyright (C) 2009 - 2016 STMicroelectronics
-  *
-  * This program is free software; you can redistribute it and/or modify
-  * it under the terms of the GNU General Public License as published by
-diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
-index a2ef8ec..eb351ba 100644
---- a/drivers/char/tpm/st33zp24/spi.c
-+++ b/drivers/char/tpm/st33zp24/spi.c
-@@ -1,6 +1,6 @@
- /*
-  * STMicroelectronics TPM SPI Linux driver for TPM ST33ZP24
-- * Copyright (C) 2009 - 2015  STMicroelectronics
-+ * Copyright (C) 2009 - 2016 STMicroelectronics
-  *
-  * This program is free software; you can redistribute it and/or modify
-  * it under the terms of the GNU General Public License as published by
-diff --git a/drivers/char/tpm/st33zp24/st33zp24.c b/drivers/char/tpm/st33zp24/st33zp24.c
-index 8d62678..944d279 100644
---- a/drivers/char/tpm/st33zp24/st33zp24.c
-+++ b/drivers/char/tpm/st33zp24/st33zp24.c
-@@ -1,6 +1,6 @@
- /*
-  * STMicroelectronics TPM Linux driver for TPM ST33ZP24
-- * Copyright (C) 2009 - 2015 STMicroelectronics
-+ * Copyright (C) 2009 - 2016 STMicroelectronics
-  *
-  * This program is free software; you can redistribute it and/or modify
-  * it under the terms of the GNU General Public License as published by
-diff --git a/drivers/char/tpm/st33zp24/st33zp24.h b/drivers/char/tpm/st33zp24/st33zp24.h
-index c207ceb..bcbd5ff 100644
---- a/drivers/char/tpm/st33zp24/st33zp24.h
-+++ b/drivers/char/tpm/st33zp24/st33zp24.h
-@@ -1,6 +1,6 @@
- /*
-  * STMicroelectronics TPM Linux driver for TPM ST33ZP24
-- * Copyright (C) 2009 - 2015  STMicroelectronics
-+ * Copyright (C) 2009 - 2016  STMicroelectronics
-  *
-  * This program is free software; you can redistribute it and/or modify it
-  * under the terms and conditions of the GNU General Public License,
-diff --git a/include/linux/platform_data/st33zp24.h b/include/linux/platform_data/st33zp24.h
-index 817dfdb..6f0fb6e 100644
---- a/include/linux/platform_data/st33zp24.h
-+++ b/include/linux/platform_data/st33zp24.h
-@@ -1,6 +1,6 @@
- /*
-  * STMicroelectronics TPM Linux driver for TPM 1.2 ST33ZP24
-- * Copyright (C) 2009 - 2015  STMicroelectronics
-+ * Copyright (C) 2009 - 2016  STMicroelectronics
-  *
-  * This program is free software; you can redistribute it and/or modify
-  * it under the terms of the GNU General Public License as published by
+diff --git a/drivers/char/tpm/st33zp24/Kconfig b/drivers/char/tpm/st33zp24/Kconfig
+index 19c0074..e74c6f2 100644
+--- a/drivers/char/tpm/st33zp24/Kconfig
++++ b/drivers/char/tpm/st33zp24/Kconfig
+@@ -1,6 +1,5 @@
+ config TCG_TIS_ST33ZP24
+-	tristate "STMicroelectronics TPM Interface Specification 1.2 Interface"
+-	depends on GPIOLIB || COMPILE_TEST
++	tristate
+ 	---help---
+ 	  STMicroelectronics ST33ZP24 core driver. It implements the core
+ 	  TPM1.2 logic and hooks into the TPM kernel APIs. Physical layers will
+@@ -10,9 +9,9 @@ config TCG_TIS_ST33ZP24
+ 	  tpm_st33zp24.
+ 
+ config TCG_TIS_ST33ZP24_I2C
+-	tristate "TPM 1.2 ST33ZP24 I2C support"
+-	depends on TCG_TIS_ST33ZP24
++	tristate "STMicroelectronics TPM Interface Specification 1.2 Interface (I2C)"
+ 	depends on I2C
++	select TCG_TIS_ST33ZP24
+ 	---help---
+ 	  This module adds support for the STMicroelectronics TPM security chip
+ 	  ST33ZP24 with i2c interface.
+@@ -20,9 +19,9 @@ config TCG_TIS_ST33ZP24_I2C
+ 	  called tpm_st33zp24_i2c.
+ 
+ config TCG_TIS_ST33ZP24_SPI
+-	tristate "TPM 1.2 ST33ZP24 SPI support"
+-	depends on TCG_TIS_ST33ZP24
++	tristate "STMicroelectronics TPM Interface Specification 1.2 Interface (SPI)"
+ 	depends on SPI
++	select TCG_TIS_ST33ZP24
+ 	---help---
+ 	  This module adds support for the STMicroelectronics TPM security chip
+ 	  ST33ZP24 with spi interface.
 -- 
 2.5.0
 
