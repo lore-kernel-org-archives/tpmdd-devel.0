@@ -1,17 +1,22 @@
-From: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [GIT PULL] remaining tpmdd fixes for Linux 4.5
-Date: Thu, 25 Feb 2016 10:30:44 -0700
-Message-ID: <20160225173044.gcr2j65ihv6cevzm@cantor.redhat.com>
-References: <20160220081705.GA12981@intel.com>
-	<alpine.LRH.2.20.1602221255210.4918@namei.org>
-	<20160222145023.GA28365@intel.com>
-Reply-To: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH v3 09/11] tpm: Driver for supporting
+ multiple emulated TPMs
+Date: Thu, 25 Feb 2016 10:39:56 -0700
+Message-ID: <20160225173956.GA1407@obsidianresearch.com>
+References: <1455885728-10315-1-git-send-email-stefanb@linux.vnet.ibm.com>
+	<1455885728-10315-10-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20160222192741.GI22088@obsidianresearch.com>
+	<201602230142.u1N1gSuF029481@d01av05.pok.ibm.com>
+	<20160223021730.GD26177@obsidianresearch.com>
+	<201602242306.u1ON6qGP030251@d01av05.pok.ibm.com>
+	<20160225131732.GA20860@intel.com>
+	<201602251409.u1PE98LH012367@d01av05.pok.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160222145023.GA28365-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <201602251409.u1PE98LH012367-8DuMPbUlb4HImUpY6SP3GEEOCMrvLtNR@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,43 +25,28 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, James Morris <jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Wilck-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org
+To: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon Feb 22 16, Jarkko Sakkinen wrote:
->On Mon, Feb 22, 2016 at 12:56:53PM +1100, James Morris wrote:
->> On Sat, 20 Feb 2016, Jarkko Sakkinen wrote:
->>
->> > Hi James,
->> >
->> > I'm sorry for the late pull request for 4.5. The reason for this was
->> > the latency in my previous one. I picked with care the absolutely
->> > critical fixes so that we can make a sound tpmdd release.
->> >
->> > I really hope you can still pick these as one of them is absolutely
->> > critical to get authorization policy sealing API right (kernel keeps
->> > it finger out of user space created objects).
->>
->> Pushed to next for more testing and review.
->>
->> This really is getting too late in the development cycle for so many
->> fixes.  It means the code was not ready to be merged in the first place.
->
->I fully agree what you're saying. I'll learn the lesson here and take
->factors more conservative attitude from now on. No excuses. I'm sorry
->about this.
->
->Partly the reason for recent increase in regressions has been
->increased real-world use of TPM2 and thus issues have started to pop
->up that's a lame excuse anyway.
->
+On Thu, Feb 25, 2016 at 09:12:57AM -0500, Stefan Berger wrote:
 
-Would it be worthwhile to have a tpm branch that gets pulled by -next
-directly so changes will have already been going through the paces in
--next prior to the pull reuqest to James?
+>    > 3) Do not show any existing sysfs attributes for
+>    > containers. All but
 
-snits
+>    A separate sysfs tree isn't built for every container, so sysfs is more
+>    or less global showing pretty much the same in every container except
+>    for networking namespace seems to have a way of not doing that.
+
+TPM should be able to use the same techniques as net, the syfs.*ns set
+of APIs exists for this purpose. I've never looked at how to use them,
+but something should be workable there.
+
+Once you figure out how to define what TPMs are in a namespace it
+should be doable to use the syfs_ns APIs to have sysfs follow that
+restriction just like net does.
+
+Jason
 
 ------------------------------------------------------------------------------
 Site24x7 APM Insight: Get Deep Visibility into Application Performance
