@@ -1,24 +1,17 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v3 09/11] tpm: Driver for supporting
- multiple emulated TPMs
-Date: Thu, 25 Feb 2016 13:31:17 -0700
-Message-ID: <20160225203117.GA22984@obsidianresearch.com>
-References: <1455885728-10315-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<1455885728-10315-10-git-send-email-stefanb@linux.vnet.ibm.com>
-	<20160222192741.GI22088@obsidianresearch.com>
-	<201602230142.u1N1gSuF029481@d01av05.pok.ibm.com>
-	<20160223021730.GD26177@obsidianresearch.com>
-	<201602242306.u1ON6qGP030251@d01av05.pok.ibm.com>
-	<20160225131732.GA20860@intel.com>
-	<201602251409.u1PE98LH012367@d01av05.pok.ibm.com>
-	<20160225173956.GA1407@obsidianresearch.com>
-	<201602251842.u1PIgEuL014249@d03av03.boulder.ibm.com>
+From: kay <kay.diam-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Subject: Re: tpm_tis driver failed to suspend, error -62
+Date: Thu, 25 Feb 2016 22:49:01 +0100
+Message-ID: <CANaOheYpnr+T9YNGfA=UNyD8K_H1L_FyWEqYKSQR523s0pkM7g@mail.gmail.com>
+References: <CANaOheYnD6S8gHbaLL0bY_csUmbFNcy0OeFA2=a8YornS1OkUA@mail.gmail.com>
+	<20151023092539.GB6941@intel.com>
+	<CANaOhebYSrW4jzwu8zsKu2=pZYbN--b1ehNc6M0yOBUVRpDTAA@mail.gmail.com>
+	<20151023110914.GA9719@intel.com>
+	<CANaOheZLeqx37ZEX4yc1ubaFpdOHO3G04WO6GWa3YLPgOjttvg@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <201602251842.u1PIgEuL014249-MijUUJkLaQs+UXBhvPuGgqsjOiXwFzmk@public.gmane.org>
+In-Reply-To: <CANaOheZLeqx37ZEX4yc1ubaFpdOHO3G04WO6GWa3YLPgOjttvg-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -27,69 +20,54 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, peterasplund-xYBMnk5ip2SzQB+pC5nmwQ@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Feb 25, 2016 at 01:42:10PM -0500, Stefan Berger wrote:
+Hi Jarkko,
 
->    It looks like they some are being used on the kobject level.
+Weird, but whole last week it worked perfectly. But several minutes
+ago I've reproduced the same issue.
 
-Yes, struct devices are kobjects.
+[11062.511097] tpm_tis 00:01: tpm_transmit: tpm_send: error -62
+[11062.511099] tpm_tis 00:01: Error (-62) sending savestate before suspend
+[11062.511105] __pnp_bus_suspend(): tpm_pm_suspend+0x0/0x1d0 returns -62
+[11062.511108] dpm_run_callback(): pnp_bus_suspend+0x0/0x20 returns -62
+[11062.511111] PM: Device 00:01 failed to suspend: error -62
+[11062.511113] PM: Some devices failed to suspend, or early wake event detected
 
->    > Once you figure out how to define what TPMs are in a namespace it
->    > should be doable to use the syfs_ns APIs to have sysfs follow that
->    > restriction just like net does.
+uname -a
+Linux host-HP 4.2.0-30-generic #35~14.04.1-Ubuntu SMP Fri Feb 19
+14:48:13 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
 
->    Networking has its own namespace and it looks like all devices get
->    created while in that namespace.
+Regards
 
-No, it is like tpm, a cannonical example is something like:
-
- ip netns add blue
- ip link add veth0 type veth peer name veth1
- ip link set veth1 netns blue
-
-To move an interface, which presumably moves the sysfs stuff as
-well. Seems exactly like a mode that could work for TPM.
-
->    clone(), a long time after current registration with sysfs. Another
->    difference is that we don't have a device namespace, so all our device
->    names and major / minor numbers need to be unique and that's also
->    reflected in sysfs.
-
-major/minor numbers do not need to be unique, the mapping of TPM ID to
-physical TPM is something a namespace should control, eg TPM ID 0 is
-always major/minor 10:224, and can be routed to which ever tpm is
-correct for the namespace of the accessing process.
-
-Same for sysfs, within the namespace the vtpm should appear as tpm0.
-
->    I have been experimenting with an ioctl that passes along a file
->    descriptor to a user namespace (/proc/pid/ns/user) for the purpose of
->    associating the vtpm with that user namespace.
-
-I would have thought you'd use the IMA namespace for this, seems more
-natural?
-
-Functionally it doesn't matter, which ever name space is used, migrate
-the sysfs stuff similar to net and virtualize all the ID.
-
->    time option). Here we need to ensure that the child gets the chip
->    hooked to the IMA namespace before the execve() triggers measurements
->    by IMA. Here I pass the process Id of that child to then determine IMA
->    namespace to hook the chip to and user namespace for vTPM sysfs
->    association. I prefer the child's process id over passing two file
->    descriptors in this case...
-
-I'm sure people familiar with namespaces/etc will have suggestions on
-how to build the uapi side.
-
-I still intensely dislike the use of an ioctl on vtpm because
-namespaces will have to be a core tpm feature, an ioctl on the
-/dev/tpmX fd would be more approriate.
-
-Jason
+On Thu, Feb 25, 2016 at 9:19 PM, kay <kay.diam-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org> wrote:
+> Hi Jarkko,
+>
+> I tested new kernel (4.2) and it didn't help. Same problem on suspend.
+> Then I found another solution - boot with the "tpm_tis.interrupts=0"
+> kernel parameter and this resolved the issue. Could you explain me
+> what exactly does it make so it solves most of the problems with tpm
+> and suspend?
+>
+> Regards
+>
+> On Fri, Oct 23, 2015 at 1:09 PM, Jarkko Sakkinen
+> <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
+>> On Fri, Oct 23, 2015 at 11:52:51AM +0200, kay wrote:
+>>> Hi Jarkko,
+>>>
+>>> It was reproduced even in earlier version. You can review initial
+>>> topic message.
+>>
+>> OK, the thing that I would try would be to assing sometihing enormous
+>> like 4 * 60 * HZ to local variable 'stop' inside tpm_transmit() in
+>> tpm-interface.c.
+>>
+>> If the problem still occurs it's definitely HW/firmware issue
+>>
+>> /Jarkko
 
 ------------------------------------------------------------------------------
 Site24x7 APM Insight: Get Deep Visibility into Application Performance
