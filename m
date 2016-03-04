@@ -1,19 +1,16 @@
-From: "Stefan Berger" <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH v4 03/10] tpm: Provide strong locking for
- device removal
-Date: Fri, 4 Mar 2016 14:06:23 -0500
-Message-ID: <201603041908.u24J8JOi008138@d03av01.boulder.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v4 08/10] tpm: Driver for supporting
+ multiple emulated TPMs
+Date: Fri, 4 Mar 2016 22:29:28 +0200
+Message-ID: <20160304202928.GA32617@intel.com>
 References: <1456766996-9300-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<1456766996-9300-4-git-send-email-stefanb@linux.vnet.ibm.com>
-	<20160229192532.GB15042@obsidianresearch.com>
-	<201602291949.u1TJn2Av025592@d03av03.boulder.ibm.com>
-	<20160229195400.GA32380@obsidianresearch.com>
-	<201602292004.u1TK4IDH023664@d01av04.pok.ibm.com>
-	<20160304181038.GA24462@intel.com>
+	<1456766996-9300-9-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: multipart/mixed; boundary="===============6849315132857821458=="
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160304181038.GA24462-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <1456766996-9300-9-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,172 +19,693 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+Hi
 
---===============6849315132857821458==
-Content-Type: multipart/alternative;
-	boundary="=_alternative 0068F71F85257F6C_="
+I noticed some glitches.
 
+On Mon, Feb 29, 2016 at 12:29:54PM -0500, Stefan Berger wrote:
+> This patch implements a driver for supporting multiple emulated TPMs in a
+> system.
+> 
+> The driver implements a device /dev/vtpmx that is used to created
+> a client device pair /dev/tpmX (e.g., /dev/tpm10) and a server side that
+> is accessed using a file descriptor returned by an ioctl.
+> The device /dev/tpmX is the usual TPM device created by the core TPM
+> driver. Applications or kernel subsystems can send TPM commands to it
+> and the corresponding server-side file descriptor receives these
+> commands and delivers them to an emulated TPM.
 
---=_alternative 0068F71F85257F6C_=
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/plain; charset="US-ASCII"
-
-Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote on 03/04/2016=20
-01:10:38 PM:
-
->=20
-> On Mon, Feb 29, 2016 at 03:04:10PM -0500, Stefan Berger wrote:
-> >    Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote on=20
-02/29/2016
-> >    02:54:01 PM:
-> >=20
-> >    >
-> >    > On Mon, Feb 29, 2016 at 02:48:54PM -0500, Stefan Berger wrote:
-> >    > >    Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote on
-> >    02/29/2016
-> >    > >    02:25:32 PM:
-> >    > >    >
-> >    > >    > On Mon, Feb 29, 2016 at 12:29:49PM -0500, Stefan Berger=20
-wrote:
-> >    > >    > >   * the device. As the last step this function adds=20
-> the chip to
-> >    > >    > the list of TPM
-> >    > >    > >   * chips available for in-kernel use.
-> >    > >    > >   *
-> >    > >    > > + * Once this function returns the driver call backs in=20
-'op's
-> >    will
-> >    > >    not be
-> >    > >    > > + * running and will no longer start.
-> >    > >    > > + *
-> >    > >    > >   * This function should be only called after the chip
-> >    > >    initialization is
-> >    > >    > >   * complete.
-> >    > >    > >   */
-> >    > >    >
-> >    > >    > Not sure what happened here, but this hunk belongs with
-> >    > >    > tpm=5Fchip=5Funregister
-> >    > >    That's where it is. The context 'tpm1=5Fchip=5Funregister' th=
-e=20
-hunk
-> >    shows
-> >    > >    is from the function 'above'.
-> >    >
-> >    > Eh?
-> >    >
-> >    > https://github.com/stefanberger/linux/blob/
-> >    >
-> >=20
-63f0cd1bae930167d31bbe5d5779d40a277e91c5/drivers/char/tpm/tpm-chip.c#L311
-> >=20
-> >    Sorry. Fixed here :
-> >    https://github.com/stefanberger/linux/commit/
-> 5808cd0b01b00e1a4e3b23d6970bac4efee69038
->=20
-> Already applied v4. Could you send a fix for this to the list?
-> Thanks.
-
-I can post v5 that also has the Reviewed-by's applied.
-
-https://github.com/stefanberger/linux/commits/vtpm-driver.v5
-
-  Stefan
+Every other driver in the subsystem except xen-tpmfront uses
+underscore instead of dash. For the sake of consistency this should be
+renamed as tpm_vtpm.
 
 
->=20
-> >       Stefan
->=20
-> /Jarkko
->=20
+> Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> ---
+>  drivers/char/tpm/Kconfig    |  10 +
+>  drivers/char/tpm/Makefile   |   1 +
+>  drivers/char/tpm/tpm-vtpm.c | 546 ++++++++++++++++++++++++++++++++++++++++++++
+>  include/uapi/linux/Kbuild   |   1 +
+>  include/uapi/linux/vtpm.h   |  41 ++++
+>  5 files changed, 599 insertions(+)
+>  create mode 100644 drivers/char/tpm/tpm-vtpm.c
+>  create mode 100644 include/uapi/linux/vtpm.h
+> 
+> diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
+> index 3b84a8b..4c4e843 100644
+> --- a/drivers/char/tpm/Kconfig
+> +++ b/drivers/char/tpm/Kconfig
+> @@ -122,5 +122,15 @@ config TCG_CRB
+>  	  from within Linux.  To compile this driver as a module, choose
+>  	  M here; the module will be called tpm_crb.
+>  
+> +config TCG_VTPM
+> +	tristate "VTPM Interface"
+> +	depends on TCG_TPM
+> +	---help---
+> +	  This driver supports an emulated TPM (vTPM) running in userspace.
+> +	  A device /dev/vtpmx is provided that creates a device pair
+> +	  /dev/vtpmX and a server-side file descriptor on which the vTPM
+> +	  can receive commands.
+> +
+> +
+>  source "drivers/char/tpm/st33zp24/Kconfig"
+>  endif # TCG_TPM
+> diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
+> index 56e8f1f..d947db2 100644
+> --- a/drivers/char/tpm/Makefile
+> +++ b/drivers/char/tpm/Makefile
+> @@ -23,3 +23,4 @@ obj-$(CONFIG_TCG_IBMVTPM) += tpm_ibmvtpm.o
+>  obj-$(CONFIG_TCG_TIS_ST33ZP24) += st33zp24/
+>  obj-$(CONFIG_TCG_XEN) += xen-tpmfront.o
+>  obj-$(CONFIG_TCG_CRB) += tpm_crb.o
+> +obj-$(CONFIG_TCG_VTPM) += tpm-vtpm.o
+> diff --git a/drivers/char/tpm/tpm-vtpm.c b/drivers/char/tpm/tpm-vtpm.c
+> new file mode 100644
+> index 0000000..2c69363
+> --- /dev/null
+> +++ b/drivers/char/tpm/tpm-vtpm.c
+> @@ -0,0 +1,546 @@
+> +/*
+> + * Copyright (C) 2015, 2016 IBM Corporation
+> + *
+> + * Author: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+> + *
+> + * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+> + *
+> + * Device driver for vTPM.
+> + *
+> + * This program is free software; you can redistribute it and/or
+> + * modify it under the terms of the GNU General Public License as
+> + * published by the Free Software Foundation, version 2 of the
+> + * License.
+> + *
+> + */
+> +
+> +#include <linux/types.h>
+> +#include <linux/spinlock.h>
+> +#include <linux/uaccess.h>
+> +#include <linux/wait.h>
+> +#include <linux/miscdevice.h>
+> +#include <linux/vtpm.h>
+> +#include <linux/file.h>
+> +#include <linux/anon_inodes.h>
+> +#include <linux/poll.h>
+> +#include <linux/compat.h>
+> +
+> +#include "tpm.h"
+> +
+> +#define VTPM_REQ_COMPLETE_FLAG  BIT(0)
+> +
+> +struct vtpm_dev {
+> +	struct tpm_chip *chip;
+> +
+> +	u32 flags;                   /* public API flags */
+> +
+> +	wait_queue_head_t wq;
+> +
+> +	struct mutex buf_lock;       /* protect buffer and flag modifications */
+> +
+> +	long state;                  /* internal state */
+> +#define STATE_OPENED_FLAG        BIT(0)
+> +#define STATE_WAIT_RESPONSE_FLAG BIT(1)  /* waiting for emulator response */
+> +
+> +	size_t req_len;              /* length of queued TPM request */
+> +	size_t resp_len;             /* length of queued TPM response */
+> +	u8 buffer[TPM_BUFSIZE];      /* request/response buffer */
+> +};
+> +
+> +
+> +static void vtpm_delete_device_pair(struct vtpm_dev *vtpm_dev);
+> +
+> +/*
+> + * Functions related to 'server side'
+> + */
+> +
+> +/**
+> + * vtpm_fops_read - Read TPM commands on 'server side'
+> + *
+> + * Return value:
+> + *	Number of bytes read or negative error code
+> + */
+> +static ssize_t vtpm_fops_read(struct file *filp, char __user *buf,
+> +			      size_t count, loff_t *off)
+> +{
+> +	struct vtpm_dev *vtpm_dev = filp->private_data;
+> +	size_t len;
+> +	int sig, rc;
+> +
+> +	sig = wait_event_interruptible(vtpm_dev->wq, vtpm_dev->req_len != 0);
+> +	if (sig)
+> +		return -EINTR;
+> +
+> +	mutex_lock(&vtpm_dev->buf_lock);
+> +
+> +	len = vtpm_dev->req_len;
+> +
+> +	if (count < len) {
+> +		mutex_unlock(&vtpm_dev->buf_lock);
+> +		pr_debug("Invalid size in recv: count=%zd, req_len=%zd\n",
+> +			 count, len);
+> +		return -EIO;
+> +	}
+> +
+> +	rc = copy_to_user(buf, vtpm_dev->buffer, len);
+> +	memset(vtpm_dev->buffer, 0, len);
+> +	vtpm_dev->req_len = 0;
+> +
+> +	if (!rc)
+> +		vtpm_dev->state |= STATE_WAIT_RESPONSE_FLAG;
+> +
+> +	mutex_unlock(&vtpm_dev->buf_lock);
+> +
+> +	if (rc)
+> +		return -EFAULT;
+> +
+> +	return len;
+> +}
+> +
+> +/**
+> + * vtpm_fops_write - Write TPM responses on 'server side'
+> + *
+> + * Return value:
+> + *	Number of bytes read or negative error value
+> + */
+> +static ssize_t vtpm_fops_write(struct file *filp, const char __user *buf,
+> +			       size_t count, loff_t *off)
+> +{
+> +	struct vtpm_dev *vtpm_dev = filp->private_data;
+> +
+> +	if (count > sizeof(vtpm_dev->buffer) ||
+> +	    !(vtpm_dev->state & STATE_WAIT_RESPONSE_FLAG))
+> +		return -EIO;
+
+This is not atomic in any sense. You should move this statement after
+taking buf_lock.
+
+> +
+> +	mutex_lock(&vtpm_dev->buf_lock);
+> +
+> +	vtpm_dev->state &= ~STATE_WAIT_RESPONSE_FLAG;
+> +
+> +	vtpm_dev->req_len = 0;
+> +
+> +	if (copy_from_user(vtpm_dev->buffer, buf, count)) {
+> +		mutex_unlock(&vtpm_dev->buf_lock);
+> +		return -EFAULT;
+> +	}
+> +
+> +	vtpm_dev->resp_len = count;
+> +
+> +	mutex_unlock(&vtpm_dev->buf_lock);
+> +
+> +	wake_up_interruptible(&vtpm_dev->wq);
+> +
+> +	return count;
+> +}
+> +
+> +/*
+> + * vtpm_fops_poll: Poll status on 'server side'
+> + *
+> + * Return value:
+> + *      Poll flags
+> + */
+> +static unsigned int vtpm_fops_poll(struct file *filp, poll_table *wait)
+> +{
+> +	struct vtpm_dev *vtpm_dev = filp->private_data;
+> +	unsigned ret;
+> +
+> +	poll_wait(filp, &vtpm_dev->wq, wait);
+> +
+> +	ret = POLLOUT;
+> +	if (vtpm_dev->req_len)
+> +		ret |= POLLIN | POLLRDNORM;
+> +
+> +	return ret;
+> +}
+> +
+> +/*
+> + * vtpm_fops_open - Open vTPM device on 'server side'
+> + *
+> + * Called when setting up the anonymous file descriptor
+> + */
+> +static void vtpm_fops_open(struct file *filp)
+> +{
+> +	struct vtpm_dev *vtpm_dev = filp->private_data;
 
 
+mutex_lock(&vtpm_dev->buf_lock);
 
---=_alternative 0068F71F85257F6C_=
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/html; charset="US-ASCII"
+> +
+> +	vtpm_dev->state |= STATE_OPENED_FLAG; /* locking not necessary */
+> +
+> +	mutex_unlock(&vtpm_dev->buf_lock);
+> +}
+> +
+> +/**
+> + * vtpm_fops_undo_open - counter-part to vtpm_fops_open
+> + *
+> + * Call to undo vtpm_fops_open
+> + */
+> +static void vtpm_fops_undo_open(struct vtpm_dev *vtpm_dev)
+> +{
+> +	vtpm_dev->state &= ~STATE_OPENED_FLAG; /* locking not necessary */
+> +
+> +	/* no more TPM responses -- wake up anyone waiting for them */
+> +	wake_up_interruptible(&vtpm_dev->wq);
+> +}
+> +
+> +/*
+> + * vtpm_fops_release: Close 'server side'
+> + *
+> + * Return value:
+> + *      Always returns 0.
+> + */
+> +static int vtpm_fops_release(struct inode *inode, struct file *filp)
+> +{
+> +	struct vtpm_dev *vtpm_dev = filp->private_data;
+> +
+> +	filp->private_data = NULL;
+> +
+> +	vtpm_delete_device_pair(vtpm_dev);
+> +
+> +	return 0;
+> +}
+> +
+> +static const struct file_operations vtpm_fops = {
+> +	.owner = THIS_MODULE,
+> +	.llseek = no_llseek,
+> +	.read = vtpm_fops_read,
+> +	.write = vtpm_fops_write,
+> +	.poll = vtpm_fops_poll,
+> +	.release = vtpm_fops_release,
+> +};
+> +
+> +/*
+> + * Functions invoked by the core TPM driver to send TPM commands to
+> + * 'server side' and receive responses from there.
+> + */
+> +
+> +/*
+> + * Called when core TPM driver reads TPM responses from 'server side'
+> + *
+> + * Return value:
+> + *      Number of TPM response bytes read, negative error value otherwise
+> + */
+> +static int vtpm_tpm_op_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+> +{
+> +	struct vtpm_dev *vtpm_dev = chip->vendor.priv;
+> +	size_t len;
+> +
+> +	if (!vtpm_dev)
+> +		return -EIO;
+> +
+> +	/* process gone ? */
+> +	if (!(vtpm_dev->state & STATE_OPENED_FLAG))
+> +		return -EPIPE;
+> +
+> +	mutex_lock(&vtpm_dev->buf_lock);
+> +
+> +	len = vtpm_dev->resp_len;
+> +	if (count < len) {
+> +		dev_err(&chip->dev,
+> +			"Invalid size in recv: count=%zd, resp_len=%zd\n",
+> +			count, len);
+> +		len = -EIO;
+> +		goto out;
+> +	}
+> +
+> +	memcpy(buf, vtpm_dev->buffer, len);
+> +	vtpm_dev->resp_len = 0;
+> +
+> +out:
+> +	mutex_unlock(&vtpm_dev->buf_lock);
+> +
+> +	return len;
+> +}
+> +
+> +/*
+> + * Called when core TPM driver forwards TPM requests to 'server side'.
+> + *
+> + * Return value:
+> + *      0 in case of success, negative error value otherwise.
+> + */
+> +static int vtpm_tpm_op_send(struct tpm_chip *chip, u8 *buf, size_t count)
+> +{
+> +	struct vtpm_dev *vtpm_dev = chip->vendor.priv;
+> +	int rc = 0;
+> +
+> +	if (!vtpm_dev)
+> +		return -EIO;
+> +
+> +	if (!(vtpm_dev->state & STATE_OPENED_FLAG))
+> +		return -EPIPE;
+> +
+> +	if (count > sizeof(vtpm_dev->buffer)) {
+> +		dev_err(&chip->dev,
+> +			"Invalid size in send: count=%zd, buffer size=%zd\n",
+> +			count, sizeof(vtpm_dev->buffer));
+> +		return -EIO;
+> +	}
+> +
+> +	mutex_lock(&vtpm_dev->buf_lock);
+> +
+> +	vtpm_dev->resp_len = 0;
+> +
+> +	vtpm_dev->req_len = count;
+> +	memcpy(vtpm_dev->buffer, buf, count);
+> +
+> +	vtpm_dev->state &= ~STATE_WAIT_RESPONSE_FLAG;
+> +
+> +	mutex_unlock(&vtpm_dev->buf_lock);
+> +
+> +	wake_up_interruptible(&vtpm_dev->wq);
+> +
+> +	return rc;
+> +}
+> +
+> +static void vtpm_tpm_op_cancel(struct tpm_chip *chip)
+> +{
+> +	/* not supported */
+> +}
+> +
+> +static u8 vtpm_tpm_op_status(struct tpm_chip *chip)
+> +{
+> +	struct vtpm_dev *vtpm_dev = chip->vendor.priv;
+> +
+> +	if (vtpm_dev->resp_len)
+> +		return VTPM_REQ_COMPLETE_FLAG;
+> +
+> +	return 0;
+> +}
+> +
+> +static bool vtpm_tpm_req_canceled(struct tpm_chip  *chip, u8 status)
+> +{
+> +	struct vtpm_dev *vtpm_dev = chip->vendor.priv;
+> +
+> +	return !(vtpm_dev->state & STATE_OPENED_FLAG);
+> +}
+> +
+> +static const struct tpm_class_ops vtpm_tpm_ops = {
+> +	.recv = vtpm_tpm_op_recv,
+> +	.send = vtpm_tpm_op_send,
+> +	.cancel = vtpm_tpm_op_cancel,
+> +	.status = vtpm_tpm_op_status,
+> +	.req_complete_mask = VTPM_REQ_COMPLETE_FLAG,
+> +	.req_complete_val = VTPM_REQ_COMPLETE_FLAG,
+> +	.req_canceled = vtpm_tpm_req_canceled,
+> +};
+> +
+> +/*
+> + * Code related to creation and deletion of device pairs
+> + */
+> +static struct vtpm_dev *vtpm_create_vtpm_dev(void)
+> +{
+> +	struct vtpm_dev *vtpm_dev;
+> +	struct tpm_chip *chip;
+> +	int err;
+> +
+> +	vtpm_dev = kzalloc(sizeof(*vtpm_dev), GFP_KERNEL);
+> +	if (vtpm_dev == NULL)
+> +		return ERR_PTR(-ENOMEM);
+> +
+> +	init_waitqueue_head(&vtpm_dev->wq);
+> +	mutex_init(&vtpm_dev->buf_lock);
+> +
+> +	chip = tpm_chip_alloc(NULL, &vtpm_tpm_ops);
+> +	if (IS_ERR(chip)) {
+> +		err = PTR_ERR(chip);
+> +		goto err_vtpm_dev_free;
+> +	}
+> +	chip->vendor.priv = vtpm_dev;
+> +
+> +	vtpm_dev->chip = chip;
+> +
+> +	return vtpm_dev;
+> +
+> +err_vtpm_dev_free:
+> +	kfree(vtpm_dev);
+> +
+> +	return ERR_PTR(err);
+> +}
+> +
+> +/*
+> + * Undo what has been done in vtpm_create_vtpm_dev
+> + */
+> +static inline void vtpm_delete_vtpm_dev(struct vtpm_dev *vtpm_dev)
+> +{
+> +	put_device(&vtpm_dev->chip->dev); /* frees chip */
+> +	kfree(vtpm_dev);
+> +}
+> +
+> +/*
+> + * Create a /dev/tpm%d and 'server side' file descriptor pair
+> + *
+> + * Return value:
+> + *      Returns file pointer on success, an error value otherwise
+> + */
+> +static struct file *vtpm_create_device_pair(
+> +				       struct vtpm_new_pair *vtpm_new_pair)
+> +{
+> +	struct vtpm_dev *vtpm_dev;
+> +	int rc, fd;
+> +	struct file *file;
+> +
+> +	if (vtpm_new_pair->flags & ~VTPM_FLAGS_ALL)
+> +		return ERR_PTR(-EINVAL);
+> +
+> +	vtpm_dev = vtpm_create_vtpm_dev();
+> +	if (IS_ERR(vtpm_dev))
+> +		return ERR_CAST(vtpm_dev);
+> +
+> +	vtpm_dev->flags = vtpm_new_pair->flags;
+> +
+> +	/* setup an anonymous file for the server-side */
+> +	fd = get_unused_fd_flags(O_RDWR);
+> +	if (fd < 0) {
+> +		rc = fd;
+> +		goto err_delete_vtpm_dev;
+> +	}
+> +
+> +	file = anon_inode_getfile("[vtpms]", &vtpm_fops, vtpm_dev, O_RDWR);
+> +	if (IS_ERR(file)) {
+> +		rc = PTR_ERR(file);
+> +		goto err_put_unused_fd;
+> +	}
+> +
+> +	/* from now on we can unwind with put_unused_fd() + fput() */
+> +	/* simulate an open() on the server side */
+> +	vtpm_fops_open(file);
+> +
+> +	if (vtpm_dev->flags & VTPM_FLAG_TPM2)
+> +		vtpm_dev->chip->flags |= TPM_CHIP_FLAG_TPM2;
+> +
+> +	rc = tpm_chip_register(vtpm_dev->chip);
+> +	if (rc)
+> +		goto err_vtpm_fput;
+> +
+> +	vtpm_new_pair->fd = fd;
+> +	vtpm_new_pair->major = MAJOR(vtpm_dev->chip->dev.devt);
+> +	vtpm_new_pair->minor = MINOR(vtpm_dev->chip->dev.devt);
+> +	vtpm_new_pair->tpm_dev_num = vtpm_dev->chip->dev_num;
+> +
+> +	return file;
+> +
+> +err_vtpm_fput:
+> +	put_unused_fd(fd);
+> +	fput(file);
+> +
+> +	return ERR_PTR(rc);
+> +
+> +err_put_unused_fd:
+> +	put_unused_fd(fd);
+> +
+> +err_delete_vtpm_dev:
+> +	vtpm_delete_vtpm_dev(vtpm_dev);
+> +
+> +	return ERR_PTR(rc);
+> +}
+> +
+> +/*
+> + * Counter part to vtpm_create_device_pair.
+> + */
+> +static void vtpm_delete_device_pair(struct vtpm_dev *vtpm_dev)
+> +{
+> +	tpm_chip_unregister(vtpm_dev->chip);
+> +
+> +	vtpm_fops_undo_open(vtpm_dev);
+> +
+> +	vtpm_delete_vtpm_dev(vtpm_dev);
+> +}
+> +
+> +/*
+> + * Code related to the control device /dev/vtpmx
+> + */
+> +
+> +/*
+> + * vtpmx_fops_ioctl: ioctl on /dev/vtpmx
+> + *
+> + * Return value:
+> + *      Returns 0 on success, a negative error code otherwise.
+> + */
+> +static long vtpmx_fops_ioctl(struct file *f, unsigned int ioctl,
+> +			    unsigned long arg)
+> +{
+> +	void __user *argp = (void __user *)arg;
+> +	struct vtpm_new_pair *vtpm_new_pair_p;
+> +	struct vtpm_new_pair vtpm_new_pair;
+> +	struct file *file;
+> +
+> +	switch (ioctl) {
+> +	case VTPM_NEW_DEV:
+> +		if (!capable(CAP_SYS_ADMIN))
+> +			return -EPERM;
+> +		vtpm_new_pair_p = argp;
+> +		if (copy_from_user(&vtpm_new_pair, vtpm_new_pair_p,
+> +				   sizeof(vtpm_new_pair)))
+> +			return -EFAULT;
+> +		file = vtpm_create_device_pair(&vtpm_new_pair);
+> +		if (IS_ERR(file))
+> +			return PTR_ERR(file);
+> +		if (copy_to_user(vtpm_new_pair_p, &vtpm_new_pair,
+> +				 sizeof(vtpm_new_pair))) {
+> +			put_unused_fd(vtpm_new_pair.fd);
+> +			fput(file);
+> +			return -EFAULT;
+> +		}
+> +
+> +		fd_install(vtpm_new_pair.fd, file);
+> +		return 0;
+> +
+> +	default:
+> +		return -EINVAL;
+> +	}
+> +}
+> +
+> +#ifdef CONFIG_COMPAT
+> +static long vtpmx_fops_compat_ioctl(struct file *f, unsigned int ioctl,
+> +				    unsigned long arg)
+> +{
+> +	return vtpmx_fops_ioctl(f, ioctl, (unsigned long)compat_ptr(arg));
+> +}
+> +#endif
+> +
+> +static const struct file_operations vtpmx_fops = {
+> +	.owner = THIS_MODULE,
+> +	.unlocked_ioctl = vtpmx_fops_ioctl,
+> +#ifdef CONFIG_COMPAT
+> +	.compat_ioctl = vtpmx_fops_compat_ioctl,
+> +#endif
+> +	.llseek = noop_llseek,
+> +};
+> +
+> +static struct miscdevice vtpmx_miscdev = {
+> +	.minor = MISC_DYNAMIC_MINOR,
+> +	.name = "vtpmx",
+> +	.fops = &vtpmx_fops,
+> +};
+> +
+> +static int vtpmx_init(void)
+> +{
+> +	return misc_register(&vtpmx_miscdev);
+> +}
+> +
+> +static void vtpmx_cleanup(void)
+> +{
+> +	misc_deregister(&vtpmx_miscdev);
+> +}
+> +
+> +static int __init vtpm_module_init(void)
+> +{
+> +	int rc;
+> +
+> +	rc = vtpmx_init();
+> +	if (rc) {
+> +		pr_err("couldn't create vtpmx device\n");
+> +		return rc;
+> +	}
+> +
+> +	return 0;
+> +}
+> +
+> +static void __exit vtpm_module_exit(void)
+> +{
+> +	vtpmx_cleanup();
+> +}
+> +
+> +module_init(vtpm_module_init);
+> +module_exit(vtpm_module_exit);
+> +
+> +MODULE_AUTHOR("Stefan Berger (stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org)");
+> +MODULE_DESCRIPTION("vTPM Driver");
+> +MODULE_VERSION("0.1");
+> +MODULE_LICENSE("GPL");
+> diff --git a/include/uapi/linux/Kbuild b/include/uapi/linux/Kbuild
+> index ebd10e6..3a602c9 100644
+> --- a/include/uapi/linux/Kbuild
+> +++ b/include/uapi/linux/Kbuild
+> @@ -449,6 +449,7 @@ header-y += virtio_scsi.h
+>  header-y += virtio_types.h
+>  header-y += vm_sockets.h
+>  header-y += vt.h
+> +header-y += vtpm.h
+>  header-y += wait.h
+>  header-y += wanrouter.h
+>  header-y += watchdog.h
+> diff --git a/include/uapi/linux/vtpm.h b/include/uapi/linux/vtpm.h
+> new file mode 100644
+> index 0000000..978a849
+> --- /dev/null
+> +++ b/include/uapi/linux/vtpm.h
+> @@ -0,0 +1,41 @@
+> +/*
+> + * Definitions for the VTPM interface
+> + * Copyright (c) 2015, 2016, IBM Corporation
+> + *
+> + * This program is free software; you can redistribute it and/or modify it
+> + * under the terms and conditions of the GNU General Public License,
+> + * version 2, as published by the Free Software Foundation.
+> + *
+> + * This program is distributed in the hope it will be useful, but WITHOUT
+> + * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+> + * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+> + * more details.
+> + */
+> +
+> +#ifndef _UAPI_LINUX_VTPM_H
+> +#define _UAPI_LINUX_VTPM_H
+> +
+> +#include <linux/types.h>
+> +#include <linux/ioctl.h>
+> +
+> +/* ioctls */
+> +
+> +struct vtpm_new_pair {
+> +	__u32 flags;         /* input */
+> +	__u32 tpm_dev_num;   /* output */
+> +	__u32 fd;            /* output */
+> +	__u32 major;         /* output */
+> +	__u32 minor;         /* output */
+> +};
+> +
+> +/* above flags */
+> +#define VTPM_FLAG_TPM2           1  /* emulator is TPM 2 */
+> +
+> +/* all supported flags */
+> +#define VTPM_FLAGS_ALL  (VTPM_FLAG_TPM2)
+> +
+> +#define VTPM_TPM 0xa0
+> +
+> +#define VTPM_NEW_DEV         _IOW(VTPM_TPM, 0x00, struct vtpm_new_pair)
+> +
+> +#endif /* _UAPI_LINUX_VTPM_H */
+> -- 
+> 2.4.3
 
-<tt><font size=3D2>Jarkko Sakkinen &lt;jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org&gt;
-wrote on 03/04/2016 01:10:38 PM:<br></font></tt><br><tt><font size=3D2>&gt;=
- <br>&gt; On Mon, Feb 29, 2016 at 03:04:10PM -0500, Stefan Berger wrote:<br=
->&gt; &gt; &nbsp; &nbsp;Jason Gunthorpe &lt;jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org=
-&gt;
-wrote on 02/29/2016<br>&gt; &gt; &nbsp; &nbsp;02:54:01 PM:<br>&gt; &gt; <br=
->&gt; &gt; &nbsp; &nbsp;&gt;<br>&gt; &gt; &nbsp; &nbsp;&gt; On Mon, Feb 29,=
- 2016 at 02:48:54PM -0500, Stefan
-Berger wrote:<br>&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp; &nbsp;Jason Guntho=
-rpe &lt;jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org&gt;
-wrote on<br>&gt; &gt; &nbsp; &nbsp;02/29/2016<br>&gt; &gt; &nbsp; &nbsp;&gt=
-; &gt; &nbsp; &nbsp;02:25:32 PM:<br>&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp;=
- &nbsp;&gt;<br>&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp; &nbsp;&gt; On Mon, F=
-eb 29, 2016
-at 12:29:49PM -0500, Stefan Berger wrote:<br>&gt; &gt; &nbsp; &nbsp;&gt; &g=
-t; &nbsp; &nbsp;&gt; &gt; &nbsp; * the device.
-As the last step this function adds <br>&gt; the chip to<br>&gt; &gt; &nbsp=
-; &nbsp;&gt; &gt; &nbsp; &nbsp;&gt; the list of TPM<br>&gt; &gt; &nbsp; &nb=
-sp;&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp; * chips
-available for in-kernel use.<br>&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp; &nb=
-sp;&gt; &gt; &nbsp; *<br>&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp; &nbsp;&gt;=
- &gt; + * Once this function
-returns the driver call backs in 'op's<br>&gt; &gt; &nbsp; &nbsp;will<br>&g=
-t; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp; &nbsp;not be<br>&gt; &gt; &nbsp; &nbs=
-p;&gt; &gt; &nbsp; &nbsp;&gt; &gt; + * running and
-will no longer start.<br>&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp; &nbsp;&gt;=
- &gt; + *<br>&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp;=
- * This function
-should be only called after the chip<br>&gt; &gt; &nbsp; &nbsp;&gt; &gt; &n=
-bsp; &nbsp;initialization is<br>&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp; &nb=
-sp;&gt; &gt; &nbsp; * complete.<br>&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp; =
-&nbsp;&gt; &gt; &nbsp; */<br>&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp; &nbsp;=
-&gt;<br>&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp; &nbsp;&gt; Not sure what ha=
-ppened
-here, but this hunk belongs with<br>&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp;=
- &nbsp;&gt; tpm=5Fchip=5Funregister<br>&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nb=
-sp; &nbsp;That's where it is. The context
-'tpm1=5Fchip=5Funregister' the hunk<br>&gt; &gt; &nbsp; &nbsp;shows<br>&gt;=
- &gt; &nbsp; &nbsp;&gt; &gt; &nbsp; &nbsp;is from the function 'above'.<br>=
-&gt; &gt; &nbsp; &nbsp;&gt;<br>&gt; &gt; &nbsp; &nbsp;&gt; Eh?<br>&gt; &gt;=
- &nbsp; &nbsp;&gt;<br>&gt; &gt; &nbsp; &nbsp;&gt; </font></tt><a href=3Dhtt=
-ps://github.com/stefanberger/linux/blob/><tt><font size=3D2>https://github.=
-com/stefanberger/linux/blob/</font></tt></a><tt><font size=3D2><br>&gt; &gt=
-; &nbsp; &nbsp;&gt;<br>&gt; &gt; &nbsp; &nbsp;63f0cd1bae930167d31bbe5d5779d=
-40a277e91c5/drivers/char/tpm/tpm-chip.c#L311<br>&gt; &gt; <br>&gt; &gt; &nb=
-sp; &nbsp;Sorry. Fixed here :<br>&gt; &gt; &nbsp; &nbsp;</font></tt><a href=
-=3Dhttps://github.com/stefanberger/linux/commit/><tt><font size=3D2>https:/=
-/github.com/stefanberger/linux/commit/</font></tt></a><tt><font size=3D2><b=
-r>&gt; 5808cd0b01b00e1a4e3b23d6970bac4efee69038<br>&gt; <br>&gt; Already ap=
-plied v4. Could you send a fix for this to the list?<br>&gt; Thanks.</font>=
-</tt><br><br><tt><font size=3D2>I can post v5 that also has the Reviewed-by=
-'s applied.</font></tt><br><br><a href=3D"https://github.com/stefanberger/l=
-inux/commits/vtpm-driver.v5"><tt><font size=3D2 color=3Dblue>https://github=
-.com/stefanberger/linux/commits/vtpm-driver.v5</font></tt></a><br><br><tt><=
-font size=3D2>&nbsp; Stefan</font></tt><br><br><tt><font size=3D2><br>&gt; =
-<br>&gt; &gt; &nbsp; &nbsp; &nbsp; Stefan<br>&gt; <br>&gt; /Jarkko<br>&gt; =
-<br></font></tt><BR>
---=_alternative 0068F71F85257F6C_=--
-
-
-
---===============6849315132857821458==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
+/Jarkko
 
 ------------------------------------------------------------------------------
-
---===============6849315132857821458==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-_______________________________________________
-tpmdd-devel mailing list
-tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-
---===============6849315132857821458==--
