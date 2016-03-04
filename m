@@ -1,112 +1,99 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] vTPM: fix missing error handling for suspend operation
-Date: Fri, 4 Mar 2016 18:55:38 +0200
-Message-ID: <20160304165537.GA13204@intel.com>
-References: <1456899827-14365-1-git-send-email-honclo@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v4 00/10] Multi-instance vTPM driver
+Date: Fri, 4 Mar 2016 19:05:28 +0200
+Message-ID: <20160304170528.GA17408@intel.com>
+References: <1456766996-9300-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1456899827-14365-1-git-send-email-honclo@linux.vnet.ibm.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: "Hon Ching(Vicky) Lo" <honclo@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, Peter Huewe <PeterHuewe@gmx.de>, Ashley Lai <ashley@ashleylai.com>, Vicky Lo <honclo2014@gmail.com>, linux-kernel@vger.kernel.org
+In-Reply-To: <1456766996-9300-1-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Mar 02, 2016 at 01:23:47AM -0500, Hon Ching(Vicky) Lo wrote:
-> ibmvtpm_send_crq in tpm_ibmvtpm_suspend returns errors in a more
-> granular level than what the existing code does.  This patch adds
-> the missing CRQ transport event code checks to ensure appropriate
-> action taken, in the case that ibmvtpm_send_crq returns H_CLOSED.
+On Mon, Feb 29, 2016 at 12:29:46PM -0500, Stefan Berger wrote:
+> The following series of patches implements a multi-instance vTPM driver
+> that can dynamically create TPM 'server' and client device pairs.
 > 
-> Signed-off-by: Hon Ching(Vicky) Lo <honclo@linux.vnet.ibm.com>
-> ---
->  drivers/char/tpm/tpm_ibmvtpm.c |   58 +++++++++++++++++++++++++++++++++++++---
->  drivers/char/tpm/tpm_ibmvtpm.h |    9 ++++++
->  2 files changed, 63 insertions(+), 4 deletions(-)
+> Using an ioctl on the provided /dev/vtpmx, a client-side vTPM device
+> and a server side file descriptor is created. The file descriptor must
+> be passed to a TPM emulator. The device driver will initialize the
+> emulated TPM using TPM 1.2 or TPM 2 startup commands and it will read
+> the command durations from the device in case of a TPM 1.2. The choice
+> of emulated TPM device (1.2 or 2) must be provided with a flag in
+> the ioctl.
 > 
-> diff --git a/drivers/char/tpm/tpm_ibmvtpm.c b/drivers/char/tpm/tpm_ibmvtpm.c
-> index 3e6a226..5d984af 100644
-> --- a/drivers/char/tpm/tpm_ibmvtpm.c
-> +++ b/drivers/char/tpm/tpm_ibmvtpm.c
-> @@ -335,17 +335,61 @@ static int tpm_ibmvtpm_suspend(struct device *dev)
->  	struct ibmvtpm_crq crq;
->  	u64 *buf = (u64 *) &crq;
->  	int rc = 0;
-> +	int sig;
->  
-> -	crq.valid = (u8)IBMVTPM_VALID_CMD;
-> -	crq.msg = (u8)VTPM_PREPARE_TO_SUSPEND;
-> +	crq_initialized = 0;
-> +	crq.valid = (u8) IBMVTPM_VALID_CMD;
-> +	crq.msg = (u8) VTPM_PREPARE_TO_SUSPEND;
->  
->  	rc = ibmvtpm_send_crq(ibmvtpm->vdev, cpu_to_be64(buf[0]),
->  			      cpu_to_be64(buf[1]));
-> +
-> +	if ((rc == H_CLOSED) && (crq.valid == (u8) VALID_TRANSPORT_EVENT)) {
+> The driver is based on James Morris's 'next' branch and uses several
+> recently posted patches from Jason and Jarkko. Some of these patches
+> needed to rebased on top of this tree.
 
-What if rc == H_CLOSED and crq.valid != VALID_TRANSPORT_EVENT?
+I've now applied these patches to my master branch so that they
+get more exposure:
 
-> +		if (crq.msg == (u8) PARTNER_PARTITION_SUSPENDED) {
-> +			/* The "partner partition suspended" transport
-> +			 * event disables the associated CRQ such that
-> +			 * any H_SEND_CRQ hcall() to the associated CRQ
-> +			 * returns H_Closed until CRQ has been explicitly
-> +			 * enabled using the H_ENABLED_CRQ hcall.
-> +			 */
-> +			return H_SUCCESS;
+git://git.infradead.org/users/jjs/linux-tpmdd.git
 
-I'm having trouble to understand when the suspend happens through this
-route and when you just get H_SUCCESS from ibmvtpm_send_crq(). It
-seems that there are two ways how suspend can happen.
+All patches are applied except the last one containing the test
+program. Could you put a repository to somewhere for it?
 
-I don't understand the big picture.
-
-> +		} else if (crq.msg == (u8) PARTNER_PARTITION_FAILED) {
-> +			dev_err(ibmvtpm->dev,
-> +				"vtpm has terminated fatally; reboot to reinstate a trusted state.\n");
-> +		} else if (crq.msg == (u8) PARTNER_PARTITION_DEREG_CRQ) {
-> +			/* The vtpm is in the process of being reloaded by
-> +			 * firmware and has de-registered CRQ.  The client
-> +			 * must wait for the CRQ INITIALIZATION message and
-> +			 * respond and must resubmit suspend message.
-> +			 */
-> +			sig =
-> +			    wait_event_interruptible(ibmvtpm->wq,
-> +						     crq_initialized == 1);
-> +			if (sig)
-> +				return -EINTR;
-> +
-> +			if (suspend_again_count < 1) {
-> +				suspend_again_count++;
-> +				goto suspendagain;
-> +			}
-> +		} else
-> +			;
-> +	}
-> +
->  	if (rc != H_SUCCESS)
-> -		dev_err(ibmvtpm->dev,
-> -			"tpm_ibmvtpm_suspend failed rc=%d\n", rc);
-> +		dev_err(ibmvtpm->dev, "tpm_ibmvtpm_suspend failed rc=%d\n", rc);
->  
->  	return rc;
-> +
-> +suspendagain:
-> +	rc = tpm_ibmvtpm_suspend(ibmvtpm->dev);
-> +	suspend_again_count = 0;
-> +
-> +	if (rc != H_SUCCESS)
-> +		dev_err(ibmvtpm->dev, "tpm_ibmvtpm_suspend failed rc=%d\n", rc);
-> +
-> +	return rc;
-> +
-
-Get rid of this horrible looking tail recursion thing.
-
-What the heck is suspend_again_count and why it can be module scope
-variable? You could use a local variable instead if you would iterate
-with a loop.
+Thanks for the good work!
 
 /Jarkko
+
+>    Stefan
+> 
+> 
+> Jason Gunthorpe (4):
+>   tpm: Get rid of chip->pdev
+>   tpm: Get rid of devname
+>   tpm: Provide strong locking for device removal
+>   tpm: Split out the devm stuff from tpmm_chip_alloc
+> 
+> Stefan Berger (6):
+>   tpm: Get rid of module locking
+>   tpm: Replace device number bitmap with IDR
+>   tpm: Introduce TPM_CHIP_FLAG_VIRTUAL
+>   tpm: Driver for supporting multiple emulated TPMs
+>   tpm: Initialize TPM and get durations and timeouts
+>   A test program for vTPM device creation
+> 
+>  drivers/char/tpm/Kconfig            |  10 +
+>  drivers/char/tpm/Makefile           |   1 +
+>  drivers/char/tpm/tpm-chip.c         | 221 +++++++++----
+>  drivers/char/tpm/tpm-dev.c          |  15 +-
+>  drivers/char/tpm/tpm-interface.c    |  50 +--
+>  drivers/char/tpm/tpm-sysfs.c        |  22 +-
+>  drivers/char/tpm/tpm-vtpm.c         | 613 ++++++++++++++++++++++++++++++++++++
+>  drivers/char/tpm/tpm.h              |  30 +-
+>  drivers/char/tpm/tpm2-cmd.c         |   8 +-
+>  drivers/char/tpm/tpm_atmel.c        |  14 +-
+>  drivers/char/tpm/tpm_eventlog.c     |   2 +-
+>  drivers/char/tpm/tpm_eventlog.h     |   2 +-
+>  drivers/char/tpm/tpm_i2c_atmel.c    |  16 +-
+>  drivers/char/tpm/tpm_i2c_infineon.c |   6 +-
+>  drivers/char/tpm/tpm_i2c_nuvoton.c  |  24 +-
+>  drivers/char/tpm/tpm_infineon.c     |  22 +-
+>  drivers/char/tpm/tpm_nsc.c          |  20 +-
+>  drivers/char/tpm/tpm_tis.c          |  18 +-
+>  include/uapi/linux/Kbuild           |   1 +
+>  include/uapi/linux/vtpm.h           |  41 +++
+>  vtpmctrl.c                          | 163 ++++++++++
+>  21 files changed, 1120 insertions(+), 179 deletions(-)
+>  create mode 100644 drivers/char/tpm/tpm-vtpm.c
+>  create mode 100644 include/uapi/linux/vtpm.h
+>  create mode 100644 vtpmctrl.c
+> 
+> -- 
+> 2.4.3
+> 
+
+------------------------------------------------------------------------------
