@@ -1,11 +1,13 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v5 00/11] Multi-instance vTPM driver
-Date: Mon,  7 Mar 2016 07:25:03 -0500
-Message-ID: <1457353514-2509-1-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v5 04/11] tpm: Get rid of module locking
+Date: Mon,  7 Mar 2016 07:25:07 -0500
+Message-ID: <1457353514-2509-5-git-send-email-stefanb@linux.vnet.ibm.com>
+References: <1457353514-2509-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1457353514-2509-1-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,66 +19,50 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The following series of patches implements a multi-instance vTPM driver
-that can dynamically create TPM 'server' and client device pairs.
+Now that the tpm core has strong locking around 'ops' it is possible
+to remove a TPM driver, module and all, even while user space still
+has things like /dev/tpmX open. For consistency and simplicity, drop
+the module locking entirely.
 
-Using an ioctl on the provided /dev/vtpmx, a client-side vTPM device
-and a server side file descriptor is created. The file descriptor must
-be passed to a TPM emulator. The device driver will initialize the
-emulated TPM using TPM 1.2 or TPM 2 startup commands and it will read
-the command durations from the device in case of a TPM 1.2. The choice
-of emulated TPM device (1.2 or 2) must be provided with a flag in
-the ioctl.
+Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+---
+ drivers/char/tpm/tpm-chip.c | 6 +-----
+ 1 file changed, 1 insertion(+), 5 deletions(-)
 
-The driver is based on James Morris's 'next' branch and uses several
-recently posted patches from Jason and Jarkko. Some of these patches
-needed to rebased on top of this tree.
-
-   Stefan
-
-Jason Gunthorpe (4):
-  tpm: Get rid of chip->pdev
-  tpm: Get rid of devname
-  tpm: Provide strong locking for device removal
-  tpm: Split out the devm stuff from tpmm_chip_alloc
-
-Stefan Berger (7):
-  tpm: Get rid of module locking
-  tpm: Replace device number bitmap with IDR
-  tpm: Introduce TPM_CHIP_FLAG_VIRTUAL
-  tpm: Driver for supporting multiple emulated TPMs
-  tpm: Initialize TPM and get durations and timeouts
-  tpm: Add documentation for the tpm_vtpm device driver
-  A test program for vTPM device creation
-
- Documentation/tpm/tpm_vtpm.txt      |  53 +++
- drivers/char/tpm/Kconfig            |  10 +
- drivers/char/tpm/Makefile           |   1 +
- drivers/char/tpm/tpm-chip.c         | 221 +++++++++----
- drivers/char/tpm/tpm-dev.c          |  15 +-
- drivers/char/tpm/tpm-interface.c    |  50 +--
- drivers/char/tpm/tpm-sysfs.c        |  22 +-
- drivers/char/tpm/tpm.h              |  30 +-
- drivers/char/tpm/tpm2-cmd.c         |   8 +-
- drivers/char/tpm/tpm_atmel.c        |  14 +-
- drivers/char/tpm/tpm_eventlog.c     |   2 +-
- drivers/char/tpm/tpm_eventlog.h     |   2 +-
- drivers/char/tpm/tpm_i2c_atmel.c    |  16 +-
- drivers/char/tpm/tpm_i2c_infineon.c |   6 +-
- drivers/char/tpm/tpm_i2c_nuvoton.c  |  24 +-
- drivers/char/tpm/tpm_infineon.c     |  22 +-
- drivers/char/tpm/tpm_nsc.c          |  20 +-
- drivers/char/tpm/tpm_tis.c          |  18 +-
- drivers/char/tpm/tpm_vtpm.c         | 642 ++++++++++++++++++++++++++++++++++++
- include/uapi/linux/Kbuild           |   1 +
- include/uapi/linux/vtpm.h           |  41 +++
- vtpmctrl.c                          | 163 +++++++++
- 22 files changed, 1202 insertions(+), 179 deletions(-)
- create mode 100644 Documentation/tpm/tpm_vtpm.txt
- create mode 100644 drivers/char/tpm/tpm_vtpm.c
- create mode 100644 include/uapi/linux/vtpm.h
- create mode 100644 vtpmctrl.c
-
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 5793ea1..6636728 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -57,9 +57,6 @@ int tpm_try_get_ops(struct tpm_chip *chip)
+ 	if (!chip->ops)
+ 		goto out_lock;
+ 
+-	if (!try_module_get(chip->dev.parent->driver->owner))
+-		goto out_lock;
+-
+ 	return 0;
+ out_lock:
+ 	up_read(&chip->ops_sem);
+@@ -77,7 +74,6 @@ EXPORT_SYMBOL_GPL(tpm_try_get_ops);
+  */
+ void tpm_put_ops(struct tpm_chip *chip)
+ {
+-	module_put(chip->dev.parent->driver->owner);
+ 	up_read(&chip->ops_sem);
+ 	put_device(&chip->dev);
+ }
+@@ -183,7 +179,7 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
+ 		goto out;
+ 
+ 	cdev_init(&chip->cdev, &tpm_fops);
+-	chip->cdev.owner = dev->driver->owner;
++	chip->cdev.owner = THIS_MODULE;
+ 	chip->cdev.kobj.parent = &chip->dev.kobj;
+ 
+ 	rc = devm_add_action(dev, (void (*)(void *)) put_device, &chip->dev);
 -- 
 2.4.3
 
