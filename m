@@ -1,8 +1,8 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v5 05/11] tpm: Split out the devm stuff from
-	tpmm_chip_alloc
-Date: Mon,  7 Mar 2016 07:25:08 -0500
-Message-ID: <1457353514-2509-6-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v5 11/11] A test program for vTPM device
+	creation
+Date: Mon,  7 Mar 2016 07:25:14 -0500
+Message-ID: <1457353514-2509-12-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1457353514-2509-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,120 +20,201 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+This patch provides a program that is for testing purposes only.
 
-tpm_chip_alloc becomes a typical subsystem allocate call.
+Build it using the following commands:
 
-Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Reviewed-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Tested-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+make headers_install ARCH=x86_64  INSTALL_HDR_PATH=/usr
+
+gcc vtpmctrl.c -o vtpmctrl
+
+To use it:
+
+To create a device pair and have vtpmctrl listen for commands, display
+them and respond with TPM success messages do:
+
+Created TPM device /dev/tpm0; vTPM device has fd 4, major/minor = 10/224.
+
+In another shell do
+
+00000000 00 c4 00 00 00 0a 00 00 00 00
+00000012
+
+Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 ---
- drivers/char/tpm/tpm-chip.c | 49 ++++++++++++++++++++++++++++++++-------------
- drivers/char/tpm/tpm.h      |  4 +++-
- 2 files changed, 38 insertions(+), 15 deletions(-)
+ vtpmctrl.c | 163 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 163 insertions(+)
+ create mode 100644 vtpmctrl.c
 
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index 6636728..5880377 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -121,17 +121,17 @@ static void tpm_dev_release(struct device *dev)
- }
- 
- /**
-- * tpmm_chip_alloc() - allocate a new struct tpm_chip instance
-- * @dev: device to which the chip is associated
-+ * tpm_chip_alloc() - allocate a new struct tpm_chip instance
-+ * @pdev: device to which the chip is associated
-+ *        At this point pdev mst be initialized, but does not have to
-+ *        be registered
-  * @ops: struct tpm_class_ops instance
-  *
-  * Allocates a new struct tpm_chip instance and assigns a free
-- * device number for it. Caller does not have to worry about
-- * freeing the allocated resources. When the devices is removed
-- * devres calls tpmm_chip_remove() to do the job.
-+ * device number for it. Must be paired with put_device(&chip->dev).
-  */
--struct tpm_chip *tpmm_chip_alloc(struct device *dev,
--				 const struct tpm_class_ops *ops)
-+struct tpm_chip *tpm_chip_alloc(struct device *dev,
-+				const struct tpm_class_ops *ops)
- {
- 	struct tpm_chip *chip;
- 	int rc;
-@@ -160,8 +160,6 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
- 
- 	device_initialize(&chip->dev);
- 
--	dev_set_drvdata(dev, chip);
--
- 	chip->dev.class = tpm_class;
- 	chip->dev.release = tpm_dev_release;
- 	chip->dev.parent = dev;
-@@ -182,17 +180,40 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
- 	chip->cdev.owner = THIS_MODULE;
- 	chip->cdev.kobj.parent = &chip->dev.kobj;
- 
--	rc = devm_add_action(dev, (void (*)(void *)) put_device, &chip->dev);
-+	return chip;
-+
-+out:
-+	put_device(&chip->dev);
-+	return ERR_PTR(rc);
-+}
-+EXPORT_SYMBOL_GPL(tpm_chip_alloc);
-+
-+/**
-+ * tpmm_chip_alloc() - allocate a new struct tpm_chip instance
-+ * @pdev: parent device to which the chip is associated
-+ * @ops: struct tpm_class_ops instance
+diff --git a/vtpmctrl.c b/vtpmctrl.c
+new file mode 100644
+index 0000000..071be45
+--- /dev/null
++++ b/vtpmctrl.c
+@@ -0,0 +1,163 @@
++/*
++ * vtpmctrl.c -- Linux vTPM driver control program
 + *
-+ * Same as tpm_chip_alloc except devm is used to do the put_device
++ * (c) Copyright IBM Corporation 2015.
++ *
++ * Author: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
++ *
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are
++ * met:
++ *
++ * Redistributions of source code must retain the above copyright notice,
++ * this list of conditions and the following disclaimer.
++ *
++ * Redistributions in binary form must reproduce the above copyright
++ * notice, this list of conditions and the following disclaimer in the
++ * documentation and/or other materials provided with the distribution.
++ *
++ * Neither the names of the IBM Corporation nor the names of its
++ * contributors may be used to endorse or promote products derived from
++ * this software without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 + */
-+struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
-+				 const struct tpm_class_ops *ops)
++
++
++#include <linux/vtpm.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <sys/ioctl.h>
++#include <unistd.h>
++#include <fcntl.h>
++#include <errno.h>
++#include <string.h>
++#include <endian.h>
++#include <stdint.h>
++
++int vtpmctrl_create(void)
 +{
-+	struct tpm_chip *chip;
-+	int rc;
++	int fd, n, option, li, serverfd, nn;
++	struct vtpm_new_dev vtpm_new_dev = {
++		.flags = 0,
++	};
++	char tpmdev[16];
++	unsigned char buffer[4096];
++	const unsigned char tpm_startup_resp[] = {
++		0x00, 0xc4, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00
++	};
++	const unsigned char timeout_req[] = {
++		0x00, 0xc1, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00, 0x65,
++		0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
++		0x01, 0x15
++	};
++	const unsigned char timeout_res[] = {
++		0x00, 0xc4, 0x00, 0x00, 0x00, 0x1e, 0x00, 0x00, 0x00, 0x00,
++		0x00, 0x00, 0x00, 0x00,
++		0x00, 0x01, 0x00, 0x00,
++		0x00, 0x02, 0x00, 0x00,
++		0x00, 0x03, 0x00, 0x00,
++		0x00, 0x04, 0x00, 0x00,
++	};
++	const unsigned char duration_req[] = {
++		0x00, 0xc1, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00, 0x65,
++		0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
++		0x01, 0x20
++	};
++	const unsigned char duration_res[] = {
++		0x00, 0xc4, 0x00, 0x00, 0x00, 0x1a, 0x00, 0x00, 0x00, 0x00,
++		0x00, 0x00, 0x00, 0x00,
++		0x00, 0x01, 0x00, 0x00,
++		0x00, 0x02, 0x00, 0x00,
++		0x00, 0x03, 0x00, 0x00,
++	};
++	uint32_t ordinal;
 +
-+	chip = tpm_chip_alloc(pdev, ops);
-+	if (IS_ERR(chip))
-+		return chip;
++	fd = open("/dev/vtpmx", O_RDWR);
++	if (fd < 0) {
++		perror("Could not open /dev/vtpmx");
++		return 1;
++	}
 +
-+	rc = devm_add_action(pdev, (void (*)(void *)) put_device, &chip->dev);
- 	if (rc) {
- 		put_device(&chip->dev);
- 		return ERR_PTR(rc);
- 	}
- 
--	return chip;
-+	dev_set_drvdata(pdev, chip);
- 
--out:
--	put_device(&chip->dev);
--	return ERR_PTR(rc);
-+	return chip;
- }
- EXPORT_SYMBOL_GPL(tpmm_chip_alloc);
- 
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index c6376b1..5fcf788 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -511,7 +511,9 @@ struct tpm_chip *tpm_chip_find_get(int chip_num);
- __must_check int tpm_try_get_ops(struct tpm_chip *chip);
- void tpm_put_ops(struct tpm_chip *chip);
- 
--extern struct tpm_chip *tpmm_chip_alloc(struct device *dev,
-+extern struct tpm_chip *tpm_chip_alloc(struct device *dev,
-+				       const struct tpm_class_ops *ops);
-+extern struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
- 				       const struct tpm_class_ops *ops);
- extern int tpm_chip_register(struct tpm_chip *chip);
- extern void tpm_chip_unregister(struct tpm_chip *chip);
++	n = ioctl(fd, VTPM_NEW_DEV, &vtpm_new_dev);
++	if (n != 0) {
++		perror("ioctl to create new device failed");
++		close(fd);
++		return 1;
++	}
++
++	snprintf(tpmdev, sizeof(tpmdev), "/dev/tpm%u",
++		 vtpm_new_dev.dev_num);
++
++	serverfd = vtpm_new_dev.fd;
++
++	printf("Created TPM device %s; vTPM device has fd %d, "
++	       "major/minor = %u/%u.\n",
++	       tpmdev, serverfd, vtpm_new_dev.major, vtpm_new_dev.minor);
++
++	close(fd);
++
++	while (1) {
++		n = read(serverfd, buffer, sizeof(buffer));
++		if (n > 0) {
++			printf("Request with %d bytes:\n", n);
++			nn = 0;
++			while (nn < n) {
++				printf("0x%02x ", buffer[nn]);
++				nn++;
++				if (nn % 16 == 0)
++					printf("\n");
++			}
++			printf("\n");
++			ordinal = be32toh(*(uint32_t *)&(buffer[6]));
++			switch (ordinal) {
++			case 0x99:
++				n = write(serverfd, tpm_startup_resp, sizeof(tpm_startup_resp));
++				break;
++			case 0x65:
++				if (!memcmp(timeout_req, buffer, sizeof(timeout_req))) {
++					n = write(serverfd, timeout_res, sizeof(timeout_res));
++
++				} else if (!memcmp(duration_req, buffer, sizeof(duration_req))) {
++					n = write(serverfd, duration_res, sizeof(duration_res));
++				} else {
++					n = write(serverfd, tpm_startup_resp, sizeof(tpm_startup_resp));
++				}
++				break;
++			default:
++				n = write(serverfd, tpm_startup_resp, sizeof(tpm_startup_resp));
++				break;
++			}
++			if (n < 0) {
++				printf("Error from writing the response: %s\n",
++				       strerror(errno));
++				break;
++			} else {
++				printf("Sent response with %d bytes.\n", n);
++			}
++		} else {
++			break;
++		}
++	}
++
++	return 0;
++}
++
++int main(int argc, char *argv[])
++{
++	return vtpmctrl_create();
++}
 -- 
 2.4.3
 
