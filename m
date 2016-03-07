@@ -1,7 +1,8 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v5 07/11] tpm: Introduce TPM_CHIP_FLAG_VIRTUAL
-Date: Mon,  7 Mar 2016 07:25:10 -0500
-Message-ID: <1457353514-2509-8-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v5 03/11] tpm: Provide strong locking for
+	device removal
+Date: Mon,  7 Mar 2016 07:25:06 -0500
+Message-ID: <1457353514-2509-4-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1457353514-2509-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -19,117 +20,313 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Introduce TPM_CHIP_FLAG_VIRTUAL to be used when the chip device has no
-parent device. Also adapt tpm_chip_alloc so that it can be called with
-parent device being NULL.
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 
-Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Add a read/write semaphore around the ops function pointers so
+ops can be set to null when the driver un-registers.
+
+Previously the tpm core expected module locking to be enough to
+ensure that tpm_unregister could not be called during certain times,
+however that hasn't been sufficient for a long time.
+
+Introduce a read/write semaphore around 'ops' so the core can set
+it to null when unregistering. This provides a strong fence around
+the driver callbacks, guaranteeing to the driver that no callbacks
+are running or will run again.
+
+For now the ops_lock is placed very high in the call stack, it could
+be pushed down and made more granular in future if necessary.
+
+Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Reviewed-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm-chip.c  |  9 +++++----
- drivers/char/tpm/tpm-sysfs.c | 15 +++++++++++----
- drivers/char/tpm/tpm.h       |  5 +++--
- 3 files changed, 19 insertions(+), 10 deletions(-)
+ drivers/char/tpm/tpm-chip.c      | 72 ++++++++++++++++++++++++++++++++++++----
+ drivers/char/tpm/tpm-dev.c       | 11 +++++-
+ drivers/char/tpm/tpm-interface.c | 19 ++++++-----
+ drivers/char/tpm/tpm-sysfs.c     |  5 +++
+ drivers/char/tpm/tpm.h           | 14 +++++---
+ 5 files changed, 100 insertions(+), 21 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index f62c851..e4e1fad 100644
+index c21d81c..5793ea1 100644
 --- a/drivers/char/tpm/tpm-chip.c
 +++ b/drivers/char/tpm/tpm-chip.c
-@@ -170,9 +170,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
- 	chip->dev.class = tpm_class;
- 	chip->dev.release = tpm_dev_release;
- 	chip->dev.parent = dev;
--#ifdef CONFIG_ACPI
- 	chip->dev.groups = chip->groups;
--#endif
+@@ -36,10 +36,60 @@ static DEFINE_SPINLOCK(driver_lock);
+ struct class *tpm_class;
+ dev_t tpm_devt;
  
- 	if (chip->dev_num == 0)
- 		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
-@@ -183,6 +181,9 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
- 	if (rc)
- 		goto out;
- 
-+	if (!dev)
-+		chip->flags |= TPM_CHIP_FLAG_VIRTUAL;
+-/*
+- * tpm_chip_find_get - return tpm_chip for a given chip number
+- * @chip_num the device number for the chip
++/**
++ * tpm_try_get_ops() - Get a ref to the tpm_chip
++ * @chip: Chip to ref
++ *
++ * The caller must already have some kind of locking to ensure that chip is
++ * valid. This function will lock the chip so that the ops member can be
++ * accessed safely. The locking prevents tpm_chip_unregister from
++ * completing, so it should not be held for long periods.
++ *
++ * Returns -ERRNO if the chip could not be got.
+  */
++int tpm_try_get_ops(struct tpm_chip *chip)
++{
++	int rc = -EIO;
 +
- 	cdev_init(&chip->cdev, &tpm_fops);
- 	chip->cdev.owner = THIS_MODULE;
- 	chip->cdev.kobj.parent = &chip->dev.kobj;
-@@ -327,7 +328,7 @@ int tpm_chip_register(struct tpm_chip *chip)
++	get_device(&chip->dev);
++
++	down_read(&chip->ops_sem);
++	if (!chip->ops)
++		goto out_lock;
++
++	if (!try_module_get(chip->dev.parent->driver->owner))
++		goto out_lock;
++
++	return 0;
++out_lock:
++	up_read(&chip->ops_sem);
++	put_device(&chip->dev);
++	return rc;
++}
++EXPORT_SYMBOL_GPL(tpm_try_get_ops);
++
++/**
++ * tpm_put_ops() - Release a ref to the tpm_chip
++ * @chip: Chip to put
++ *
++ * This is the opposite pair to tpm_try_get_ops(). After this returns chip may
++ * be kfree'd.
++ */
++void tpm_put_ops(struct tpm_chip *chip)
++{
++	module_put(chip->dev.parent->driver->owner);
++	up_read(&chip->ops_sem);
++	put_device(&chip->dev);
++}
++EXPORT_SYMBOL_GPL(tpm_put_ops);
++
++/**
++ * tpm_chip_find_get() - return tpm_chip for a given chip number
++ * @chip_num: id to find
++ *
++ * The return'd chip has been tpm_try_get_ops'd and must be released via
++ * tpm_put_ops
++  */
+ struct tpm_chip *tpm_chip_find_get(int chip_num)
+ {
+ 	struct tpm_chip *pos, *chip = NULL;
+@@ -49,10 +99,10 @@ struct tpm_chip *tpm_chip_find_get(int chip_num)
+ 		if (chip_num != TPM_ANY_NUM && chip_num != pos->dev_num)
+ 			continue;
  
- 	chip->flags |= TPM_CHIP_FLAG_REGISTERED;
+-		if (try_module_get(pos->dev.parent->driver->owner)) {
++		/* rcu prevents chip from being free'd */
++		if (!tpm_try_get_ops(pos))
+ 			chip = pos;
+-			break;
+-		}
++		break;
+ 	}
+ 	rcu_read_unlock();
+ 	return chip;
+@@ -95,6 +145,7 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
+ 		return ERR_PTR(-ENOMEM);
  
--	if (!(chip->flags & TPM_CHIP_FLAG_TPM2)) {
-+	if (!(chip->flags & (TPM_CHIP_FLAG_TPM2 | TPM_CHIP_FLAG_VIRTUAL))) {
- 		rc = __compat_only_sysfs_link_entry_to_kobj(
- 		    &chip->dev.parent->kobj, &chip->dev.kobj, "ppi");
- 		if (rc && rc != -ENOENT) {
-@@ -361,7 +362,7 @@ void tpm_chip_unregister(struct tpm_chip *chip)
- 	if (!(chip->flags & TPM_CHIP_FLAG_REGISTERED))
- 		return;
+ 	mutex_init(&chip->tpm_mutex);
++	init_rwsem(&chip->ops_sem);
+ 	INIT_LIST_HEAD(&chip->list);
  
--	if (!(chip->flags & TPM_CHIP_FLAG_TPM2))
-+	if (!(chip->flags & (TPM_CHIP_FLAG_TPM2 | TPM_CHIP_FLAG_VIRTUAL)))
- 		sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
+ 	chip->ops = ops;
+@@ -180,6 +231,12 @@ static int tpm_add_char_device(struct tpm_chip *chip)
+ static void tpm_del_char_device(struct tpm_chip *chip)
+ {
+ 	cdev_del(&chip->cdev);
++
++	/* Make the driver uncallable. */
++	down_write(&chip->ops_sem);
++	chip->ops = NULL;
++	up_write(&chip->ops_sem);
++
+ 	device_del(&chip->dev);
+ }
  
- 	tpm1_chip_unregister(chip);
+@@ -265,6 +322,9 @@ EXPORT_SYMBOL_GPL(tpm_chip_register);
+  * Takes the chip first away from the list of available TPM chips and then
+  * cleans up all the resources reserved by tpm_chip_register().
+  *
++ * Once this function returns the driver call backs in 'op's will not be
++ * running and will no longer start.
++ *
+  * NOTE: This function should be only called before deinitializing chip
+  * resources.
+  */
+diff --git a/drivers/char/tpm/tpm-dev.c b/drivers/char/tpm/tpm-dev.c
+index 4009765..f5d4521 100644
+--- a/drivers/char/tpm/tpm-dev.c
++++ b/drivers/char/tpm/tpm-dev.c
+@@ -136,9 +136,18 @@ static ssize_t tpm_write(struct file *file, const char __user *buf,
+ 		return -EFAULT;
+ 	}
+ 
+-	/* atomic tpm command send and result receive */
++	/* atomic tpm command send and result receive. We only hold the ops
++	 * lock during this period so that the tpm can be unregistered even if
++	 * the char dev is held open.
++	 */
++	if (tpm_try_get_ops(priv->chip)) {
++		mutex_unlock(&priv->buffer_mutex);
++		return -EPIPE;
++	}
+ 	out_size = tpm_transmit(priv->chip, priv->data_buffer,
+ 				sizeof(priv->data_buffer));
++
++	tpm_put_ops(priv->chip);
+ 	if (out_size < 0) {
+ 		mutex_unlock(&priv->buffer_mutex);
+ 		return out_size;
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index 483f86f..5caf154 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -700,7 +700,7 @@ int tpm_is_tpm2(u32 chip_num)
+ 
+ 	rc = (chip->flags & TPM_CHIP_FLAG_TPM2) != 0;
+ 
+-	tpm_chip_put(chip);
++	tpm_put_ops(chip);
+ 
+ 	return rc;
+ }
+@@ -729,7 +729,7 @@ int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf)
+ 		rc = tpm2_pcr_read(chip, pcr_idx, res_buf);
+ 	else
+ 		rc = tpm_pcr_read_dev(chip, pcr_idx, res_buf);
+-	tpm_chip_put(chip);
++	tpm_put_ops(chip);
+ 	return rc;
+ }
+ EXPORT_SYMBOL_GPL(tpm_pcr_read);
+@@ -764,7 +764,7 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
+ 
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+ 		rc = tpm2_pcr_extend(chip, pcr_idx, hash);
+-		tpm_chip_put(chip);
++		tpm_put_ops(chip);
+ 		return rc;
+ 	}
+ 
+@@ -774,7 +774,7 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
+ 	rc = tpm_transmit_cmd(chip, &cmd, EXTEND_PCR_RESULT_SIZE,
+ 			      "attempting extend a PCR value");
+ 
+-	tpm_chip_put(chip);
++	tpm_put_ops(chip);
+ 	return rc;
+ }
+ EXPORT_SYMBOL_GPL(tpm_pcr_extend);
+@@ -855,7 +855,7 @@ int tpm_send(u32 chip_num, void *cmd, size_t buflen)
+ 
+ 	rc = tpm_transmit_cmd(chip, cmd, buflen, "attempting tpm_cmd");
+ 
+-	tpm_chip_put(chip);
++	tpm_put_ops(chip);
+ 	return rc;
+ }
+ EXPORT_SYMBOL_GPL(tpm_send);
+@@ -1037,7 +1037,7 @@ int tpm_get_random(u32 chip_num, u8 *out, size_t max)
+ 
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+ 		err = tpm2_get_random(chip, out, max);
+-		tpm_chip_put(chip);
++		tpm_put_ops(chip);
+ 		return err;
+ 	}
+ 
+@@ -1059,7 +1059,7 @@ int tpm_get_random(u32 chip_num, u8 *out, size_t max)
+ 		num_bytes -= recd;
+ 	} while (retries-- && total < max);
+ 
+-	tpm_chip_put(chip);
++	tpm_put_ops(chip);
+ 	return total ? total : -EIO;
+ }
+ EXPORT_SYMBOL_GPL(tpm_get_random);
+@@ -1085,7 +1085,7 @@ int tpm_seal_trusted(u32 chip_num, struct trusted_key_payload *payload,
+ 
+ 	rc = tpm2_seal_trusted(chip, payload, options);
+ 
+-	tpm_chip_put(chip);
++	tpm_put_ops(chip);
+ 	return rc;
+ }
+ EXPORT_SYMBOL_GPL(tpm_seal_trusted);
+@@ -1111,7 +1111,8 @@ int tpm_unseal_trusted(u32 chip_num, struct trusted_key_payload *payload,
+ 
+ 	rc = tpm2_unseal_trusted(chip, payload, options);
+ 
+-	tpm_chip_put(chip);
++	tpm_put_ops(chip);
++
+ 	return rc;
+ }
+ EXPORT_SYMBOL_GPL(tpm_unseal_trusted);
 diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
-index 34e7fc7..9ee0f4d 100644
+index d93736a..34e7fc7 100644
 --- a/drivers/char/tpm/tpm-sysfs.c
 +++ b/drivers/char/tpm/tpm-sysfs.c
-@@ -283,9 +283,15 @@ static const struct attribute_group tpm_dev_group = {
+@@ -295,5 +295,10 @@ int tpm_sysfs_add_device(struct tpm_chip *chip)
  
- int tpm_sysfs_add_device(struct tpm_chip *chip)
+ void tpm_sysfs_del_device(struct tpm_chip *chip)
  {
--	int err;
--	err = sysfs_create_group(&chip->dev.parent->kobj,
--				 &tpm_dev_group);
-+	int err = 0;
-+
-+	if (!(chip->flags & TPM_CHIP_FLAG_VIRTUAL))
-+		err = sysfs_create_group(&chip->dev.parent->kobj,
-+					 &tpm_dev_group);
-+	else {
-+		dev_set_drvdata(&chip->dev, chip);
-+		chip->groups[chip->groups_cnt++] = &tpm_dev_group;
-+	}
- 
- 	if (err)
- 		dev_err(&chip->dev,
-@@ -300,5 +306,6 @@ void tpm_sysfs_del_device(struct tpm_chip *chip)
- 	 * synchronizes this removal so that no callbacks are running or can
- 	 * run again
- 	 */
--	sysfs_remove_group(&chip->dev.parent->kobj, &tpm_dev_group);
-+	if (!(chip->flags & TPM_CHIP_FLAG_VIRTUAL))
-+		sysfs_remove_group(&chip->dev.parent->kobj, &tpm_dev_group);
++	/* The sysfs routines rely on an implicit tpm_try_get_ops, this
++	 * function is called before ops is null'd and the sysfs core
++	 * synchronizes this removal so that no callbacks are running or can
++	 * run again
++	 */
+ 	sysfs_remove_group(&chip->dev.parent->kobj, &tpm_dev_group);
  }
 diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 928b47f..f197eef 100644
+index 5d33ba5..c6376b1 100644
 --- a/drivers/char/tpm/tpm.h
 +++ b/drivers/char/tpm/tpm.h
-@@ -164,6 +164,7 @@ struct tpm_vendor_specific {
- enum tpm_chip_flags {
- 	TPM_CHIP_FLAG_REGISTERED	= BIT(0),
- 	TPM_CHIP_FLAG_TPM2		= BIT(1),
-+	TPM_CHIP_FLAG_VIRTUAL		= BIT(2),
- };
+@@ -170,7 +170,13 @@ struct tpm_chip {
+ 	struct device dev;
+ 	struct cdev cdev;
  
- struct tpm_chip {
-@@ -189,9 +190,9 @@ struct tpm_chip {
++	/* A driver callback under ops cannot be run unless ops_sem is held
++	 * (sometimes implicitly, eg for the sysfs code). ops becomes null
++	 * when the driver is unregistered, see tpm_try_get_ops.
++	 */
++	struct rw_semaphore ops_sem;
+ 	const struct tpm_class_ops *ops;
++
+ 	unsigned int flags;
  
- 	struct dentry **bios_dir;
+ 	int dev_num;		/* /dev/tpm# */
+@@ -195,11 +201,6 @@ struct tpm_chip {
  
--#ifdef CONFIG_ACPI
--	const struct attribute_group *groups[2];
-+	const struct attribute_group *groups[3];
- 	unsigned int groups_cnt;
-+#ifdef CONFIG_ACPI
- 	acpi_handle acpi_dev_handle;
- 	char ppi_version[TPM_PPI_VERSION_LEN + 1];
- #endif /* CONFIG_ACPI */
+ #define to_tpm_chip(d) container_of(d, struct tpm_chip, dev)
+ 
+-static inline void tpm_chip_put(struct tpm_chip *chip)
+-{
+-	module_put(chip->dev.parent->driver->owner);
+-}
+-
+ static inline int tpm_read_index(int base, int index)
+ {
+ 	outb(index, base);
+@@ -507,6 +508,9 @@ extern int wait_for_tpm_stat(struct tpm_chip *, u8, unsigned long,
+ 			     wait_queue_head_t *, bool);
+ 
+ struct tpm_chip *tpm_chip_find_get(int chip_num);
++__must_check int tpm_try_get_ops(struct tpm_chip *chip);
++void tpm_put_ops(struct tpm_chip *chip);
++
+ extern struct tpm_chip *tpmm_chip_alloc(struct device *dev,
+ 				       const struct tpm_class_ops *ops);
+ extern int tpm_chip_register(struct tpm_chip *chip);
 -- 
 2.4.3
 
