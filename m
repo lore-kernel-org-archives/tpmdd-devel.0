@@ -1,17 +1,15 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: ioctl API for vTPM driver
-Date: Tue, 8 Mar 2016 21:40:01 +0200
-Message-ID: <20160308194001.GA27228@intel.com>
-References: <20160306120537.GA22702@intel.com>
-	<20160306121103.GA23480@intel.com>
-	<20160306122816.GA24077@intel.com>
-	<201603081724.u28HOrRB005375@d01av03.pok.ibm.com>
+From: "Hon Ching(Vicky) Lo" <honclo-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH] vTPM: fix missing error handling for
+	suspend operation
+Date: Tue, 08 Mar 2016 15:44:15 -0500
+Message-ID: <1457469855.30806.14.camel@vtpm2014.ibm.com>
+References: <1456899827-14365-1-git-send-email-honclo@linux.vnet.ibm.com>
+	<20160304165537.GA13204@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <201603081724.u28HOrRB005375-CUdSWdNILC7ImUpY6SP3GEEOCMrvLtNR@public.gmane.org>
+In-Reply-To: <20160304165537.GA13204-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,86 +18,133 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: Peter Huewe <PeterHuewe-Mmb7MZpHnFY@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Ashley Lai <ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Mar 08, 2016 at 12:24:10PM -0500, Stefan Berger wrote:
->    Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote on 03/06/2016
->    07:28:16 AM:
+On Fri, 2016-03-04 at 18:55 +0200, Jarkko Sakkinen wrote:
+> On Wed, Mar 02, 2016 at 01:23:47AM -0500, Hon Ching(Vicky) Lo wrote:
+> > ibmvtpm_send_crq in tpm_ibmvtpm_suspend returns errors in a more
+> > granular level than what the existing code does.  This patch adds
+> > the missing CRQ transport event code checks to ensure appropriate
+> > action taken, in the case that ibmvtpm_send_crq returns H_CLOSED.
+> > 
+> > Signed-off-by: Hon Ching(Vicky) Lo <honclo-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> > ---
+> >  drivers/char/tpm/tpm_ibmvtpm.c |   58 +++++++++++++++++++++++++++++++++++++---
+> >  drivers/char/tpm/tpm_ibmvtpm.h |    9 ++++++
+> >  2 files changed, 63 insertions(+), 4 deletions(-)
+> > 
+> > diff --git a/drivers/char/tpm/tpm_ibmvtpm.c b/drivers/char/tpm/tpm_ibmvtpm.c
+> > index 3e6a226..5d984af 100644
+> > --- a/drivers/char/tpm/tpm_ibmvtpm.c
+> > +++ b/drivers/char/tpm/tpm_ibmvtpm.c
+> > @@ -335,17 +335,61 @@ static int tpm_ibmvtpm_suspend(struct device *dev)
+> >  	struct ibmvtpm_crq crq;
+> >  	u64 *buf = (u64 *) &crq;
+> >  	int rc = 0;
+> > +	int sig;
+> >  
+> > -	crq.valid = (u8)IBMVTPM_VALID_CMD;
+> > -	crq.msg = (u8)VTPM_PREPARE_TO_SUSPEND;
+> > +	crq_initialized = 0;
+> > +	crq.valid = (u8) IBMVTPM_VALID_CMD;
+> > +	crq.msg = (u8) VTPM_PREPARE_TO_SUSPEND;
+> >  
+> >  	rc = ibmvtpm_send_crq(ibmvtpm->vdev, cpu_to_be64(buf[0]),
+> >  			      cpu_to_be64(buf[1]));
+> > +
+> > +	if ((rc == H_CLOSED) && (crq.valid == (u8) VALID_TRANSPORT_EVENT)) {
 > 
->    >
->    > On Sun, Mar 06, 2016 at 02:11:03PM +0200, Jarkko Sakkinen wrote:
->    > > On Sun, Mar 06, 2016 at 02:05:37PM +0200, Jarkko Sakkinen wrote:
->    > > > Hi
->    > > >
->    > > > Some follow-up question that have popped up while I've started to
->    > > > write a test program for this feature mainly about ioctl API.  It's
->    > > > better to be extremly cautious here because we will be stuck with
->    this
->    > > > ioctl forever.
->    > > >
->    > > > 1. Why the ioctl name is VTPM_NEW_DEV but the struct name is
->    > > >    vtpm_new_pair? It would be better if they both were either
->    > > >    VTPM_NEW_DEV and vtpm_new_dev or alternatively VTPM_NEW_PAIR
->    > > >    and vtpm_new_pair.
->    > > > 2. Is 'pair' or 'tuple' a better term?
->    > > > 3. Where is the documentation for the ioctl? I don't think I can
->    > > >    merge this to my next branch before it exists.
->    > > > 4. I have forgotten why the major and minor numbers were returned.
->    > > >    My guess is that they were returned so that a container could
->    > > >    replicate the device? This is one reason why documentation is
->    > > >    mandatory.
->    > >
->    > > 5. Is there any particular reason why 'tpm_dev_num' couldn't simply be
->    > >    'dev_num'?
->    >
->    > I think you should still send a patch set after documentation has been
->    > completed and we have addressed these items to the following mailing
->    > lists:
->    >
->    > * linux-kernel
->    > * linux-api
->    > * linux-doc
->    > * tpmdd
->    >
->    > Now these patches have circled only in the tpmdd mailing list which
->    > is not sufficient. I just realized this recently that the relevant
->    > mailing lists were completely missing (while starting to write a
->    > test program).
->    >
->    > For patches up to TPM_CHIP_FLAG_VIRTUAL you could downloaded patches
->    > from my repository before posting the patch set since they include
->    > also my reviewed/tested-by's.
+> What if rc == H_CLOSED and crq.valid != VALID_TRANSPORT_EVENT?
+
+If that's the case, the function will return rc as the execution will
+skip this if block.  
+
 > 
->    I will post a v6 tomorrow again with the 3 vtpm related patches cc'ed to
->    the above mailing lists. V6 addresses the errno's Jason has been
->    suggesting.
+> > +		if (crq.msg == (u8) PARTNER_PARTITION_SUSPENDED) {
+> > +			/* The "partner partition suspended" transport
+> > +			 * event disables the associated CRQ such that
+> > +			 * any H_SEND_CRQ hcall() to the associated CRQ
+> > +			 * returns H_Closed until CRQ has been explicitly
+> > +			 * enabled using the H_ENABLED_CRQ hcall.
+> > +			 */
+> > +			return H_SUCCESS;
+> 
+> I'm having trouble to understand when the suspend happens through this
+> route and when you just get H_SUCCESS from ibmvtpm_send_crq(). It
+> seems that there are two ways how suspend can happen.
+> 
+> I don't understand the big picture.
 
-I've used today improving this:
+You're right.  This is not a valid case.  As I revisited it, I realized
+that "partner partition suspended" transport event was handled in the 
+rtas calls; vtpm doesn't have to take that into account.  I'll get rid
+of this if-block.
 
-git://git.infradead.org/users/jjs/buildroot-tpmdd.git
+So, upon receiving H_CLOSED only the following two events are expected
+to be handled: 1) vtpm has terminated fatally. 2) partner partition
+preregistered CRQ.
 
-By doing
 
-make tpmdd_defconfig
-make
+> > +		} else if (crq.msg == (u8) PARTNER_PARTITION_FAILED) {
+> > +			dev_err(ibmvtpm->dev,
+> > +				"vtpm has terminated fatally; reboot to reinstate a trusted state.\n");
+> > +		} else if (crq.msg == (u8) PARTNER_PARTITION_DEREG_CRQ) {
+> > +			/* The vtpm is in the process of being reloaded by
+> > +			 * firmware and has de-registered CRQ.  The client
+> > +			 * must wait for the CRQ INITIALIZATION message and
+> > +			 * respond and must resubmit suspend message.
+> > +			 */
+> > +			sig =
+> > +			    wait_event_interruptible(ibmvtpm->wq,
+> > +						     crq_initialized == 1);
+> > +			if (sig)
+> > +				return -EINTR;
+> > +
+> > +			if (suspend_again_count < 1) {
+> > +				suspend_again_count++;
+> > +				goto suspendagain;
+> > +			}
+> > +		} else
+> > +			;
+> > +	}
+> > +
+> >  	if (rc != H_SUCCESS)
+> > -		dev_err(ibmvtpm->dev,
+> > -			"tpm_ibmvtpm_suspend failed rc=%d\n", rc);
+> > +		dev_err(ibmvtpm->dev, "tpm_ibmvtpm_suspend failed rc=%d\n", rc);
+> >  
+> >  	return rc;
+> > +
+> > +suspendagain:
+> > +	rc = tpm_ibmvtpm_suspend(ibmvtpm->dev);
+> > +	suspend_again_count = 0;
+> > +
+> > +	if (rc != H_SUCCESS)
+> > +		dev_err(ibmvtpm->dev, "tpm_ibmvtpm_suspend failed rc=%d\n", rc);
+> > +
+> > +	return rc;
+> > +
+> 
+> Get rid of this horrible looking tail recursion thing.
+> 
+> What the heck is suspend_again_count and why it can be module scope
+> variable? You could use a local variable instead if you would iterate
+> with a loop.
+> 
 
-You get a file called 'tpmdd.img' that you can flash to a USB stick. The
-image is both legacy and UEFI bootable. The kernel is my latest master
-and perf is included for tracing.
+The reason for the 'goto' statement and the suspend_again_count was to
+prevent the suspend function recurse again.  In the case if vtpm is in
+the process of being reloaded by firmware, we want to wait for the CRQ
+INITIALIZATION and resubmit suspend message i.e. recurse only once.
 
-The compiled kernel has vtpm enabled.
 
-There's a scripts called board/tpmdd/image.sh that does the image
-generation magic. I've only tested it in Ubuntu environment.
 
-As the next step I'll finish my test script for vtpm and use it and
-TPM 2.0 simulator to test your functionality.
+> /Jarkko
+> 
 
->       Stefan
 
-/Jarkko
 
 ------------------------------------------------------------------------------
 Transform Data into Opportunity.
