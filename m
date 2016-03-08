@@ -1,18 +1,13 @@
 From: "Stefan Berger" <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
 Subject: Re: ioctl API for vTPM driver
-Date: Mon, 7 Mar 2016 17:24:03 -0500
-Message-ID: <201603072224.u27MO9v0027911@d01av04.pok.ibm.com>
-References: <20160306120537.GA22702@intel.com>
-	<20160306121103.GA23480@intel.com>
+Date: Tue, 8 Mar 2016 12:24:10 -0500
+Message-ID: <201603081724.u28HOtXm023400@d03av04.boulder.ibm.com>
+References: <20160306120537.GA22702@intel.com><20160306121103.GA23480@intel.com>
 	<20160306122816.GA24077@intel.com>
-	<201603070040.u270eq7U019952@d01av03.pok.ibm.com>
-	<20160307203206.GA4303@obsidianresearch.com>
-	<201603072115.u27LFcMK001519@d01av01.pok.ibm.com>
-	<20160307213453.GA4630@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: multipart/mixed; boundary="===============2218340363459344895=="
+Content-Type: multipart/mixed; boundary="===============1991367040909674134=="
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160307213453.GA4630-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <20160306122816.GA24077-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,116 +16,130 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
 
---===============2218340363459344895==
+--===============1991367040909674134==
 Content-Type: multipart/alternative;
-	boundary="=_alternative 007B0D7785257F6F_="
+	boundary="=_alternative 005F991985257F70_="
 
 
---=_alternative 007B0D7785257F6F_=
+--=_alternative 005F991985257F70_=
 Content-Transfer-Encoding: quoted-printable
 Content-Type: text/plain; charset="US-ASCII"
 
-Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote on 03/07/2016=20
-04:34:53 PM:
+Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote on 03/06/2016=20
+07:28:16 AM:
 
-> Subject: Re: [tpmdd-devel] ioctl API for vTPM driver
->=20
-> On Mon, Mar 07, 2016 at 04:12:45PM -0500, Stefan Berger wrote:
-> >    Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote on=20
-03/07/2016
-> >    03:32:06 PM:
-> >    >
-> >    > On Sun, Mar 06, 2016 at 07:40:40PM -0500, Stefan Berger wrote:
-> >    >
-> >    > >    If you have suggestions or comments, let me know.
-> >    > >    I adjusted the code to reflect the ENOSYS (previously=20
-EINVAL) in
-> >    case
-> >    > >    of unsupported flags or unsupported ioctls.
-> >    >
-> >    > Please don't use ENOSYS, the desire is that is only used by
-> >    > systemcalls.
->=20
-> >    Ok, found alternatives: ENOTSUPP for the flag ENOIOCTLCMD for the
-> >    unsupported ioctl ?
->=20
-> ENOIOCTLCMD might be OK, just make sure it gets converted to ENOTTY:
->=20
-> 390  * Is it an unrecognized ioctl? The correct returns are either
-> 391  * ENOTTY (final) or ENOIOCTLCMD ("I don't know this one, try a
-> 392  * fallback"). ENOIOCTLCMD gets turned into ENOTTY by the ioctl
-> 393  * code before returning.
->=20
-> ENOTSUPP is for NFS internal use only, can't be exported to user
-> space.
-
-It's found in more then 300 files using that errno...
-
-http://lxr.free-electrons.com/ident?i=3DENOTSUPP
 
 >=20
-> Try EOPNOTSUPP
+> On Sun, Mar 06, 2016 at 02:11:03PM +0200, Jarkko Sakkinen wrote:
+> > On Sun, Mar 06, 2016 at 02:05:37PM +0200, Jarkko Sakkinen wrote:
+> > > Hi
+> > >=20
+> > > Some follow-up question that have popped up while I've started to
+> > > write a test program for this feature mainly about ioctl API.  It's
+> > > better to be extremly cautious here because we will be stuck with=20
+this
+> > > ioctl forever.
+> > >=20
+> > > 1. Why the ioctl name is VTPM=5FNEW=5FDEV but the struct name is
+> > >    vtpm=5Fnew=5Fpair? It would be better if they both were either
+> > >    VTPM=5FNEW=5FDEV and vtpm=5Fnew=5Fdev or alternatively VTPM=5FNEW=
+=5FPAIR
+> > >    and vtpm=5Fnew=5Fpair.
+> > > 2. Is 'pair' or 'tuple' a better term?
+> > > 3. Where is the documentation for the ioctl? I don't think I can
+> > >    merge this to my next branch before it exists.
+> > > 4. I have forgotten why the major and minor numbers were returned.
+> > >    My guess is that they were returned so that a container could
+> > >    replicate the device? This is one reason why documentation is
+> > >    mandatory.
+> >=20
+> > 5. Is there any particular reason why 'tpm=5Fdev=5Fnum' couldn't simply=
+ be
+> >    'dev=5Fnum'?
+>=20
+> I think you should still send a patch set after documentation has been
+> completed and we have addressed these items to the following mailing
+> lists:
+>=20
+> * linux-kernel
+> * linux-api
+> * linux-doc
+> * tpmdd
+>=20
+> Now these patches have circled only in the tpmdd mailing list which
+> is not sufficient. I just realized this recently that the relevant
+> mailing lists were completely missing (while starting to write a
+> test program).
+>=20
+> For patches up to TPM=5FCHIP=5FFLAG=5FVIRTUAL you could downloaded patches
+> from my repository before posting the patch set since they include
+> also my reviewed/tested-by's.
 
-Ok, I will use that one.
+I will post a v6 tomorrow again with the 3 vtpm related patches cc'ed to=20
+the above mailing lists. V6 addresses the errno's Jason has been=20
+suggesting.
 
    Stefan
 
->=20
-> Jason
->=20
 
 
-
---=_alternative 007B0D7785257F6F_=
+--=_alternative 005F991985257F70_=
 Content-Transfer-Encoding: quoted-printable
 Content-Type: text/html; charset="US-ASCII"
 
-<tt><font size=3D2>Jason Gunthorpe &lt;jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org&gt;
-wrote on 03/07/2016 04:34:53 PM:<br><br>&gt; Subject: Re: [tpmdd-devel] ioc=
-tl API for vTPM driver</font></tt><br><tt><font size=3D2>&gt; <br>&gt; On M=
-on, Mar 07, 2016 at 04:12:45PM -0500, Stefan Berger wrote:<br>&gt; &gt; &nb=
-sp; &nbsp;Jason Gunthorpe &lt;jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org&gt;
-wrote on 03/07/2016<br>&gt; &gt; &nbsp; &nbsp;03:32:06 PM:<br>&gt; &gt; &nb=
-sp; &nbsp;&gt;<br>&gt; &gt; &nbsp; &nbsp;&gt; On Sun, Mar 06, 2016 at 07:40=
-:40PM -0500, Stefan
-Berger wrote:<br>&gt; &gt; &nbsp; &nbsp;&gt;<br>&gt; &gt; &nbsp; &nbsp;&gt;=
- &gt; &nbsp; &nbsp;If you have suggestions or
-comments, let me know.<br>&gt; &gt; &nbsp; &nbsp;&gt; &gt; &nbsp; &nbsp;I a=
-djusted the code to reflect
-the ENOSYS (previously EINVAL) in<br>&gt; &gt; &nbsp; &nbsp;case<br>&gt; &g=
-t; &nbsp; &nbsp;&gt; &gt; &nbsp; &nbsp;of unsupported flags or unsupported
-ioctls.<br>&gt; &gt; &nbsp; &nbsp;&gt;<br>&gt; &gt; &nbsp; &nbsp;&gt; Pleas=
-e don't use ENOSYS, the desire is that
-is only used by<br>&gt; &gt; &nbsp; &nbsp;&gt; systemcalls.<br>&gt; <br>&gt=
-; &gt; &nbsp; &nbsp;Ok, found alternatives: ENOTSUPP for the flag ENOIOCTLC=
-MD
-for the<br>&gt; &gt; &nbsp; &nbsp;unsupported ioctl ?<br>&gt; <br>&gt; ENOI=
-OCTLCMD might be OK, just make sure it gets converted to ENOTTY:<br>&gt; <b=
-r>&gt; 390 &nbsp;* Is it an unrecognized ioctl? The correct returns are eit=
-her<br>&gt; 391 &nbsp;* ENOTTY (final) or ENOIOCTLCMD (&quot;I don't know t=
-his
-one, try a<br>&gt; 392 &nbsp;* fallback&quot;). ENOIOCTLCMD gets turned int=
-o ENOTTY by
-the ioctl<br>&gt; 393 &nbsp;* code before returning.<br>&gt; <br>&gt; ENOTS=
-UPP is for NFS internal use only, can't be exported to user<br>&gt; space.<=
-/font></tt><br><br><tt><font size=3D2>It's found in more then 300 files usi=
-ng that errno...</font></tt><br><br><a href=3D"http://lxr.free-electrons.co=
-m/ident?i=3DENOTSUPP"><tt><font size=3D2 color=3Dblue>http://lxr.free-elect=
-rons.com/ident?i=3DENOTSUPP</font></tt></a><br><tt><font size=3D2><br>&gt; =
-<br>&gt; Try EOPNOTSUPP</font></tt><br><br><tt><font size=3D2>Ok, I will us=
-e that one.</font></tt><br><br><tt><font size=3D2>&nbsp; &nbsp;Stefan</font=
-></tt><br><tt><font size=3D2><br>&gt; <br>&gt; Jason<br>&gt; <br></font></t=
-t><BR>
---=_alternative 007B0D7785257F6F_=--
+<tt><font size=3D2>Jarkko Sakkinen &lt;jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org&gt;
+wrote on 03/06/2016 07:28:16 AM:<br><br></font></tt><br><tt><font size=3D2>=
+&gt; <br>&gt; On Sun, Mar 06, 2016 at 02:11:03PM +0200, Jarkko Sakkinen wro=
+te:<br>&gt; &gt; On Sun, Mar 06, 2016 at 02:05:37PM +0200, Jarkko Sakkinen =
+wrote:<br>&gt; &gt; &gt; Hi<br>&gt; &gt; &gt; <br>&gt; &gt; &gt; Some follo=
+w-up question that have popped up while I've started
+to<br>&gt; &gt; &gt; write a test program for this feature mainly about ioc=
+tl
+API. &nbsp;It's<br>&gt; &gt; &gt; better to be extremly cautious here becau=
+se we will be stuck
+with this<br>&gt; &gt; &gt; ioctl forever.<br>&gt; &gt; &gt; <br>&gt; &gt; =
+&gt; 1. Why the ioctl name is VTPM=5FNEW=5FDEV but the struct name
+is<br>&gt; &gt; &gt; &nbsp; &nbsp;vtpm=5Fnew=5Fpair? It would be better if =
+they both
+were either<br>&gt; &gt; &gt; &nbsp; &nbsp;VTPM=5FNEW=5FDEV and vtpm=5Fnew=
+=5Fdev or alternatively
+VTPM=5FNEW=5FPAIR<br>&gt; &gt; &gt; &nbsp; &nbsp;and vtpm=5Fnew=5Fpair.<br>=
+&gt; &gt; &gt; 2. Is 'pair' or 'tuple' a better term?<br>&gt; &gt; &gt; 3. =
+Where is the documentation for the ioctl? I don't think
+I can<br>&gt; &gt; &gt; &nbsp; &nbsp;merge this to my next branch before it=
+ exists.<br>&gt; &gt; &gt; 4. I have forgotten why the major and minor numb=
+ers were
+returned.<br>&gt; &gt; &gt; &nbsp; &nbsp;My guess is that they were returne=
+d so that
+a container could<br>&gt; &gt; &gt; &nbsp; &nbsp;replicate the device? This=
+ is one reason why
+documentation is<br>&gt; &gt; &gt; &nbsp; &nbsp;mandatory.<br>&gt; &gt; <br=
+>&gt; &gt; 5. Is there any particular reason why 'tpm=5Fdev=5Fnum' couldn't
+simply be<br>&gt; &gt; &nbsp; &nbsp;'dev=5Fnum'?<br>&gt; <br>&gt; I think y=
+ou should still send a patch set after documentation has
+been<br>&gt; completed and we have addressed these items to the following m=
+ailing<br>&gt; lists:<br>&gt; <br>&gt; * linux-kernel<br>&gt; * linux-api<b=
+r>&gt; * linux-doc<br>&gt; * tpmdd<br>&gt; <br>&gt; Now these patches have =
+circled only in the tpmdd mailing list which<br>&gt; is not sufficient. I j=
+ust realized this recently that the relevant<br>&gt; mailing lists were com=
+pletely missing (while starting to write a<br>&gt; test program).<br>&gt; <=
+br>&gt; For patches up to TPM=5FCHIP=5FFLAG=5FVIRTUAL you could downloaded =
+patches<br>&gt; from my repository before posting the patch set since they =
+include<br>&gt; also my reviewed/tested-by's.</font></tt><br><br><tt><font =
+size=3D2>I will post a v6 tomorrow again with the 3 vtpm related
+patches cc'ed to the above mailing lists. V6 addresses the errno's Jason
+has been suggesting.</font></tt><br><br><tt><font size=3D2>&nbsp; &nbsp;Ste=
+fan</font></tt><br><BR>
+--=_alternative 005F991985257F70_=--
 
 
 
---===============2218340363459344895==
+--===============1991367040909674134==
 Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
@@ -142,7 +151,7 @@ Accelerate data analysis in your applications with
 Intel Data Analytics Acceleration Library.
 Click to learn more.
 http://makebettercode.com/inteldaal-eval
---===============2218340363459344895==
+--===============1991367040909674134==
 Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
@@ -153,4 +162,4 @@ tpmdd-devel mailing list
 tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
 
---===============2218340363459344895==--
+--===============1991367040909674134==--
