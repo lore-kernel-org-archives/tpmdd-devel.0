@@ -1,11 +1,14 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v6 00/11] Multi-instance vTPM driver
-Date: Wed,  9 Mar 2016 12:39:19 -0500
-Message-ID: <1457545170-30120-1-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v6 06/11] tpm: Replace device number bitmap
+	with IDR
+Date: Wed,  9 Mar 2016 12:39:25 -0500
+Message-ID: <1457545170-30120-7-git-send-email-stefanb@linux.vnet.ibm.com>
+References: <1457545170-30120-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1457545170-30120-1-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,73 +20,223 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The following series of patches implements a multi-instance vTPM driver
-that can dynamically create TPM 'server' and client device pairs.
+Replace the device number bitmap with IDR. Extend the number of devices we
+can create to 64k.
+Since an IDR allows us to associate a pointer with an ID, we use this now
+to rewrite tpm_chip_find_get() to simply look up the chip pointer by the
+given device ID.
 
-Using an ioctl on the provided /dev/vtpmx, a client-side vTPM device
-and a server side file descriptor is created. The file descriptor must
-be passed to a TPM emulator. The device driver will initialize the
-emulated TPM using TPM 1.2 or TPM 2 startup commands and it will read
-the command durations from the device in case of a TPM 1.2. The choice
-of emulated TPM device (1.2 or 2) must be provided with a flag in
-the ioctl.
+Protect the IDR calls with a mutex.
 
-The driver is based on James Morris's 'next' branch and uses several
-recently posted patches from Jason and Jarkko.
+Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+---
+ drivers/char/tpm/tpm-chip.c      | 84 +++++++++++++++++++++-------------------
+ drivers/char/tpm/tpm-interface.c |  1 +
+ drivers/char/tpm/tpm.h           |  5 +--
+ 3 files changed, 48 insertions(+), 42 deletions(-)
 
-   Stefan
-
-v5->v6:
- - Adapted errno's for unsupported flags and ioctls following Jason's comments
-
-v4->v5:
- - Introduced different error codes for unsupported flags and ioctls
- - Added documentation patch
-
-
-Jason Gunthorpe (4):
-  tpm: Get rid of chip->pdev
-  tpm: Get rid of devname
-  tpm: Provide strong locking for device removal
-  tpm: Split out the devm stuff from tpmm_chip_alloc
-
-Stefan Berger (7):
-  tpm: Get rid of module locking
-  tpm: Replace device number bitmap with IDR
-  tpm: Introduce TPM_CHIP_FLAG_VIRTUAL
-  tpm: Driver for supporting multiple emulated TPMs
-  tpm: Initialize TPM and get durations and timeouts
-  tpm: Add documentation for the tpm_vtpm device driver
-  A test program for vTPM device creation
-
- Documentation/tpm/tpm_vtpm.txt      |  54 +++
- drivers/char/tpm/Kconfig            |  10 +
- drivers/char/tpm/Makefile           |   1 +
- drivers/char/tpm/tpm-chip.c         | 221 +++++++++----
- drivers/char/tpm/tpm-dev.c          |  15 +-
- drivers/char/tpm/tpm-interface.c    |  50 +--
- drivers/char/tpm/tpm-sysfs.c        |  22 +-
- drivers/char/tpm/tpm.h              |  30 +-
- drivers/char/tpm/tpm2-cmd.c         |   8 +-
- drivers/char/tpm/tpm_atmel.c        |  14 +-
- drivers/char/tpm/tpm_eventlog.c     |   2 +-
- drivers/char/tpm/tpm_eventlog.h     |   2 +-
- drivers/char/tpm/tpm_i2c_atmel.c    |  16 +-
- drivers/char/tpm/tpm_i2c_infineon.c |   6 +-
- drivers/char/tpm/tpm_i2c_nuvoton.c  |  24 +-
- drivers/char/tpm/tpm_infineon.c     |  22 +-
- drivers/char/tpm/tpm_nsc.c          |  20 +-
- drivers/char/tpm/tpm_tis.c          |  18 +-
- drivers/char/tpm/tpm_vtpm.c         | 642 ++++++++++++++++++++++++++++++++++++
- include/uapi/linux/Kbuild           |   1 +
- include/uapi/linux/vtpm.h           |  41 +++
- vtpmctrl.c                          | 163 +++++++++
- 22 files changed, 1203 insertions(+), 179 deletions(-)
- create mode 100644 Documentation/tpm/tpm_vtpm.txt
- create mode 100644 drivers/char/tpm/tpm_vtpm.c
- create mode 100644 include/uapi/linux/vtpm.h
- create mode 100644 vtpmctrl.c
-
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 5880377..f62c851 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -29,9 +29,8 @@
+ #include "tpm.h"
+ #include "tpm_eventlog.h"
+ 
+-static DECLARE_BITMAP(dev_mask, TPM_NUM_DEVICES);
+-static LIST_HEAD(tpm_chip_list);
+-static DEFINE_SPINLOCK(driver_lock);
++DEFINE_IDR(dev_nums_idr);
++static DEFINE_MUTEX(idr_lock);
+ 
+ struct class *tpm_class;
+ dev_t tpm_devt;
+@@ -88,20 +87,30 @@ EXPORT_SYMBOL_GPL(tpm_put_ops);
+   */
+ struct tpm_chip *tpm_chip_find_get(int chip_num)
+ {
+-	struct tpm_chip *pos, *chip = NULL;
++	struct tpm_chip *chip, *res = NULL;
++	int chip_prev;
++
++	mutex_lock(&idr_lock);
++
++	if (chip_num == TPM_ANY_NUM) {
++		chip_num = 0;
++		do {
++			chip_prev = chip_num;
++			chip = idr_get_next(&dev_nums_idr, &chip_num);
++			if (chip && !tpm_try_get_ops(chip)) {
++				res = chip;
++				break;
++			}
++		} while (chip_prev != chip_num);
++	} else {
++		chip = idr_find_slowpath(&dev_nums_idr, chip_num);
++		if (chip && !tpm_try_get_ops(chip))
++			res = chip;
++	}
+ 
+-	rcu_read_lock();
+-	list_for_each_entry_rcu(pos, &tpm_chip_list, list) {
+-		if (chip_num != TPM_ANY_NUM && chip_num != pos->dev_num)
+-			continue;
++	mutex_unlock(&idr_lock);
+ 
+-		/* rcu prevents chip from being free'd */
+-		if (!tpm_try_get_ops(pos))
+-			chip = pos;
+-		break;
+-	}
+-	rcu_read_unlock();
+-	return chip;
++	return res;
+ }
+ 
+ /**
+@@ -114,9 +123,10 @@ static void tpm_dev_release(struct device *dev)
+ {
+ 	struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
+ 
+-	spin_lock(&driver_lock);
+-	clear_bit(chip->dev_num, dev_mask);
+-	spin_unlock(&driver_lock);
++	mutex_lock(&idr_lock);
++	idr_remove(&dev_nums_idr, chip->dev_num);
++	mutex_unlock(&idr_lock);
++
+ 	kfree(chip);
+ }
+ 
+@@ -142,21 +152,18 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
+ 
+ 	mutex_init(&chip->tpm_mutex);
+ 	init_rwsem(&chip->ops_sem);
+-	INIT_LIST_HEAD(&chip->list);
+ 
+ 	chip->ops = ops;
+ 
+-	spin_lock(&driver_lock);
+-	chip->dev_num = find_first_zero_bit(dev_mask, TPM_NUM_DEVICES);
+-	spin_unlock(&driver_lock);
+-
+-	if (chip->dev_num >= TPM_NUM_DEVICES) {
++	mutex_lock(&idr_lock);
++	rc = idr_alloc(&dev_nums_idr, NULL, 0, TPM_NUM_DEVICES, GFP_KERNEL);
++	mutex_unlock(&idr_lock);
++	if (rc < 0) {
+ 		dev_err(dev, "No available tpm device numbers\n");
+ 		kfree(chip);
+-		return ERR_PTR(-ENOMEM);
++		return ERR_PTR(rc);
+ 	}
+-
+-	set_bit(chip->dev_num, dev_mask);
++	chip->dev_num = rc;
+ 
+ 	device_initialize(&chip->dev);
+ 
+@@ -242,19 +249,28 @@ static int tpm_add_char_device(struct tpm_chip *chip)
+ 		return rc;
+ 	}
+ 
++	/* Make the chip available. */
++	mutex_lock(&idr_lock);
++	idr_replace(&dev_nums_idr, chip, chip->dev_num);
++	mutex_unlock(&idr_lock);
++
+ 	return rc;
+ }
+ 
+ static void tpm_del_char_device(struct tpm_chip *chip)
+ {
+ 	cdev_del(&chip->cdev);
++	device_del(&chip->dev);
++
++	/* Make the chip unavailable. */
++	mutex_lock(&idr_lock);
++	idr_replace(&dev_nums_idr, NULL, chip->dev_num);
++	mutex_unlock(&idr_lock);
+ 
+ 	/* Make the driver uncallable. */
+ 	down_write(&chip->ops_sem);
+ 	chip->ops = NULL;
+ 	up_write(&chip->ops_sem);
+-
+-	device_del(&chip->dev);
+ }
+ 
+ static int tpm1_chip_register(struct tpm_chip *chip)
+@@ -309,11 +325,6 @@ int tpm_chip_register(struct tpm_chip *chip)
+ 	if (rc)
+ 		goto out_err;
+ 
+-	/* Make the chip available. */
+-	spin_lock(&driver_lock);
+-	list_add_tail_rcu(&chip->list, &tpm_chip_list);
+-	spin_unlock(&driver_lock);
+-
+ 	chip->flags |= TPM_CHIP_FLAG_REGISTERED;
+ 
+ 	if (!(chip->flags & TPM_CHIP_FLAG_TPM2)) {
+@@ -350,11 +361,6 @@ void tpm_chip_unregister(struct tpm_chip *chip)
+ 	if (!(chip->flags & TPM_CHIP_FLAG_REGISTERED))
+ 		return;
+ 
+-	spin_lock(&driver_lock);
+-	list_del_rcu(&chip->list);
+-	spin_unlock(&driver_lock);
+-	synchronize_rcu();
+-
+ 	if (!(chip->flags & TPM_CHIP_FLAG_TPM2))
+ 		sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
+ 
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index 5caf154..5397b64 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -1139,6 +1139,7 @@ static int __init tpm_init(void)
+ 
+ static void __exit tpm_exit(void)
+ {
++	idr_destroy(&dev_nums_idr);
+ 	class_destroy(tpm_class);
+ 	unregister_chrdev_region(tpm_devt, TPM_NUM_DEVICES);
+ }
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 5fcf788..928b47f 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -34,7 +34,7 @@
+ enum tpm_const {
+ 	TPM_MINOR = 224,	/* officially assigned */
+ 	TPM_BUFSIZE = 4096,
+-	TPM_NUM_DEVICES = 256,
++	TPM_NUM_DEVICES = 65536,
+ 	TPM_RETRY = 50,		/* 5 seconds */
+ };
+ 
+@@ -195,8 +195,6 @@ struct tpm_chip {
+ 	acpi_handle acpi_dev_handle;
+ 	char ppi_version[TPM_PPI_VERSION_LEN + 1];
+ #endif /* CONFIG_ACPI */
+-
+-	struct list_head list;
+ };
+ 
+ #define to_tpm_chip(d) container_of(d, struct tpm_chip, dev)
+@@ -492,6 +490,7 @@ static inline void tpm_buf_append_u32(struct tpm_buf *buf, const u32 value)
+ extern struct class *tpm_class;
+ extern dev_t tpm_devt;
+ extern const struct file_operations tpm_fops;
++extern struct idr dev_nums_idr;
+ 
+ ssize_t	tpm_getcap(struct device *, __be32, cap_t *, const char *);
+ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
 -- 
 2.4.3
 
