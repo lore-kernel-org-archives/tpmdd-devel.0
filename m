@@ -1,14 +1,16 @@
-From: "Stefan Berger" <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH v6 08/11] tpm: Driver for
- supporting	multiple emulated TPMs
-Date: Wed, 9 Mar 2016 13:44:29 -0500
-Message-ID: <201603091844.u29IiWPo016087@d03av01.boulder.ibm.com>
-References: <1457545170-30120-1-git-send-email-stefanb@linux.vnet.ibm.com><1457545170-30120-9-git-send-email-stefanb@linux.vnet.ibm.com>
-	<CALCETrXDfHRdFnqK15o1yD8106sn4e6Susr9j7=GGi4sb-p0qQ@mail.gmail.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v6 06/11] tpm: Replace device number
+	bitmap with IDR
+Date: Thu, 10 Mar 2016 15:21:56 +0200
+Message-ID: <20160310132156.GA16320@intel.com>
+References: <1457545170-30120-1-git-send-email-stefanb@linux.vnet.ibm.com>
+	<1457545170-30120-7-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: multipart/mixed; boundary="===============8362569175340286854=="
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <CALCETrXDfHRdFnqK15o1yD8106sn4e6Susr9j7=GGi4sb-p0qQ-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <1457545170-30120-7-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,104 +19,247 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Andy Lutomirski <luto-kltTT9wpgjJwATOyAt5JVQ@public.gmane.org>
-Cc: Linux API <linux-api-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, "linux-doc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-doc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+Hi Stefan
 
---===============8362569175340286854==
-Content-Type: multipart/alternative;
-	boundary="=_alternative 0066F33385257F71_="
+On Wed, Mar 09, 2016 at 12:39:25PM -0500, Stefan Berger wrote:
+> Replace the device number bitmap with IDR. Extend the number of devices we
+> can create to 64k.
+> Since an IDR allows us to associate a pointer with an ID, we use this now
+> to rewrite tpm_chip_find_get() to simply look up the chip pointer by the
+> given device ID.
+> 
+> Protect the IDR calls with a mutex.
 
+Could you make a separate patch set of first six patches and CC them to
+linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org and linux-security-module-u79uwXL29TaiAVqoAR/hOA@public.gmane.org
+They are obvious improvements and could be soon merged to 'next' but
+they do need more wider review first.
 
---=_alternative 0066F33385257F71_=
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/plain; charset="US-ASCII"
+This also make reviewers easier as the first six patches kind of form
+separate entity from remaining four patches.
 
-Andy Lutomirski <luto-kltTT9wpgjJwATOyAt5JVQ@public.gmane.org> wrote on 03/09/2016 01:01:05 PM:
+For the patch that takes the module lock away it would be a good idea
+to better document the behavioral change.
 
-
->=20
-> On Wed, Mar 9, 2016 at 9:39 AM, Stefan Berger
-> <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org> wrote:
-> > This patch implements a driver for supporting multiple emulated TPMs=20
-in a
-> > system.
-> >
-> > The driver implements a device /dev/vtpmx that is used to created
-> > a client device pair /dev/tpmX (e.g., /dev/tpm10) and a server side=20
-that
-> > is accessed using a file descriptor returned by an ioctl.
-> > The device /dev/tpmX is the usual TPM device created by the core TPM
-> > driver. Applications or kernel subsystems can send TPM commands to it
-> > and the corresponding server-side file descriptor receives these
-> > commands and delivers them to an emulated TPM.
->=20
-> Nifty!
->=20
-> Is anyone considering writing a modification or replacement of
-> trousers that creates claims the real tpm and exposes a vtpm that
-> handles multiplexing internally?  Does the vtpm driver intelligently
-> support multiple simultaneous clients?
-
-The vtpm driver allows to use an independent trousers instance in each=20
-container.
-
-Using the VTPM=5FNEW=5FDEV ioctl the container mgmt. stack can create a=20
-/dev/tpmX (X=3D0,1,2,...) device and a file descriptor. The file descriptor=
-=20
-is passed to a vTPM instance, the /dev/tpmX is moved into the container,=20
-meaning a device with the same major/minor numbers is created in the=20
-container. This then allows each container to talk to an independent vTPM. =
-
-The vTPM can either be 1.2 or 2.
-
-   Stefan
+/Jarkko
 
 
-
---=_alternative 0066F33385257F71_=
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/html; charset="US-ASCII"
-
-<tt><font size=3D2>Andy Lutomirski &lt;luto-kltTT9wpgjJwATOyAt5JVQ@public.gmane.org&gt; wrote on
-03/09/2016 01:01:05 PM:<br><br></font></tt><br><tt><font size=3D2>&gt; <br>=
-&gt; On Wed, Mar 9, 2016 at 9:39 AM, Stefan Berger<br>&gt; &lt;stefanb@linu=
-x.vnet.ibm.com&gt; wrote:<br>&gt; &gt; This patch implements a driver for s=
-upporting multiple emulated
-TPMs in a<br>&gt; &gt; system.<br>&gt; &gt;<br>&gt; &gt; The driver impleme=
-nts a device /dev/vtpmx that is used to created<br>&gt; &gt; a client devic=
-e pair /dev/tpmX (e.g., /dev/tpm10) and a server
-side that<br>&gt; &gt; is accessed using a file descriptor returned by an i=
-octl.<br>&gt; &gt; The device /dev/tpmX is the usual TPM device created by =
-the core
-TPM<br>&gt; &gt; driver. Applications or kernel subsystems can send TPM com=
-mands
-to it<br>&gt; &gt; and the corresponding server-side file descriptor receiv=
-es these<br>&gt; &gt; commands and delivers them to an emulated TPM.<br>&gt=
-; <br>&gt; Nifty!<br>&gt; <br>&gt; Is anyone considering writing a modifica=
-tion or replacement of<br>&gt; trousers that creates claims the real tpm an=
-d exposes a vtpm that<br>&gt; handles multiplexing internally? &nbsp;Does t=
-he vtpm driver intelligently<br>&gt; support multiple simultaneous clients?=
-</font></tt><br><br><tt><font size=3D2>The vtpm driver allows to use an ind=
-ependent trousers
-instance in each container.</font></tt><br><br><tt><font size=3D2>Using the=
- VTPM=5FNEW=5FDEV ioctl the container mgmt. stack
-can create a /dev/tpmX (X=3D0,1,2,...) device and a file descriptor. The
-file descriptor is passed to a vTPM instance, the /dev/tpmX is moved into
-the container, meaning a device with the same major/minor numbers is created
-in the container. This then allows each container to talk to an independent
-vTPM. The vTPM can either be 1.2 or 2.</font></tt><br><br><tt><font size=3D=
-2>&nbsp; &nbsp;Stefan</font></tt><br><BR>
---=_alternative 0066F33385257F71_=--
-
-
-
---===============8362569175340286854==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
+> Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> ---
+>  drivers/char/tpm/tpm-chip.c      | 84 +++++++++++++++++++++-------------------
+>  drivers/char/tpm/tpm-interface.c |  1 +
+>  drivers/char/tpm/tpm.h           |  5 +--
+>  3 files changed, 48 insertions(+), 42 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index 5880377..f62c851 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -29,9 +29,8 @@
+>  #include "tpm.h"
+>  #include "tpm_eventlog.h"
+>  
+> -static DECLARE_BITMAP(dev_mask, TPM_NUM_DEVICES);
+> -static LIST_HEAD(tpm_chip_list);
+> -static DEFINE_SPINLOCK(driver_lock);
+> +DEFINE_IDR(dev_nums_idr);
+> +static DEFINE_MUTEX(idr_lock);
+>  
+>  struct class *tpm_class;
+>  dev_t tpm_devt;
+> @@ -88,20 +87,30 @@ EXPORT_SYMBOL_GPL(tpm_put_ops);
+>    */
+>  struct tpm_chip *tpm_chip_find_get(int chip_num)
+>  {
+> -	struct tpm_chip *pos, *chip = NULL;
+> +	struct tpm_chip *chip, *res = NULL;
+> +	int chip_prev;
+> +
+> +	mutex_lock(&idr_lock);
+> +
+> +	if (chip_num == TPM_ANY_NUM) {
+> +		chip_num = 0;
+> +		do {
+> +			chip_prev = chip_num;
+> +			chip = idr_get_next(&dev_nums_idr, &chip_num);
+> +			if (chip && !tpm_try_get_ops(chip)) {
+> +				res = chip;
+> +				break;
+> +			}
+> +		} while (chip_prev != chip_num);
+> +	} else {
+> +		chip = idr_find_slowpath(&dev_nums_idr, chip_num);
+> +		if (chip && !tpm_try_get_ops(chip))
+> +			res = chip;
+> +	}
+>  
+> -	rcu_read_lock();
+> -	list_for_each_entry_rcu(pos, &tpm_chip_list, list) {
+> -		if (chip_num != TPM_ANY_NUM && chip_num != pos->dev_num)
+> -			continue;
+> +	mutex_unlock(&idr_lock);
+>  
+> -		/* rcu prevents chip from being free'd */
+> -		if (!tpm_try_get_ops(pos))
+> -			chip = pos;
+> -		break;
+> -	}
+> -	rcu_read_unlock();
+> -	return chip;
+> +	return res;
+>  }
+>  
+>  /**
+> @@ -114,9 +123,10 @@ static void tpm_dev_release(struct device *dev)
+>  {
+>  	struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
+>  
+> -	spin_lock(&driver_lock);
+> -	clear_bit(chip->dev_num, dev_mask);
+> -	spin_unlock(&driver_lock);
+> +	mutex_lock(&idr_lock);
+> +	idr_remove(&dev_nums_idr, chip->dev_num);
+> +	mutex_unlock(&idr_lock);
+> +
+>  	kfree(chip);
+>  }
+>  
+> @@ -142,21 +152,18 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
+>  
+>  	mutex_init(&chip->tpm_mutex);
+>  	init_rwsem(&chip->ops_sem);
+> -	INIT_LIST_HEAD(&chip->list);
+>  
+>  	chip->ops = ops;
+>  
+> -	spin_lock(&driver_lock);
+> -	chip->dev_num = find_first_zero_bit(dev_mask, TPM_NUM_DEVICES);
+> -	spin_unlock(&driver_lock);
+> -
+> -	if (chip->dev_num >= TPM_NUM_DEVICES) {
+> +	mutex_lock(&idr_lock);
+> +	rc = idr_alloc(&dev_nums_idr, NULL, 0, TPM_NUM_DEVICES, GFP_KERNEL);
+> +	mutex_unlock(&idr_lock);
+> +	if (rc < 0) {
+>  		dev_err(dev, "No available tpm device numbers\n");
+>  		kfree(chip);
+> -		return ERR_PTR(-ENOMEM);
+> +		return ERR_PTR(rc);
+>  	}
+> -
+> -	set_bit(chip->dev_num, dev_mask);
+> +	chip->dev_num = rc;
+>  
+>  	device_initialize(&chip->dev);
+>  
+> @@ -242,19 +249,28 @@ static int tpm_add_char_device(struct tpm_chip *chip)
+>  		return rc;
+>  	}
+>  
+> +	/* Make the chip available. */
+> +	mutex_lock(&idr_lock);
+> +	idr_replace(&dev_nums_idr, chip, chip->dev_num);
+> +	mutex_unlock(&idr_lock);
+> +
+>  	return rc;
+>  }
+>  
+>  static void tpm_del_char_device(struct tpm_chip *chip)
+>  {
+>  	cdev_del(&chip->cdev);
+> +	device_del(&chip->dev);
+> +
+> +	/* Make the chip unavailable. */
+> +	mutex_lock(&idr_lock);
+> +	idr_replace(&dev_nums_idr, NULL, chip->dev_num);
+> +	mutex_unlock(&idr_lock);
+>  
+>  	/* Make the driver uncallable. */
+>  	down_write(&chip->ops_sem);
+>  	chip->ops = NULL;
+>  	up_write(&chip->ops_sem);
+> -
+> -	device_del(&chip->dev);
+>  }
+>  
+>  static int tpm1_chip_register(struct tpm_chip *chip)
+> @@ -309,11 +325,6 @@ int tpm_chip_register(struct tpm_chip *chip)
+>  	if (rc)
+>  		goto out_err;
+>  
+> -	/* Make the chip available. */
+> -	spin_lock(&driver_lock);
+> -	list_add_tail_rcu(&chip->list, &tpm_chip_list);
+> -	spin_unlock(&driver_lock);
+> -
+>  	chip->flags |= TPM_CHIP_FLAG_REGISTERED;
+>  
+>  	if (!(chip->flags & TPM_CHIP_FLAG_TPM2)) {
+> @@ -350,11 +361,6 @@ void tpm_chip_unregister(struct tpm_chip *chip)
+>  	if (!(chip->flags & TPM_CHIP_FLAG_REGISTERED))
+>  		return;
+>  
+> -	spin_lock(&driver_lock);
+> -	list_del_rcu(&chip->list);
+> -	spin_unlock(&driver_lock);
+> -	synchronize_rcu();
+> -
+>  	if (!(chip->flags & TPM_CHIP_FLAG_TPM2))
+>  		sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
+>  
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index 5caf154..5397b64 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -1139,6 +1139,7 @@ static int __init tpm_init(void)
+>  
+>  static void __exit tpm_exit(void)
+>  {
+> +	idr_destroy(&dev_nums_idr);
+>  	class_destroy(tpm_class);
+>  	unregister_chrdev_region(tpm_devt, TPM_NUM_DEVICES);
+>  }
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 5fcf788..928b47f 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -34,7 +34,7 @@
+>  enum tpm_const {
+>  	TPM_MINOR = 224,	/* officially assigned */
+>  	TPM_BUFSIZE = 4096,
+> -	TPM_NUM_DEVICES = 256,
+> +	TPM_NUM_DEVICES = 65536,
+>  	TPM_RETRY = 50,		/* 5 seconds */
+>  };
+>  
+> @@ -195,8 +195,6 @@ struct tpm_chip {
+>  	acpi_handle acpi_dev_handle;
+>  	char ppi_version[TPM_PPI_VERSION_LEN + 1];
+>  #endif /* CONFIG_ACPI */
+> -
+> -	struct list_head list;
+>  };
+>  
+>  #define to_tpm_chip(d) container_of(d, struct tpm_chip, dev)
+> @@ -492,6 +490,7 @@ static inline void tpm_buf_append_u32(struct tpm_buf *buf, const u32 value)
+>  extern struct class *tpm_class;
+>  extern dev_t tpm_devt;
+>  extern const struct file_operations tpm_fops;
+> +extern struct idr dev_nums_idr;
+>  
+>  ssize_t	tpm_getcap(struct device *, __be32, cap_t *, const char *);
+>  ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
+> -- 
+> 2.4.3
+> 
 
 ------------------------------------------------------------------------------
 Transform Data into Opportunity.
@@ -122,15 +267,3 @@ Accelerate data analysis in your applications with
 Intel Data Analytics Acceleration Library.
 Click to learn more.
 http://pubads.g.doubleclick.net/gampad/clk?id=278785111&iu=/4140
---===============8362569175340286854==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-_______________________________________________
-tpmdd-devel mailing list
-tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-
---===============8362569175340286854==--
