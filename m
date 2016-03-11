@@ -1,17 +1,12 @@
-From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v6 11/11] A test program for vTPM
- devicecreation
-Date: Fri, 11 Mar 2016 08:16:28 -0500
-Message-ID: <56E2C52C.20606@linux.vnet.ibm.com>
-References: <1457545170-30120-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<1457545170-30120-12-git-send-email-stefanb@linux.vnet.ibm.com>
-	<201603102058.u2AKw7Ie013400@d01av04.pok.ibm.com>
-	<20160311103001.GA13368@intel.com>
+From: "Stefan Berger" <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Subject: Re: Is vTPM the right name for the new functionality?
+Date: Fri, 11 Mar 2016 10:26:26 -0500
+Message-ID: <201603111522.u2BFM8wc006269@d01av05.pok.ibm.com>
+References: <20160311104304.GA14787@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: multipart/mixed; boundary="===============8772502739584882392=="
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160311103001.GA13368-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20160311104304.GA14787-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,90 +15,98 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 03/11/2016 05:30 AM, Jarkko Sakkinen wrote:
-> On Thu, Mar 10, 2016 at 03:57:58PM -0500, Stefan Berger wrote:
->>     Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org> wrote on 03/09/2016 12:39:30
->>     PM:
->>     >
->>     > This patch provides a program that is for testing purposes only.
->>     >
->>     > Build it using the following commands:
->>     >
->>     > make headers_install ARCH=x86_64  INSTALL_HDR_PATH=/usr
->>     >
->>     > gcc vtpmctrl.c -o vtpmctrl
->>     >
->>     > To use it:
->>     >
->>     > To create a device pair and have vtpmctrl listen for commands, display
->>     > them and respond with TPM success messages do:
->>     >
->>     > Created TPM device /dev/tpm0; vTPM device has fd 4, major/minor =
->>     10/224.
->>     >
->>     > In another shell do
->>     >
->>     > 00000000 00 c4 00 00 00 0a 00 00 00 00
->>     > 00000012
->>
->>     This test program is now available as part of a test suite at:
->>
->>     https://github.com/stefanberger/linux-vtpm-tests
-> I've ported TPM 2.0 simulator proxy here
->
-> git://git.infradead.org/users/jjs/tpm2-scripts.git
->
-> At the moment it gets blocked on write() at client side and on read() at
-> server side. Haven't yet applied the timeouts patch but I'd expect
-> things to work without that patch since it's a separate patch
 
-With this patch applied it works for me. I am using a file descriptor 
-rather than the file. If using a file, it seems to want to read more 
-bytes to fill up 4096 bytes or get an EOF. Also make sure that /dev/tpmX 
-is not a normal file. I ran into that problem when using exec 
-100<>/dev/tpm1  that creates /dev/tpm1 as file if it isn't there...
-
-diff --git a/tpm2-simulator-vtpm b/tpm2-simulator-vtpm
-index f9f7d82..6a9a0d9 100755
---- a/tpm2-simulator-vtpm
-+++ b/tpm2-simulator-vtpm
-@@ -56,6 +56,7 @@ class TPM2Simulator():
-          """ Initializes the connection to the simulator and 
-initializes the
-              simulator device by sending some control commands """
-
-+        return
-          self.ctrl = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-          self.ctrl.connect((host, 2322))
-          self.data = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-@@ -109,16 +110,14 @@ class TPM2Simulator():
-          with open('/dev/vtpmx', 'w+b', buffering = 0) as vtpmx_fp:
-              ioctl(vtpmx_fp, VTPM_IOC_NEW_DEV, addressof(new_dev))
-
--            vtpm_fp = os.fdopen(new_dev.fd)
--
-              for n, t in new_dev._fields_:
-                  print(n, getattr(new_dev, n))
-
-              while True:
--                stream = vtpm_fp.read(4096)
-+                stream = os.read(new_dev.fd, 4096)
-                  print("IN {}".format(binascii.hexlify(stream)))
--                resp = self.transmit_command(stream)
--                vtpm_fp.write(resp)
-+                #resp = self.transmit_command(stream)
-+                os.write(new_dev.fd, stream)
-
-  class c_vtpm_new_dev(Structure):
-      _fields_ = \
+--===============8772502739584882392==
+Content-Type: multipart/alternative;
+	boundary="=_alternative 0054D35585257F73_="
 
 
-     Stefan
+--=_alternative 0054D35585257F73_=
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset="US-ASCII"
 
+Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote on 03/11/2016=20
+05:43:04 AM:
+
+>=20
+> Hi Stefan,
+>=20
+> This is something I would like discuss and get other points of views.
+>=20
+> The thing that I would like to rise is the name of this new subsystem.
+> The keyword 'vTPM' is already heavily referenced in contexts for more
+> "full stack" solution of virtualization [1].
+>=20
+> If I look at this new functionality it is essentially a proxy and not
+> much else, isn't it? You can apply for Linux containers but alone it is
+> proxy tool. With the current name it is too easy to confuse it with
+> existing solutions.
+
+Fine by me. I can rename it to tpm=5Fproxy.c and reference to it as the=20
+virtual TPM proxy driver or TPM emulator proxy driver, which I think=20
+describes it well. It's not a 'Proxy TPM'.
+The title of the cover letter for the patches would then be
+
+Multi-instance vTPM proxy driver
+
+  Stefan
+
+>=20
+> Maybe we should call it Proxy TPM instead (I'm open for other name
+> suggestions)?
+>=20
+> [1] http://domino.research.ibm.com/library/cyberdig.nsf/
+>=20
+1e4115aea78b6e7c85256b360066f0d4/a0163fff5b1a61fe85257178004eee39?OpenDocum=
+ent
+>=20
+> /Jarkko
+>=20
+
+
+
+--=_alternative 0054D35585257F73_=
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset="US-ASCII"
+
+<tt><font size=3D2>Jarkko Sakkinen &lt;jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org&gt;
+wrote on 03/11/2016 05:43:04 AM:<br><br>&gt; <br>&gt; Hi Stefan,<br>&gt; <b=
+r>&gt; This is something I would like discuss and get other points of views=
+.<br>&gt; <br>&gt; The thing that I would like to rise is the name of this =
+new subsystem.<br>&gt; The keyword 'vTPM' is already heavily referenced in =
+contexts for more<br>&gt; &quot;full stack&quot; solution of virtualization=
+ [1].<br>&gt; <br>&gt; If I look at this new functionality it is essentiall=
+y a proxy and
+not<br>&gt; much else, isn't it? You can apply for Linux containers but alo=
+ne
+it is<br>&gt; proxy tool. With the current name it is too easy to confuse i=
+t with<br>&gt; existing solutions.</font></tt><br><br><tt><font size=3D2>Fi=
+ne by me. I can rename it to tpm=5Fproxy.c and reference
+to it as the virtual TPM proxy driver or TPM emulator proxy driver, which
+I think describes it well. It's not a 'Proxy TPM'.</font></tt><br><tt><font=
+ size=3D2>The title of the cover letter for the patches would
+then be</font></tt><br><br><font size=3D2 face=3D"sans-serif"><b>Multi-inst=
+ance vTPM proxy driver</b></font><br><br><tt><font size=3D2>&nbsp; Stefan</=
+font></tt><br><tt><font size=3D2><br>&gt; <br>&gt; Maybe we should call it =
+Proxy TPM instead (I'm open for other name<br>&gt; suggestions)?<br>&gt; <b=
+r>&gt; [1] </font></tt><a href=3Dhttp://domino.research.ibm.com/library/cyb=
+erdig.nsf/><tt><font size=3D2>http://domino.research.ibm.com/library/cyberd=
+ig.nsf/</font></tt></a><tt><font size=3D2><br>&gt; 1e4115aea78b6e7c85256b36=
+0066f0d4/a0163fff5b1a61fe85257178004eee39?OpenDocument<br>&gt; <br>&gt; /Ja=
+rkko<br>&gt; <br></font></tt><BR>
+--=_alternative 0054D35585257F73_=--
+
+
+
+--===============8772502739584882392==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
 
 ------------------------------------------------------------------------------
 Transform Data into Opportunity.
@@ -111,3 +114,15 @@ Accelerate data analysis in your applications with
 Intel Data Analytics Acceleration Library.
 Click to learn more.
 http://pubads.g.doubleclick.net/gampad/clk?id=278785111&iu=/4140
+--===============8772502739584882392==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
+
+_______________________________________________
+tpmdd-devel mailing list
+tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+
+--===============8772502739584882392==--
