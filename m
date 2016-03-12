@@ -1,8 +1,8 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v7 10/10] tpm: Add documentation for the
-	tpm_vtpm device driver
-Date: Fri, 11 Mar 2016 21:51:05 -0500
-Message-ID: <1457751065-11507-11-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v7 05/10] tpm: Split out the devm stuff from
+	tpmm_chip_alloc
+Date: Fri, 11 Mar 2016 21:51:00 -0500
+Message-ID: <1457751065-11507-6-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1457751065-11507-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -18,116 +18,123 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-doc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-api-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Add documentation for the tpm_vtpm device driver that implements
-support for providing TPM functionality to Linux containers.
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 
-Parts of this documentation were recycled from the Xen vTPM
-device driver documentation.
+tpm_chip_alloc becomes a typical subsystem allocate call.
 
-Update the documentation for the ioctl numbers.
-
-Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-CC: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-CC: linux-doc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-CC: linux-api-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Reviewed-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Tested-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- Documentation/ioctl/ioctl-number.txt |  1 +
- Documentation/tpm/tpm_vtpm_proxy.txt | 71 ++++++++++++++++++++++++++++++++++++
- 2 files changed, 72 insertions(+)
- create mode 100644 Documentation/tpm/tpm_vtpm_proxy.txt
+ drivers/char/tpm/tpm-chip.c | 49 ++++++++++++++++++++++++++++++++-------------
+ drivers/char/tpm/tpm.h      |  4 +++-
+ 2 files changed, 38 insertions(+), 15 deletions(-)
 
-diff --git a/Documentation/ioctl/ioctl-number.txt b/Documentation/ioctl/ioctl-number.txt
-index 91261a3..7dbec90 100644
---- a/Documentation/ioctl/ioctl-number.txt
-+++ b/Documentation/ioctl/ioctl-number.txt
-@@ -303,6 +303,7 @@ Code  Seq#(hex)	Include File		Comments
- 					<mailto:buk-KMFVLCTwZAcb1SvskN2V4Q@public.gmane.org>
- 0xA0	all	linux/sdp/sdp.h		Industrial Device Project
- 					<mailto:kenji-/mrfy+mawvNBDgjK7y7TUQ@public.gmane.org>
-+0xA1	0	linux/vtpm_proxy.h	TPM Emulator Proxy Driver
- 0xA2	00-0F	arch/tile/include/asm/hardwall.h
- 0xA3	80-8F	Port ACL		in development:
- 					<mailto:tlewis-mn4gwa5WIIQysxA8WJXlww@public.gmane.org>
-diff --git a/Documentation/tpm/tpm_vtpm_proxy.txt b/Documentation/tpm/tpm_vtpm_proxy.txt
-new file mode 100644
-index 0000000..3a2e3946
---- /dev/null
-+++ b/Documentation/tpm/tpm_vtpm_proxy.txt
-@@ -0,0 +1,71 @@
-+Virtual TPM Proxy Driver for Linux Containers
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 6636728..5880377 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -121,17 +121,17 @@ static void tpm_dev_release(struct device *dev)
+ }
+ 
+ /**
+- * tpmm_chip_alloc() - allocate a new struct tpm_chip instance
+- * @dev: device to which the chip is associated
++ * tpm_chip_alloc() - allocate a new struct tpm_chip instance
++ * @pdev: device to which the chip is associated
++ *        At this point pdev mst be initialized, but does not have to
++ *        be registered
+  * @ops: struct tpm_class_ops instance
+  *
+  * Allocates a new struct tpm_chip instance and assigns a free
+- * device number for it. Caller does not have to worry about
+- * freeing the allocated resources. When the devices is removed
+- * devres calls tpmm_chip_remove() to do the job.
++ * device number for it. Must be paired with put_device(&chip->dev).
+  */
+-struct tpm_chip *tpmm_chip_alloc(struct device *dev,
+-				 const struct tpm_class_ops *ops)
++struct tpm_chip *tpm_chip_alloc(struct device *dev,
++				const struct tpm_class_ops *ops)
+ {
+ 	struct tpm_chip *chip;
+ 	int rc;
+@@ -160,8 +160,6 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
+ 
+ 	device_initialize(&chip->dev);
+ 
+-	dev_set_drvdata(dev, chip);
+-
+ 	chip->dev.class = tpm_class;
+ 	chip->dev.release = tpm_dev_release;
+ 	chip->dev.parent = dev;
+@@ -182,17 +180,40 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
+ 	chip->cdev.owner = THIS_MODULE;
+ 	chip->cdev.kobj.parent = &chip->dev.kobj;
+ 
+-	rc = devm_add_action(dev, (void (*)(void *)) put_device, &chip->dev);
++	return chip;
 +
-+Authors: Stefan Berger (IBM)
++out:
++	put_device(&chip->dev);
++	return ERR_PTR(rc);
++}
++EXPORT_SYMBOL_GPL(tpm_chip_alloc);
 +
-+This document describes the virtual Trusted Platform Module (vTPM)
-+proxy device driver for Linux containers.
++/**
++ * tpmm_chip_alloc() - allocate a new struct tpm_chip instance
++ * @pdev: parent device to which the chip is associated
++ * @ops: struct tpm_class_ops instance
++ *
++ * Same as tpm_chip_alloc except devm is used to do the put_device
++ */
++struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
++				 const struct tpm_class_ops *ops)
++{
++	struct tpm_chip *chip;
++	int rc;
 +
-+INTRODUCTION
-+------------
++	chip = tpm_chip_alloc(pdev, ops);
++	if (IS_ERR(chip))
++		return chip;
 +
-+The goal of this work is to provide TPM functionality to each Linux
-+container. This allows programs to interact with a TPM in a container
-+the same way they interact with a TPM on the physical system. Each
-+container gets its own unique, emulated, software TPM.
-+
-+
-+DESIGN
-+------
-+
-+To make an emulated software TPM available to each container, the container
-+management stack needs to create a device pair consisting of a client TPM
-+character device /dev/tpmX (with X=0,1,2...) and a 'server side' file
-+descriptor. The former is moved into the container by creating a character
-+device with the appropriate major and minor numbers while the file descriptor
-+is passed to the TPM emulator. Software inside the container can then send
-+TPM commands using the character device and the emulator will receive the
-+commands via the file descriptor and use it for sending back responses.
-+
-+To support this, the virtual TPM proxy driver provides a device /dev/vtpmx
-+that is used to create device pairs using an ioctl. The ioctl takes as
-+an input flags for configuring the device. The flags  for example indicate
-+whether TPM 1.2 or TPM 2 functionality is supported by the TPM emulator.
-+The result of the ioctl are the file descriptor for the 'server side'
-+as well as the major and minor numbers of the character device that was created.
-+Besides that the number of the TPM character device is return. If for
-+example /dev/tpm10 was created, the number (dev_num) 10 is returned.
-+
-+The following is the data structure of the TPM_PROXY_IOC_NEW_DEV ioctl:
-+
-+struct vtpm_proxy_new_dev {
-+	__u32 flags;         /* input */
-+	__u32 tpm_num;       /* output */
-+	__u32 fd;            /* output */
-+	__u32 major;         /* output */
-+	__u32 minor;         /* output */
-+};
-+
-+Note that if unsupported flags are passed to the device driver, the ioctl will
-+fail and errno will be set to EOPNOTSUPP. Similarly, if an unsupported ioctl is
-+called on the device driver, the ioctl will fail and errno will be set to
-+ENOTTY.
-+
-+See /usr/include/linux/vtpm_proxy.h for definitions related to the public interface
-+of this vTPM device driver.
-+
-+Once the device has been created, the driver will immediately try to talk
-+to the TPM. All commands from the driver can read from the file descriptor
-+returned by the ioctl. The commands should be responded to immediately.
-+
-+Depending on the version of TPM the following commands will be sent by the
-+driver:
-+
-+- TPM 1.2:
-+  - the driver will send a TPM_Startup() command to the TPM emulator
-+  - the driver will send commands to read the command durations and
-+    interface timeouts from the TPM emulator
-+- TPM 2:
-+  - the driver will send a TPM2_Startup() command to the TPM emulator
-+
-+The TPM device /dev/tpmX will only appear if all of the relevant commands
-+were responded to properly.
++	rc = devm_add_action(pdev, (void (*)(void *)) put_device, &chip->dev);
+ 	if (rc) {
+ 		put_device(&chip->dev);
+ 		return ERR_PTR(rc);
+ 	}
+ 
+-	return chip;
++	dev_set_drvdata(pdev, chip);
+ 
+-out:
+-	put_device(&chip->dev);
+-	return ERR_PTR(rc);
++	return chip;
+ }
+ EXPORT_SYMBOL_GPL(tpmm_chip_alloc);
+ 
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index c6376b1..5fcf788 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -511,7 +511,9 @@ struct tpm_chip *tpm_chip_find_get(int chip_num);
+ __must_check int tpm_try_get_ops(struct tpm_chip *chip);
+ void tpm_put_ops(struct tpm_chip *chip);
+ 
+-extern struct tpm_chip *tpmm_chip_alloc(struct device *dev,
++extern struct tpm_chip *tpm_chip_alloc(struct device *dev,
++				       const struct tpm_class_ops *ops);
++extern struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
+ 				       const struct tpm_class_ops *ops);
+ extern int tpm_chip_register(struct tpm_chip *chip);
+ extern void tpm_chip_unregister(struct tpm_chip *chip);
 -- 
 2.4.3
 
