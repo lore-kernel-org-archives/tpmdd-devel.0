@@ -1,8 +1,8 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v8 06/10] tpm: Replace device number bitmap
-	with IDR
-Date: Sun, 13 Mar 2016 18:54:36 -0400
-Message-ID: <1457909680-14085-7-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v8 10/10] tpm: Add documentation for the
+	tpm_vtpm device driver
+Date: Sun, 13 Mar 2016 18:54:40 -0400
+Message-ID: <1457909680-14085-11-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1457909680-14085-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -18,226 +18,116 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: linux-doc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-api-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Replace the device number bitmap with IDR. Extend the number of devices we
-can create to 64k.
-Since an IDR allows us to associate a pointer with an ID, we use this now
-to rewrite tpm_chip_find_get() to simply look up the chip pointer by the
-given device ID.
+Add documentation for the tpm_vtpm device driver that implements
+support for providing TPM functionality to Linux containers.
 
-Protect the IDR calls with a mutex.
+Parts of this documentation were recycled from the Xen vTPM
+device driver documentation.
+
+Update the documentation for the ioctl numbers.
 
 Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+CC: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+CC: linux-doc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+CC: linux-api-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 ---
- drivers/char/tpm/tpm-chip.c      | 84 +++++++++++++++++++++-------------------
- drivers/char/tpm/tpm-interface.c |  1 +
- drivers/char/tpm/tpm.h           |  5 +--
- 3 files changed, 48 insertions(+), 42 deletions(-)
+ Documentation/ioctl/ioctl-number.txt |  1 +
+ Documentation/tpm/tpm_vtpm_proxy.txt | 71 ++++++++++++++++++++++++++++++++++++
+ 2 files changed, 72 insertions(+)
+ create mode 100644 Documentation/tpm/tpm_vtpm_proxy.txt
 
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index 5880377..f62c851 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -29,9 +29,8 @@
- #include "tpm.h"
- #include "tpm_eventlog.h"
- 
--static DECLARE_BITMAP(dev_mask, TPM_NUM_DEVICES);
--static LIST_HEAD(tpm_chip_list);
--static DEFINE_SPINLOCK(driver_lock);
-+DEFINE_IDR(dev_nums_idr);
-+static DEFINE_MUTEX(idr_lock);
- 
- struct class *tpm_class;
- dev_t tpm_devt;
-@@ -88,20 +87,30 @@ EXPORT_SYMBOL_GPL(tpm_put_ops);
-   */
- struct tpm_chip *tpm_chip_find_get(int chip_num)
- {
--	struct tpm_chip *pos, *chip = NULL;
-+	struct tpm_chip *chip, *res = NULL;
-+	int chip_prev;
+diff --git a/Documentation/ioctl/ioctl-number.txt b/Documentation/ioctl/ioctl-number.txt
+index 91261a3..7dbec90 100644
+--- a/Documentation/ioctl/ioctl-number.txt
++++ b/Documentation/ioctl/ioctl-number.txt
+@@ -303,6 +303,7 @@ Code  Seq#(hex)	Include File		Comments
+ 					<mailto:buk-KMFVLCTwZAcb1SvskN2V4Q@public.gmane.org>
+ 0xA0	all	linux/sdp/sdp.h		Industrial Device Project
+ 					<mailto:kenji-/mrfy+mawvNBDgjK7y7TUQ@public.gmane.org>
++0xA1	0	linux/vtpm_proxy.h	TPM Emulator Proxy Driver
+ 0xA2	00-0F	arch/tile/include/asm/hardwall.h
+ 0xA3	80-8F	Port ACL		in development:
+ 					<mailto:tlewis-mn4gwa5WIIQysxA8WJXlww@public.gmane.org>
+diff --git a/Documentation/tpm/tpm_vtpm_proxy.txt b/Documentation/tpm/tpm_vtpm_proxy.txt
+new file mode 100644
+index 0000000..30d1902
+--- /dev/null
++++ b/Documentation/tpm/tpm_vtpm_proxy.txt
+@@ -0,0 +1,71 @@
++Virtual TPM Proxy Driver for Linux Containers
 +
-+	mutex_lock(&idr_lock);
++Authors: Stefan Berger (IBM)
 +
-+	if (chip_num == TPM_ANY_NUM) {
-+		chip_num = 0;
-+		do {
-+			chip_prev = chip_num;
-+			chip = idr_get_next(&dev_nums_idr, &chip_num);
-+			if (chip && !tpm_try_get_ops(chip)) {
-+				res = chip;
-+				break;
-+			}
-+		} while (chip_prev != chip_num);
-+	} else {
-+		chip = idr_find_slowpath(&dev_nums_idr, chip_num);
-+		if (chip && !tpm_try_get_ops(chip))
-+			res = chip;
-+	}
- 
--	rcu_read_lock();
--	list_for_each_entry_rcu(pos, &tpm_chip_list, list) {
--		if (chip_num != TPM_ANY_NUM && chip_num != pos->dev_num)
--			continue;
-+	mutex_unlock(&idr_lock);
- 
--		/* rcu prevents chip from being free'd */
--		if (!tpm_try_get_ops(pos))
--			chip = pos;
--		break;
--	}
--	rcu_read_unlock();
--	return chip;
-+	return res;
- }
- 
- /**
-@@ -114,9 +123,10 @@ static void tpm_dev_release(struct device *dev)
- {
- 	struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
- 
--	spin_lock(&driver_lock);
--	clear_bit(chip->dev_num, dev_mask);
--	spin_unlock(&driver_lock);
-+	mutex_lock(&idr_lock);
-+	idr_remove(&dev_nums_idr, chip->dev_num);
-+	mutex_unlock(&idr_lock);
++This document describes the virtual Trusted Platform Module (vTPM)
++proxy device driver for Linux containers.
 +
- 	kfree(chip);
- }
- 
-@@ -142,21 +152,18 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
- 
- 	mutex_init(&chip->tpm_mutex);
- 	init_rwsem(&chip->ops_sem);
--	INIT_LIST_HEAD(&chip->list);
- 
- 	chip->ops = ops;
- 
--	spin_lock(&driver_lock);
--	chip->dev_num = find_first_zero_bit(dev_mask, TPM_NUM_DEVICES);
--	spin_unlock(&driver_lock);
--
--	if (chip->dev_num >= TPM_NUM_DEVICES) {
-+	mutex_lock(&idr_lock);
-+	rc = idr_alloc(&dev_nums_idr, NULL, 0, TPM_NUM_DEVICES, GFP_KERNEL);
-+	mutex_unlock(&idr_lock);
-+	if (rc < 0) {
- 		dev_err(dev, "No available tpm device numbers\n");
- 		kfree(chip);
--		return ERR_PTR(-ENOMEM);
-+		return ERR_PTR(rc);
- 	}
--
--	set_bit(chip->dev_num, dev_mask);
-+	chip->dev_num = rc;
- 
- 	device_initialize(&chip->dev);
- 
-@@ -242,19 +249,28 @@ static int tpm_add_char_device(struct tpm_chip *chip)
- 		return rc;
- 	}
- 
-+	/* Make the chip available. */
-+	mutex_lock(&idr_lock);
-+	idr_replace(&dev_nums_idr, chip, chip->dev_num);
-+	mutex_unlock(&idr_lock);
++INTRODUCTION
++------------
 +
- 	return rc;
- }
- 
- static void tpm_del_char_device(struct tpm_chip *chip)
- {
- 	cdev_del(&chip->cdev);
-+	device_del(&chip->dev);
++The goal of this work is to provide TPM functionality to each Linux
++container. This allows programs to interact with a TPM in a container
++the same way they interact with a TPM on the physical system. Each
++container gets its own unique, emulated, software TPM.
 +
-+	/* Make the chip unavailable. */
-+	mutex_lock(&idr_lock);
-+	idr_replace(&dev_nums_idr, NULL, chip->dev_num);
-+	mutex_unlock(&idr_lock);
- 
- 	/* Make the driver uncallable. */
- 	down_write(&chip->ops_sem);
- 	chip->ops = NULL;
- 	up_write(&chip->ops_sem);
--
--	device_del(&chip->dev);
- }
- 
- static int tpm1_chip_register(struct tpm_chip *chip)
-@@ -309,11 +325,6 @@ int tpm_chip_register(struct tpm_chip *chip)
- 	if (rc)
- 		goto out_err;
- 
--	/* Make the chip available. */
--	spin_lock(&driver_lock);
--	list_add_tail_rcu(&chip->list, &tpm_chip_list);
--	spin_unlock(&driver_lock);
--
- 	chip->flags |= TPM_CHIP_FLAG_REGISTERED;
- 
- 	if (!(chip->flags & TPM_CHIP_FLAG_TPM2)) {
-@@ -350,11 +361,6 @@ void tpm_chip_unregister(struct tpm_chip *chip)
- 	if (!(chip->flags & TPM_CHIP_FLAG_REGISTERED))
- 		return;
- 
--	spin_lock(&driver_lock);
--	list_del_rcu(&chip->list);
--	spin_unlock(&driver_lock);
--	synchronize_rcu();
--
- 	if (!(chip->flags & TPM_CHIP_FLAG_TPM2))
- 		sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
- 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 5caf154..5397b64 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -1139,6 +1139,7 @@ static int __init tpm_init(void)
- 
- static void __exit tpm_exit(void)
- {
-+	idr_destroy(&dev_nums_idr);
- 	class_destroy(tpm_class);
- 	unregister_chrdev_region(tpm_devt, TPM_NUM_DEVICES);
- }
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 5fcf788..928b47f 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -34,7 +34,7 @@
- enum tpm_const {
- 	TPM_MINOR = 224,	/* officially assigned */
- 	TPM_BUFSIZE = 4096,
--	TPM_NUM_DEVICES = 256,
-+	TPM_NUM_DEVICES = 65536,
- 	TPM_RETRY = 50,		/* 5 seconds */
- };
- 
-@@ -195,8 +195,6 @@ struct tpm_chip {
- 	acpi_handle acpi_dev_handle;
- 	char ppi_version[TPM_PPI_VERSION_LEN + 1];
- #endif /* CONFIG_ACPI */
--
--	struct list_head list;
- };
- 
- #define to_tpm_chip(d) container_of(d, struct tpm_chip, dev)
-@@ -492,6 +490,7 @@ static inline void tpm_buf_append_u32(struct tpm_buf *buf, const u32 value)
- extern struct class *tpm_class;
- extern dev_t tpm_devt;
- extern const struct file_operations tpm_fops;
-+extern struct idr dev_nums_idr;
- 
- ssize_t	tpm_getcap(struct device *, __be32, cap_t *, const char *);
- ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
++
++DESIGN
++------
++
++To make an emulated software TPM available to each container, the container
++management stack needs to create a device pair consisting of a client TPM
++character device /dev/tpmX (with X=0,1,2...) and a 'server side' file
++descriptor. The former is moved into the container by creating a character
++device with the appropriate major and minor numbers while the file descriptor
++is passed to the TPM emulator. Software inside the container can then send
++TPM commands using the character device and the emulator will receive the
++commands via the file descriptor and use it for sending back responses.
++
++To support this, the virtual TPM proxy driver provides a device /dev/vtpmx
++that is used to create device pairs using an ioctl. The ioctl takes as
++an input flags for configuring the device. The flags  for example indicate
++whether TPM 1.2 or TPM 2 functionality is supported by the TPM emulator.
++The result of the ioctl are the file descriptor for the 'server side'
++as well as the major and minor numbers of the character device that was created.
++Besides that the number of the TPM character device is return. If for
++example /dev/tpm10 was created, the number (dev_num) 10 is returned.
++
++The following is the data structure of the TPM_PROXY_IOC_NEW_DEV ioctl:
++
++struct vtpm_proxy_new_dev {
++	__u32 flags;         /* input */
++	__u32 tpm_num;       /* output */
++	__u32 fd;            /* output */
++	__u32 major;         /* output */
++	__u32 minor;         /* output */
++};
++
++Note that if unsupported flags are passed to the device driver, the ioctl will
++fail and errno will be set to EOPNOTSUPP. Similarly, if an unsupported ioctl is
++called on the device driver, the ioctl will fail and errno will be set to
++ENOTTY.
++
++See /usr/include/linux/vtpm_proxy.h for definitions related to the public interface
++of this vTPM device driver.
++
++Once the device has been created, the driver will immediately try to talk
++to the TPM. All commands from the driver can be read from the file descriptor
++returned by the ioctl. The commands should be responded to immediately.
++
++Depending on the version of TPM the following commands will be sent by the
++driver:
++
++- TPM 1.2:
++  - the driver will send a TPM_Startup command to the TPM emulator
++  - the driver will send commands to read the command durations and
++    interface timeouts from the TPM emulator
++- TPM 2:
++  - the driver will send a TPM2_Startup command to the TPM emulator
++
++The TPM device /dev/tpmX will only appear if all of the relevant commands
++were responded to properly.
 -- 
 2.4.3
 
