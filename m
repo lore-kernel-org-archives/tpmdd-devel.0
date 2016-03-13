@@ -1,8 +1,7 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v8 09/10] tpm: Initialize TPM and get
-	durations and timeouts
-Date: Sun, 13 Mar 2016 18:54:39 -0400
-Message-ID: <1457909680-14085-10-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v8 07/10] tpm: Introduce TPM_CHIP_FLAG_VIRTUAL
+Date: Sun, 13 Mar 2016 18:54:37 -0400
+Message-ID: <1457909680-14085-8-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1457909680-14085-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -18,196 +17,120 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-doc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-api-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Add the retrieval of TPM 1.2 durations and timeouts. Since this requires
-the startup of the TPM, do this for TPM 1.2 and TPM 2.
+Introduce TPM_CHIP_FLAG_VIRTUAL to be used when the chip device has no
+parent device. Also adapt tpm_chip_alloc so that it can be called with
+parent device being NULL.
 
 Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-CC: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-CC: linux-doc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-CC: linux-api-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm_vtpm_proxy.c | 95 +++++++++++++++++++++++++++++++++++----
- 1 file changed, 86 insertions(+), 9 deletions(-)
+ drivers/char/tpm/tpm-chip.c  |  9 +++++----
+ drivers/char/tpm/tpm-sysfs.c | 15 +++++++++++----
+ drivers/char/tpm/tpm.h       |  5 +++--
+ 3 files changed, 19 insertions(+), 10 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
-index 2bb2c8c..7fd686b 100644
---- a/drivers/char/tpm/tpm_vtpm_proxy.c
-+++ b/drivers/char/tpm/tpm_vtpm_proxy.c
-@@ -45,8 +45,11 @@ struct proxy_dev {
- 	size_t req_len;              /* length of queued TPM request */
- 	size_t resp_len;             /* length of queued TPM response */
- 	u8 buffer[TPM_BUFSIZE];      /* request/response buffer */
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index f62c851..e4e1fad 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -170,9 +170,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
+ 	chip->dev.class = tpm_class;
+ 	chip->dev.release = tpm_dev_release;
+ 	chip->dev.parent = dev;
+-#ifdef CONFIG_ACPI
+ 	chip->dev.groups = chip->groups;
+-#endif
+ 
+ 	if (chip->dev_num == 0)
+ 		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
+@@ -183,6 +181,9 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
+ 	if (rc)
+ 		goto out;
+ 
++	if (!dev)
++		chip->flags |= TPM_CHIP_FLAG_VIRTUAL;
 +
-+	struct work_struct work;     /* task that retrieves TPM timeouts */
+ 	cdev_init(&chip->cdev, &tpm_fops);
+ 	chip->cdev.owner = THIS_MODULE;
+ 	chip->cdev.kobj.parent = &chip->dev.kobj;
+@@ -327,7 +328,7 @@ int tpm_chip_register(struct tpm_chip *chip)
+ 
+ 	chip->flags |= TPM_CHIP_FLAG_REGISTERED;
+ 
+-	if (!(chip->flags & TPM_CHIP_FLAG_TPM2)) {
++	if (!(chip->flags & (TPM_CHIP_FLAG_TPM2 | TPM_CHIP_FLAG_VIRTUAL))) {
+ 		rc = __compat_only_sysfs_link_entry_to_kobj(
+ 		    &chip->dev.parent->kobj, &chip->dev.kobj, "ppi");
+ 		if (rc && rc != -ENOENT) {
+@@ -361,7 +362,7 @@ void tpm_chip_unregister(struct tpm_chip *chip)
+ 	if (!(chip->flags & TPM_CHIP_FLAG_REGISTERED))
+ 		return;
+ 
+-	if (!(chip->flags & TPM_CHIP_FLAG_TPM2))
++	if (!(chip->flags & (TPM_CHIP_FLAG_TPM2 | TPM_CHIP_FLAG_VIRTUAL)))
+ 		sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
+ 
+ 	tpm1_chip_unregister(chip);
+diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+index 34e7fc7..9ee0f4d 100644
+--- a/drivers/char/tpm/tpm-sysfs.c
++++ b/drivers/char/tpm/tpm-sysfs.c
+@@ -283,9 +283,15 @@ static const struct attribute_group tpm_dev_group = {
+ 
+ int tpm_sysfs_add_device(struct tpm_chip *chip)
+ {
+-	int err;
+-	err = sysfs_create_group(&chip->dev.parent->kobj,
+-				 &tpm_dev_group);
++	int err = 0;
++
++	if (!(chip->flags & TPM_CHIP_FLAG_VIRTUAL))
++		err = sysfs_create_group(&chip->dev.parent->kobj,
++					 &tpm_dev_group);
++	else {
++		dev_set_drvdata(&chip->dev, chip);
++		chip->groups[chip->groups_cnt++] = &tpm_dev_group;
++	}
+ 
+ 	if (err)
+ 		dev_err(&chip->dev,
+@@ -300,5 +306,6 @@ void tpm_sysfs_del_device(struct tpm_chip *chip)
+ 	 * synchronizes this removal so that no callbacks are running or can
+ 	 * run again
+ 	 */
+-	sysfs_remove_group(&chip->dev.parent->kobj, &tpm_dev_group);
++	if (!(chip->flags & TPM_CHIP_FLAG_VIRTUAL))
++		sysfs_remove_group(&chip->dev.parent->kobj, &tpm_dev_group);
+ }
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 928b47f..f197eef 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -164,6 +164,7 @@ struct tpm_vendor_specific {
+ enum tpm_chip_flags {
+ 	TPM_CHIP_FLAG_REGISTERED	= BIT(0),
+ 	TPM_CHIP_FLAG_TPM2		= BIT(1),
++	TPM_CHIP_FLAG_VIRTUAL		= BIT(2),
  };
  
-+static struct workqueue_struct *workqueue;
+ struct tpm_chip {
+@@ -189,9 +190,9 @@ struct tpm_chip {
  
- static void vtpm_proxy_delete_device(struct proxy_dev *proxy_dev);
+ 	struct dentry **bios_dir;
  
-@@ -67,6 +70,15 @@ static ssize_t vtpm_proxy_fops_read(struct file *filp, char __user *buf,
- 	size_t len;
- 	int sig, rc;
- 
-+	mutex_lock(&proxy_dev->buf_lock);
-+
-+	if (!(proxy_dev->state & STATE_OPENED_FLAG)) {
-+		mutex_unlock(&proxy_dev->buf_lock);
-+		return -EPIPE;
-+	}
-+
-+	mutex_unlock(&proxy_dev->buf_lock);
-+
- 	sig = wait_event_interruptible(proxy_dev->wq, proxy_dev->req_len != 0);
- 	if (sig)
- 		return -EINTR;
-@@ -110,6 +122,11 @@ static ssize_t vtpm_proxy_fops_write(struct file *filp, const char __user *buf,
- 
- 	mutex_lock(&proxy_dev->buf_lock);
- 
-+	if (!(proxy_dev->state & STATE_OPENED_FLAG)) {
-+		mutex_unlock(&proxy_dev->buf_lock);
-+		return -EPIPE;
-+	}
-+
- 	if (count > sizeof(proxy_dev->buffer) ||
- 	    !(proxy_dev->state & STATE_WAIT_RESPONSE_FLAG)) {
- 		mutex_unlock(&proxy_dev->buf_lock);
-@@ -154,6 +171,9 @@ static unsigned int vtpm_proxy_fops_poll(struct file *filp, poll_table *wait)
- 	if (proxy_dev->req_len)
- 		ret |= POLLIN | POLLRDNORM;
- 
-+	if (!(proxy_dev->state & STATE_OPENED_FLAG))
-+		ret |= POLLHUP;
-+
- 	mutex_unlock(&proxy_dev->buf_lock);
- 
- 	return ret;
-@@ -341,6 +361,55 @@ static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
- };
- 
- /*
-+ * Code related to the startup of the TPM 2 and startup of TPM 1.2 +
-+ * retrieval of timeouts and durations.
-+ */
-+
-+static void vtpm_proxy_work(struct work_struct *work)
-+{
-+	struct proxy_dev *proxy_dev = container_of(work, struct proxy_dev,
-+						   work);
-+	int rc;
-+
-+	if (proxy_dev->flags & VTPM_PROXY_FLAG_TPM2)
-+		rc = tpm2_startup(proxy_dev->chip, TPM2_SU_CLEAR);
-+	else
-+		rc = tpm_get_timeouts(proxy_dev->chip);
-+
-+	if (rc)
-+		goto err;
-+
-+	rc = tpm_chip_register(proxy_dev->chip);
-+	if (rc)
-+		goto err;
-+
-+	return;
-+
-+err:
-+	vtpm_proxy_fops_undo_open(proxy_dev);
-+}
-+
-+/*
-+ * vtpm_proxy_work_stop: make sure the work has finished
-+ *
-+ * This function is useful when user space closed the fd
-+ * while the driver still determines timeouts.
-+ */
-+static void vtpm_proxy_work_stop(struct proxy_dev *proxy_dev)
-+{
-+	vtpm_proxy_fops_undo_open(proxy_dev);
-+	flush_work(&proxy_dev->work);
-+}
-+
-+/*
-+ * vtpm_proxy_work_start: Schedule the work for TPM 1.2 & 2 initialization
-+ */
-+static inline void vtpm_proxy_work_start(struct proxy_dev *proxy_dev)
-+{
-+	queue_work(workqueue, &proxy_dev->work);
-+}
-+
-+/*
-  * Code related to creation and deletion of device pairs
-  */
- static struct proxy_dev *vtpm_proxy_create_proxy_dev(void)
-@@ -355,6 +424,7 @@ static struct proxy_dev *vtpm_proxy_create_proxy_dev(void)
- 
- 	init_waitqueue_head(&proxy_dev->wq);
- 	mutex_init(&proxy_dev->buf_lock);
-+	INIT_WORK(&proxy_dev->work, vtpm_proxy_work);
- 
- 	chip = tpm_chip_alloc(NULL, &vtpm_proxy_tpm_ops);
- 	if (IS_ERR(chip)) {
-@@ -425,9 +495,7 @@ static struct file *vtpm_proxy_create_device(
- 	if (proxy_dev->flags & VTPM_PROXY_FLAG_TPM2)
- 		proxy_dev->chip->flags |= TPM_CHIP_FLAG_TPM2;
- 
--	rc = tpm_chip_register(proxy_dev->chip);
--	if (rc)
--		goto err_vtpm_fput;
-+	vtpm_proxy_work_start(proxy_dev);
- 
- 	vtpm_new_dev->fd = fd;
- 	vtpm_new_dev->major = MAJOR(proxy_dev->chip->dev.devt);
-@@ -436,12 +504,6 @@ static struct file *vtpm_proxy_create_device(
- 
- 	return file;
- 
--err_vtpm_fput:
--	put_unused_fd(fd);
--	fput(file);
--
--	return ERR_PTR(rc);
--
- err_put_unused_fd:
- 	put_unused_fd(fd);
- 
-@@ -456,6 +518,8 @@ err_delete_proxy_dev:
-  */
- static void vtpm_proxy_delete_device(struct proxy_dev *proxy_dev)
- {
-+	vtpm_proxy_work_stop(proxy_dev);
-+
- 	/*
- 	 * A client may hold the 'ops' lock, so let it know that the server
- 	 * side shuts down before we try to grab the 'ops' lock when
-@@ -555,11 +619,24 @@ static int __init vtpm_module_init(void)
- 		return rc;
- 	}
- 
-+	workqueue = create_workqueue("tpm-vtpm");
-+	if (!workqueue) {
-+		pr_err("couldn't create workqueue\n");
-+		rc = -ENOMEM;
-+		goto err_vtpmx_cleanup;
-+	}
-+
- 	return 0;
-+
-+err_vtpmx_cleanup:
-+	vtpmx_cleanup();
-+
-+	return rc;
- }
- 
- static void __exit vtpm_module_exit(void)
- {
-+	destroy_workqueue(workqueue);
- 	vtpmx_cleanup();
- }
- 
+-#ifdef CONFIG_ACPI
+-	const struct attribute_group *groups[2];
++	const struct attribute_group *groups[3];
+ 	unsigned int groups_cnt;
++#ifdef CONFIG_ACPI
+ 	acpi_handle acpi_dev_handle;
+ 	char ppi_version[TPM_PPI_VERSION_LEN + 1];
+ #endif /* CONFIG_ACPI */
 -- 
 2.4.3
 
