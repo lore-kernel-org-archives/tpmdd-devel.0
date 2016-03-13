@@ -1,7 +1,8 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v8 07/10] tpm: Introduce TPM_CHIP_FLAG_VIRTUAL
-Date: Sun, 13 Mar 2016 18:54:37 -0400
-Message-ID: <1457909680-14085-8-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v8 05/10] tpm: Split out the devm stuff from
+	tpmm_chip_alloc
+Date: Sun, 13 Mar 2016 18:54:35 -0400
+Message-ID: <1457909680-14085-6-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1457909680-14085-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,117 +21,120 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Introduce TPM_CHIP_FLAG_VIRTUAL to be used when the chip device has no
-parent device. Also adapt tpm_chip_alloc so that it can be called with
-parent device being NULL.
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 
-Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+tpm_chip_alloc becomes a typical subsystem allocate call.
+
+Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Reviewed-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Tested-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm-chip.c  |  9 +++++----
- drivers/char/tpm/tpm-sysfs.c | 15 +++++++++++----
- drivers/char/tpm/tpm.h       |  5 +++--
- 3 files changed, 19 insertions(+), 10 deletions(-)
+ drivers/char/tpm/tpm-chip.c | 49 ++++++++++++++++++++++++++++++++-------------
+ drivers/char/tpm/tpm.h      |  4 +++-
+ 2 files changed, 38 insertions(+), 15 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index f62c851..e4e1fad 100644
+index 6636728..5880377 100644
 --- a/drivers/char/tpm/tpm-chip.c
 +++ b/drivers/char/tpm/tpm-chip.c
-@@ -170,9 +170,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
+@@ -121,17 +121,17 @@ static void tpm_dev_release(struct device *dev)
+ }
+ 
+ /**
+- * tpmm_chip_alloc() - allocate a new struct tpm_chip instance
+- * @dev: device to which the chip is associated
++ * tpm_chip_alloc() - allocate a new struct tpm_chip instance
++ * @pdev: device to which the chip is associated
++ *        At this point pdev mst be initialized, but does not have to
++ *        be registered
+  * @ops: struct tpm_class_ops instance
+  *
+  * Allocates a new struct tpm_chip instance and assigns a free
+- * device number for it. Caller does not have to worry about
+- * freeing the allocated resources. When the devices is removed
+- * devres calls tpmm_chip_remove() to do the job.
++ * device number for it. Must be paired with put_device(&chip->dev).
+  */
+-struct tpm_chip *tpmm_chip_alloc(struct device *dev,
+-				 const struct tpm_class_ops *ops)
++struct tpm_chip *tpm_chip_alloc(struct device *dev,
++				const struct tpm_class_ops *ops)
+ {
+ 	struct tpm_chip *chip;
+ 	int rc;
+@@ -160,8 +160,6 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
+ 
+ 	device_initialize(&chip->dev);
+ 
+-	dev_set_drvdata(dev, chip);
+-
  	chip->dev.class = tpm_class;
  	chip->dev.release = tpm_dev_release;
  	chip->dev.parent = dev;
--#ifdef CONFIG_ACPI
- 	chip->dev.groups = chip->groups;
--#endif
- 
- 	if (chip->dev_num == 0)
- 		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
-@@ -183,6 +181,9 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
- 	if (rc)
- 		goto out;
- 
-+	if (!dev)
-+		chip->flags |= TPM_CHIP_FLAG_VIRTUAL;
-+
- 	cdev_init(&chip->cdev, &tpm_fops);
+@@ -182,17 +180,40 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
  	chip->cdev.owner = THIS_MODULE;
  	chip->cdev.kobj.parent = &chip->dev.kobj;
-@@ -327,7 +328,7 @@ int tpm_chip_register(struct tpm_chip *chip)
  
- 	chip->flags |= TPM_CHIP_FLAG_REGISTERED;
- 
--	if (!(chip->flags & TPM_CHIP_FLAG_TPM2)) {
-+	if (!(chip->flags & (TPM_CHIP_FLAG_TPM2 | TPM_CHIP_FLAG_VIRTUAL))) {
- 		rc = __compat_only_sysfs_link_entry_to_kobj(
- 		    &chip->dev.parent->kobj, &chip->dev.kobj, "ppi");
- 		if (rc && rc != -ENOENT) {
-@@ -361,7 +362,7 @@ void tpm_chip_unregister(struct tpm_chip *chip)
- 	if (!(chip->flags & TPM_CHIP_FLAG_REGISTERED))
- 		return;
- 
--	if (!(chip->flags & TPM_CHIP_FLAG_TPM2))
-+	if (!(chip->flags & (TPM_CHIP_FLAG_TPM2 | TPM_CHIP_FLAG_VIRTUAL)))
- 		sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
- 
- 	tpm1_chip_unregister(chip);
-diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
-index 34e7fc7..9ee0f4d 100644
---- a/drivers/char/tpm/tpm-sysfs.c
-+++ b/drivers/char/tpm/tpm-sysfs.c
-@@ -283,9 +283,15 @@ static const struct attribute_group tpm_dev_group = {
- 
- int tpm_sysfs_add_device(struct tpm_chip *chip)
- {
--	int err;
--	err = sysfs_create_group(&chip->dev.parent->kobj,
--				 &tpm_dev_group);
-+	int err = 0;
+-	rc = devm_add_action(dev, (void (*)(void *)) put_device, &chip->dev);
++	return chip;
 +
-+	if (!(chip->flags & TPM_CHIP_FLAG_VIRTUAL))
-+		err = sysfs_create_group(&chip->dev.parent->kobj,
-+					 &tpm_dev_group);
-+	else {
-+		dev_set_drvdata(&chip->dev, chip);
-+		chip->groups[chip->groups_cnt++] = &tpm_dev_group;
-+	}
++out:
++	put_device(&chip->dev);
++	return ERR_PTR(rc);
++}
++EXPORT_SYMBOL_GPL(tpm_chip_alloc);
++
++/**
++ * tpmm_chip_alloc() - allocate a new struct tpm_chip instance
++ * @pdev: parent device to which the chip is associated
++ * @ops: struct tpm_class_ops instance
++ *
++ * Same as tpm_chip_alloc except devm is used to do the put_device
++ */
++struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
++				 const struct tpm_class_ops *ops)
++{
++	struct tpm_chip *chip;
++	int rc;
++
++	chip = tpm_chip_alloc(pdev, ops);
++	if (IS_ERR(chip))
++		return chip;
++
++	rc = devm_add_action(pdev, (void (*)(void *)) put_device, &chip->dev);
+ 	if (rc) {
+ 		put_device(&chip->dev);
+ 		return ERR_PTR(rc);
+ 	}
  
- 	if (err)
- 		dev_err(&chip->dev,
-@@ -300,5 +306,6 @@ void tpm_sysfs_del_device(struct tpm_chip *chip)
- 	 * synchronizes this removal so that no callbacks are running or can
- 	 * run again
- 	 */
--	sysfs_remove_group(&chip->dev.parent->kobj, &tpm_dev_group);
-+	if (!(chip->flags & TPM_CHIP_FLAG_VIRTUAL))
-+		sysfs_remove_group(&chip->dev.parent->kobj, &tpm_dev_group);
+-	return chip;
++	dev_set_drvdata(pdev, chip);
+ 
+-out:
+-	put_device(&chip->dev);
+-	return ERR_PTR(rc);
++	return chip;
  }
+ EXPORT_SYMBOL_GPL(tpmm_chip_alloc);
+ 
 diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 928b47f..f197eef 100644
+index c6376b1..5fcf788 100644
 --- a/drivers/char/tpm/tpm.h
 +++ b/drivers/char/tpm/tpm.h
-@@ -164,6 +164,7 @@ struct tpm_vendor_specific {
- enum tpm_chip_flags {
- 	TPM_CHIP_FLAG_REGISTERED	= BIT(0),
- 	TPM_CHIP_FLAG_TPM2		= BIT(1),
-+	TPM_CHIP_FLAG_VIRTUAL		= BIT(2),
- };
+@@ -511,7 +511,9 @@ struct tpm_chip *tpm_chip_find_get(int chip_num);
+ __must_check int tpm_try_get_ops(struct tpm_chip *chip);
+ void tpm_put_ops(struct tpm_chip *chip);
  
- struct tpm_chip {
-@@ -189,9 +190,9 @@ struct tpm_chip {
- 
- 	struct dentry **bios_dir;
- 
--#ifdef CONFIG_ACPI
--	const struct attribute_group *groups[2];
-+	const struct attribute_group *groups[3];
- 	unsigned int groups_cnt;
-+#ifdef CONFIG_ACPI
- 	acpi_handle acpi_dev_handle;
- 	char ppi_version[TPM_PPI_VERSION_LEN + 1];
- #endif /* CONFIG_ACPI */
+-extern struct tpm_chip *tpmm_chip_alloc(struct device *dev,
++extern struct tpm_chip *tpm_chip_alloc(struct device *dev,
++				       const struct tpm_class_ops *ops);
++extern struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
+ 				       const struct tpm_class_ops *ops);
+ extern int tpm_chip_register(struct tpm_chip *chip);
+ extern void tpm_chip_unregister(struct tpm_chip *chip);
 -- 
 2.4.3
 
