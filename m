@@ -1,59 +1,61 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v8 08/10] tpm: Proxy driver for supporting multiple
- emulated TPMs
-Date: Mon, 14 Mar 2016 18:26:02 +0200
-Message-ID: <20160314162602.GA24203@intel.com>
-References: <1457909680-14085-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1457909680-14085-9-git-send-email-stefanb@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: [PATCH] tpm, tpm_crb: remove wmb()'s
+Date: Mon, 14 Mar 2016 20:34:46 +0200
+Message-ID: <1457980486-29229-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <1457909680-14085-9-git-send-email-stefanb@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org, linux-api@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Mar 13, 2016 at 06:54:38PM -0400, Stefan Berger wrote:
-> This patch implements a proxy driver for supporting multiple emulated TPMs
-> in a system.
-> 
-> The driver implements a device /dev/vtpmx that is used to created
-> a client device pair /dev/tpmX (e.g., /dev/tpm10) and a server side that
-> is accessed using a file descriptor returned by an ioctl.
-> The device /dev/tpmX is the usual TPM device created by the core TPM
-> driver. Applications or kernel subsystems can send TPM commands to it
-> and the corresponding server-side file descriptor receives these
-> commands and delivers them to an emulated TPM.
+wmbs are not neded as we use iowrite32().
 
-Tested-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+---
+ drivers/char/tpm/tpm_crb.c | 6 ------
+ 1 file changed, 6 deletions(-)
 
-My testing procedure was:
+diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+index a12b319..1cabe30 100644
+--- a/drivers/char/tpm/tpm_crb.c
++++ b/drivers/char/tpm/tpm_crb.c
+@@ -153,9 +153,6 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+ 
+ 	memcpy_toio(priv->cmd, buf, len);
+ 
+-	/* Make sure that cmd is populated before issuing start. */
+-	wmb();
+-
+ 	if (priv->flags & CRB_FL_CRB_START)
+ 		iowrite32(cpu_to_le32(CRB_START_INVOKE), &priv->cca->start);
+ 
+@@ -171,9 +168,6 @@ static void crb_cancel(struct tpm_chip *chip)
+ 
+ 	iowrite32(cpu_to_le32(CRB_CANCEL_INVOKE), &priv->cca->cancel);
+ 
+-	/* Make sure that cmd is populated before issuing cancel. */
+-	wmb();
+-
+ 	if ((priv->flags & CRB_FL_ACPI_START) && crb_do_acpi_start(chip))
+ 		dev_err(&chip->dev, "ACPI Start failed\n");
+ 
+-- 
+2.7.0
 
-* Wine running TPM 2.0 simulator on the host side. [1]
-* QEMU running an OS image with this patch. [2]
-* Wrote a script for proxying the simulator: tpm2-simulator-vtpm. [3]
-* Run some smoke tests: python -m unittest -v tpm2_smoke. [3]
 
-[1] http://research.microsoft.com/en-us/downloads/35116857-e544-4003-8e7b-584182dc6833/
-[2] git://git.infradead.org/users/jjs/buildroot-tpmdd.git
-[3] git://git.infradead.org/users/jjs/tpm2-scripts.git
-
-/Jarkko
-
-> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
-> CC: linux-kernel@vger.kernel.org
-> CC: linux-doc@vger.kernel.org
-> CC: linux-api@vger.kernel.org
-> ---
->  drivers/char/tpm/Kconfig          |  10 +
->  drivers/char/tpm/Makefile         |   1 +
->  drivers/char/tpm/tpm_vtpm_proxy.c | 572 ++++++++++++++++++++++++++++++++++++++
->  include/uapi/linux/Kbuild         |   1 +
->  include/uapi/linux/vtpm_proxy.h   |  42 +++
->  5 files changed, 626 insertions(+)
->  create mode 100644 drivers/char/tpm/tpm_vtpm_proxy.c
->  create mode 100644 include/uapi/linux/vtpm_proxy.h
-
-/Jarkko
+------------------------------------------------------------------------------
+Transform Data into Opportunity.
+Accelerate data analysis in your applications with
+Intel Data Analytics Acceleration Library.
+Click to learn more.
+http://pubads.g.doubleclick.net/gampad/clk?id=278785231&iu=/4140
