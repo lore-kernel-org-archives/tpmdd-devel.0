@@ -1,8 +1,8 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH 07/12] devicetree: Add Trusted Computing Group
-	to vendor-prefix.txt
-Date: Sun, 20 Mar 2016 20:34:38 +0100
-Message-ID: <1458502483-16887-8-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH 06/12] devicetree: Add infineon to
+	vendor-prefix.txt
+Date: Sun, 20 Mar 2016 20:34:37 +0100
+Message-ID: <1458502483-16887-7-git-send-email-christophe-h.ricard@st.com>
 References: <1458502483-16887-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,11 +21,7 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Add missing vendor to vendor-prefix.txt.
-
-Trusted Computing Group design common specifications for
-TPM (Trusted Platform Module) vendors.
-TCG designates a TPM answering to a public specification.
+Add missing vendor to vendor-prefix.txt
 
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 ---
@@ -33,17 +29,17 @@ Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.o
  1 file changed, 1 insertion(+)
 
 diff --git a/Documentation/devicetree/bindings/vendor-prefixes.txt b/Documentation/devicetree/bindings/vendor-prefixes.txt
-index 6c3d970..717bae9 100644
+index 72e2c5a..6c3d970 100644
 --- a/Documentation/devicetree/bindings/vendor-prefixes.txt
 +++ b/Documentation/devicetree/bindings/vendor-prefixes.txt
-@@ -230,6 +230,7 @@ stericsson	ST-Ericsson
- synology	Synology, Inc.
- tbs	TBS Technologies
- tcl	Toby Churchill Ltd.
-+tcg	Trusted Computing Group
- technologic	Technologic Systems
- thine	THine Electronics, Inc.
- ti	Texas Instruments
+@@ -113,6 +113,7 @@ ibm	International Business Machines (IBM)
+ idt	Integrated Device Technologies, Inc.
+ iom	Iomega Corporation
+ img	Imagination Technologies Ltd.
++infineon Infineon Technologies
+ ingenic	Ingenic Semiconductor
+ innolux	Innolux Corporation
+ intel	Intel Corporation
 -- 
 2.5.0
 
