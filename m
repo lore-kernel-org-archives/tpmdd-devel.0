@@ -1,15 +1,13 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH] tpm: drop int_queue from
- tpm_vendor_specific
-Date: Tue, 22 Mar 2016 10:31:54 -0600
-Message-ID: <20160322163154.GA8060@obsidianresearch.com>
-References: <1458620409-15603-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+From: <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+Subject: [PATCH 1/1] tpm: add tpm 2.0 support to nuvoton chips
+	on i2c bus
+Date: Sun, 20 Mar 2016 08:02:58 +0000
+Message-ID: <510d6333a3fc49b297a82bd69c89a05e@NTILML02.nuvoton.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1458620409-15603-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,157 +16,136 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org, peterhuewe-Mmb7MZpHnFY@public.gmane.org
+Cc: Dan.Morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, Eyal.Cohen-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, shmulik.hager-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Mar 22, 2016 at 06:20:09AM +0200, Jarkko Sakkinen wrote:
-> Drop field int_queue from tpm_vendor_specific as it is used only by
-> tpm_tis. Probably all of the fields should be eventually dropped and
-> moved to the private structures of different drivers but it is better to
-> do this one step at a time in order not to break anything.
-> 
-> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+>From 40c94ed59330638da05932d14b91ebe886c4d33c Mon Sep 17 00:00:00 2001
+From: andrew azmansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+Date: Sun, 20 Mar 2016 09:01:46 +0200
+Subject: [PATCH 1/1] tpm: add tpm 2.0 support to nuvoton chips on i2c bus
 
-Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+prob of tpm_i2c_nuvoton check if chip tpm support tpm 2.0
+specification . if chip support tpm 2.0 then run tmp 2.0 selftest
+and set timeouts according tpm 2.0 .  otherwise run tpm 1.2 selftest
+and set timeouts according to tpm 1.2
 
->  drivers/char/tpm/tpm.h             |  1 -
->  drivers/char/tpm/tpm_i2c_nuvoton.c |  1 -
->  drivers/char/tpm/tpm_tis.c         | 19 ++++++++++++-------
->  3 files changed, 12 insertions(+), 9 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> index f197eef..4764545 100644
-> +++ b/drivers/char/tpm/tpm.h
-> @@ -148,7 +148,6 @@ struct tpm_vendor_specific {
->  	void *priv;
->  
->  	wait_queue_head_t read_queue;
-> -	wait_queue_head_t int_queue;
->  
->  	u16 manufacturer_id;
->  };
-> diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
-> index d61d43f..a43b5f3 100644
-> +++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
-> @@ -540,7 +540,6 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
->  		return -ENOMEM;
->  
->  	init_waitqueue_head(&chip->vendor.read_queue);
-> -	init_waitqueue_head(&chip->vendor.int_queue);
->  
->  	/* Default timeouts */
->  	chip->vendor.timeout_a = msecs_to_jiffies(TPM_I2C_SHORT_TIMEOUT);
-> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-> index eed3bf5..7d7a776 100644
-> +++ b/drivers/char/tpm/tpm_tis.c
-> @@ -95,6 +95,7 @@ struct tpm_info {
->  
->  struct priv_data {
->  	bool irq_tested;
-> +	wait_queue_head_t int_queue;
->  };
->  
->  #if defined(CONFIG_PNP) && defined(CONFIG_ACPI)
-> @@ -157,6 +158,7 @@ static void release_locality(struct tpm_chip *chip, int l, int force)
->  
->  static int request_locality(struct tpm_chip *chip, int l)
->  {
-> +	struct priv_data *priv = chip->vendor.priv;
->  	unsigned long stop, timeout;
->  	long rc;
->  
-> @@ -173,7 +175,7 @@ again:
->  		timeout = stop - jiffies;
->  		if ((long)timeout <= 0)
->  			return -1;
-> -		rc = wait_event_interruptible_timeout(chip->vendor.int_queue,
-> +		rc = wait_event_interruptible_timeout(priv->int_queue,
->  						      (check_locality
->  						       (chip, l) >= 0),
->  						      timeout);
-> @@ -249,6 +251,7 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
->  
->  static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
->  {
-> +	struct priv_data *priv = chip->vendor.priv;
->  	int size = 0;
->  	int expected, status;
->  
-> @@ -279,7 +282,7 @@ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
->  	}
->  
->  	wait_for_tpm_stat(chip, TPM_STS_VALID, chip->vendor.timeout_c,
-> -			  &chip->vendor.int_queue, false);
-> +			  &priv->int_queue, false);
->  	status = tpm_tis_status(chip);
->  	if (status & TPM_STS_DATA_AVAIL) {	/* retry? */
->  		dev_err(&chip->dev, "Error left over data\n");
-> @@ -304,6 +307,7 @@ MODULE_PARM_DESC(itpm, "Force iTPM workarounds (found on some Lenovo laptops)");
->   */
->  static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
->  {
-> +	struct priv_data *priv = chip->vendor.priv;
->  	int rc, status, burstcnt;
->  	size_t count = 0;
->  
-> @@ -315,7 +319,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
->  		tpm_tis_ready(chip);
->  		if (wait_for_tpm_stat
->  		    (chip, TPM_STS_COMMAND_READY, chip->vendor.timeout_b,
-> -		     &chip->vendor.int_queue, false) < 0) {
-> +		     &priv->int_queue, false) < 0) {
->  			rc = -ETIME;
->  			goto out_err;
->  		}
-> @@ -330,7 +334,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
->  		}
->  
->  		wait_for_tpm_stat(chip, TPM_STS_VALID, chip->vendor.timeout_c,
-> -				  &chip->vendor.int_queue, false);
-> +				  &priv->int_queue, false);
->  		status = tpm_tis_status(chip);
->  		if (!itpm && (status & TPM_STS_DATA_EXPECT) == 0) {
->  			rc = -EIO;
-> @@ -342,7 +346,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
->  	iowrite8(buf[count],
->  		 chip->vendor.iobase + TPM_DATA_FIFO(chip->vendor.locality));
->  	wait_for_tpm_stat(chip, TPM_STS_VALID, chip->vendor.timeout_c,
-> -			  &chip->vendor.int_queue, false);
-> +			  &priv->int_queue, false);
->  	status = tpm_tis_status(chip);
->  	if ((status & TPM_STS_DATA_EXPECT) != 0) {
->  		rc = -EIO;
-> @@ -537,6 +541,7 @@ static const struct tpm_class_ops tpm_tis = {
->  static irqreturn_t tis_int_handler(int dummy, void *dev_id)
->  {
->  	struct tpm_chip *chip = dev_id;
-> +	struct priv_data *priv = chip->vendor.priv;
->  	u32 interrupt;
->  	int i;
->  
-> @@ -556,7 +561,7 @@ static irqreturn_t tis_int_handler(int dummy, void *dev_id)
->  	if (interrupt &
->  	    (TPM_INTF_LOCALITY_CHANGE_INT | TPM_INTF_STS_VALID_INT |
->  	     TPM_INTF_CMD_READY_INT))
-> -		wake_up_interruptible(&chip->vendor.int_queue);
-> +		wake_up_interruptible(&priv->int_queue);
->  
->  	/* Clear interrupts handled with TPM_EOI */
->  	iowrite32(interrupt,
-> @@ -773,7 +778,7 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
->  
->  	/* INTERRUPT Setup */
->  	init_waitqueue_head(&chip->vendor.read_queue);
-> -	init_waitqueue_head(&chip->vendor.int_queue);
-> +	init_waitqueue_head(&priv->int_queue);
->  	if (interrupts && tpm_info->irq != -1) {
->  		if (tpm_info->irq) {
->  			tpm_tis_probe_irq_single(chip, intmask, IRQF_SHARED,
+Signed-off-by: andrew azmansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+---
+ drivers/char/tpm/tpm_i2c_nuvoton.c | 48 ++++++++++++++++++++++++++++++++------
+ 1 file changed, 41 insertions(+), 7 deletions(-)
 
--- 
-Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>        (780)4406067x832
-Chief Technology Officer, Obsidian Research Corp         Edmonton, Canada
+diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
+index 847f159..4263911 100644
+--- a/drivers/char/tpm/tpm_i2c_nuvoton.c
++++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
+@@ -138,7 +138,8 @@ static void i2c_nuvoton_ready(struct tpm_chip *chip)
+ }
+
+ /* read burstCount field from TPM_STS register
+- * return -1 on fail to read */
++ * return -1 on fail to read
++*/
+ static int i2c_nuvoton_get_burstcount(struct i2c_client *client,
+       struct tpm_chip *chip)
+ {
+@@ -170,6 +171,7 @@ static int i2c_nuvoton_get_burstcount(struct i2c_client *client,
+ static bool i2c_nuvoton_check_status(struct tpm_chip *chip, u8 mask, u8 value)
+ {
+ u8 status = i2c_nuvoton_read_status(chip);
++
+ return (status != TPM_STS_ERR_VAL) && ((status & mask) == value);
+ }
+
+@@ -188,7 +190,8 @@ static int i2c_nuvoton_wait_for_stat(struct tpm_chip *chip, u8 mask, u8 value,
+ if (rc > 0)
+ return 0;
+ /* At this point we know that the SINT pin is asserted, so we
+- * do not need to do i2c_nuvoton_check_status */
++ * do not need to do i2c_nuvoton_check_status
++*/
+ } else {
+ unsigned long ten_msec, stop;
+ bool status_valid;
+@@ -469,7 +472,8 @@ static const struct tpm_class_ops tpm_i2c = {
+  * the interrupt is currently being asserted. The driver does not do any
+  * processing triggered by interrupts, and the chip provides no way to mask at
+  * the source (plus that would be slow over I2C). Run the IRQ as a one-shot,
+- * this means it cannot be shared. */
++ * this means it cannot be shared.
++*/
+ static irqreturn_t i2c_nuvoton_int_handler(int dummy, void *dev_id)
+ {
+ struct tpm_chip *chip = dev_id;
+@@ -552,7 +556,8 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
+  * I2C intfcaps (interrupt capabilitieis) in the chip are hard coded to:
+  *   TPM_INTF_INT_LEVEL_LOW | TPM_INTF_DATA_AVAIL_INT
+  * The IRQ should be set in the i2c_board_info (which is done
+- * automatically in of_i2c_register_devices, for device tree users */
++ * automatically in of_i2c_register_devices, for device tree users
++*/
+ chip->vendor.irq = client->irq;
+
+ if (chip->vendor.irq) {
+@@ -601,10 +606,38 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
+ }
+ }
+
+-if (tpm_get_timeouts(chip))
+-return -ENODEV;
++rc = tpm2_probe(chip);
++if (rc)
++return rc;
+
+-if (tpm_do_selftest(chip))
++if (chip->flags & TPM_CHIP_FLAG_TPM2) {
++chip->vendor.timeout_a = msecs_to_jiffies(TPM2_TIMEOUT_A);
++chip->vendor.timeout_b = msecs_to_jiffies(TPM2_TIMEOUT_B);
++chip->vendor.timeout_c = msecs_to_jiffies(TPM2_TIMEOUT_C);
++chip->vendor.timeout_d = msecs_to_jiffies(TPM2_TIMEOUT_D);
++chip->vendor.duration[TPM_SHORT] =
++msecs_to_jiffies(TPM2_DURATION_SHORT);
++chip->vendor.duration[TPM_MEDIUM] =
++msecs_to_jiffies(TPM2_DURATION_MEDIUM);
++chip->vendor.duration[TPM_LONG] =
++msecs_to_jiffies(TPM2_DURATION_LONG);
++
++rc = tpm2_do_selftest(chip);
++if (rc == TPM2_RC_INITIALIZE) {
++if (tpm2_startup(chip, TPM2_SU_CLEAR))
++return -ENODEV;
++
++rc = tpm2_do_selftest(chip);
++}
++
++} else {
++if (tpm_get_timeouts(chip))
++return -ENODEV;
++
++rc = tpm_do_selftest(chip);
++}
++
++if (rc)
+ return -ENODEV;
+
+ return tpm_chip_register(chip);
+@@ -614,6 +647,7 @@ static int i2c_nuvoton_remove(struct i2c_client *client)
+ {
+ struct device *dev = &(client->dev);
+ struct tpm_chip *chip = dev_get_drvdata(dev);
++
+ tpm_chip_unregister(chip);
+ return 0;
+ }
+--
+1.9.1
+
+
+
+
+
+===========================================================================================
+The privileged confidential information contained in this email is intended for use only by the addressees as indicated by the original sender of this email. If you are not the addressee indicated in this email or are not responsible for delivery of the email to such a person, please kindly reply to the sender indicating this fact and delete all copies of it from your computer and network server immediately. Your cooperation is highly appreciated. It is advised that any unauthorized use of confidential information of Nuvoton is strictly prohibited; and any information in this email irrelevant to the official business of Nuvoton shall be deemed as neither given nor endorsed by Nuvoton.
 
 ------------------------------------------------------------------------------
 Transform Data into Opportunity.
