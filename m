@@ -1,16 +1,16 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH 4/5] tpm: Move irqs field from
- tpm_vendor_specific to tpm_chip structure
-Date: Wed, 23 Mar 2016 16:52:18 -0600
-Message-ID: <20160323225218.GC17397@obsidianresearch.com>
+Subject: Re: [PATCH 5/5] tpm: Rename tpm_vendor_specific
+ structure to tpm_protocol_infos
+Date: Wed, 23 Mar 2016 16:54:54 -0600
+Message-ID: <20160323225454.GD17397@obsidianresearch.com>
 References: <1458764240-24185-1-git-send-email-christophe-h.ricard@st.com>
-	<1458764240-24185-5-git-send-email-christophe-h.ricard@st.com>
+	<1458764240-24185-6-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1458764240-24185-5-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
+In-Reply-To: <1458764240-24185-6-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,35 +23,22 @@ To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Mar 23, 2016 at 09:17:19PM +0100, Christophe Ricard wrote:
-> In order to complete the tpm_vendor_specific cleanup structure move irqs
-> specific fields to tpm_chip. It make sense to be in this place as those
-> fields are part of the tpm properties.
+On Wed, Mar 23, 2016 at 09:17:20PM +0100, Christophe Ricard wrote:
+> As no more information available in tpm_vendor_specific structure are
+> available in tpm_vendor_specific structure rename it tpm_protocol_infos.
 
-No, sprinkle these two fields into the drivers.
+Just get rid of it. Either the info rightly belongs in the chip or it
+should be pushed to a priv. Either way, we don't need this structure.
 
-> @@ -359,7 +359,7 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
->  		goto out;
->  	}
->  
-> -	if (chip->vendor.irq)
-> +	if (chip->irq)
->  		goto out_recv;
->  
->  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> @@ -890,7 +890,7 @@ int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
->  
->  	stop = jiffies + timeout;
->  
-> -	if (chip->vendor.irq) {
-> +	if (chip->irq) {
+>  		if (tpm_info->irq) {
+>  			tpm_tis_probe_irq_single(chip, intmask, IRQF_SHARED,
+>  						 tpm_info->irq);
+> -			if (!chip->vendor.irq)
+> +			if (!chip->irq)
+>  				dev_err(&chip->dev, FW_BUG
+>  					"TPM interrupt not working, polling instead\n");
 
-This should be something smarter, a chip->flags or something is a
-little better than this.
-
-Ideally, the driver facing API would be fixed and this behavior would
-be in a utility function the driver can call in the standard recv
-path, not weird like this.
+Read your diffs, these doesn't belong in this patch.
 
 Jason
 
