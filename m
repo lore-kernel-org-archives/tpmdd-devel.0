@@ -1,8 +1,8 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH 1/5] tpm: drop 'iobase' from struct
-	tpm_vendor_specific
-Date: Wed, 23 Mar 2016 21:17:16 +0100
-Message-ID: <1458764240-24185-2-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH 3/5] tpm: Move priv field from
+	tpm_vendor_specific to tpm_chip
+Date: Wed, 23 Mar 2016 21:17:18 +0100
+Message-ID: <1458764240-24185-4-git-send-email-christophe-h.ricard@st.com>
 References: <1458764240-24185-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,522 +21,486 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Dropped the field 'iobase' from struct tpm_vendor_specific and migrated
-it to the private structures of tpm_atmel and tpm_tis.
+Move from tpm_vendor_specific priv field to tpm_chip as this is going to
+be used for additional tpm_chip description.
 
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 ---
- drivers/char/tpm/tpm.h       |   2 -
- drivers/char/tpm/tpm_atmel.c |  29 +++++++-----
- drivers/char/tpm/tpm_tis.c   | 104 +++++++++++++++++++++++++------------------
- 3 files changed, 78 insertions(+), 57 deletions(-)
+ drivers/char/tpm/tpm.h             |  4 ++--
+ drivers/char/tpm/tpm_atmel.c       | 12 +++++-----
+ drivers/char/tpm/tpm_atmel.h       |  2 +-
+ drivers/char/tpm/tpm_crb.c         | 12 +++++-----
+ drivers/char/tpm/tpm_i2c_atmel.c   | 12 +++++-----
+ drivers/char/tpm/tpm_i2c_nuvoton.c |  8 +++----
+ drivers/char/tpm/tpm_nsc.c         |  4 ++--
+ drivers/char/tpm/tpm_tis.c         | 46 +++++++++++++++++++-------------------
+ 8 files changed, 50 insertions(+), 50 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 7317bec..0d1b7e6 100644
+index 357ac14..06d5c2a 100644
 --- a/drivers/char/tpm/tpm.h
 +++ b/drivers/char/tpm/tpm.h
-@@ -131,8 +131,6 @@ enum tpm2_startup_types {
- struct tpm_chip;
+@@ -138,12 +138,11 @@ struct tpm_vendor_specific {
+ 	bool timeout_adjusted;
+ 	unsigned long duration[3]; /* jiffies */
+ 	bool duration_adjusted;
+-	void *priv;
  
- struct tpm_vendor_specific {
--	void __iomem *iobase;		/* ioremapped address */
--
- 	int irq;
- 
- 	struct list_head list;
-diff --git a/drivers/char/tpm/tpm_atmel.c b/drivers/char/tpm/tpm_atmel.c
-index c6daf6c..242d6c6 100644
---- a/drivers/char/tpm/tpm_atmel.c
-+++ b/drivers/char/tpm/tpm_atmel.c
-@@ -36,6 +36,7 @@ enum tpm_atmel_read_status {
+ 	wait_queue_head_t read_queue;
  };
  
- struct tpm_atmel_priv {
-+	void __iomem *iobase;
- 	unsigned long base;
- 	int region_size;
- 	int have_region;
-@@ -43,6 +44,7 @@ struct tpm_atmel_priv {
+-#define TPM_VPRIV(c)     ((c)->vendor.priv)
++#define TPM_VPRIV(c)     ((c)->priv)
+ 
+ #define TPM_VID_INTEL    0x8086
+ #define TPM_VID_WINBOND  0x1050
+@@ -159,6 +158,7 @@ enum tpm_chip_flags {
+ struct tpm_chip {
+ 	struct device dev;
+ 	struct cdev cdev;
++	void *priv;
+ 
+ 	/* A driver callback under ops cannot be run unless ops_sem is held
+ 	 * (sometimes implicitly, eg for the sysfs code). ops becomes null
+diff --git a/drivers/char/tpm/tpm_atmel.c b/drivers/char/tpm/tpm_atmel.c
+index 242d6c6..56845bf 100644
+--- a/drivers/char/tpm/tpm_atmel.c
++++ b/drivers/char/tpm/tpm_atmel.c
+@@ -44,7 +44,7 @@ struct tpm_atmel_priv {
  
  static int tpm_atml_recv(struct tpm_chip *chip, u8 *buf, size_t count)
  {
-+	struct tpm_atmel_priv *priv = chip->vendor.priv;
+-	struct tpm_atmel_priv *priv = chip->vendor.priv;
++	struct tpm_atmel_priv *priv = chip->priv;
  	u8 status, *hdr = buf;
  	u32 size;
  	int i;
-@@ -53,12 +55,12 @@ static int tpm_atml_recv(struct tpm_chip *chip, u8 *buf, size_t count)
- 		return -EIO;
- 
- 	for (i = 0; i < 6; i++) {
--		status = ioread8(chip->vendor.iobase + 1);
-+		status = ioread8(priv->iobase + 1);
- 		if ((status & ATML_STATUS_DATA_AVAIL) == 0) {
- 			dev_err(&chip->dev, "error reading header\n");
- 			return -EIO;
- 		}
--		*buf++ = ioread8(chip->vendor.iobase);
-+		*buf++ = ioread8(priv->iobase);
- 	}
- 
- 	/* size of the data received */
-@@ -69,7 +71,7 @@ static int tpm_atml_recv(struct tpm_chip *chip, u8 *buf, size_t count)
- 		dev_err(&chip->dev,
- 			"Recv size(%d) less than available space\n", size);
- 		for (; i < size; i++) {	/* clear the waiting data anyway */
--			status = ioread8(chip->vendor.iobase + 1);
-+			status = ioread8(priv->iobase + 1);
- 			if ((status & ATML_STATUS_DATA_AVAIL) == 0) {
- 				dev_err(&chip->dev, "error reading data\n");
- 				return -EIO;
-@@ -80,16 +82,16 @@ static int tpm_atml_recv(struct tpm_chip *chip, u8 *buf, size_t count)
- 
- 	/* read all the data available */
- 	for (; i < size; i++) {
--		status = ioread8(chip->vendor.iobase + 1);
-+		status = ioread8(priv->iobase + 1);
- 		if ((status & ATML_STATUS_DATA_AVAIL) == 0) {
- 			dev_err(&chip->dev, "error reading data\n");
- 			return -EIO;
- 		}
--		*buf++ = ioread8(chip->vendor.iobase);
-+		*buf++ = ioread8(priv->iobase);
- 	}
- 
- 	/* make sure data available is gone */
--	status = ioread8(chip->vendor.iobase + 1);
-+	status = ioread8(priv->iobase + 1);
- 
- 	if (status & ATML_STATUS_DATA_AVAIL) {
- 		dev_err(&chip->dev, "data available is stuck\n");
-@@ -101,12 +103,13 @@ static int tpm_atml_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+@@ -103,7 +103,7 @@ static int tpm_atml_recv(struct tpm_chip *chip, u8 *buf, size_t count)
  
  static int tpm_atml_send(struct tpm_chip *chip, u8 *buf, size_t count)
  {
-+	struct tpm_atmel_priv *priv = chip->vendor.priv;
+-	struct tpm_atmel_priv *priv = chip->vendor.priv;
++	struct tpm_atmel_priv *priv = chip->priv;
  	int i;
  
  	dev_dbg(&chip->dev, "tpm_atml_send:\n");
- 	for (i = 0; i < count; i++) {
- 		dev_dbg(&chip->dev, "%d 0x%x(%d)\n",  i, buf[i], buf[i]);
-- 		iowrite8(buf[i], chip->vendor.iobase);
-+		iowrite8(buf[i], priv->iobase);
- 	}
- 
- 	return count;
-@@ -114,12 +117,16 @@ static int tpm_atml_send(struct tpm_chip *chip, u8 *buf, size_t count)
+@@ -117,14 +117,14 @@ static int tpm_atml_send(struct tpm_chip *chip, u8 *buf, size_t count)
  
  static void tpm_atml_cancel(struct tpm_chip *chip)
  {
--	iowrite8(ATML_STATUS_ABORT, chip->vendor.iobase + 1);
-+	struct tpm_atmel_priv *priv = chip->vendor.priv;
-+
-+	iowrite8(ATML_STATUS_ABORT, priv->iobase + 1);
+-	struct tpm_atmel_priv *priv = chip->vendor.priv;
++	struct tpm_atmel_priv *priv = chip->priv;
+ 
+ 	iowrite8(ATML_STATUS_ABORT, priv->iobase + 1);
  }
  
  static u8 tpm_atml_status(struct tpm_chip *chip)
  {
--	return ioread8(chip->vendor.iobase + 1);
-+	struct tpm_atmel_priv *priv = chip->vendor.priv;
-+
-+	return ioread8(priv->iobase + 1);
- }
+-	struct tpm_atmel_priv *priv = chip->vendor.priv;
++	struct tpm_atmel_priv *priv = chip->priv;
  
- static bool tpm_atml_req_canceled(struct tpm_chip *chip, u8 status)
-@@ -148,7 +155,7 @@ static void atml_plat_remove(void)
+ 	return ioread8(priv->iobase + 1);
+ }
+@@ -149,7 +149,7 @@ static struct platform_device *pdev;
+ static void atml_plat_remove(void)
+ {
+ 	struct tpm_chip *chip = dev_get_drvdata(&pdev->dev);
+-	struct tpm_atmel_priv *priv = chip->vendor.priv;
++	struct tpm_atmel_priv *priv = chip->priv;
+ 
+ 	if (chip) {
  		tpm_chip_unregister(chip);
- 		if (priv->have_region)
- 			atmel_release_region(priv->base, priv->region_size);
--		atmel_put_base_addr(chip->vendor.iobase);
-+		atmel_put_base_addr(priv->iobase);
- 		platform_device_unregister(pdev);
- 	}
- }
-@@ -196,6 +203,7 @@ static int __init init_atmel(void)
+@@ -214,7 +214,7 @@ static int __init init_atmel(void)
  		goto err_unreg_dev;
  	}
  
-+	priv->iobase = iobase;
- 	priv->base = base;
- 	priv->have_region = have_region;
- 	priv->region_size = region_size;
-@@ -206,7 +214,6 @@ static int __init init_atmel(void)
- 		goto err_unreg_dev;
- 	}
- 
--	chip->vendor.iobase = iobase;
- 	chip->vendor.priv = priv;
+-	chip->vendor.priv = priv;
++	chip->priv = priv;
  
  	rc = tpm_chip_register(chip);
+ 	if (rc)
+diff --git a/drivers/char/tpm/tpm_atmel.h b/drivers/char/tpm/tpm_atmel.h
+index 08607a6..dedc5dc 100644
+--- a/drivers/char/tpm/tpm_atmel.h
++++ b/drivers/char/tpm/tpm_atmel.h
+@@ -22,7 +22,7 @@
+  *
+  */
+ 
+-#define atmel_get_priv(chip) ((struct tpm_atmel_priv *) chip->vendor.priv)
++#define atmel_get_priv(chip) ((struct tpm_atmel_priv *) chip->priv)
+ 
+ #ifdef CONFIG_PPC64
+ 
+diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+index 8767da6..0e81a36 100644
+--- a/drivers/char/tpm/tpm_crb.c
++++ b/drivers/char/tpm/tpm_crb.c
+@@ -87,7 +87,7 @@ static SIMPLE_DEV_PM_OPS(crb_pm, tpm_pm_suspend, tpm_pm_resume);
+ 
+ static u8 crb_status(struct tpm_chip *chip)
+ {
+-	struct crb_priv *priv = chip->vendor.priv;
++	struct crb_priv *priv = chip->priv;
+ 	u8 sts = 0;
+ 
+ 	if ((ioread32(&priv->cca->start) & CRB_START_INVOKE) !=
+@@ -99,7 +99,7 @@ static u8 crb_status(struct tpm_chip *chip)
+ 
+ static int crb_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+ {
+-	struct crb_priv *priv = chip->vendor.priv;
++	struct crb_priv *priv = chip->priv;
+ 	unsigned int expected;
+ 
+ 	/* sanity check */
+@@ -139,7 +139,7 @@ static int crb_do_acpi_start(struct tpm_chip *chip)
+ 
+ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+ {
+-	struct crb_priv *priv = chip->vendor.priv;
++	struct crb_priv *priv = chip->priv;
+ 	int rc = 0;
+ 
+ 	if (len > ioread32(&priv->cca->cmd_size)) {
+@@ -163,7 +163,7 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+ 
+ static void crb_cancel(struct tpm_chip *chip)
+ {
+-	struct crb_priv *priv = chip->vendor.priv;
++	struct crb_priv *priv = chip->priv;
+ 
+ 	iowrite32(cpu_to_le32(CRB_CANCEL_INVOKE), &priv->cca->cancel);
+ 
+@@ -175,7 +175,7 @@ static void crb_cancel(struct tpm_chip *chip)
+ 
+ static bool crb_req_canceled(struct tpm_chip *chip, u8 status)
+ {
+-	struct crb_priv *priv = chip->vendor.priv;
++	struct crb_priv *priv = chip->priv;
+ 	u32 cancel = ioread32(&priv->cca->cancel);
+ 
+ 	return (cancel & CRB_CANCEL_INVOKE) == CRB_CANCEL_INVOKE;
+@@ -200,7 +200,7 @@ static int crb_init(struct acpi_device *device, struct crb_priv *priv)
+ 	if (IS_ERR(chip))
+ 		return PTR_ERR(chip);
+ 
+-	chip->vendor.priv = priv;
++	chip->priv = priv;
+ 	chip->acpi_dev_handle = device->handle;
+ 	chip->flags = TPM_CHIP_FLAG_TPM2;
+ 
+diff --git a/drivers/char/tpm/tpm_i2c_atmel.c b/drivers/char/tpm/tpm_i2c_atmel.c
+index dd8f0eb..92cd080 100644
+--- a/drivers/char/tpm/tpm_i2c_atmel.c
++++ b/drivers/char/tpm/tpm_i2c_atmel.c
+@@ -51,7 +51,7 @@ struct priv_data {
+ 
+ static int i2c_atmel_send(struct tpm_chip *chip, u8 *buf, size_t len)
+ {
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
+ 	struct i2c_client *client = to_i2c_client(chip->dev.parent);
+ 	s32 status;
+ 
+@@ -70,7 +70,7 @@ static int i2c_atmel_send(struct tpm_chip *chip, u8 *buf, size_t len)
+ 
+ static int i2c_atmel_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+ {
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
+ 	struct i2c_client *client = to_i2c_client(chip->dev.parent);
+ 	struct tpm_output_header *hdr =
+ 		(struct tpm_output_header *)priv->buffer;
+@@ -111,7 +111,7 @@ static void i2c_atmel_cancel(struct tpm_chip *chip)
+ 
+ static u8 i2c_atmel_read_status(struct tpm_chip *chip)
+ {
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
+ 	struct i2c_client *client = to_i2c_client(chip->dev.parent);
+ 	int rc;
+ 
+@@ -163,9 +163,9 @@ static int i2c_atmel_probe(struct i2c_client *client,
+ 	if (IS_ERR(chip))
+ 		return PTR_ERR(chip);
+ 
+-	chip->vendor.priv = devm_kzalloc(dev, sizeof(struct priv_data),
+-					 GFP_KERNEL);
+-	if (!chip->vendor.priv)
++	chip->priv = devm_kzalloc(dev, sizeof(struct priv_data),
++				  GFP_KERNEL);
++	if (!chip->priv)
+ 		return -ENOMEM;
+ 
+ 	/* Default timeouts */
+diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
+index a43b5f3..a9c6b2d 100644
+--- a/drivers/char/tpm/tpm_i2c_nuvoton.c
++++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
+@@ -178,7 +178,7 @@ static int i2c_nuvoton_wait_for_stat(struct tpm_chip *chip, u8 mask, u8 value,
+ {
+ 	if (chip->vendor.irq && queue) {
+ 		s32 rc;
+-		struct priv_data *priv = chip->vendor.priv;
++		struct priv_data *priv = chip->priv;
+ 		unsigned int cur_intrs = priv->intrs;
+ 
+ 		enable_irq(chip->vendor.irq);
+@@ -473,7 +473,7 @@ static const struct tpm_class_ops tpm_i2c = {
+ static irqreturn_t i2c_nuvoton_int_handler(int dummy, void *dev_id)
+ {
+ 	struct tpm_chip *chip = dev_id;
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
+ 
+ 	priv->intrs++;
+ 	wake_up(&chip->vendor.read_queue);
+@@ -534,9 +534,9 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
+ 	if (IS_ERR(chip))
+ 		return PTR_ERR(chip);
+ 
+-	chip->vendor.priv = devm_kzalloc(dev, sizeof(struct priv_data),
++	chip->priv = devm_kzalloc(dev, sizeof(struct priv_data),
+ 					 GFP_KERNEL);
+-	if (!chip->vendor.priv)
++	if (!chip->priv)
+ 		return -ENOMEM;
+ 
+ 	init_waitqueue_head(&chip->vendor.read_queue);
+diff --git a/drivers/char/tpm/tpm_nsc.c b/drivers/char/tpm/tpm_nsc.c
+index 8ccb1d5..48cc7ff 100644
+--- a/drivers/char/tpm/tpm_nsc.c
++++ b/drivers/char/tpm/tpm_nsc.c
+@@ -69,7 +69,7 @@ struct tpm_nsc_priv {
+ 	unsigned long base;
+ };
+ 
+-#define tpm_nsc_get_priv(chip) ((struct tpm_nsc_priv *) chip->vendor.priv)
++#define tpm_nsc_get_priv(chip) ((struct tpm_nsc_priv *) chip->priv)
+ 
+ /*
+  * Wait for a certain status to appear
+@@ -331,7 +331,7 @@ static int __init init_nsc(void)
+ 		goto err_rel_reg;
+ 	}
+ 
+-	chip->vendor.priv = priv;
++	chip->priv = priv;
+ 
+ 	rc = tpm_chip_register(chip);
+ 	if (rc)
 diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index 068f021..19dac62 100644
+index 19dac62..96cb824 100644
 --- a/drivers/char/tpm/tpm_tis.c
 +++ b/drivers/char/tpm/tpm_tis.c
-@@ -94,6 +94,7 @@ struct tpm_info {
- #define	TPM_RID(l)			(0x0F04 | ((l) << 12))
- 
- struct priv_data {
-+	void __iomem *iobase;
- 	u16 manufacturer_id;
- 	bool irq_tested;
- 	wait_queue_head_t int_queue;
-@@ -128,9 +129,10 @@ static inline int is_itpm(struct acpi_device *dev)
+@@ -129,7 +129,7 @@ static inline int is_itpm(struct acpi_device *dev)
   * correct values in the other bits.' */
  static int wait_startup(struct tpm_chip *chip, int l)
  {
-+	struct priv_data *priv = chip->vendor.priv;
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
  	unsigned long stop = jiffies + chip->vendor.timeout_a;
  	do {
--		if (ioread8(chip->vendor.iobase + TPM_ACCESS(l)) &
-+		if (ioread8(priv->iobase + TPM_ACCESS(l)) &
- 		    TPM_ACCESS_VALID)
- 			return 0;
- 		msleep(TPM_TIMEOUT);
-@@ -140,7 +142,9 @@ static int wait_startup(struct tpm_chip *chip, int l)
+ 		if (ioread8(priv->iobase + TPM_ACCESS(l)) &
+@@ -142,7 +142,7 @@ static int wait_startup(struct tpm_chip *chip, int l)
  
  static int check_locality(struct tpm_chip *chip, int l)
  {
--	if ((ioread8(chip->vendor.iobase + TPM_ACCESS(l)) &
-+	struct priv_data *priv = chip->vendor.priv;
-+
-+	if ((ioread8(priv->iobase + TPM_ACCESS(l)) &
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
+ 
+ 	if ((ioread8(priv->iobase + TPM_ACCESS(l)) &
  	     (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID)) ==
- 	    (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID))
- 		return chip->vendor.locality = l;
-@@ -150,11 +154,13 @@ static int check_locality(struct tpm_chip *chip, int l)
+@@ -154,7 +154,7 @@ static int check_locality(struct tpm_chip *chip, int l)
  
  static void release_locality(struct tpm_chip *chip, int l, int force)
  {
--	if (force || (ioread8(chip->vendor.iobase + TPM_ACCESS(l)) &
-+	struct priv_data *priv = chip->vendor.priv;
-+
-+	if (force || (ioread8(priv->iobase + TPM_ACCESS(l)) &
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
+ 
+ 	if (force || (ioread8(priv->iobase + TPM_ACCESS(l)) &
  		      (TPM_ACCESS_REQUEST_PENDING | TPM_ACCESS_VALID)) ==
- 	    (TPM_ACCESS_REQUEST_PENDING | TPM_ACCESS_VALID))
- 		iowrite8(TPM_ACCESS_ACTIVE_LOCALITY,
--			 chip->vendor.iobase + TPM_ACCESS(l));
-+			 priv->iobase + TPM_ACCESS(l));
- }
+@@ -165,7 +165,7 @@ static void release_locality(struct tpm_chip *chip, int l, int force)
  
  static int request_locality(struct tpm_chip *chip, int l)
-@@ -167,7 +173,7 @@ static int request_locality(struct tpm_chip *chip, int l)
- 		return l;
+ {
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
+ 	unsigned long stop, timeout;
+ 	long rc;
  
- 	iowrite8(TPM_ACCESS_REQUEST_USE,
--		 chip->vendor.iobase + TPM_ACCESS(l));
-+		 priv->iobase + TPM_ACCESS(l));
- 
- 	stop = jiffies + chip->vendor.timeout_a;
- 
-@@ -200,19 +206,24 @@ again:
+@@ -206,7 +206,7 @@ again:
  
  static u8 tpm_tis_status(struct tpm_chip *chip)
  {
--	return ioread8(chip->vendor.iobase +
-+	struct priv_data *priv = chip->vendor.priv;
-+
-+	return ioread8(priv->iobase +
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
+ 
+ 	return ioread8(priv->iobase +
  		       TPM_STS(chip->vendor.locality));
- }
+@@ -214,7 +214,7 @@ static u8 tpm_tis_status(struct tpm_chip *chip)
  
  static void tpm_tis_ready(struct tpm_chip *chip)
  {
-+	struct priv_data *priv = chip->vendor.priv;
-+
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
+ 
  	/* this causes the current command to be aborted */
  	iowrite8(TPM_STS_COMMAND_READY,
--		 chip->vendor.iobase + TPM_STS(chip->vendor.locality));
-+		 priv->iobase + TPM_STS(chip->vendor.locality));
- }
+@@ -223,7 +223,7 @@ static void tpm_tis_ready(struct tpm_chip *chip)
  
  static int get_burstcount(struct tpm_chip *chip)
  {
-+	struct priv_data *priv = chip->vendor.priv;
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
  	unsigned long stop;
  	int burstcnt;
  
-@@ -220,9 +231,9 @@ static int get_burstcount(struct tpm_chip *chip)
- 	/* which timeout value, spec has 2 answers (c & d) */
- 	stop = jiffies + chip->vendor.timeout_d;
- 	do {
--		burstcnt = ioread8(chip->vendor.iobase +
-+		burstcnt = ioread8(priv->iobase +
- 				   TPM_STS(chip->vendor.locality) + 1);
--		burstcnt += ioread8(chip->vendor.iobase +
-+		burstcnt += ioread8(priv->iobase +
- 				    TPM_STS(chip->vendor.locality) +
- 				    2) << 8;
- 		if (burstcnt)
-@@ -234,6 +245,7 @@ static int get_burstcount(struct tpm_chip *chip)
+@@ -245,7 +245,7 @@ static int get_burstcount(struct tpm_chip *chip)
  
  static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
  {
-+	struct priv_data *priv = chip->vendor.priv;
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
  	int size = 0, burstcnt;
  	while (size < count &&
  	       wait_for_tpm_stat(chip,
-@@ -243,7 +255,7 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
- 	       == 0) {
- 		burstcnt = get_burstcount(chip);
- 		for (; burstcnt > 0 && size < count; burstcnt--)
--			buf[size++] = ioread8(chip->vendor.iobase +
-+			buf[size++] = ioread8(priv->iobase +
- 					      TPM_DATA_FIFO(chip->vendor.
- 							    locality));
- 	}
-@@ -329,7 +341,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 	while (count < len - 1) {
- 		burstcnt = get_burstcount(chip);
- 		for (; burstcnt > 0 && count < len - 1; burstcnt--) {
--			iowrite8(buf[count], chip->vendor.iobase +
-+			iowrite8(buf[count], priv->iobase +
- 				 TPM_DATA_FIFO(chip->vendor.locality));
- 			count++;
- 		}
-@@ -345,7 +357,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+@@ -264,7 +264,7 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
  
- 	/* write last byte */
- 	iowrite8(buf[count],
--		 chip->vendor.iobase + TPM_DATA_FIFO(chip->vendor.locality));
-+		 priv->iobase + TPM_DATA_FIFO(chip->vendor.locality));
- 	wait_for_tpm_stat(chip, TPM_STS_VALID, chip->vendor.timeout_c,
- 			  &priv->int_queue, false);
- 	status = tpm_tis_status(chip);
-@@ -364,15 +376,15 @@ out_err:
+ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+ {
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
+ 	int size = 0;
+ 	int expected, status;
+ 
+@@ -320,7 +320,7 @@ MODULE_PARM_DESC(itpm, "Force iTPM workarounds (found on some Lenovo laptops)");
+  */
+ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ {
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
+ 	int rc, status, burstcnt;
+ 	size_t count = 0;
+ 
+@@ -376,7 +376,7 @@ out_err:
  
  static void disable_interrupts(struct tpm_chip *chip)
  {
-+	struct priv_data *priv = chip->vendor.priv;
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
  	u32 intmask;
  
  	intmask =
--	    ioread32(chip->vendor.iobase +
-+	    ioread32(priv->iobase +
- 		     TPM_INT_ENABLE(chip->vendor.locality));
- 	intmask &= ~TPM_GLOBAL_INT_ENABLE;
- 	iowrite32(intmask,
--		  chip->vendor.iobase +
--		  TPM_INT_ENABLE(chip->vendor.locality));
-+		  priv->iobase + TPM_INT_ENABLE(chip->vendor.locality));
- 	devm_free_irq(&chip->dev, chip->vendor.irq, chip);
- 	chip->vendor.irq = 0;
- }
-@@ -384,6 +396,7 @@ static void disable_interrupts(struct tpm_chip *chip)
+@@ -396,7 +396,7 @@ static void disable_interrupts(struct tpm_chip *chip)
   */
  static int tpm_tis_send_main(struct tpm_chip *chip, u8 *buf, size_t len)
  {
-+	struct priv_data *priv = chip->vendor.priv;
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
  	int rc;
  	u32 ordinal;
  	unsigned long dur;
-@@ -394,7 +407,7 @@ static int tpm_tis_send_main(struct tpm_chip *chip, u8 *buf, size_t len)
+@@ -434,7 +434,7 @@ out_err:
+ static int tpm_tis_send(struct tpm_chip *chip, u8 *buf, size_t len)
+ {
+ 	int rc, irq;
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
  
- 	/* go and do it */
- 	iowrite8(TPM_STS_GO,
--		 chip->vendor.iobase + TPM_STS(chip->vendor.locality));
-+		 priv->iobase + TPM_STS(chip->vendor.locality));
- 
- 	if (chip->vendor.irq) {
- 		ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
-@@ -453,10 +466,11 @@ static const struct tis_vendor_timeout_override vendor_timeout_overrides[] = {
+ 	if (!chip->vendor.irq || priv->irq_tested)
+ 		return tpm_tis_send_main(chip, buf, len);
+@@ -466,7 +466,7 @@ static const struct tis_vendor_timeout_override vendor_timeout_overrides[] = {
  static bool tpm_tis_update_timeouts(struct tpm_chip *chip,
  				    unsigned long *timeout_cap)
  {
-+	struct priv_data *priv = chip->vendor.priv;
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
  	int i;
  	u32 did_vid;
  
--	did_vid = ioread32(chip->vendor.iobase + TPM_DID_VID(0));
-+	did_vid = ioread32(priv->iobase + TPM_DID_VID(0));
- 
- 	for (i = 0; i != ARRAY_SIZE(vendor_timeout_overrides); i++) {
- 		if (vendor_timeout_overrides[i].did_vid != did_vid)
-@@ -476,6 +490,7 @@ static bool tpm_tis_update_timeouts(struct tpm_chip *chip,
+@@ -490,7 +490,7 @@ static bool tpm_tis_update_timeouts(struct tpm_chip *chip,
   */
  static int probe_itpm(struct tpm_chip *chip)
  {
-+	struct priv_data *priv = chip->vendor.priv;
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
  	int rc = 0;
  	u8 cmd_getticks[] = {
  		0x00, 0xc1, 0x00, 0x00, 0x00, 0x0a,
-@@ -483,7 +498,7 @@ static int probe_itpm(struct tpm_chip *chip)
- 	};
- 	size_t len = sizeof(cmd_getticks);
- 	bool rem_itpm = itpm;
--	u16 vendor = ioread16(chip->vendor.iobase + TPM_DID_VID(0));
-+	u16 vendor = ioread16(priv->iobase + TPM_DID_VID(0));
+@@ -532,7 +532,7 @@ out:
  
- 	/* probe only iTPMS */
- 	if (vendor != TPM_VID_INTEL)
-@@ -548,7 +563,7 @@ static irqreturn_t tis_int_handler(int dummy, void *dev_id)
+ static bool tpm_tis_req_canceled(struct tpm_chip *chip, u8 status)
+ {
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
+ 
+ 	switch (priv->manufacturer_id) {
+ 	case TPM_VID_WINBOND:
+@@ -559,7 +559,7 @@ static const struct tpm_class_ops tpm_tis = {
+ static irqreturn_t tis_int_handler(int dummy, void *dev_id)
+ {
+ 	struct tpm_chip *chip = dev_id;
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
  	u32 interrupt;
  	int i;
  
--	interrupt = ioread32(chip->vendor.iobase +
-+	interrupt = ioread32(priv->iobase +
- 			     TPM_INT_STATUS(chip->vendor.locality));
- 
+@@ -569,7 +569,7 @@ static irqreturn_t tis_int_handler(int dummy, void *dev_id)
  	if (interrupt == 0)
-@@ -568,9 +583,9 @@ static irqreturn_t tis_int_handler(int dummy, void *dev_id)
+ 		return IRQ_NONE;
  
- 	/* Clear interrupts handled with TPM_EOI */
- 	iowrite32(interrupt,
--		  chip->vendor.iobase +
-+		  priv->iobase +
- 		  TPM_INT_STATUS(chip->vendor.locality));
--	ioread32(chip->vendor.iobase + TPM_INT_STATUS(chip->vendor.locality));
-+	ioread32(priv->iobase + TPM_INT_STATUS(chip->vendor.locality));
- 	return IRQ_HANDLED;
- }
+-	((struct priv_data *)chip->vendor.priv)->irq_tested = true;
++	((struct priv_data *)chip->priv)->irq_tested = true;
+ 	if (interrupt & TPM_INTF_DATA_AVAIL_INT)
+ 		wake_up_interruptible(&chip->vendor.read_queue);
+ 	if (interrupt & TPM_INTF_LOCALITY_CHANGE_INT)
+@@ -596,7 +596,7 @@ static irqreturn_t tis_int_handler(int dummy, void *dev_id)
+ static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
+ 				    int flags, int irq)
+ {
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
+ 	u8 original_int_vec;
  
-@@ -592,19 +607,19 @@ static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
- 	}
- 	chip->vendor.irq = irq;
- 
--	original_int_vec = ioread8(chip->vendor.iobase +
-+	original_int_vec = ioread8(priv->iobase +
- 				   TPM_INT_VECTOR(chip->vendor.locality));
- 	iowrite8(irq,
--		 chip->vendor.iobase + TPM_INT_VECTOR(chip->vendor.locality));
-+		 priv->iobase + TPM_INT_VECTOR(chip->vendor.locality));
- 
- 	/* Clear all existing */
--	iowrite32(ioread32(chip->vendor.iobase +
-+	iowrite32(ioread32(priv->iobase +
- 			   TPM_INT_STATUS(chip->vendor.locality)),
--		  chip->vendor.iobase + TPM_INT_STATUS(chip->vendor.locality));
-+		  priv->iobase + TPM_INT_STATUS(chip->vendor.locality));
- 
- 	/* Turn on */
- 	iowrite32(intmask | TPM_GLOBAL_INT_ENABLE,
--		  chip->vendor.iobase + TPM_INT_ENABLE(chip->vendor.locality));
-+		  priv->iobase + TPM_INT_ENABLE(chip->vendor.locality));
- 
- 	priv->irq_tested = false;
- 
-@@ -621,8 +636,7 @@ static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
- 	 */
- 	if (!chip->vendor.irq) {
- 		iowrite8(original_int_vec,
--			 chip->vendor.iobase +
--			     TPM_INT_VECTOR(chip->vendor.locality));
-+			 priv->iobase + TPM_INT_VECTOR(chip->vendor.locality));
- 		return 1;
- 	}
- 
-@@ -635,10 +649,11 @@ static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
+ 	if (devm_request_irq(&chip->dev, irq, tis_int_handler, flags,
+@@ -649,7 +649,7 @@ static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
   */
  static void tpm_tis_probe_irq(struct tpm_chip *chip, u32 intmask)
  {
-+	struct priv_data *priv = chip->vendor.priv;
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
  	u8 original_int_vec;
  	int i;
  
--	original_int_vec = ioread8(chip->vendor.iobase +
-+	original_int_vec = ioread8(priv->iobase +
- 				   TPM_INT_VECTOR(chip->vendor.locality));
- 
- 	if (!original_int_vec) {
-@@ -658,15 +673,16 @@ MODULE_PARM_DESC(interrupts, "Enable interrupts");
+@@ -673,7 +673,7 @@ MODULE_PARM_DESC(interrupts, "Enable interrupts");
  
  static void tpm_tis_remove(struct tpm_chip *chip)
  {
-+	struct priv_data *priv = chip->vendor.priv;
-+
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
+ 
  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
  		tpm2_shutdown(chip, TPM2_SU_CLEAR);
+@@ -702,7 +702,7 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+ 	if (IS_ERR(chip))
+ 		return PTR_ERR(chip);
  
- 	iowrite32(~TPM_GLOBAL_INT_ENABLE &
--		  ioread32(chip->vendor.iobase +
-+		  ioread32(priv->iobase +
- 			   TPM_INT_ENABLE(chip->vendor.
- 					  locality)),
--		  chip->vendor.iobase +
--		  TPM_INT_ENABLE(chip->vendor.locality));
-+			   priv->iobase + TPM_INT_ENABLE(chip->vendor.locality));
- 	release_locality(chip, chip->vendor.locality, 1);
- }
- 
-@@ -691,9 +707,9 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+-	chip->vendor.priv = priv;
++	chip->priv = priv;
+ #ifdef CONFIG_ACPI
  	chip->acpi_dev_handle = acpi_dev_handle;
  #endif
- 
--	chip->vendor.iobase = devm_ioremap_resource(dev, &tpm_info->res);
--	if (IS_ERR(chip->vendor.iobase))
--		return PTR_ERR(chip->vendor.iobase);
-+	priv->iobase = devm_ioremap_resource(dev, &tpm_info->res);
-+	if (IS_ERR(priv->iobase))
-+		return PTR_ERR(priv->iobase);
- 
- 	/* Maximum timeouts */
- 	chip->vendor.timeout_a = TIS_TIMEOUT_A_MAX;
-@@ -707,13 +723,13 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
- 	}
- 
- 	/* Take control of the TPM's interrupt hardware and shut it off */
--	intmask = ioread32(chip->vendor.iobase +
-+	intmask = ioread32(priv->iobase +
- 			   TPM_INT_ENABLE(chip->vendor.locality));
- 	intmask |= TPM_INTF_CMD_READY_INT | TPM_INTF_LOCALITY_CHANGE_INT |
- 		   TPM_INTF_DATA_AVAIL_INT | TPM_INTF_STS_VALID_INT;
- 	intmask &= ~TPM_GLOBAL_INT_ENABLE;
- 	iowrite32(intmask,
--		  chip->vendor.iobase + TPM_INT_ENABLE(chip->vendor.locality));
-+		  priv->iobase + TPM_INT_ENABLE(chip->vendor.locality));
- 
- 	if (request_locality(chip, 0) != 0) {
- 		rc = -ENODEV;
-@@ -724,12 +740,12 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
- 	if (rc)
- 		goto out_err;
- 
--	vendor = ioread32(chip->vendor.iobase + TPM_DID_VID(0));
-+	vendor = ioread32(priv->iobase + TPM_DID_VID(0));
- 	priv->manufacturer_id = vendor;
- 
- 	dev_info(dev, "%s TPM (device-id 0x%X, rev-id %d)\n",
- 		 (chip->flags & TPM_CHIP_FLAG_TPM2) ? "2.0" : "1.2",
--		 vendor >> 16, ioread8(chip->vendor.iobase + TPM_RID(0)));
-+		 vendor >> 16, ioread8(priv->iobase + TPM_RID(0)));
- 
- 	if (!itpm) {
- 		probe = probe_itpm(chip);
-@@ -746,7 +762,7 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
- 
- 	/* Figure out the capabilities */
- 	intfcaps =
--	    ioread32(chip->vendor.iobase +
-+	    ioread32(priv->iobase +
- 		     TPM_INTF_CAPS(chip->vendor.locality));
- 	dev_dbg(dev, "TPM interface capabilities (0x%x):\n",
- 		intfcaps);
-@@ -825,23 +841,23 @@ out_err:
+@@ -841,7 +841,7 @@ out_err:
  #ifdef CONFIG_PM_SLEEP
  static void tpm_tis_reenable_interrupts(struct tpm_chip *chip)
  {
-+	struct priv_data *priv = chip->vendor.priv;
+-	struct priv_data *priv = chip->vendor.priv;
++	struct priv_data *priv = chip->priv;
  	u32 intmask;
  
  	/* reenable interrupts that device may have lost or
- 	   BIOS/firmware may have disabled */
--	iowrite8(chip->vendor.irq, chip->vendor.iobase +
-+	iowrite8(chip->vendor.irq, priv->iobase +
- 		 TPM_INT_VECTOR(chip->vendor.locality));
- 
- 	intmask =
--	    ioread32(chip->vendor.iobase +
--		     TPM_INT_ENABLE(chip->vendor.locality));
-+	    ioread32(priv->iobase + TPM_INT_ENABLE(chip->vendor.locality));
- 
- 	intmask |= TPM_INTF_CMD_READY_INT
- 	    | TPM_INTF_LOCALITY_CHANGE_INT | TPM_INTF_DATA_AVAIL_INT
- 	    | TPM_INTF_STS_VALID_INT | TPM_GLOBAL_INT_ENABLE;
- 
- 	iowrite32(intmask,
--		  chip->vendor.iobase + TPM_INT_ENABLE(chip->vendor.locality));
-+		  priv->iobase + TPM_INT_ENABLE(chip->vendor.locality));
- }
- 
- static int tpm_tis_resume(struct device *dev)
 -- 
 2.5.0
 
