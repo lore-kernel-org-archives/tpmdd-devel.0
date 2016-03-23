@@ -1,8 +1,8 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH 3/3] tpm/st33zp24: Remove unneeded tpm_reg in
-	get_burstcount
-Date: Wed, 23 Mar 2016 08:55:34 +0100
-Message-ID: <1458719734-13752-4-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH 1/3] tpm/st33zp24/i2c: Drop two useless checks
+	in ACPI probe path
+Date: Wed, 23 Mar 2016 08:55:32 +0100
+Message-ID: <1458719734-13752-2-git-send-email-christophe-h.ricard@st.com>
 References: <1458719734-13752-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,44 +21,44 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-We can get rid of tpm_reg variable in get_burstcount.
+When st33zp24_i2c_acpi_request_resources() gets called we
+already know that the entries in ->acpi_match_table have matched ACPI ID
+of the device.
+In addition I2C client pointer cannot be NULL in any case (otherwise I2C
+core would not call ->probe() for the driver in the first place).
+
+Drop the two useless checks from the driver.
 
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 ---
- drivers/char/tpm/st33zp24/st33zp24.c | 10 +++++-----
- 1 file changed, 5 insertions(+), 5 deletions(-)
+ drivers/char/tpm/st33zp24/i2c.c | 13 +------------
+ 1 file changed, 1 insertion(+), 12 deletions(-)
 
-diff --git a/drivers/char/tpm/st33zp24/st33zp24.c b/drivers/char/tpm/st33zp24/st33zp24.c
-index 944d279..9e91ca7 100644
---- a/drivers/char/tpm/st33zp24/st33zp24.c
-+++ b/drivers/char/tpm/st33zp24/st33zp24.c
-@@ -208,21 +208,21 @@ static int get_burstcount(struct tpm_chip *chip)
+diff --git a/drivers/char/tpm/st33zp24/i2c.c b/drivers/char/tpm/st33zp24/i2c.c
+index f179aad..f8e8123 100644
+--- a/drivers/char/tpm/st33zp24/i2c.c
++++ b/drivers/char/tpm/st33zp24/i2c.c
+@@ -113,19 +113,8 @@ static const struct st33zp24_phy_ops i2c_phy_ops = {
+ static int st33zp24_i2c_acpi_request_resources(struct i2c_client *client)
  {
- 	unsigned long stop;
- 	int burstcnt, status;
--	u8 tpm_reg, temp;
-+	u8 temp;
- 	struct st33zp24_dev *tpm_dev;
+ 	struct st33zp24_i2c_phy *phy = i2c_get_clientdata(client);
+-	const struct acpi_device_id *id;
+ 	struct gpio_desc *gpiod_lpcpd;
+-	struct device *dev;
+-
+-	if (!client)
+-		return -EINVAL;
+-
+-	dev = &client->dev;
+-
+-	/* Match the struct device against a given list of ACPI IDs */
+-	id = acpi_match_device(dev->driver->acpi_match_table, dev);
+-	if (!id)
+-		return -ENODEV;
++	struct device *dev = &client->dev;
  
- 	tpm_dev = (struct st33zp24_dev *)TPM_VPRIV(chip);
- 
- 	stop = jiffies + chip->vendor.timeout_d;
- 	do {
--		tpm_reg = TPM_STS + 1;
--		status = tpm_dev->ops->recv(tpm_dev->phy_id, tpm_reg, &temp, 1);
-+		status = tpm_dev->ops->recv(tpm_dev->phy_id, TPM_STS + 1,
-+					    &temp, 1);
- 		if (status < 0)
- 			return -EBUSY;
- 
--		tpm_reg = TPM_STS + 2;
- 		burstcnt = temp;
--		status = tpm_dev->ops->recv(tpm_dev->phy_id, tpm_reg, &temp, 1);
-+		status = tpm_dev->ops->recv(tpm_dev->phy_id, TPM_STS + 2,
-+					    &temp, 1);
- 		if (status < 0)
- 			return -EBUSY;
- 
+ 	/* Get LPCPD GPIO from ACPI */
+ 	gpiod_lpcpd = devm_gpiod_get_index(dev, "TPM IO LPCPD", 1,
 -- 
 2.5.0
 
