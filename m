@@ -1,13 +1,13 @@
-From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH 2/3] tpm/st33zp24/spi: Drop two useless checks
-	in ACPI probe path
-Date: Wed, 23 Mar 2016 08:55:33 +0100
-Message-ID: <1458719734-13752-3-git-send-email-christophe-h.ricard@st.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH 0/3] Few st33zp24 fixes
+Date: Wed, 23 Mar 2016 10:17:55 +0200
+Message-ID: <20160323081755.GA6434@intel.com>
 References: <1458719734-13752-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
 In-Reply-To: <1458719734-13752-1-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
@@ -17,51 +17,40 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
+To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-When st33zp24_spi_acpi_request_resources() gets called we
-already know that the entries in ->acpi_match_table have matched ACPI ID
-of the device.
-In addition spi_device pointer cannot be NULL in any case (otherwise I2C
-core would not call ->probe() for the driver in the first place).
+On Wed, Mar 23, 2016 at 08:55:31AM +0100, Christophe Ricard wrote:
+> Hi Jarkko,
+> 
+> After my first tentative and as discussed, please find a dedicated
+> st33zp24 serie intends to provide few fixes on acpi probing and code
+> style improvement.
 
-Drop the two useless checks from the driver.
+Thanks. This is also your benefit because these patches probably get
+reviewed and merged much faster whereas other patches might go for a few
+cycles before taken be accepted.
 
-Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
----
- drivers/char/tpm/st33zp24/spi.c | 13 +------------
- 1 file changed, 1 insertion(+), 12 deletions(-)
+> Best Regards
+> Christophe
 
-diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
-index 6be51ac..608dbc6 100644
---- a/drivers/char/tpm/st33zp24/spi.c
-+++ b/drivers/char/tpm/st33zp24/spi.c
-@@ -232,19 +232,8 @@ static const struct st33zp24_phy_ops spi_phy_ops = {
- static int st33zp24_spi_acpi_request_resources(struct spi_device *spi_dev)
- {
- 	struct st33zp24_spi_phy *phy = spi_get_drvdata(spi_dev);
--	const struct acpi_device_id *id;
- 	struct gpio_desc *gpiod_lpcpd;
--	struct device *dev;
--
--	if (!spi_dev)
--		return -EINVAL;
--
--	dev = &spi_dev->dev;
--
--	/* Match the struct device against a given list of ACPI IDs */
--	id = acpi_match_device(dev->driver->acpi_match_table, dev);
--	if (!id)
--		return -ENODEV;
-+	struct device *dev = &spi_dev->dev;
- 
- 	/* Get LPCPD GPIO from ACPI */
- 	gpiod_lpcpd = devm_gpiod_get_index(dev, "TPM IO LPCPD", 1,
--- 
-2.5.0
+/Jarkko
 
+> 
+> Christophe Ricard (3):
+>   tpm/st33zp24/i2c: Drop two useless checks in ACPI probe path
+>   tpm/st33zp24/spi: Drop two useless checks in ACPI probe path
+>   tpm/st33zp24: Remove unneeded tpm_reg in get_burstcount
+> 
+>  drivers/char/tpm/st33zp24/i2c.c      | 13 +------------
+>  drivers/char/tpm/st33zp24/spi.c      | 13 +------------
+>  drivers/char/tpm/st33zp24/st33zp24.c | 10 +++++-----
+>  3 files changed, 7 insertions(+), 29 deletions(-)
+> 
+> -- 
+> 2.5.0
+> 
 
 ------------------------------------------------------------------------------
 Transform Data into Opportunity.
