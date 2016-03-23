@@ -1,31 +1,49 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [PATCH] tpm: drop the field 'time_expired' from struct tpm_chip
-Date: Wed, 23 Mar 2016 08:23:39 +0200
-Message-ID: <1458714219-26721-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Peter Huewe <peterhuewe@gmx.de>
-Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Subject: [PATCH 0/3] Few st33zp24 fixes
+Date: Wed, 23 Mar 2016 08:55:31 +0100
+Message-ID: <1458719734-13752-1-git-send-email-christophe-h.ricard@st.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
+Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Removed the field because it is not used for anything.
+Hi Jarkko,
 
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
----
- drivers/char/tpm/tpm.h | 1 -
- 1 file changed, 1 deletion(-)
+After my first tentative and as discussed, please find a dedicated
+st33zp24 serie intends to provide few fixes on acpi probing and code
+style improvement.
 
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 09302ab..3c4e5eb 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -175,7 +175,6 @@ struct tpm_chip {
- 
- 	int dev_num;		/* /dev/tpm# */
- 	unsigned long is_open;	/* only one allowed */
--	int time_expired;
- 
- 	struct mutex tpm_mutex;	/* tpm is processing */
- 
+Best Regards
+Christophe
+
+Christophe Ricard (3):
+  tpm/st33zp24/i2c: Drop two useless checks in ACPI probe path
+  tpm/st33zp24/spi: Drop two useless checks in ACPI probe path
+  tpm/st33zp24: Remove unneeded tpm_reg in get_burstcount
+
+ drivers/char/tpm/st33zp24/i2c.c      | 13 +------------
+ drivers/char/tpm/st33zp24/spi.c      | 13 +------------
+ drivers/char/tpm/st33zp24/st33zp24.c | 10 +++++-----
+ 3 files changed, 7 insertions(+), 29 deletions(-)
+
 -- 
-2.7.3
+2.5.0
+
+
+------------------------------------------------------------------------------
+Transform Data into Opportunity.
+Accelerate data analysis in your applications with
+Intel Data Analytics Acceleration Library.
+Click to learn more.
+http://pubads.g.doubleclick.net/gampad/clk?id=278785351&iu=/4140
