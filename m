@@ -1,15 +1,18 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH] tpm: drop 'base' from struct
-	tpm_vendor_specific
-Date: Wed, 23 Mar 2016 10:45:42 -0600
-Message-ID: <20160323164542.GC16336@obsidianresearch.com>
-References: <1458713769-11800-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH 05/12] tpm: Add tpm_set_vendordata and
+	tpm_get_vendordata
+Date: Wed, 23 Mar 2016 10:48:45 -0600
+Message-ID: <20160323164845.GD16336@obsidianresearch.com>
+References: <1458502483-16887-1-git-send-email-christophe-h.ricard@st.com>
+	<1458502483-16887-6-git-send-email-christophe-h.ricard@st.com>
+	<20160322062001.GB4058@intel.com>
+	<CALD+uuxj2NHd0-LpDZpnfkfMHwY6ke0FPPqmR0FKzrC4BJmFNQ@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1458713769-11800-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+In-Reply-To: <CALD+uuxj2NHd0-LpDZpnfkfMHwY6ke0FPPqmR0FKzrC4BJmFNQ-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,27 +21,23 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Cc: Jean-Luc BLANC <jean-luc.blanc-qxv4g6HH51o@public.gmane.org>, "ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org" <ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, Christophe RICARD <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>, Benoit HOUYERE <benoit.houyere-qxv4g6HH51o@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Mar 23, 2016 at 08:16:09AM +0200, Jarkko Sakkinen wrote:
-> Dropped the field 'base' from struct tpm_vendor_specific and migrated
-> it to the private structures of tpm_atmel and tpm_nsc.
-> 
-> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-  
-> +#define atmel_get_priv(chip) ((struct tpm_atmel_priv *) chip->vendor.priv)
+On Wed, Mar 23, 2016 at 02:11:26PM +0100, Christophe Ricard wrote:
+>    When working on the tpm_vendor_specific cleanup, i came also through
+>    the conclusion that moving priv from tpm_vendor_specific to tpm_chip
+>    structure would the most
+>    simple and appropriate solution in short term.
 
-This should be a static inline function not a define
+Someday, but we really should just use chip->dev drvdata for 'priv'
 
-> +#define tpm_nsc_get_priv(chip) ((struct tpm_nsc_priv *) chip->vendor.priv)
+>    ...priv field may be renamed data...
+>    Do you see anything against a serie removing atmel_get_priv and
+>    tpm_nsc_get_priv and with a common helper replacing TPM_VPRIV ?
 
-Ditto
-
-Otherwise looks ok
-
-Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+These functions include a cast, they can't be generic.
 
 Jason
 
