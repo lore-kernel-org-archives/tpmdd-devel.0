@@ -1,64 +1,137 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH 05/12] tpm: Add tpm_set_vendordata and
-	tpm_get_vendordata
-Date: Thu, 24 Mar 2016 11:10:32 -0600
-Message-ID: <20160324171032.GA27978@obsidianresearch.com>
-References: <1458502483-16887-1-git-send-email-christophe-h.ricard@st.com>
-	<1458502483-16887-6-git-send-email-christophe-h.ricard@st.com>
-	<20160322062001.GB4058@intel.com>
-	<CALD+uuxj2NHd0-LpDZpnfkfMHwY6ke0FPPqmR0FKzrC4BJmFNQ@mail.gmail.com>
-	<20160324132732.GF8452@intel.com>
-	<CALD+uuwVG_84dY4rCOjecZXxS4LZoE+Kh=CyhmVwyT2U0bAMrg@mail.gmail.com>
-	<20160324161819.GA5263@obsidianresearch.com>
-	<CALD+uux0-nbwJfsHFHqPrZwWt=vEy73oi_djNrrY5QeiWwCq9A@mail.gmail.com>
+From: James Morris <jmorris@namei.org>
+Subject: [ANNOUNCE] Linux Security Summit 2016 - CFP
+Date: Fri, 25 Mar 2016 09:55:41 +1100 (AEDT)
+Message-ID: <alpine.LRH.2.20.1603250947150.31257@namei.org>
+Reply-To: kernel-hardening@lists.openwall.com
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <CALD+uux0-nbwJfsHFHqPrZwWt=vEy73oi_djNrrY5QeiWwCq9A-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Cc: Jean-Luc BLANC <jean-luc.blanc-qxv4g6HH51o@public.gmane.org>, "ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org" <ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, Christophe RICARD <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>, Benoit HOUYERE <benoit.houyere-qxv4g6HH51o@public.gmane.org>
+Content-Type: multipart/mixed; BOUNDARY="1665246916-1935272454-1458860143=:31257"
+Return-path: <kernel-hardening-return-2854-glkh-kernel-hardening=m.gmane.org@lists.openwall.com>
+List-Post: <mailto:kernel-hardening@lists.openwall.com>
+List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
+List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
+List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
+To: linux-security-module@vger.kernel.org
+Cc: linux-kernel@vger.kernel.org, lwn@lwn.net, fedora-selinux-list@redhat.com, selinux@tycho.nsa.gov, ubuntu-hardened@lists.ubuntu.com, Linux Security Summit Program Committee <lss-pc@lists.linuxfoundation.org>, netfilter-devel@vger.kernel.org, linux-crypto@vger.kernel.org, Audit-ML <linux-audit@redhat.com>, gentoo-hardened@gentoo.org, keyrings@linux-nfs.org, tpmdd-devel@lists.sourceforge.net, kernel-hardening@lists.openwall.com, oss-security@lists.openwall.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Mar 24, 2016 at 05:31:21PM +0100, Christophe Ricard wrote:
->    I got confused like you are but when looking a little bit better at the
->    code i think we have 2 differents "struct device" available on a tpm
->    driver.
->    One is coming from the physical layer driver (aka: client->dev,
->    spi->dev, pdev->dev) and the other one from chip->dev which is
->    initialized in tpm_chip_alloc.
+  This message is in MIME format.  The first part should be readable text,
+  while the remaining parts are likely unreadable without MIME-aware tools.
 
-Yes, client->dev's drvdata (aka chip->dev.parent) should point to the
-chip. In an ideal world the TPM core will never touch this, but we are
-not quite there yet, sysfs in particular is broken.
+--1665246916-1935272454-1458860143=:31257
+Content-Type: text/plain; charset=ISO-8859-7
+Content-Transfer-Encoding: 8BIT
 
-chip->dev's drvdata could/should point to the driver's priv, that
-would make sense. With Jarkko's tree today that is OK.
+==========================================================================
+                 ANNOUNCEMENT AND CALL FOR PARTICIPATION
 
-But Stefan's vtpm driver adds a use:
+                       LINUX SECURITY SUMMIT 2016
+                              25-26 AUGUST
+                            TORONTO, CANADA
+                           
+==========================================================================
 
- https://github.com/stefanberger/linux/commit/3ab4e3aabf50137068e2807910e5f867668b4e23
 
-Which is an ugly hacky thing..
+DESCRIPTION
 
-So, if you are planning a tpm_get_drvdata or whatever then we should
-probably patch vtpm to put priv back in or patch vtpm to not need that
-hack.
+  The Linux Security Summit (LSS) is a technical forum for collaboration
+  between Linux developers, researchers, and end users.  Its primary aim
+  is to foster community efforts in analyzing and solving Linux security
+  challenges.
 
-Jason
+  The format of the summit will be:
+  
+    * Refereed presentations
+    * Discussion topics
+    * Subsystem reports
+    * Breakout development sessions 
 
-------------------------------------------------------------------------------
-Transform Data into Opportunity.
-Accelerate data analysis in your applications with
-Intel Data Analytics Acceleration Library.
-Click to learn more.
-http://pubads.g.doubleclick.net/gampad/clk?id=278785351&iu=/4140
+
+WEB SITE
+
+  http://events.linuxfoundation.org/events/linux-security-summit
+
+
+TWITTER
+
+  For event updates and announcements, follow:
+
+  https://twitter.com/LinuxSecSummit
+
+
+DATES / LOCATION
+
+  The Linux Security Summit for 2016 will be held  August 25th and 26th
+  in Toronto, Canada.  It will be co-located with LinuxCon.
+
+  The Linux Security Summit CFP is now open, and will close on June 10th.
+  
+  Accepted speakers will be notified by June 17th.
+
+
+WHO SHOULD ATTEND
+
+  We're seeking a diverse range of attendees, and welcome participation
+  by people involved in Linux security development, operations, and research.
+
+  The LSS is a unique global event which provides the opportunity to present
+  and discuss your work or research with key Linux security community
+  members and maintainers.  It¢s also useful for those who wish to keep up
+  with the latest in Linux security development, and to provide input to
+  the development process.
+
+
+CALL FOR PARTICIPATION
+
+  The program committee currently seeks proposals for:
+
+  * Refereed Presentations:
+      45 minutes in length, including at least 10 minutes of discussion.
+      One-page abstracts are encouraged.
+
+  * Discussion Topics:
+      30 minutes in length.
+ 
+  Topic areas include, but are not limited to:
+  
+    * Kernel self-protection
+    * Access control
+    * Cryptography and key management
+    * Integrity control
+    * Hardware security
+    * Trust systems
+    * Storage and file systems
+    * Virtualization and containers
+    * Case studies
+    * Identity management
+    * Code analysis
+    * Security analytics
+    * Secure development and operational practices
+    * Emerging technologies, threats & techniques 
+    
+  Proposals should be submitted via the event web site:
+
+    http://events.linuxfoundation.org/events/linux-security-summit/program/cfp
+
+
+PROGRAM COMMITTEE
+
+  The Linux Security Summit for 2016 is organized by:
+
+    * James Morris, Oracle
+    * Serge Hallyn, Canonical
+    * Paul Moore, Red Hat
+    * Stephen Smalley, NSA
+    * Elena Reshetova, Intel
+    * Herbert Xu, Red Hat
+    * John Johansen, Canonical
+    * Kees Cook, Google
+    * Casey Schaufler, Intel
+    * Mimi Zohar, IBM
+
+  The program committee may be contacted as a group via email:
+
+    lss-pc@lists.linuxfoundation.org
+
+   
+
+--1665246916-1935272454-1458860143=:31257--
