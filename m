@@ -1,38 +1,41 @@
-From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: Re: [PATCH 5/5] tpm: Rename tpm_vendor_specific
- structure to tpm_protocol_infos
-Date: Thu, 24 Mar 2016 07:14:23 +0100
-Message-ID: <56F385BF.9020207@gmail.com>
-References: <1458764240-24185-1-git-send-email-christophe-h.ricard@st.com>
-	<1458764240-24185-6-git-send-email-christophe-h.ricard@st.com>
-	<20160323225454.GD17397@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH] tpm: drop 'base' from struct tpm_vendor_specific
+Date: Thu, 24 Mar 2016 15:21:27 +0200
+Message-ID: <20160324132127.GA8452@intel.com>
+References: <1458713769-11800-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+ <20160323164542.GC16336@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160323225454.GD17397-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20160323164542.GC16336@obsidianresearch.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This is a mistake. Will fix sorry.
+On Wed, Mar 23, 2016 at 10:45:42AM -0600, Jason Gunthorpe wrote:
+> On Wed, Mar 23, 2016 at 08:16:09AM +0200, Jarkko Sakkinen wrote:
+> > Dropped the field 'base' from struct tpm_vendor_specific and migrated
+> > it to the private structures of tpm_atmel and tpm_nsc.
+> > 
+> > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+>   
+> > +#define atmel_get_priv(chip) ((struct tpm_atmel_priv *) chip->vendor.priv)
+> 
+> This should be a static inline function not a define
+> 
+> > +#define tpm_nsc_get_priv(chip) ((struct tpm_nsc_priv *) chip->vendor.priv)
+> 
+> Ditto
+> 
+> Otherwise looks ok
+> 
+> Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 
-On 23/03/2016 23:54, Jason Gunthorpe wrote:
-> -			if (!chip->vendor.irq)
-> >+			if (!chip->irq)
+Thank you. In my the commit now in my master branch they are now changed
+as static inline functions.
 
+> Jason
 
-------------------------------------------------------------------------------
-Transform Data into Opportunity.
-Accelerate data analysis in your applications with
-Intel Data Analytics Acceleration Library.
-Click to learn more.
-http://pubads.g.doubleclick.net/gampad/clk?id=278785351&iu=/4140
+/Jarkko
