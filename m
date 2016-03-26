@@ -1,8 +1,7 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v2 1/7] tpm/tpm_atmel: drop remaining 'iobase'
-	usage
-Date: Sat, 26 Mar 2016 08:00:09 +0100
-Message-ID: <1458975615-8095-2-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH v2 4/7] tpm/tpm_i2c_atmel: Few code style fixes
+Date: Sat, 26 Mar 2016 08:00:12 +0100
+Message-ID: <1458975615-8095-5-git-send-email-christophe-h.ricard@st.com>
 References: <1458975615-8095-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,28 +20,35 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Remove some sporadic iobase
+Few code style fixes.
 
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 ---
- drivers/char/tpm/tpm_atmel.h | 4 ++--
+ drivers/char/tpm/tpm_i2c_atmel.c | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm_atmel.h b/drivers/char/tpm/tpm_atmel.h
-index c5618ea..7e37c16 100644
---- a/drivers/char/tpm/tpm_atmel.h
-+++ b/drivers/char/tpm/tpm_atmel.h
-@@ -38,8 +38,8 @@ static inline struct tpm_atmel_priv *atmel_get_priv(struct tpm_chip *chip)
+diff --git a/drivers/char/tpm/tpm_i2c_atmel.c b/drivers/char/tpm/tpm_i2c_atmel.c
+index 5426c9d..d357065 100644
+--- a/drivers/char/tpm/tpm_i2c_atmel.c
++++ b/drivers/char/tpm/tpm_i2c_atmel.c
+@@ -125,8 +125,7 @@ static u8 i2c_atmel_read_status(struct tpm_chip *chip)
+ 	/* Once the TPM has completed the command the command remains readable
+ 	 * until another command is issued. */
+ 	rc = i2c_master_recv(client, priv->buffer, sizeof(priv->buffer));
+-	dev_dbg(&chip->dev,
+-		"%s: sts=%d", __func__, rc);
++	dev_dbg(&chip->dev, "%s: sts=%d", __func__, rc);
+ 	if (rc <= 0)
+ 		return 0;
  
- #include <asm/prom.h>
- 
--#define atmel_getb(chip, offset) readb(chip->vendor->iobase + offset);
--#define atmel_putb(val, chip, offset) writeb(val, chip->vendor->iobase + offset)
-+#define atmel_getb(priv, offset) readb(priv->iobase + offset);
-+#define atmel_putb(val, priv, offset) writeb(val, priv->iobase + offset)
- #define atmel_request_region request_mem_region
- #define atmel_release_region release_mem_region
- 
+@@ -192,6 +191,7 @@ static int i2c_atmel_probe(struct i2c_client *client,
+ static int i2c_atmel_remove(struct i2c_client *client)
+ {
+ 	struct tpm_chip *chip = i2c_get_clientdata(client);
++
+ 	tpm_chip_unregister(chip);
+ 	return 0;
+ }
 -- 
 2.5.0
 
