@@ -1,105 +1,83 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v8 00/10] Multi-instance vTPM proxy driver
-Date: Tue, 29 Mar 2016 19:24:33 +0300
-Message-ID: <20160329162433.GB24833@intel.com>
-References: <1457909680-14085-1-git-send-email-stefanb@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH 2/5] tpm: drop list from struct
+	tpm_vendor_specific
+Date: Tue, 29 Mar 2016 19:25:22 +0300
+Message-ID: <20160329162522.GC24833@intel.com>
+References: <1458764240-24185-1-git-send-email-christophe-h.ricard@st.com>
+	<1458764240-24185-3-git-send-email-christophe-h.ricard@st.com>
+	<20160324140835.GA21170@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1457909680-14085-1-git-send-email-stefanb@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+In-Reply-To: <20160324140835.GA21170-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Mar 13, 2016 at 06:54:30PM -0400, Stefan Berger wrote:
-> The following series of patches implements a multi-instance vTPM 
-> proxy driver that can dynamically create TPM 'server' and client device
-> pairs.
+On Thu, Mar 24, 2016 at 04:08:35PM +0200, Jarkko Sakkinen wrote:
+> On Wed, Mar 23, 2016 at 09:17:17PM +0100, Christophe Ricard wrote:
+> > Dropped list from struct tpm_vendor_specific as it is not used in any
+> > place.
+> > 
+> > It is initialized in tpm_i2c_infineon but not used at all in the code.
+> > 
+> > Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 > 
-> Using an ioctl on the provided /dev/vtpmx, a client-side vTPM device
-> and a server side file descriptor is created. The file descriptor must
-> be passed to a TPM emulator. The device driver will initialize the
-> emulated TPM using TPM 1.2 or TPM 2 startup commands and it will read
-> the command durations from the device in case of a TPM 1.2. The choice
-> of emulated TPM device (1.2 or 2) must be provided with a flag in
-> the ioctl.
-> 
-> The driver is based on a recent checkout of James Morris's 'next'
-> branch and uses several recently posted patches from Jason and Jarkko.
+> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
-I don't remember if I said this but up to the IDR patch I merged patches
-to next (at the same day you sent this) so for v9 you can only include
-top four changes.
+You can drop this patch from next version of the series as it is
+applied.
 
 /Jarkko
 
->    Stefan
+> /Jarkko
 > 
-> v7->v8:
->  - minor tweaks on the documentation
->  - Reordered function calls in the VTPM proxy driver's server side release
->    function so that a client holding the 'ops' lock releases it before the
->    driver tries to grab the lock when unregistering the device.
-> 
-> v6->v7:
->  - Adjusted name of driver to tpm_vtpm_proxy from tpm_vtpm. Adjust function
->    names, names of structures, and names of constants.
->  - Adjusted IOCTL to use magic 0xa1 rather than the completely used 0xa0.
->  - Extended driver documentation and added documentation of ioctl.
->  - Moved test program to own project (dropped patch 11).
-> 
-> v5->v6:
->  - Adapted errno's for unsupported flags and ioctls following Jason's
->    comments
-> 
-> v4->v5:
->  - Introduced different error codes for unsupported flags and ioctls
->  - Added documentation patch
-> 
-> 
-> Jason Gunthorpe (4):
->   tpm: Get rid of chip->pdev
->   tpm: Get rid of devname
->   tpm: Provide strong locking for device removal
->   tpm: Split out the devm stuff from tpmm_chip_alloc
-> 
-> Stefan Berger (6):
->   tpm: Get rid of module locking
->   tpm: Replace device number bitmap with IDR
->   tpm: Introduce TPM_CHIP_FLAG_VIRTUAL
->   tpm: Proxy driver for supporting multiple emulated TPMs
->   tpm: Initialize TPM and get durations and timeouts
->   tpm: Add documentation for the tpm_vtpm device driver
-> 
->  Documentation/ioctl/ioctl-number.txt |   1 +
->  Documentation/tpm/tpm_vtpm_proxy.txt |  71 ++++
->  drivers/char/tpm/Kconfig             |  10 +
->  drivers/char/tpm/Makefile            |   1 +
->  drivers/char/tpm/tpm-chip.c          | 221 ++++++++----
->  drivers/char/tpm/tpm-dev.c           |  15 +-
->  drivers/char/tpm/tpm-interface.c     |  50 +--
->  drivers/char/tpm/tpm-sysfs.c         |  22 +-
->  drivers/char/tpm/tpm.h               |  30 +-
->  drivers/char/tpm/tpm2-cmd.c          |   8 +-
->  drivers/char/tpm/tpm_atmel.c         |  14 +-
->  drivers/char/tpm/tpm_eventlog.c      |   2 +-
->  drivers/char/tpm/tpm_eventlog.h      |   2 +-
->  drivers/char/tpm/tpm_i2c_atmel.c     |  16 +-
->  drivers/char/tpm/tpm_i2c_infineon.c  |   6 +-
->  drivers/char/tpm/tpm_i2c_nuvoton.c   |  24 +-
->  drivers/char/tpm/tpm_infineon.c      |  22 +-
->  drivers/char/tpm/tpm_nsc.c           |  20 +-
->  drivers/char/tpm/tpm_tis.c           |  18 +-
->  drivers/char/tpm/tpm_vtpm_proxy.c    | 649 +++++++++++++++++++++++++++++++++++
->  include/uapi/linux/Kbuild            |   1 +
->  include/uapi/linux/vtpm_proxy.h      |  42 +++
->  22 files changed, 1066 insertions(+), 179 deletions(-)
->  create mode 100644 Documentation/tpm/tpm_vtpm_proxy.txt
->  create mode 100644 drivers/char/tpm/tpm_vtpm_proxy.c
->  create mode 100644 include/uapi/linux/vtpm_proxy.h
-> 
-> -- 
-> 2.4.3
-> 
+> > ---
+> >  drivers/char/tpm/tpm.h              | 1 -
+> >  drivers/char/tpm/tpm_i2c_infineon.c | 1 -
+> >  2 files changed, 2 deletions(-)
+> > 
+> > diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> > index 0d1b7e6..357ac14 100644
+> > --- a/drivers/char/tpm/tpm.h
+> > +++ b/drivers/char/tpm/tpm.h
+> > @@ -133,7 +133,6 @@ struct tpm_chip;
+> >  struct tpm_vendor_specific {
+> >  	int irq;
+> >  
+> > -	struct list_head list;
+> >  	int locality;
+> >  	unsigned long timeout_a, timeout_b, timeout_c, timeout_d; /* jiffies */
+> >  	bool timeout_adjusted;
+> > diff --git a/drivers/char/tpm/tpm_i2c_infineon.c b/drivers/char/tpm/tpm_i2c_infineon.c
+> > index f2aa99e..e74f1c1 100644
+> > --- a/drivers/char/tpm/tpm_i2c_infineon.c
+> > +++ b/drivers/char/tpm/tpm_i2c_infineon.c
+> > @@ -619,7 +619,6 @@ static int tpm_tis_i2c_init(struct device *dev)
+> >  
+> >  	dev_info(dev, "1.2 TPM (device-id 0x%X)\n", vendor >> 16);
+> >  
+> > -	INIT_LIST_HEAD(&chip->vendor.list);
+> >  	tpm_dev.chip = chip;
+> >  
+> >  	tpm_get_timeouts(chip);
+> > -- 
+> > 2.5.0
+> > 
+
+------------------------------------------------------------------------------
+Transform Data into Opportunity.
+Accelerate data analysis in your applications with
+Intel Data Analytics Acceleration Library.
+Click to learn more.
+http://pubads.g.doubleclick.net/gampad/clk?id=278785471&iu=/4140
