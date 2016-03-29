@@ -1,122 +1,126 @@
 From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: [PATCH v9 4/4] tpm: Add documentation for the tpm_vtpm device driver
-Date: Tue, 29 Mar 2016 14:19:14 -0400
-Message-ID: <1459275554-12915-5-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v9 1/4] tpm: Introduce TPM_CHIP_FLAG_VIRTUAL
+Date: Tue, 29 Mar 2016 14:19:11 -0400
+Message-ID: <1459275554-12915-2-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1459275554-12915-1-git-send-email-stefanb@linux.vnet.ibm.com>
-Return-path: <linux-doc-owner@vger.kernel.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
 In-Reply-To: <1459275554-12915-1-git-send-email-stefanb@linux.vnet.ibm.com>
-Sender: linux-doc-owner@vger.kernel.org
+Sender: owner-linux-security-module@vger.kernel.org
 To: tpmdd-devel@lists.sourceforge.net
-Cc: jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Stefan Berger <stefanb@linux.vnet.ibm.com>, linux-doc@vger.kernel.org, linux-api@vger.kernel.org
+Cc: jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Stefan Berger <stefanb@linux.vnet.ibm.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Add documentation for the tpm_vtpm device driver that implements
-support for providing TPM functionality to Linux containers.
-
-Parts of this documentation were recycled from the Xen vTPM
-device driver documentation.
-
-Update the documentation for the ioctl numbers.
+Introduce TPM_CHIP_FLAG_VIRTUAL to be used when the chip device has no
+parent device. Also adapt tpm_chip_alloc so that it can be called with
+parent device being NULL.
 
 Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
-CC: linux-kernel@vger.kernel.org
-CC: linux-doc@vger.kernel.org
-CC: linux-api@vger.kernel.org
+Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 ---
- Documentation/ioctl/ioctl-number.txt |  1 +
- Documentation/tpm/tpm_vtpm_proxy.txt | 71 ++++++++++++++++++++++++++++++++++++
- 2 files changed, 72 insertions(+)
- create mode 100644 Documentation/tpm/tpm_vtpm_proxy.txt
+ drivers/char/tpm/tpm-chip.c  |  9 +++++----
+ drivers/char/tpm/tpm-sysfs.c | 15 +++++++++++----
+ drivers/char/tpm/tpm.h       |  5 +++--
+ 3 files changed, 19 insertions(+), 10 deletions(-)
 
-diff --git a/Documentation/ioctl/ioctl-number.txt b/Documentation/ioctl/ioctl-number.txt
-index 91261a3..7dbec90 100644
---- a/Documentation/ioctl/ioctl-number.txt
-+++ b/Documentation/ioctl/ioctl-number.txt
-@@ -303,6 +303,7 @@ Code  Seq#(hex)	Include File		Comments
- 					<mailto:buk@buks.ipn.de>
- 0xA0	all	linux/sdp/sdp.h		Industrial Device Project
- 					<mailto:kenji@bitgate.com>
-+0xA1	0	linux/vtpm_proxy.h	TPM Emulator Proxy Driver
- 0xA2	00-0F	arch/tile/include/asm/hardwall.h
- 0xA3	80-8F	Port ACL		in development:
- 					<mailto:tlewis@mindspring.com>
-diff --git a/Documentation/tpm/tpm_vtpm_proxy.txt b/Documentation/tpm/tpm_vtpm_proxy.txt
-new file mode 100644
-index 0000000..30d1902
---- /dev/null
-+++ b/Documentation/tpm/tpm_vtpm_proxy.txt
-@@ -0,0 +1,71 @@
-+Virtual TPM Proxy Driver for Linux Containers
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index f62c851..e4e1fad 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -170,9 +170,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
+ 	chip->dev.class = tpm_class;
+ 	chip->dev.release = tpm_dev_release;
+ 	chip->dev.parent = dev;
+-#ifdef CONFIG_ACPI
+ 	chip->dev.groups = chip->groups;
+-#endif
+ 
+ 	if (chip->dev_num == 0)
+ 		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
+@@ -183,6 +181,9 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
+ 	if (rc)
+ 		goto out;
+ 
++	if (!dev)
++		chip->flags |= TPM_CHIP_FLAG_VIRTUAL;
 +
-+Authors: Stefan Berger (IBM)
+ 	cdev_init(&chip->cdev, &tpm_fops);
+ 	chip->cdev.owner = THIS_MODULE;
+ 	chip->cdev.kobj.parent = &chip->dev.kobj;
+@@ -327,7 +328,7 @@ int tpm_chip_register(struct tpm_chip *chip)
+ 
+ 	chip->flags |= TPM_CHIP_FLAG_REGISTERED;
+ 
+-	if (!(chip->flags & TPM_CHIP_FLAG_TPM2)) {
++	if (!(chip->flags & (TPM_CHIP_FLAG_TPM2 | TPM_CHIP_FLAG_VIRTUAL))) {
+ 		rc = __compat_only_sysfs_link_entry_to_kobj(
+ 		    &chip->dev.parent->kobj, &chip->dev.kobj, "ppi");
+ 		if (rc && rc != -ENOENT) {
+@@ -361,7 +362,7 @@ void tpm_chip_unregister(struct tpm_chip *chip)
+ 	if (!(chip->flags & TPM_CHIP_FLAG_REGISTERED))
+ 		return;
+ 
+-	if (!(chip->flags & TPM_CHIP_FLAG_TPM2))
++	if (!(chip->flags & (TPM_CHIP_FLAG_TPM2 | TPM_CHIP_FLAG_VIRTUAL)))
+ 		sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
+ 
+ 	tpm1_chip_unregister(chip);
+diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+index 34e7fc7..9ee0f4d 100644
+--- a/drivers/char/tpm/tpm-sysfs.c
++++ b/drivers/char/tpm/tpm-sysfs.c
+@@ -283,9 +283,15 @@ static const struct attribute_group tpm_dev_group = {
+ 
+ int tpm_sysfs_add_device(struct tpm_chip *chip)
+ {
+-	int err;
+-	err = sysfs_create_group(&chip->dev.parent->kobj,
+-				 &tpm_dev_group);
++	int err = 0;
 +
-+This document describes the virtual Trusted Platform Module (vTPM)
-+proxy device driver for Linux containers.
-+
-+INTRODUCTION
-+------------
-+
-+The goal of this work is to provide TPM functionality to each Linux
-+container. This allows programs to interact with a TPM in a container
-+the same way they interact with a TPM on the physical system. Each
-+container gets its own unique, emulated, software TPM.
-+
-+
-+DESIGN
-+------
-+
-+To make an emulated software TPM available to each container, the container
-+management stack needs to create a device pair consisting of a client TPM
-+character device /dev/tpmX (with X=0,1,2...) and a 'server side' file
-+descriptor. The former is moved into the container by creating a character
-+device with the appropriate major and minor numbers while the file descriptor
-+is passed to the TPM emulator. Software inside the container can then send
-+TPM commands using the character device and the emulator will receive the
-+commands via the file descriptor and use it for sending back responses.
-+
-+To support this, the virtual TPM proxy driver provides a device /dev/vtpmx
-+that is used to create device pairs using an ioctl. The ioctl takes as
-+an input flags for configuring the device. The flags  for example indicate
-+whether TPM 1.2 or TPM 2 functionality is supported by the TPM emulator.
-+The result of the ioctl are the file descriptor for the 'server side'
-+as well as the major and minor numbers of the character device that was created.
-+Besides that the number of the TPM character device is return. If for
-+example /dev/tpm10 was created, the number (dev_num) 10 is returned.
-+
-+The following is the data structure of the TPM_PROXY_IOC_NEW_DEV ioctl:
-+
-+struct vtpm_proxy_new_dev {
-+	__u32 flags;         /* input */
-+	__u32 tpm_num;       /* output */
-+	__u32 fd;            /* output */
-+	__u32 major;         /* output */
-+	__u32 minor;         /* output */
-+};
-+
-+Note that if unsupported flags are passed to the device driver, the ioctl will
-+fail and errno will be set to EOPNOTSUPP. Similarly, if an unsupported ioctl is
-+called on the device driver, the ioctl will fail and errno will be set to
-+ENOTTY.
-+
-+See /usr/include/linux/vtpm_proxy.h for definitions related to the public interface
-+of this vTPM device driver.
-+
-+Once the device has been created, the driver will immediately try to talk
-+to the TPM. All commands from the driver can be read from the file descriptor
-+returned by the ioctl. The commands should be responded to immediately.
-+
-+Depending on the version of TPM the following commands will be sent by the
-+driver:
-+
-+- TPM 1.2:
-+  - the driver will send a TPM_Startup command to the TPM emulator
-+  - the driver will send commands to read the command durations and
-+    interface timeouts from the TPM emulator
-+- TPM 2:
-+  - the driver will send a TPM2_Startup command to the TPM emulator
-+
-+The TPM device /dev/tpmX will only appear if all of the relevant commands
-+were responded to properly.
++	if (!(chip->flags & TPM_CHIP_FLAG_VIRTUAL))
++		err = sysfs_create_group(&chip->dev.parent->kobj,
++					 &tpm_dev_group);
++	else {
++		dev_set_drvdata(&chip->dev, chip);
++		chip->groups[chip->groups_cnt++] = &tpm_dev_group;
++	}
+ 
+ 	if (err)
+ 		dev_err(&chip->dev,
+@@ -300,5 +306,6 @@ void tpm_sysfs_del_device(struct tpm_chip *chip)
+ 	 * synchronizes this removal so that no callbacks are running or can
+ 	 * run again
+ 	 */
+-	sysfs_remove_group(&chip->dev.parent->kobj, &tpm_dev_group);
++	if (!(chip->flags & TPM_CHIP_FLAG_VIRTUAL))
++		sysfs_remove_group(&chip->dev.parent->kobj, &tpm_dev_group);
+ }
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index cd780c7..0949ba9 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -156,6 +156,7 @@ struct tpm_vendor_specific {
+ enum tpm_chip_flags {
+ 	TPM_CHIP_FLAG_REGISTERED	= BIT(0),
+ 	TPM_CHIP_FLAG_TPM2		= BIT(1),
++	TPM_CHIP_FLAG_VIRTUAL		= BIT(2),
+ };
+ 
+ struct tpm_chip {
+@@ -180,9 +181,9 @@ struct tpm_chip {
+ 
+ 	struct dentry **bios_dir;
+ 
+-#ifdef CONFIG_ACPI
+-	const struct attribute_group *groups[2];
++	const struct attribute_group *groups[3];
+ 	unsigned int groups_cnt;
++#ifdef CONFIG_ACPI
+ 	acpi_handle acpi_dev_handle;
+ 	char ppi_version[TPM_PPI_VERSION_LEN + 1];
+ #endif /* CONFIG_ACPI */
 -- 
 2.4.3
 
