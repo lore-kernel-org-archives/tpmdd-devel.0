@@ -1,77 +1,210 @@
 From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: [PATCH v9 0/4] Multi-instance vTPM proxy driver
-Date: Tue, 29 Mar 2016 14:19:10 -0400
-Message-ID: <1459275554-12915-1-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v9 3/4] tpm: Initialize TPM and get durations and timeouts
+Date: Tue, 29 Mar 2016 14:19:13 -0400
+Message-ID: <1459275554-12915-4-git-send-email-stefanb@linux.vnet.ibm.com>
+References: <1459275554-12915-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <1459275554-12915-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Sender: linux-kernel-owner@vger.kernel.org
 To: tpmdd-devel@lists.sourceforge.net
-Cc: jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Stefan Berger <stefanb@linux.vnet.ibm.com>, linux-doc@vger.kernel.org, linux-api@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The following series of patches implements a multi-instance vTPM 
-proxy driver that can dynamically create TPM 'server' and client device
-pairs.
+Add the retrieval of TPM 1.2 durations and timeouts. Since this requires
+the startup of the TPM, do this for TPM 1.2 and TPM 2.
 
-Using an ioctl on the provided /dev/vtpmx, a client-side vTPM device
-and a server side file descriptor is created. The file descriptor must
-be passed to a TPM emulator. The device driver will initialize the
-emulated TPM using TPM 1.2 or TPM 2 startup commands and it will read
-the command durations from the device in case of a TPM 1.2. The choice
-of emulated TPM device (1.2 or 2) must be provided with a flag in
-the ioctl.
+Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+CC: linux-kernel@vger.kernel.org
+CC: linux-doc@vger.kernel.org
+CC: linux-api@vger.kernel.org
+---
+ drivers/char/tpm/tpm_vtpm_proxy.c | 96 +++++++++++++++++++++++++++++++++++----
+ 1 file changed, 86 insertions(+), 10 deletions(-)
 
-The patches are based on a recent checkout of Jarkko's tree (master branch).
-
-   Stefan
-
-v8->v9:
- - move constant from public header into tpm_vtpm_proxy.c
- - Replaced VTPM_PROXY_MAGIC in ioctl definition with its value (0xa1)
- - Check for the STATE_OPEN_FLAG in wait_event_interruptable and after
-   returning from it
-
-v7->v8:
- - minor tweaks on the documentation
- - Reordered function calls in the VTPM proxy driver's server side release
-   function so that a client holding the 'ops' lock releases it before the
-   driver tries to grab the lock when unregistering the device.
-
-v6->v7:
- - Adjusted name of driver to tpm_vtpm_proxy from tpm_vtpm. Adjust function
-   names, names of structures, and names of constants.
- - Adjusted IOCTL to use magic 0xa1 rather than the completely used 0xa0.
- - Extended driver documentation and added documentation of ioctl.
- - Moved test program to own project (dropped patch 11).
-
-v5->v6:
- - Adapted errno's for unsupported flags and ioctls following Jason's
-   comments
-
-v4->v5:
- - Introduced different error codes for unsupported flags and ioctls
- - Added documentation patch
-
-
-Stefan Berger (4):
-  tpm: Introduce TPM_CHIP_FLAG_VIRTUAL
-  tpm: Proxy driver for supporting multiple emulated TPMs
-  tpm: Initialize TPM and get durations and timeouts
-  tpm: Add documentation for the tpm_vtpm device driver
-
- Documentation/ioctl/ioctl-number.txt |   1 +
- Documentation/tpm/tpm_vtpm_proxy.txt |  71 ++++
- drivers/char/tpm/Kconfig             |  10 +
- drivers/char/tpm/Makefile            |   1 +
- drivers/char/tpm/tpm-chip.c          |   9 +-
- drivers/char/tpm/tpm-sysfs.c         |  15 +-
- drivers/char/tpm/tpm.h               |   5 +-
- drivers/char/tpm/tpm_vtpm_proxy.c    | 650 +++++++++++++++++++++++++++++++++++
- include/uapi/linux/Kbuild            |   1 +
- include/uapi/linux/vtpm_proxy.h      |  36 ++
- 10 files changed, 789 insertions(+), 10 deletions(-)
- create mode 100644 Documentation/tpm/tpm_vtpm_proxy.txt
- create mode 100644 drivers/char/tpm/tpm_vtpm_proxy.c
- create mode 100644 include/uapi/linux/vtpm_proxy.h
-
+diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
+index 81abc4b..8936bf3 100644
+--- a/drivers/char/tpm/tpm_vtpm_proxy.c
++++ b/drivers/char/tpm/tpm_vtpm_proxy.c
+@@ -45,11 +45,15 @@ struct proxy_dev {
+ 	size_t req_len;              /* length of queued TPM request */
+ 	size_t resp_len;             /* length of queued TPM response */
+ 	u8 buffer[TPM_BUFSIZE];      /* request/response buffer */
++
++	struct work_struct work;     /* task that retrieves TPM timeouts */
+ };
+ 
+ /* all supported flags */
+ #define VTPM_PROXY_FLAGS_ALL  (VTPM_PROXY_FLAG_TPM2)
+ 
++static struct workqueue_struct *workqueue;
++
+ static void vtpm_proxy_delete_device(struct proxy_dev *proxy_dev);
+ 
+ /*
+@@ -69,12 +73,19 @@ static ssize_t vtpm_proxy_fops_read(struct file *filp, char __user *buf,
+ 	size_t len;
+ 	int sig, rc;
+ 
+-	sig = wait_event_interruptible(proxy_dev->wq, proxy_dev->req_len != 0);
++	sig = wait_event_interruptible(proxy_dev->wq,
++		proxy_dev->req_len != 0 ||
++		!(proxy_dev->state & STATE_OPENED_FLAG));
+ 	if (sig)
+ 		return -EINTR;
+ 
+ 	mutex_lock(&proxy_dev->buf_lock);
+ 
++	if (!(proxy_dev->state & STATE_OPENED_FLAG)) {
++		mutex_unlock(&proxy_dev->buf_lock);
++		return -EPIPE;
++	}
++
+ 	len = proxy_dev->req_len;
+ 
+ 	if (count < len) {
+@@ -112,6 +123,11 @@ static ssize_t vtpm_proxy_fops_write(struct file *filp, const char __user *buf,
+ 
+ 	mutex_lock(&proxy_dev->buf_lock);
+ 
++	if (!(proxy_dev->state & STATE_OPENED_FLAG)) {
++		mutex_unlock(&proxy_dev->buf_lock);
++		return -EPIPE;
++	}
++
+ 	if (count > sizeof(proxy_dev->buffer) ||
+ 	    !(proxy_dev->state & STATE_WAIT_RESPONSE_FLAG)) {
+ 		mutex_unlock(&proxy_dev->buf_lock);
+@@ -156,6 +172,9 @@ static unsigned int vtpm_proxy_fops_poll(struct file *filp, poll_table *wait)
+ 	if (proxy_dev->req_len)
+ 		ret |= POLLIN | POLLRDNORM;
+ 
++	if (!(proxy_dev->state & STATE_OPENED_FLAG))
++		ret |= POLLHUP;
++
+ 	mutex_unlock(&proxy_dev->buf_lock);
+ 
+ 	return ret;
+@@ -343,6 +362,55 @@ static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
+ };
+ 
+ /*
++ * Code related to the startup of the TPM 2 and startup of TPM 1.2 +
++ * retrieval of timeouts and durations.
++ */
++
++static void vtpm_proxy_work(struct work_struct *work)
++{
++	struct proxy_dev *proxy_dev = container_of(work, struct proxy_dev,
++						   work);
++	int rc;
++
++	if (proxy_dev->flags & VTPM_PROXY_FLAG_TPM2)
++		rc = tpm2_startup(proxy_dev->chip, TPM2_SU_CLEAR);
++	else
++		rc = tpm_get_timeouts(proxy_dev->chip);
++
++	if (rc)
++		goto err;
++
++	rc = tpm_chip_register(proxy_dev->chip);
++	if (rc)
++		goto err;
++
++	return;
++
++err:
++	vtpm_proxy_fops_undo_open(proxy_dev);
++}
++
++/*
++ * vtpm_proxy_work_stop: make sure the work has finished
++ *
++ * This function is useful when user space closed the fd
++ * while the driver still determines timeouts.
++ */
++static void vtpm_proxy_work_stop(struct proxy_dev *proxy_dev)
++{
++	vtpm_proxy_fops_undo_open(proxy_dev);
++	flush_work(&proxy_dev->work);
++}
++
++/*
++ * vtpm_proxy_work_start: Schedule the work for TPM 1.2 & 2 initialization
++ */
++static inline void vtpm_proxy_work_start(struct proxy_dev *proxy_dev)
++{
++	queue_work(workqueue, &proxy_dev->work);
++}
++
++/*
+  * Code related to creation and deletion of device pairs
+  */
+ static struct proxy_dev *vtpm_proxy_create_proxy_dev(void)
+@@ -357,6 +425,7 @@ static struct proxy_dev *vtpm_proxy_create_proxy_dev(void)
+ 
+ 	init_waitqueue_head(&proxy_dev->wq);
+ 	mutex_init(&proxy_dev->buf_lock);
++	INIT_WORK(&proxy_dev->work, vtpm_proxy_work);
+ 
+ 	chip = tpm_chip_alloc(NULL, &vtpm_proxy_tpm_ops);
+ 	if (IS_ERR(chip)) {
+@@ -427,9 +496,7 @@ static struct file *vtpm_proxy_create_device(
+ 	if (proxy_dev->flags & VTPM_PROXY_FLAG_TPM2)
+ 		proxy_dev->chip->flags |= TPM_CHIP_FLAG_TPM2;
+ 
+-	rc = tpm_chip_register(proxy_dev->chip);
+-	if (rc)
+-		goto err_vtpm_fput;
++	vtpm_proxy_work_start(proxy_dev);
+ 
+ 	vtpm_new_dev->fd = fd;
+ 	vtpm_new_dev->major = MAJOR(proxy_dev->chip->dev.devt);
+@@ -438,12 +505,6 @@ static struct file *vtpm_proxy_create_device(
+ 
+ 	return file;
+ 
+-err_vtpm_fput:
+-	put_unused_fd(fd);
+-	fput(file);
+-
+-	return ERR_PTR(rc);
+-
+ err_put_unused_fd:
+ 	put_unused_fd(fd);
+ 
+@@ -458,6 +519,8 @@ err_delete_proxy_dev:
+  */
+ static void vtpm_proxy_delete_device(struct proxy_dev *proxy_dev)
+ {
++	vtpm_proxy_work_stop(proxy_dev);
++
+ 	/*
+ 	 * A client may hold the 'ops' lock, so let it know that the server
+ 	 * side shuts down before we try to grab the 'ops' lock when
+@@ -557,11 +620,24 @@ static int __init vtpm_module_init(void)
+ 		return rc;
+ 	}
+ 
++	workqueue = create_workqueue("tpm-vtpm");
++	if (!workqueue) {
++		pr_err("couldn't create workqueue\n");
++		rc = -ENOMEM;
++		goto err_vtpmx_cleanup;
++	}
++
+ 	return 0;
++
++err_vtpmx_cleanup:
++	vtpmx_cleanup();
++
++	return rc;
+ }
+ 
+ static void __exit vtpm_module_exit(void)
+ {
++	destroy_workqueue(workqueue);
+ 	vtpmx_cleanup();
+ }
+ 
 -- 
 2.4.3
