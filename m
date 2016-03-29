@@ -1,16 +1,15 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: Re: [PATCH v2 1/7] tpm/tpm_atmel: drop remaining
-	'iobase' usage
-Date: Tue, 29 Mar 2016 16:45:40 +0200
-Message-ID: <56FA9514.9070507@gmail.com>
+Subject: Re: [PATCH v2 0/7] Remove the tpm_vendor_specific
+	structure
+Date: Tue, 29 Mar 2016 17:09:49 +0200
+Message-ID: <56FA9ABD.5090100@gmail.com>
 References: <1458975615-8095-1-git-send-email-christophe-h.ricard@st.com>
-	<1458975615-8095-2-git-send-email-christophe-h.ricard@st.com>
-	<20160329140814.GA12764@intel.com>
+	<20160329141029.GB12764@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160329140814.GA12764-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20160329141029.GB12764-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,57 +22,64 @@ To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi Jarkko,
+ok clear.
 
-I just saw you have updated the master branch removing patch:
-tpm: drop 'iobase' from struct tpm_vendor_specific.
-
-I will merge both in a new v3 serie and will make sure it will build for 
-PPC64
-as well.
-
-Does that sound acceptable for you ?
-
-Best Regards
+Thanks
 Christophe
 
-On 29/03/2016 16:08, Jarkko Sakkinen wrote:
-> On Sat, Mar 26, 2016 at 08:00:09AM +0100, Christophe Ricard wrote:
->> Remove some sporadic iobase
-> This description of this commit is total crap to be honest (saying
-> this with a polite tone but that's how it is). For me the commit meessage
-> is the most important part of the commit and the sentence above contains
-> exactly zero amount of information.
->
-> A proper commit message would have stated that this fixes the PPC64
-> builds that your earlier patch breaks. Have you tested that PPC64 builds
-> work now?
->
-> Actually what you should have *really* done would have updated your
-> older patch and put a remark into change log in the cover letter.
+On 29/03/2016 16:10, Jarkko Sakkinen wrote:
+> On Sat, Mar 26, 2016 at 08:00:08AM +0100, Christophe Ricard wrote:
+>> Hi Jarkko,
+>>
+>> This is the latest steps to cleanup tpm_vendor_specific structure.
+>>
+>> I have also included some few obvious cleanup inside the drivers.
+>> I have been able to test tpm_tis on a HP Desktop machine.
+>>
+>> In v2 i have added a patch fixing:
+>> 'tpm: drop 'iobase' from struct tpm_vendor_specific' 691f211398bb93878b727be0c5c523e2371074f5
+> You give zero information here what you are fixing and why. For the next
+> version of the patch set just put a remark about fixing PPC64 builds and
+> include the full patch. I'll drop the current iobase patch from my
+> master branch.
 >
 > /Jarkko
 >
->> Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
->> ---
->>   drivers/char/tpm/tpm_atmel.h | 4 ++--
->>   1 file changed, 2 insertions(+), 2 deletions(-)
+>> It may be merged with the mention commit.
 >>
->> diff --git a/drivers/char/tpm/tpm_atmel.h b/drivers/char/tpm/tpm_atmel.h
->> index c5618ea..7e37c16 100644
->> --- a/drivers/char/tpm/tpm_atmel.h
->> +++ b/drivers/char/tpm/tpm_atmel.h
->> @@ -38,8 +38,8 @@ static inline struct tpm_atmel_priv *atmel_get_priv(struct tpm_chip *chip)
->>   
->>   #include <asm/prom.h>
->>   
->> -#define atmel_getb(chip, offset) readb(chip->vendor->iobase + offset);
->> -#define atmel_putb(val, chip, offset) writeb(val, chip->vendor->iobase + offset)
->> +#define atmel_getb(priv, offset) readb(priv->iobase + offset);
->> +#define atmel_putb(val, priv, offset) writeb(val, priv->iobase + offset)
->>   #define atmel_request_region request_mem_region
->>   #define atmel_release_region release_mem_region
->>   
+>> Best Regards
+>> Christophe
+>>
+>>
+>> Christophe Ricard (7):
+>>    tpm/tpm_atmel: drop remaining 'iobase' usage
+>>    tpm: Remove useless priv field in struct tpm_vendor_specific
+>>    tpm/tpm_i2c_atmel: simplify patch to get tpm_chip from an i2c_client
+>>    tpm/tpm_i2c_atmel: Few code style fixes
+>>    tpm: drop 'irq' from struct tpm_vendor_specific
+>>    tpm: Move remaining tpm_vendor_specific structure data to tpm_chip
+>>    tpm: drop 'read_queue' from struct tpm_vendor_specific
+>>
+>>   drivers/char/tpm/st33zp24/i2c.c      |  15 ++-
+>>   drivers/char/tpm/st33zp24/spi.c      |  15 ++-
+>>   drivers/char/tpm/st33zp24/st33zp24.c | 113 ++++++++--------------
+>>   drivers/char/tpm/st33zp24/st33zp24.h |   9 ++
+>>   drivers/char/tpm/tpm-interface.c     |  52 +++++-----
+>>   drivers/char/tpm/tpm-sysfs.c         |  20 ++--
+>>   drivers/char/tpm/tpm.h               |  24 ++---
+>>   drivers/char/tpm/tpm2-cmd.c          |   2 +-
+>>   drivers/char/tpm/tpm_atmel.c         |  12 +--
+>>   drivers/char/tpm/tpm_atmel.h         |   9 +-
+>>   drivers/char/tpm/tpm_crb.c           |  12 +--
+>>   drivers/char/tpm/tpm_i2c_atmel.c     |  30 +++---
+>>   drivers/char/tpm/tpm_i2c_infineon.c  |  47 +++++----
+>>   drivers/char/tpm/tpm_i2c_nuvoton.c   |  73 ++++++++------
+>>   drivers/char/tpm/tpm_ibmvtpm.c       |  38 +++-----
+>>   drivers/char/tpm/tpm_nsc.c           |  48 ++++-----
+>>   drivers/char/tpm/tpm_tis.c           | 182 ++++++++++++++++++-----------------
+>>   drivers/char/tpm/xen-tpmfront.c      |  36 +++----
+>>   18 files changed, 356 insertions(+), 381 deletions(-)
+>>
 >> -- 
 >> 2.5.0
 >>
