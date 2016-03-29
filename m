@@ -1,83 +1,117 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 2/5] tpm: drop list from struct
-	tpm_vendor_specific
-Date: Tue, 29 Mar 2016 19:25:22 +0300
-Message-ID: <20160329162522.GC24833@intel.com>
-References: <1458764240-24185-1-git-send-email-christophe-h.ricard@st.com>
-	<1458764240-24185-3-git-send-email-christophe-h.ricard@st.com>
-	<20160324140835.GA21170@intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20160324140835.GA21170-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH] tpm: fix checks for policy digest existence in tpm2_seal_trusted() (resend for stable)
+Date: Tue, 29 Mar 2016 19:48:57 +0300
+Message-ID: <1459270137-27805-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Peter Huewe <peterhuewe@gmx.de>
+Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, stable@vger.kernel.org, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, David Safford <safford@us.ibm.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, David Howells <dhowells@redhat.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>, "open list:KEYS-TRUSTED" <linux-security-module@vger.kernel.org>, "open list:KEYS-TRUSTED" <keyrings@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Mar 24, 2016 at 04:08:35PM +0200, Jarkko Sakkinen wrote:
-> On Wed, Mar 23, 2016 at 09:17:17PM +0100, Christophe Ricard wrote:
-> > Dropped list from struct tpm_vendor_specific as it is not used in any
-> > place.
-> > 
-> > It is initialized in tpm_i2c_infineon but not used at all in the code.
-> > 
-> > Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
-> 
-> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+In my original patch sealing with policy was done with dynamically
+allocated buffer that I changed later into an array so the checks in
+tpm2-cmd.c became invalid. This patch fixes the issue.
 
-You can drop this patch from next version of the series as it is
-applied.
+Fixes: 5beb0c435bdd ("keys, trusted: seal with a TPM2 authorization policy")
+Reported-by: Dan Carpenter <dan.carpenter@oracle.com>
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Acked-by: Peter Huewe <peterhuewe@gmx.de>
+CC: stable@vger.kernel.org
+---
+ drivers/char/tpm/tpm2-cmd.c | 12 ++++--------
+ include/keys/trusted-type.h |  2 +-
+ security/keys/trusted.c     | 11 +++++------
+ 3 files changed, 10 insertions(+), 15 deletions(-)
 
-/Jarkko
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index 45a6340..66e04b4 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -478,20 +478,16 @@ int tpm2_seal_trusted(struct tpm_chip *chip,
+ 	tpm_buf_append_u8(&buf, payload->migratable);
+ 
+ 	/* public */
+-	if (options->policydigest)
+-		tpm_buf_append_u16(&buf, 14 + options->digest_len);
+-	else
+-		tpm_buf_append_u16(&buf, 14);
+-
++	tpm_buf_append_u16(&buf, 14 + options->policydigest_len);
+ 	tpm_buf_append_u16(&buf, TPM2_ALG_KEYEDHASH);
+ 	tpm_buf_append_u16(&buf, hash);
+ 
+ 	/* policy */
+-	if (options->policydigest) {
++	if (options->policydigest_len) {
+ 		tpm_buf_append_u32(&buf, 0);
+-		tpm_buf_append_u16(&buf, options->digest_len);
++		tpm_buf_append_u16(&buf, options->policydigest_len);
+ 		tpm_buf_append(&buf, options->policydigest,
+-			       options->digest_len);
++			       options->policydigest_len);
+ 	} else {
+ 		tpm_buf_append_u32(&buf, TPM2_ATTR_USER_WITH_AUTH);
+ 		tpm_buf_append_u16(&buf, 0);
+diff --git a/include/keys/trusted-type.h b/include/keys/trusted-type.h
+index 42cf2d9..4ea7e55 100644
+--- a/include/keys/trusted-type.h
++++ b/include/keys/trusted-type.h
+@@ -38,7 +38,7 @@ struct trusted_key_options {
+ 	unsigned char pcrinfo[MAX_PCRINFO_SIZE];
+ 	int pcrlock;
+ 	uint32_t hash;
+-	uint32_t digest_len;
++	uint32_t policydigest_len;
+ 	unsigned char policydigest[MAX_DIGEST_SIZE];
+ 	uint32_t policyhandle;
+ };
+diff --git a/security/keys/trusted.c b/security/keys/trusted.c
+index 0dcab20..90d6175 100644
+--- a/security/keys/trusted.c
++++ b/security/keys/trusted.c
+@@ -744,6 +744,7 @@ static int getoptions(char *c, struct trusted_key_payload *pay,
+ 	unsigned long handle;
+ 	unsigned long lock;
+ 	unsigned long token_mask = 0;
++	unsigned int digest_len;
+ 	int i;
+ 	int tpm2;
+ 
+@@ -752,7 +753,6 @@ static int getoptions(char *c, struct trusted_key_payload *pay,
+ 		return tpm2;
+ 
+ 	opt->hash = tpm2 ? HASH_ALGO_SHA256 : HASH_ALGO_SHA1;
+-	opt->digest_len = hash_digest_size[opt->hash];
+ 
+ 	while ((p = strsep(&c, " \t"))) {
+ 		if (*p == '\0' || *p == ' ' || *p == '\t')
+@@ -812,8 +812,6 @@ static int getoptions(char *c, struct trusted_key_payload *pay,
+ 			for (i = 0; i < HASH_ALGO__LAST; i++) {
+ 				if (!strcmp(args[0].from, hash_algo_name[i])) {
+ 					opt->hash = i;
+-					opt->digest_len =
+-						hash_digest_size[opt->hash];
+ 					break;
+ 				}
+ 			}
+@@ -825,13 +823,14 @@ static int getoptions(char *c, struct trusted_key_payload *pay,
+ 			}
+ 			break;
+ 		case Opt_policydigest:
+-			if (!tpm2 ||
+-			    strlen(args[0].from) != (2 * opt->digest_len))
++			digest_len = hash_digest_size[opt->hash];
++			if (!tpm2 || strlen(args[0].from) != (2 * digest_len))
+ 				return -EINVAL;
+ 			res = hex2bin(opt->policydigest, args[0].from,
+-				      opt->digest_len);
++				      digest_len);
+ 			if (res < 0)
+ 				return -EINVAL;
++			opt->policydigest_len = digest_len;
+ 			break;
+ 		case Opt_policyhandle:
+ 			if (!tpm2)
+-- 
+2.7.3
 
-> /Jarkko
-> 
-> > ---
-> >  drivers/char/tpm/tpm.h              | 1 -
-> >  drivers/char/tpm/tpm_i2c_infineon.c | 1 -
-> >  2 files changed, 2 deletions(-)
-> > 
-> > diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> > index 0d1b7e6..357ac14 100644
-> > --- a/drivers/char/tpm/tpm.h
-> > +++ b/drivers/char/tpm/tpm.h
-> > @@ -133,7 +133,6 @@ struct tpm_chip;
-> >  struct tpm_vendor_specific {
-> >  	int irq;
-> >  
-> > -	struct list_head list;
-> >  	int locality;
-> >  	unsigned long timeout_a, timeout_b, timeout_c, timeout_d; /* jiffies */
-> >  	bool timeout_adjusted;
-> > diff --git a/drivers/char/tpm/tpm_i2c_infineon.c b/drivers/char/tpm/tpm_i2c_infineon.c
-> > index f2aa99e..e74f1c1 100644
-> > --- a/drivers/char/tpm/tpm_i2c_infineon.c
-> > +++ b/drivers/char/tpm/tpm_i2c_infineon.c
-> > @@ -619,7 +619,6 @@ static int tpm_tis_i2c_init(struct device *dev)
-> >  
-> >  	dev_info(dev, "1.2 TPM (device-id 0x%X)\n", vendor >> 16);
-> >  
-> > -	INIT_LIST_HEAD(&chip->vendor.list);
-> >  	tpm_dev.chip = chip;
-> >  
-> >  	tpm_get_timeouts(chip);
-> > -- 
-> > 2.5.0
-> > 
-
-------------------------------------------------------------------------------
-Transform Data into Opportunity.
-Accelerate data analysis in your applications with
-Intel Data Analytics Acceleration Library.
-Click to learn more.
-http://pubads.g.doubleclick.net/gampad/clk?id=278785471&iu=/4140
