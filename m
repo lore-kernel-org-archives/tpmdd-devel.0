@@ -1,117 +1,144 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [PATCH] tpm: fix checks for policy digest existence in tpm2_seal_trusted() (resend for stable)
-Date: Tue, 29 Mar 2016 19:48:57 +0300
-Message-ID: <1459270137-27805-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Peter Huewe <peterhuewe@gmx.de>
-Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, stable@vger.kernel.org, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, David Safford <safford@us.ibm.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, David Howells <dhowells@redhat.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>, "open list:KEYS-TRUSTED" <linux-security-module@vger.kernel.org>, "open list:KEYS-TRUSTED" <keyrings@vger.kernel.org>
+From: "Stefan Berger" <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Subject: Re: [PATCH v8 00/10] Multi-instance vTPM proxy driver
+Date: Tue, 29 Mar 2016 11:31:05 -0500
+Message-ID: <201603291631.u2TGVBxR001332@d03av04.boulder.ibm.com>
+References: <1457909680-14085-1-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20160329162433.GB24833@intel.com>
+Mime-Version: 1.0
+Content-Type: multipart/mixed; boundary="===============7333724538624397130=="
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20160329162433.GB24833-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Stefan, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-In my original patch sealing with policy was done with dynamically
-allocated buffer that I changed later into an array so the checks in
-tpm2-cmd.c became invalid. This patch fixes the issue.
 
-Fixes: 5beb0c435bdd ("keys, trusted: seal with a TPM2 authorization policy")
-Reported-by: Dan Carpenter <dan.carpenter@oracle.com>
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Acked-by: Peter Huewe <peterhuewe@gmx.de>
-CC: stable@vger.kernel.org
----
- drivers/char/tpm/tpm2-cmd.c | 12 ++++--------
- include/keys/trusted-type.h |  2 +-
- security/keys/trusted.c     | 11 +++++------
- 3 files changed, 10 insertions(+), 15 deletions(-)
+--===============7333724538624397130==
+Content-Type: multipart/alternative;
+	boundary="=_alternative 005ABD7885257F85_="
 
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 45a6340..66e04b4 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -478,20 +478,16 @@ int tpm2_seal_trusted(struct tpm_chip *chip,
- 	tpm_buf_append_u8(&buf, payload->migratable);
- 
- 	/* public */
--	if (options->policydigest)
--		tpm_buf_append_u16(&buf, 14 + options->digest_len);
--	else
--		tpm_buf_append_u16(&buf, 14);
--
-+	tpm_buf_append_u16(&buf, 14 + options->policydigest_len);
- 	tpm_buf_append_u16(&buf, TPM2_ALG_KEYEDHASH);
- 	tpm_buf_append_u16(&buf, hash);
- 
- 	/* policy */
--	if (options->policydigest) {
-+	if (options->policydigest_len) {
- 		tpm_buf_append_u32(&buf, 0);
--		tpm_buf_append_u16(&buf, options->digest_len);
-+		tpm_buf_append_u16(&buf, options->policydigest_len);
- 		tpm_buf_append(&buf, options->policydigest,
--			       options->digest_len);
-+			       options->policydigest_len);
- 	} else {
- 		tpm_buf_append_u32(&buf, TPM2_ATTR_USER_WITH_AUTH);
- 		tpm_buf_append_u16(&buf, 0);
-diff --git a/include/keys/trusted-type.h b/include/keys/trusted-type.h
-index 42cf2d9..4ea7e55 100644
---- a/include/keys/trusted-type.h
-+++ b/include/keys/trusted-type.h
-@@ -38,7 +38,7 @@ struct trusted_key_options {
- 	unsigned char pcrinfo[MAX_PCRINFO_SIZE];
- 	int pcrlock;
- 	uint32_t hash;
--	uint32_t digest_len;
-+	uint32_t policydigest_len;
- 	unsigned char policydigest[MAX_DIGEST_SIZE];
- 	uint32_t policyhandle;
- };
-diff --git a/security/keys/trusted.c b/security/keys/trusted.c
-index 0dcab20..90d6175 100644
---- a/security/keys/trusted.c
-+++ b/security/keys/trusted.c
-@@ -744,6 +744,7 @@ static int getoptions(char *c, struct trusted_key_payload *pay,
- 	unsigned long handle;
- 	unsigned long lock;
- 	unsigned long token_mask = 0;
-+	unsigned int digest_len;
- 	int i;
- 	int tpm2;
- 
-@@ -752,7 +753,6 @@ static int getoptions(char *c, struct trusted_key_payload *pay,
- 		return tpm2;
- 
- 	opt->hash = tpm2 ? HASH_ALGO_SHA256 : HASH_ALGO_SHA1;
--	opt->digest_len = hash_digest_size[opt->hash];
- 
- 	while ((p = strsep(&c, " \t"))) {
- 		if (*p == '\0' || *p == ' ' || *p == '\t')
-@@ -812,8 +812,6 @@ static int getoptions(char *c, struct trusted_key_payload *pay,
- 			for (i = 0; i < HASH_ALGO__LAST; i++) {
- 				if (!strcmp(args[0].from, hash_algo_name[i])) {
- 					opt->hash = i;
--					opt->digest_len =
--						hash_digest_size[opt->hash];
- 					break;
- 				}
- 			}
-@@ -825,13 +823,14 @@ static int getoptions(char *c, struct trusted_key_payload *pay,
- 			}
- 			break;
- 		case Opt_policydigest:
--			if (!tpm2 ||
--			    strlen(args[0].from) != (2 * opt->digest_len))
-+			digest_len = hash_digest_size[opt->hash];
-+			if (!tpm2 || strlen(args[0].from) != (2 * digest_len))
- 				return -EINVAL;
- 			res = hex2bin(opt->policydigest, args[0].from,
--				      opt->digest_len);
-+				      digest_len);
- 			if (res < 0)
- 				return -EINVAL;
-+			opt->policydigest_len = digest_len;
- 			break;
- 		case Opt_policyhandle:
- 			if (!tpm2)
--- 
-2.7.3
 
+--=_alternative 005ABD7885257F85_=
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset="US-ASCII"
+
+Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote on 03/29/2016=20
+12:24:33 PM:
+
+> From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-
+> devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+> Date: 03/29/2016 12:29 PM
+> Subject: Re: [tpmdd-devel] [PATCH v8 00/10] Multi-instance vTPM proxy=20
+driver
+>=20
+> On Sun, Mar 13, 2016 at 06:54:30PM -0400, Stefan Berger wrote:
+> > The following series of patches implements a multi-instance vTPM=20
+> > proxy driver that can dynamically create TPM 'server' and client=20
+device
+> > pairs.
+> >=20
+> > Using an ioctl on the provided /dev/vtpmx, a client-side vTPM device
+> > and a server side file descriptor is created. The file descriptor must
+> > be passed to a TPM emulator. The device driver will initialize the
+> > emulated TPM using TPM 1.2 or TPM 2 startup commands and it will read
+> > the command durations from the device in case of a TPM 1.2. The choice
+> > of emulated TPM device (1.2 or 2) must be provided with a flag in
+> > the ioctl.
+> >=20
+> > The driver is based on a recent checkout of James Morris's 'next'
+> > branch and uses several recently posted patches from Jason and Jarkko.
+>=20
+> I don't remember if I said this but up to the IDR patch I merged patches
+> to next (at the same day you sent this) so for v9 you can only include
+> top four changes.
+
+
+I rebased my patch set on top of your current master. Here's how it looks=20
+like:
+
+https://github.com/stefanberger/linux/commits/vtpm-driver.v9
+
+   Stefan
+
+
+
+--=_alternative 005ABD7885257F85_=
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset="US-ASCII"
+
+
+<br><tt><font size=3D2>Jarkko Sakkinen &lt;jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org&=
+gt;
+wrote on 03/29/2016 12:24:33 PM:<br><br>&gt; From: Jarkko Sakkinen &lt;jark=
+ko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org&gt;</font></tt><br><tt><font size=3D2>&gt; To: =
+Stefan Berger &lt;stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org&gt;</font></tt><br><tt><font s=
+ize=3D2>&gt; Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-<br>&gt; deve=
+l@lists.sourceforge.net, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org</font></tt><br><tt><f=
+ont size=3D2>&gt; Date: 03/29/2016 12:29 PM</font></tt><br><tt><font size=
+=3D2>&gt; Subject: Re: [tpmdd-devel] [PATCH v8 00/10] Multi-instance
+vTPM proxy driver</font></tt><br><tt><font size=3D2>&gt; <br>&gt; On Sun, M=
+ar 13, 2016 at 06:54:30PM -0400, Stefan Berger wrote:<br>&gt; &gt; The foll=
+owing series of patches implements a multi-instance vTPM
+<br>&gt; &gt; proxy driver that can dynamically create TPM 'server' and cli=
+ent
+device<br>&gt; &gt; pairs.<br>&gt; &gt; <br>&gt; &gt; Using an ioctl on the=
+ provided /dev/vtpmx, a client-side vTPM
+device<br>&gt; &gt; and a server side file descriptor is created. The file =
+descriptor
+must<br>&gt; &gt; be passed to a TPM emulator. The device driver will initi=
+alize
+the<br>&gt; &gt; emulated TPM using TPM 1.2 or TPM 2 startup commands and i=
+t will
+read<br>&gt; &gt; the command durations from the device in case of a TPM 1.=
+2. The
+choice<br>&gt; &gt; of emulated TPM device (1.2 or 2) must be provided with=
+ a flag
+in<br>&gt; &gt; the ioctl.<br>&gt; &gt; <br>&gt; &gt; The driver is based o=
+n a recent checkout of James Morris's 'next'<br>&gt; &gt; branch and uses s=
+everal recently posted patches from Jason and
+Jarkko.<br>&gt; <br>&gt; I don't remember if I said this but up to the IDR =
+patch I merged patches<br>&gt; to next (at the same day you sent this) so f=
+or v9 you can only include<br>&gt; top four changes.</font></tt><br><br><br=
+><tt><font size=3D2>I rebased my patch set on top of your current master.
+Here's how it looks like:</font></tt><br><br><a href=3D"https://github.com/=
+stefanberger/linux/commits/vtpm-driver.v9"><tt><font size=3D2 color=3Dblue>=
+https://github.com/stefanberger/linux/commits/vtpm-driver.v9</font></tt></a=
+><br><br><tt><font size=3D2>&nbsp; &nbsp;Stefan</font></tt><br><BR>
+--=_alternative 005ABD7885257F85_=--
+
+
+
+--===============7333724538624397130==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
+
+------------------------------------------------------------------------------
+Transform Data into Opportunity.
+Accelerate data analysis in your applications with
+Intel Data Analytics Acceleration Library.
+Click to learn more.
+http://pubads.g.doubleclick.net/gampad/clk?id=278785471&iu=/4140
+--===============7333724538624397130==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
+
+_______________________________________________
+tpmdd-devel mailing list
+tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+
+--===============7333724538624397130==--
