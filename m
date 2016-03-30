@@ -1,8 +1,8 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
 Subject: [PATCH v3 0/6] Remove the tpm_vendor_specific
 	structure
-Date: Wed, 30 Mar 2016 23:36:44 +0200
-Message-ID: <1459373810-13940-1-git-send-email-christophe-h.ricard@st.com>
+Date: Wed, 30 Mar 2016 23:38:09 +0200
+Message-ID: <1459373895-17704-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
