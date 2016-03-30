@@ -1,12 +1,14 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v3 0/6] Remove the tpm_vendor_specific
-	structure
-Date: Wed, 30 Mar 2016 23:38:09 +0200
-Message-ID: <1459373895-17704-1-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH v3 3/6] tpm: drop 'read_queue' from struct
+	tpm_vendor_specific
+Date: Wed, 30 Mar 2016 23:38:12 +0200
+Message-ID: <1459373895-17704-4-git-send-email-christophe-h.ricard@st.com>
+References: <1459373895-17704-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1459373895-17704-1-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,68 +21,287 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi Jarkko,
+Dropped the field 'read_queue' from struct tpm_vendor_specific and make it
+available to the various private structures in the drivers.
 
-After our discussion, please find an updated v3 serie allowing to
-completely remove reference to the tpm_vendor_specific structure.
+Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
+---
+ drivers/char/tpm/st33zp24/st33zp24.c | 12 ++++++------
+ drivers/char/tpm/st33zp24/st33zp24.h |  1 +
+ drivers/char/tpm/tpm.h               |  2 --
+ drivers/char/tpm/tpm_i2c_nuvoton.c   | 14 +++++++++-----
+ drivers/char/tpm/tpm_tis.c           |  9 +++++----
+ drivers/char/tpm/xen-tpmfront.c      | 11 ++++++-----
+ 6 files changed, 27 insertions(+), 22 deletions(-)
 
-I have been able to test tpm_tis on a HP8200 Desktop machine.
-
-v2 serie was dropped.
-
-In v3:
-- Merged 'tpm/tpm_atmel: drop remaining 'iobase' usage' from v2 and
-'tpm: drop 'iobase' from struct tpm_vendor_specific' sent in v1
-- Move patch tpm: Remove useless priv field in struct tpm_vendor_specific
-at the end of the serie,
-- Dropped codestyle/cleanup patches. May be send later...
-(e.g: tpm/tpm_i2c_atmel: simplify patch to get tpm_chip from an i2c_client,
-tpm/tpm_i2c_atmel: Few code style fixes)
-- In patch 'tpm: drop 'irq' from struct tpm_vendor_specific', Renamed
-TPM_CHIP_FLAG_USES_IRQ to TPM_CHIP_FLAG_IRQ
-- Added patch 'tpm: drop 'locality' from struct tpm_vendor_specific'.
-
-Please note: scripts/checkpatch.pl returns the following warning:
-'WARNING: macros should not use a trailing semicolon
-#165: FILE: drivers/char/tpm/tpm_atmel.h:41:
-+#define atmel_getb(priv, offset) readb(priv->iobase + offset);'
-The semicolon was already present in tpm_atmel.h at this place and concidered this
-as a side fix to add in a future update (potententially with the future remaining
-codestyle/cleanup serie). It does not generate any build errors on my side. I found
-out because atmel_getb wasn't used in any place.
-
-Best Regards
-Christophe
-
-Christophe Ricard (6):
-  tpm: drop 'iobase' from struct tpm_vendor_specific
-  tpm: drop 'irq' from struct tpm_vendor_specific
-  tpm: drop 'read_queue' from struct tpm_vendor_specific
-  tpm: drop 'locality' from struct tpm_vendor_specific
-  tpm: Move tpm_vendor_specific data related with PTP specification to
-    tpm_chip
-  tpm: Remove useless priv field in struct tpm_vendor_specific
-
- drivers/char/tpm/st33zp24/i2c.c      |  15 ++-
- drivers/char/tpm/st33zp24/spi.c      |  15 ++-
- drivers/char/tpm/st33zp24/st33zp24.c | 113 +++++++----------
- drivers/char/tpm/st33zp24/st33zp24.h |  12 ++
- drivers/char/tpm/tpm-interface.c     |  52 ++++----
- drivers/char/tpm/tpm-sysfs.c         |  20 +--
- drivers/char/tpm/tpm.h               |  25 +---
- drivers/char/tpm/tpm2-cmd.c          |   2 +-
- drivers/char/tpm/tpm_atmel.c         |  32 +++--
- drivers/char/tpm/tpm_atmel.h         |  10 +-
- drivers/char/tpm/tpm_crb.c           |  12 +-
- drivers/char/tpm/tpm_i2c_atmel.c     |  23 ++--
- drivers/char/tpm/tpm_i2c_infineon.c  |  48 ++++----
- drivers/char/tpm/tpm_i2c_nuvoton.c   |  73 ++++++-----
- drivers/char/tpm/tpm_ibmvtpm.c       |  38 ++----
- drivers/char/tpm/tpm_nsc.c           |  48 ++++----
- drivers/char/tpm/tpm_tis.c           | 231 +++++++++++++++++++----------------
- drivers/char/tpm/xen-tpmfront.c      |  36 +++---
- 18 files changed, 402 insertions(+), 403 deletions(-)
-
+diff --git a/drivers/char/tpm/st33zp24/st33zp24.c b/drivers/char/tpm/st33zp24/st33zp24.c
+index f4a44ad..d2e0175 100644
+--- a/drivers/char/tpm/st33zp24/st33zp24.c
++++ b/drivers/char/tpm/st33zp24/st33zp24.c
+@@ -338,7 +338,7 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
+ 	       wait_for_stat(chip,
+ 			     TPM_STS_DATA_AVAIL | TPM_STS_VALID,
+ 			     chip->vendor.timeout_c,
+-			     &chip->vendor.read_queue, true) == 0) {
++			     &tpm_dev->read_queue, true) == 0) {
+ 		burstcnt = get_burstcount(chip);
+ 		if (burstcnt < 0)
+ 			return burstcnt;
+@@ -367,7 +367,7 @@ static irqreturn_t tpm_ioserirq_handler(int irq, void *dev_id)
+ 	tpm_dev = (struct st33zp24_dev *)TPM_VPRIV(chip);
+ 
+ 	tpm_dev->intrs++;
+-	wake_up_interruptible(&chip->vendor.read_queue);
++	wake_up_interruptible(&tpm_dev->read_queue);
+ 	disable_irq_nosync(tpm_dev->irq);
+ 
+ 	return IRQ_HANDLED;
+@@ -407,7 +407,7 @@ static int st33zp24_send(struct tpm_chip *chip, unsigned char *buf,
+ 		st33zp24_cancel(chip);
+ 		if (wait_for_stat
+ 		    (chip, TPM_STS_COMMAND_READY, chip->vendor.timeout_b,
+-		     &chip->vendor.read_queue, false) < 0) {
++		     &tpm_dev->read_queue, false) < 0) {
+ 			ret = -ETIME;
+ 			goto out_err;
+ 		}
+@@ -453,7 +453,7 @@ static int st33zp24_send(struct tpm_chip *chip, unsigned char *buf,
+ 
+ 		ret = wait_for_stat(chip, TPM_STS_DATA_AVAIL | TPM_STS_VALID,
+ 				tpm_calc_ordinal_duration(chip, ordinal),
+-				&chip->vendor.read_queue, false);
++				&tpm_dev->read_queue, false);
+ 		if (ret < 0)
+ 			goto out_err;
+ 	}
+@@ -570,7 +570,7 @@ int st33zp24_probe(void *phy_id, const struct st33zp24_phy_ops *ops,
+ 
+ 	if (irq) {
+ 		/* INTERRUPT Setup */
+-		init_waitqueue_head(&chip->vendor.read_queue);
++		init_waitqueue_head(&tpm_dev->read_queue);
+ 		tpm_dev->intrs = 0;
+ 
+ 		if (request_locality(chip) != LOCALITY0) {
+@@ -674,7 +674,7 @@ int st33zp24_pm_resume(struct device *dev)
+ 		gpio_set_value(tpm_dev->io_lpcpd, 1);
+ 		ret = wait_for_stat(chip,
+ 				TPM_STS_VALID, chip->vendor.timeout_b,
+-				&chip->vendor.read_queue, false);
++				&tpm_dev->read_queue, false);
+ 	} else {
+ 		ret = tpm_pm_resume(dev);
+ 		if (!ret)
+diff --git a/drivers/char/tpm/st33zp24/st33zp24.h b/drivers/char/tpm/st33zp24/st33zp24.h
+index 27e7564..9b5cdc7 100644
+--- a/drivers/char/tpm/st33zp24/st33zp24.h
++++ b/drivers/char/tpm/st33zp24/st33zp24.h
+@@ -28,6 +28,7 @@ struct st33zp24_dev {
+ 	int irq;
+ 	u32 intrs;
+ 	int io_lpcpd;
++	wait_queue_head_t read_queue;
+ };
+ 
+ 
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index ad4799c..62e711b 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -137,8 +137,6 @@ struct tpm_vendor_specific {
+ 	unsigned long duration[3]; /* jiffies */
+ 	bool duration_adjusted;
+ 	void *priv;
+-
+-	wait_queue_head_t read_queue;
+ };
+ 
+ #define TPM_VPRIV(c)     ((c)->vendor.priv)
+diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
+index 75a80e466..2c1fa26 100644
+--- a/drivers/char/tpm/tpm_i2c_nuvoton.c
++++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
+@@ -57,6 +57,7 @@
+ struct priv_data {
+ 	int irq;
+ 	unsigned int intrs;
++	wait_queue_head_t read_queue;
+ };
+ 
+ static s32 i2c_nuvoton_read_buf(struct i2c_client *client, u8 offset, u8 size,
+@@ -232,13 +233,14 @@ static int i2c_nuvoton_wait_for_data_avail(struct tpm_chip *chip, u32 timeout,
+ static int i2c_nuvoton_recv_data(struct i2c_client *client,
+ 				 struct tpm_chip *chip, u8 *buf, size_t count)
+ {
++	struct priv_data *priv = chip->vendor.priv;
+ 	s32 rc;
+ 	int burst_count, bytes2read, size = 0;
+ 
+ 	while (size < count &&
+ 	       i2c_nuvoton_wait_for_data_avail(chip,
+ 					       chip->vendor.timeout_c,
+-					       &chip->vendor.read_queue) == 0) {
++					       &priv->read_queue) == 0) {
+ 		burst_count = i2c_nuvoton_get_burstcount(client, chip);
+ 		if (burst_count < 0) {
+ 			dev_err(&chip->dev,
+@@ -265,6 +267,7 @@ static int i2c_nuvoton_recv_data(struct i2c_client *client,
+ /* Read TPM command results */
+ static int i2c_nuvoton_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+ {
++	struct priv_data *priv = chip->vendor.priv;
+ 	struct device *dev = chip->dev.parent;
+ 	struct i2c_client *client = to_i2c_client(dev);
+ 	s32 rc;
+@@ -286,7 +289,7 @@ static int i2c_nuvoton_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+ 		 * tag, paramsize, and result
+ 		 */
+ 		status = i2c_nuvoton_wait_for_data_avail(
+-			chip, chip->vendor.timeout_c, &chip->vendor.read_queue);
++			chip, chip->vendor.timeout_c, &priv->read_queue);
+ 		if (status != 0) {
+ 			dev_err(dev, "%s() timeout on dataAvail\n", __func__);
+ 			size = -ETIMEDOUT;
+@@ -348,6 +351,7 @@ static int i2c_nuvoton_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+  */
+ static int i2c_nuvoton_send(struct tpm_chip *chip, u8 *buf, size_t len)
+ {
++	struct priv_data *priv = chip->vendor.priv;
+ 	struct device *dev = chip->dev.parent;
+ 	struct i2c_client *client = to_i2c_client(dev);
+ 	u32 ordinal;
+@@ -440,7 +444,7 @@ static int i2c_nuvoton_send(struct tpm_chip *chip, u8 *buf, size_t len)
+ 	rc = i2c_nuvoton_wait_for_data_avail(chip,
+ 					     tpm_calc_ordinal_duration(chip,
+ 								       ordinal),
+-					     &chip->vendor.read_queue);
++					     &priv->read_queue);
+ 	if (rc) {
+ 		dev_err(dev, "%s() timeout command duration\n", __func__);
+ 		i2c_nuvoton_ready(chip);
+@@ -477,7 +481,7 @@ static irqreturn_t i2c_nuvoton_int_handler(int dummy, void *dev_id)
+ 	struct priv_data *priv = chip->vendor.priv;
+ 
+ 	priv->intrs++;
+-	wake_up(&chip->vendor.read_queue);
++	wake_up(&priv->read_queue);
+ 	disable_irq_nosync(priv->irq);
+ 	return IRQ_HANDLED;
+ }
+@@ -541,7 +545,7 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
+ 		return -ENOMEM;
+ 	chip->vendor.priv = priv;
+ 
+-	init_waitqueue_head(&chip->vendor.read_queue);
++	init_waitqueue_head(&priv->read_queue);
+ 
+ 	/* Default timeouts */
+ 	chip->vendor.timeout_a = msecs_to_jiffies(TPM_I2C_SHORT_TIMEOUT);
+diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+index b8bb502..403c7bd 100644
+--- a/drivers/char/tpm/tpm_tis.c
++++ b/drivers/char/tpm/tpm_tis.c
+@@ -99,6 +99,7 @@ struct priv_data {
+ 	int irq;
+ 	bool irq_tested;
+ 	wait_queue_head_t int_queue;
++	wait_queue_head_t read_queue;
+ };
+ 
+ #if defined(CONFIG_PNP) && defined(CONFIG_ACPI)
+@@ -252,7 +253,7 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
+ 	       wait_for_tpm_stat(chip,
+ 				 TPM_STS_DATA_AVAIL | TPM_STS_VALID,
+ 				 chip->vendor.timeout_c,
+-				 &chip->vendor.read_queue, true)
++				 &priv->read_queue, true)
+ 	       == 0) {
+ 		burstcnt = get_burstcount(chip);
+ 		for (; burstcnt > 0 && size < count; burstcnt--)
+@@ -421,7 +422,7 @@ static int tpm_tis_send_main(struct tpm_chip *chip, u8 *buf, size_t len)
+ 
+ 		if (wait_for_tpm_stat
+ 		    (chip, TPM_STS_DATA_AVAIL | TPM_STS_VALID, dur,
+-		     &chip->vendor.read_queue, false) < 0) {
++		     &priv->read_queue, false) < 0) {
+ 			rc = -ETIME;
+ 			goto out_err;
+ 		}
+@@ -575,7 +576,7 @@ static irqreturn_t tis_int_handler(int dummy, void *dev_id)
+ 
+ 	((struct priv_data *)chip->vendor.priv)->irq_tested = true;
+ 	if (interrupt & TPM_INTF_DATA_AVAIL_INT)
+-		wake_up_interruptible(&chip->vendor.read_queue);
++		wake_up_interruptible(&priv->read_queue);
+ 	if (interrupt & TPM_INTF_LOCALITY_CHANGE_INT)
+ 		for (i = 0; i < 5; i++)
+ 			if (check_locality(chip, i) >= 0)
+@@ -800,7 +801,7 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+ 	}
+ 
+ 	/* INTERRUPT Setup */
+-	init_waitqueue_head(&chip->vendor.read_queue);
++	init_waitqueue_head(&priv->read_queue);
+ 	init_waitqueue_head(&priv->int_queue);
+ 	if (interrupts && tpm_info->irq != -1) {
+ 		if (tpm_info->irq) {
+diff --git a/drivers/char/tpm/xen-tpmfront.c b/drivers/char/tpm/xen-tpmfront.c
+index 329941d..cca89d9 100644
+--- a/drivers/char/tpm/xen-tpmfront.c
++++ b/drivers/char/tpm/xen-tpmfront.c
+@@ -29,6 +29,7 @@ struct tpm_private {
+ 	int ring_ref;
+ 	domid_t backend_id;
+ 	int irq;
++	wait_queue_head_t read_queue;
+ };
+ 
+ enum status_bits {
+@@ -89,7 +90,7 @@ static int vtpm_send(struct tpm_chip *chip, u8 *buf, size_t count)
+ 
+ 	/* Wait for completion of any existing command or cancellation */
+ 	if (wait_for_tpm_stat(chip, VTPM_STATUS_IDLE, chip->vendor.timeout_c,
+-			&chip->vendor.read_queue, true) < 0) {
++			&priv->read_queue, true) < 0) {
+ 		vtpm_cancel(chip);
+ 		return -ETIME;
+ 	}
+@@ -105,7 +106,7 @@ static int vtpm_send(struct tpm_chip *chip, u8 *buf, size_t count)
+ 	duration = tpm_calc_ordinal_duration(chip, ordinal);
+ 
+ 	if (wait_for_tpm_stat(chip, VTPM_STATUS_IDLE, duration,
+-			&chip->vendor.read_queue, true) < 0) {
++			&priv->read_queue, true) < 0) {
+ 		/* got a signal or timeout, try to cancel */
+ 		vtpm_cancel(chip);
+ 		return -ETIME;
+@@ -126,7 +127,7 @@ static int vtpm_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+ 
+ 	/* In theory the wait at the end of _send makes this one unnecessary */
+ 	if (wait_for_tpm_stat(chip, VTPM_STATUS_RESULT, chip->vendor.timeout_c,
+-			&chip->vendor.read_queue, true) < 0) {
++			&priv->read_queue, true) < 0) {
+ 		vtpm_cancel(chip);
+ 		return -ETIME;
+ 	}
+@@ -162,7 +163,7 @@ static irqreturn_t tpmif_interrupt(int dummy, void *dev_id)
+ 	switch (priv->shr->state) {
+ 	case VTPM_STATE_IDLE:
+ 	case VTPM_STATE_FINISH:
+-		wake_up_interruptible(&priv->chip->vendor.read_queue);
++		wake_up_interruptible(&priv->read_queue);
+ 		break;
+ 	case VTPM_STATE_SUBMIT:
+ 	case VTPM_STATE_CANCEL:
+@@ -180,7 +181,7 @@ static int setup_chip(struct device *dev, struct tpm_private *priv)
+ 	if (IS_ERR(chip))
+ 		return PTR_ERR(chip);
+ 
+-	init_waitqueue_head(&chip->vendor.read_queue);
++	init_waitqueue_head(&priv->read_queue);
+ 
+ 	priv->chip = chip;
+ 	TPM_VPRIV(chip) = priv;
 -- 
 2.5.0
 
