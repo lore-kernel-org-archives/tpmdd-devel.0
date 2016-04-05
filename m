@@ -1,113 +1,147 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH] tpm: fix tpm_transmit() parameters
-Date: Tue,  5 Apr 2016 17:23:41 +0300
-Message-ID: <1459866221-20052-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v3] vTPM: fix missing error handling for suspend operation
+Date: Tue, 5 Apr 2016 18:23:07 +0300
+Message-ID: <20160405152307.GA20516@intel.com>
+References: <1459816186-7220-1-git-send-email-honclo@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <1459816186-7220-1-git-send-email-honclo@linux.vnet.ibm.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: "Hon Ching(Vicky) Lo" <honclo@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, Peter Huewe <PeterHuewe@gmx.de>, Ashley Lai <ashley@ashleylai.com>, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Changed the type of 'buf' from 'const char *' to 'u8*' because the
-contents of the 'buf' get modified by the function and to better match
-the API in struct tpm_class_ops. Renamed 'bufsize' to 'len' in order to
-better match the API in struct tpm_class_ops.
+On Mon, Apr 04, 2016 at 08:29:46PM -0400, Hon Ching(Vicky) Lo wrote:
+> ibmvtpm_send_crq in tpm_ibmvtpm_suspend returns errors in a more
+> granular level than what the existing code does, according to the
+> PAPR standard.  This patch adds the missing CRQ transport event
+> code checks to ensure the appropriate actions are taken, in the
+> case that ibmvtpm_send_crq returns H_CLOSED.
 
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
----
- drivers/char/tpm/tpm-interface.c | 15 +++++++--------
- drivers/char/tpm/tpm.h           |  3 +--
- drivers/char/tpm/tpm2-cmd.c      |  2 +-
- 3 files changed, 9 insertions(+), 11 deletions(-)
+What are the transport events really? The commit message does not
+provide any information. What are the appropriate actions? Please refine
+the commit message.
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 316c784..c82f31f 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -330,29 +330,28 @@ EXPORT_SYMBOL_GPL(tpm_calc_ordinal_duration);
- /*
-  * Internal kernel interface to transmit TPM commands
-  */
--ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
--		     size_t bufsiz)
-+ssize_t tpm_transmit(struct tpm_chip *chip, u8 *buf, size_t len)
- {
- 	ssize_t rc;
- 	u32 count, ordinal;
- 	unsigned long stop;
- 
--	if (bufsiz > TPM_BUFSIZE)
--		bufsiz = TPM_BUFSIZE;
-+	if (len > TPM_BUFSIZE)
-+		len = TPM_BUFSIZE;
- 
- 	count = be32_to_cpu(*((__be32 *) (buf + 2)));
- 	ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
- 	if (count == 0)
- 		return -ENODATA;
--	if (count > bufsiz) {
-+	if (count > len) {
- 		dev_err(&chip->dev,
--			"invalid count value %x %zx\n", count, bufsiz);
-+			"invalid count value %x %zx\n", count, len);
- 		return -E2BIG;
- 	}
- 
- 	mutex_lock(&chip->tpm_mutex);
- 
--	rc = chip->ops->send(chip, (u8 *) buf, count);
-+	rc = chip->ops->send(chip, buf, count);
- 	if (rc < 0) {
- 		dev_err(&chip->dev,
- 			"tpm_transmit: tpm_send: error %zd\n", rc);
-@@ -388,7 +387,7 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
- 	goto out;
- 
- out_recv:
--	rc = chip->ops->recv(chip, (u8 *) buf, bufsiz);
-+	rc = chip->ops->recv(chip, buf, len);
- 	if (rc < 0)
- 		dev_err(&chip->dev,
- 			"tpm_transmit: tpm_recv: error %zd\n", rc);
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 154984b..4126b04 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -472,8 +472,7 @@ extern const struct file_operations tpm_fops;
- extern struct idr dev_nums_idr;
- 
- ssize_t	tpm_getcap(struct device *, __be32, cap_t *, const char *);
--ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
--		     size_t bufsiz);
-+ssize_t tpm_transmit(struct tpm_chip *chip, u8 *buf, size_t len);
- ssize_t tpm_transmit_cmd(struct tpm_chip *chip, void *cmd, int len,
- 			 const char *desc);
- extern int tpm_get_timeouts(struct tpm_chip *);
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 552b3ee..8f47206 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -921,7 +921,7 @@ int tpm2_probe(struct tpm_chip *chip)
- 	cmd.params.get_tpm_pt_in.property_id = cpu_to_be32(0x100);
- 	cmd.params.get_tpm_pt_in.property_cnt = cpu_to_be32(1);
- 
--	rc = tpm_transmit(chip, (const char *) &cmd, sizeof(cmd));
-+	rc = tpm_transmit(chip, (u8 *) &cmd, sizeof(cmd));
- 	if (rc <  0)
- 		return rc;
- 	else if (rc < TPM_HEADER_SIZE)
--- 
-2.7.4
+The code quality is just depressing to be frank. I think I already
+commented the loop-construction earlier. Please use a proper loop
+construction and get rid of your goto-statement mess.
 
+This is so much all over the place in this patch that I'll say this only
+once here: please remove u8-casts that you use together with constant
+values. They are not mandatory.
 
-------------------------------------------------------------------------------
+BTW, does this patch pass checkpatch.pl?
+
+> Signed-off-by: Hon Ching(Vicky) Lo <honclo@linux.vnet.ibm.com>
+> ---
+>  drivers/char/tpm/tpm_ibmvtpm.c |   43 ++++++++++++++++++++++++++++++++++++---
+>  drivers/char/tpm/tpm_ibmvtpm.h |    7 ++++++
+>  2 files changed, 46 insertions(+), 4 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_ibmvtpm.c b/drivers/char/tpm/tpm_ibmvtpm.c
+> index 3e6a226..ea2a970 100644
+> --- a/drivers/char/tpm/tpm_ibmvtpm.c
+> +++ b/drivers/char/tpm/tpm_ibmvtpm.c
+> @@ -335,17 +335,46 @@ static int tpm_ibmvtpm_suspend(struct device *dev)
+>  	struct ibmvtpm_crq crq;
+>  	u64 *buf = (u64 *) &crq;
+>  	int rc = 0;
+> +	int counter = 0;
+> +	int sig;
+>  
+> -	crq.valid = (u8)IBMVTPM_VALID_CMD;
+> -	crq.msg = (u8)VTPM_PREPARE_TO_SUSPEND;
+> +suspend:
+> +	crq_initialized = 0;
+> +	crq.valid = (u8) IBMVTPM_VALID_CMD;
+> +	crq.msg = (u8) VTPM_PREPARE_TO_SUSPEND;
+>  
+>  	rc = ibmvtpm_send_crq(ibmvtpm->vdev, cpu_to_be64(buf[0]),
+>  			      cpu_to_be64(buf[1]));
+> +
+> +	if ((rc == H_CLOSED) && (crq.valid == (u8) VALID_TRANSPORT_EVENT)) {
+> +		if (crq.msg == (u8) PARTNER_PARTITION_FAILED) {
+> +			dev_err(ibmvtpm->dev,
+> +				"vtpm has terminated fatally; reboot to reinstate a trusted state.\n");
+> +		}
+> +
+> +		if ((crq.msg == (u8) PARTNER_PARTITION_DEREG_CRQ)
+> +		    && (counter < 1)) {
+> +			counter++;
+> +
+> +			/* The vtpm is in the process of being reloaded by
+> +			 * firmware and has de-registered CRQ.  The client
+> +			 * must wait for the CRQ INITIALIZATION message and
+> +			 * respond and must resubmit suspend message.
+> +			 */
+> +			sig =
+> +			    wait_event_interruptible(ibmvtpm->wq,
+> +						     crq_initialized == 1);
+> +			if (sig)
+> +				return -EINTR;
+> +			goto suspend;
+> +		}
+> +	}
+> +
+>  	if (rc != H_SUCCESS)
+> -		dev_err(ibmvtpm->dev,
+> -			"tpm_ibmvtpm_suspend failed rc=%d\n", rc);
+> +		dev_err(ibmvtpm->dev, "tpm_ibmvtpm_suspend failed rc=%d\n", rc);
+
+Zero value change.
+
+>  
+>  	return rc;
+> +
+
+Extra newline.
+
+>  }
+>  
+>  /**
+> @@ -477,6 +506,9 @@ static void ibmvtpm_crq_process(struct ibmvtpm_crq *crq,
+>  		case INIT_CRQ_COMP_RES:
+>  			dev_info(ibmvtpm->dev,
+>  				 "CRQ initialization completed\n");
+> +			/* in case vtpm is being reloaded */
+> +			crq_initialized = 1;
+> +			wake_up_interruptible(&ibmvtpm->wq);
+>  			return;
+>  		default:
+>  			dev_err(ibmvtpm->dev, "Unknown crq message type: %d\n", crq->msg);
+> @@ -517,6 +549,9 @@ static void ibmvtpm_crq_process(struct ibmvtpm_crq *crq,
+>  			ibmvtpm->res_len = be16_to_cpu(crq->len);
+>  			wake_up_interruptible(&ibmvtpm->wq);
+>  			return;
+> +		case VTPM_PREPARE_TO_SUSPEND_RES:
+> +			dev_info(ibmvtpm->dev, "Prepare to Suspend Response\n");
+> +			return;
+
+Is this really necessary? If so, why?
+
+>  		default:
+>  			return;
+>  		}
+> diff --git a/drivers/char/tpm/tpm_ibmvtpm.h b/drivers/char/tpm/tpm_ibmvtpm.h
+> index 6af9289..ed5fd5f 100644
+> --- a/drivers/char/tpm/tpm_ibmvtpm.h
+> +++ b/drivers/char/tpm/tpm_ibmvtpm.h
+> @@ -73,4 +73,11 @@ struct ibmvtpm_dev {
+>  #define VTPM_PREPARE_TO_SUSPEND			0x04
+>  #define VTPM_PREPARE_TO_SUSPEND_RES		(0x04 | VTPM_MSG_RES)
+>  
+> +/* vTPM CRQ Transport Event codes */
+> +#define VALID_TRANSPORT_EVENT		0xFF
+> +#define PARTNER_PARTITION_FAILED	0x01
+> +#define PARTNER_PARTITION_DEREG_CRQ	0x02
+> +
+> +int crq_initialized;
+> +
+>  #endif
+> -- 
+> 1.7.1
+> 
+
+/Jarkko
