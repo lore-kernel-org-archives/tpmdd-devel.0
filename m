@@ -1,52 +1,43 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix crash in tpm_tis
-Date: Thu, 07 Apr 2016 07:36:54 -0700
-Message-ID: <65cbfbc2-d994-452d-851c-102831ea0837@email.android.com>
-References: <1460033770-20586-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH v9 2/4] tpm: Proxy driver for supporting multiple emulated
+ TPMs
+Date: Thu, 7 Apr 2016 11:49:44 -0400
+Message-ID: <57068198.6050407@linux.vnet.ibm.com>
+References: <1459275554-12915-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <1459275554-12915-3-git-send-email-stefanb@linux.vnet.ibm.com>
+ <20160407123539.GA17489@intel.com>
 Mime-Version: 1.0
-Content-Type: multipart/mixed; boundary="===============2995479212543394210=="
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1460033770-20586-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Return-path: <linux-api-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+In-Reply-To: <20160407123539.GA17489-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Sender: linux-api-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-doc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-api-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
---===============2995479212543394210==
-Content-Type: text/html; charset=utf-8
-Content-Transfer-Encoding: base64
+On 04/07/2016 08:35 AM, Jarkko Sakkinen wrote:
+> On Tue, Mar 29, 2016 at 02:19:12PM -0400, Stefan Berger wrote:
+>> This patch implements a proxy driver for supporting multiple emulated TPMs
+>> in a system.
+>>
+>> The driver implements a device /dev/vtpmx that is used to created
+>> a client device pair /dev/tpmX (e.g., /dev/tpm10) and a server side that
+>> is accessed using a file descriptor returned by an ioctl.
+>> The device /dev/tpmX is the usual TPM device created by the core TPM
+>> driver. Applications or kernel subsystems can send TPM commands to it
+>> and the corresponding server-side file descriptor receives these
+>> commands and delivers them to an emulated TPM.
+>>
+>> Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+>> CC: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+>> CC: linux-doc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+>> CC: linux-api-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
-PHAgZGlyPSJsdHIiPkkgd2lsbCBoYXZlIHRvIGxvb2sgY2xvc2VyIGFmdGVyIHRoZSBjb25mZXJl
-bmNlLCBidXQgdGhpcyBkb2VzIG5vdCBsb29rIHJpZ2h0LjwvcD4KPHAgZGlyPSJsdHIiPkkgdmFn
-dWVseSByZWNhbGwgY29tbWVudGluZyBvbiB0aGlzIGJlZm9yZS4gTW92ZSB0aGUgc2h1dGRvd24g
-aW50byB0aGUgY29yZSBjb2RlIHRvIGZpeCBpdC48L3A+CjxwIGRpcj0ibHRyIj5KYXNvbjwvcD4K
+Thanks. So I can post a v10 where I have to re-introduce the priv field 
+but put it into the tpm_chip struct. Obviously it needs this field. I am 
+not sure whether you'll let me take the Reviewed-by and Tested-by, though?
 
-
-
---===============2995479212543394210==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-------------------------------------------------------------------------------
-
---===============2995479212543394210==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-_______________________________________________
-tpmdd-devel mailing list
-tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-
---===============2995479212543394210==--
+    Stefan
