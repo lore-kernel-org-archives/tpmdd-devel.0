@@ -1,58 +1,49 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix crash in tpm_tis
-Date: Mon, 11 Apr 2016 11:41:24 +0300
-Message-ID: <20160411084124.GA11322@intel.com>
-References: <1460033770-20586-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<65cbfbc2-d994-452d-851c-102831ea0837@email.android.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v9 2/4] tpm: Proxy driver for supporting multiple
+ emulated TPMs
+Date: Mon, 11 Apr 2016 11:43:58 +0300
+Message-ID: <20160411084358.GB11322@intel.com>
+References: <1459275554-12915-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <1459275554-12915-3-git-send-email-stefanb@linux.vnet.ibm.com>
+ <20160407123539.GA17489@intel.com>
+ <57068198.6050407@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-doc-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <65cbfbc2-d994-452d-851c-102831ea0837-2ueSQiBKiTY7tOexoI0I+QC/G2K4zDHf@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+In-Reply-To: <57068198.6050407@linux.vnet.ibm.com>
+Sender: linux-doc-owner@vger.kernel.org
+To: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org, linux-api@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Apr 07, 2016 at 07:36:54AM -0700, Jason Gunthorpe wrote:
->    I will have to look closer after the conference, but this does not look
->    right.
+On Thu, Apr 07, 2016 at 11:49:44AM -0400, Stefan Berger wrote:
+> On 04/07/2016 08:35 AM, Jarkko Sakkinen wrote:
+> >On Tue, Mar 29, 2016 at 02:19:12PM -0400, Stefan Berger wrote:
+> >>This patch implements a proxy driver for supporting multiple emulated TPMs
+> >>in a system.
+> >>
+> >>The driver implements a device /dev/vtpmx that is used to created
+> >>a client device pair /dev/tpmX (e.g., /dev/tpm10) and a server side that
+> >>is accessed using a file descriptor returned by an ioctl.
+> >>The device /dev/tpmX is the usual TPM device created by the core TPM
+> >>driver. Applications or kernel subsystems can send TPM commands to it
+> >>and the corresponding server-side file descriptor receives these
+> >>commands and delivers them to an emulated TPM.
+> >>
+> >>Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+> >>CC: linux-kernel@vger.kernel.org
+> >>CC: linux-doc@vger.kernel.org
+> >>CC: linux-api@vger.kernel.org
+> >Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> >Tested-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 > 
->    I vaguely recall commenting on this before. Move the shutdown into the
->    core code to fix it.
+> Thanks. So I can post a v10 where I have to re-introduce the priv field but
+> put it into the tpm_chip struct. Obviously it needs this field. I am not
+> sure whether you'll let me take the Reviewed-by and Tested-by, though?
 
-This fix that I sent is not the right way to do it.
+Lets hold for them then. I'll do retest when I get the new series.
 
-One example scenario:
-
-1. TIS driver gets detached, which causes tpm_tis_remove() to be called.
-2. Some in-kernel subsystem uses TPM, which should not be done since the
-   hardware is already unitialized.
-3. The devres subsystem sets ops to NULL.
-
-Even though the fix is wrong I feel that it might put the rwsem into
-question.
-
-I'm just thinking that maybe there could be a release callback in
-tpm_class_ops that could be called by tpm_del_char_device(). There can't
-be clients for the chip at that point so no synchronization mechanism
-is needed.
-
->    Jason
+>    Stefan
 
 /Jarkko
-
-------------------------------------------------------------------------------
-Find and fix application performance issues faster with Applications Manager
-Applications Manager provides deep performance insights into multiple tiers of
-your business applications. It resolves application problems quickly and
-reduces your MTTR. Get your free trial! http://pubads.g.doubleclick.net/
-gampad/clk?id=1444514301&iu=/ca-pub-7940484522588532
