@@ -1,16 +1,15 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH 09/10] tpm/tpm_tis: Split tpm_tis driver
- into a core and TCG TIS compliant phy
-Date: Sun, 10 Apr 2016 17:54:16 -0600
-Message-ID: <20160410235416.GD11226@obsidianresearch.com>
-References: <1460323386-16892-1-git-send-email-christophe-h.ricard@st.com>
-	<1460323386-16892-10-git-send-email-christophe-h.ricard@st.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm: fix crash in tpm_tis
+Date: Mon, 11 Apr 2016 11:41:24 +0300
+Message-ID: <20160411084124.GA11322@intel.com>
+References: <1460033770-20586-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<65cbfbc2-d994-452d-851c-102831ea0837@email.android.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1460323386-16892-10-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
+In-Reply-To: <65cbfbc2-d994-452d-851c-102831ea0837-2ueSQiBKiTY7tOexoI0I+QC/G2K4zDHf@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,47 +18,37 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>, benoit.houyere-qxv4g6HH51o@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Apr 10, 2016 at 11:23:05PM +0200, Christophe Ricard wrote:
+On Thu, Apr 07, 2016 at 07:36:54AM -0700, Jason Gunthorpe wrote:
+>    I will have to look closer after the conference, but this does not look
+>    right.
+> 
+>    I vaguely recall commenting on this before. Move the shutdown into the
+>    core code to fix it.
 
-> +config TCG_TIS_CORE
-> +	tristate
-> +	---help---
-> +	TCG TIS TPM core driver. It implements the TPM TCG TIS logic and hooks
-> +	into the TPM kernel APIs. Physical layers will register against it.
-> +
->  config TCG_TIS
->  	tristate "TPM Interface Specification 1.2 Interface / TPM 2.0 FIFO Interface"
->  	depends on X86
-> +	select TCG_TIS_CORE
->  	  If you have a TPM security chip that is compliant with the
->  	  TCG TIS 1.2 TPM specification (TPM1.2) or the TCG PTP FIFO
-> diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
-> index 56e8f1f..c6a4cea 100644
-> +++ b/drivers/char/tpm/Makefile
-> @@ -2,7 +2,7 @@
->  # Makefile for the kernel tpm device drivers.
->  #
->  obj-$(CONFIG_TCG_TPM) += tpm.o
-> -tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o
-> +tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o tpm_tis_core.o
+This fix that I sent is not the right way to do it.
 
-Not sure we should merge tpm_tis_core into the main module like that,
-make a new module?
+One example scenario:
 
-> +++ b/drivers/char/tpm/tpm_tis_core.c
-> +EXPORT_SYMBOL(release_locality);
-> +MODULE_LICENSE("GPL");
+1. TIS driver gets detached, which causes tpm_tis_remove() to be called.
+2. Some in-kernel subsystem uses TPM, which should not be done since the
+   hardware is already unitialized.
+3. The devres subsystem sets ops to NULL.
 
-These look like then need to be EXPORT_SYMBOL_GPL to me?
+Even though the fix is wrong I feel that it might put the rwsem into
+question.
 
-Why are so many things being exported? It seems really strange to
-export the ops callbacks.
+I'm just thinking that maybe there could be a release callback in
+tpm_class_ops that could be called by tpm_del_char_device(). There can't
+be clients for the chip at that point so no synchronization mechanism
+is needed.
 
-Jason
+>    Jason
+
+/Jarkko
 
 ------------------------------------------------------------------------------
 Find and fix application performance issues faster with Applications Manager
