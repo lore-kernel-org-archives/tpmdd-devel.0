@@ -1,8 +1,8 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v2 02/12] tpm: tpm_tis: Rename priv_data
-	structure tpm_tis_data
-Date: Wed, 13 Apr 2016 21:55:41 +0200
-Message-ID: <1460577351-24632-3-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH v2 06/12] tpm: Manage itpm workaround with tis
+	specific data_expect bit
+Date: Wed, 13 Apr 2016 21:55:45 +0200
+Message-ID: <1460577351-24632-7-git-send-email-christophe-h.ricard@st.com>
 References: <1460577351-24632-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,233 +21,119 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-For code sanity rename priv_data tpm_tis_data.
+In order to keep this itpm workaround available after the tpm_tis rework,
+we are changing the way it is managed by using a tpm_tis_phy_ops structure
+allowing to manage TPM_STS_EXPECT_DATA bit behavior according to different
+TPM vendor.
+
+Those 2 fields might be used only for tpm_tis (lpc) phy in the future.
 
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 ---
- drivers/char/tpm/tpm_tis.c      | 46 ++++++++++++++++++++---------------------
- drivers/char/tpm/tpm_tis_core.h |  2 +-
- 2 files changed, 24 insertions(+), 24 deletions(-)
+ drivers/char/tpm/tpm_tis.c      | 22 +++++++++++++++++++---
+ drivers/char/tpm/tpm_tis_core.h |  7 +++++++
+ 2 files changed, 26 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index cc64edb..3b84ade 100644
+index 2056481..a641af0 100644
 --- a/drivers/char/tpm/tpm_tis.c
 +++ b/drivers/char/tpm/tpm_tis.c
-@@ -126,7 +126,7 @@ static inline int is_itpm(struct acpi_device *dev)
-  * correct values in the other bits.' */
- static int wait_startup(struct tpm_chip *chip, int l)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
- 	unsigned long stop = jiffies + chip->timeout_a;
- 	do {
-@@ -140,7 +140,7 @@ static int wait_startup(struct tpm_chip *chip, int l)
- 
- static int check_locality(struct tpm_chip *chip, int l)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
- 
- 	if ((ioread8(priv->iobase + TPM_ACCESS(l)) &
-@@ -153,7 +153,7 @@ static int check_locality(struct tpm_chip *chip, int l)
- 
- static void release_locality(struct tpm_chip *chip, int l, int force)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
- 
- 	if (force || (ioread8(priv->iobase + TPM_ACCESS(l)) &
-@@ -165,7 +165,7 @@ static void release_locality(struct tpm_chip *chip, int l, int force)
- 
- static int request_locality(struct tpm_chip *chip, int l)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
- 	unsigned long stop, timeout;
- 	long rc;
-@@ -207,7 +207,7 @@ again:
- 
- static u8 tpm_tis_status(struct tpm_chip *chip)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
- 
- 	return ioread8(priv->iobase +
-@@ -216,7 +216,7 @@ static u8 tpm_tis_status(struct tpm_chip *chip)
- 
- static void tpm_tis_ready(struct tpm_chip *chip)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
- 
- 	/* this causes the current command to be aborted */
-@@ -226,7 +226,7 @@ static void tpm_tis_ready(struct tpm_chip *chip)
- 
- static int get_burstcount(struct tpm_chip *chip)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
- 	unsigned long stop;
- 	int burstcnt;
-@@ -249,7 +249,7 @@ static int get_burstcount(struct tpm_chip *chip)
- 
- static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
- 	int size = 0, burstcnt;
- 	while (size < count &&
-@@ -268,7 +268,7 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
- 
- static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	int size = 0;
- 	int expected, status;
- 
-@@ -324,7 +324,7 @@ MODULE_PARM_DESC(itpm, "Force iTPM workarounds (found on some Lenovo laptops)");
-  */
- static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
- 	int rc, status, burstcnt;
- 	size_t count = 0;
-@@ -381,7 +381,7 @@ out_err:
- 
- static void disable_interrupts(struct tpm_chip *chip)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
- 	u32 intmask;
- 
-@@ -403,7 +403,7 @@ static void disable_interrupts(struct tpm_chip *chip)
-  */
- static int tpm_tis_send_main(struct tpm_chip *chip, u8 *buf, size_t len)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	int rc;
- 	u32 ordinal;
- 	unsigned long dur;
-@@ -441,7 +441,7 @@ out_err:
- static int tpm_tis_send(struct tpm_chip *chip, u8 *buf, size_t len)
- {
- 	int rc, irq;
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 
- 	if (!(chip->flags & TPM_CHIP_FLAG_IRQ) || priv->irq_tested)
- 		return tpm_tis_send_main(chip, buf, len);
-@@ -475,7 +475,7 @@ static const struct tis_vendor_timeout_override vendor_timeout_overrides[] = {
- static bool tpm_tis_update_timeouts(struct tpm_chip *chip,
- 				    unsigned long *timeout_cap)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
- 	int i;
- 	u32 did_vid;
-@@ -500,7 +500,7 @@ static bool tpm_tis_update_timeouts(struct tpm_chip *chip,
-  */
+@@ -377,7 +377,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ 		wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
+ 				  &priv->int_queue, false);
+ 		status = tpm_tis_status(chip);
+-		if (!itpm && (status & TPM_STS_DATA_EXPECT) == 0) {
++		if ((status & priv->data_expect_mask) !=
++			      priv->data_expect_val) {
+ 			rc = -EIO;
+ 			goto out_err;
+ 		}
+@@ -391,7 +392,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ 	wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
+ 			  &priv->int_queue, false);
+ 	status = tpm_tis_status(chip);
+-	if ((status & TPM_STS_DATA_EXPECT) != 0) {
++	if ((status & priv->data_expect_mask) ==
++		      priv->data_expect_mask) {
+ 		rc = -EIO;
+ 		goto out_err;
+ 	}
+@@ -529,6 +531,8 @@ static bool tpm_tis_update_timeouts(struct tpm_chip *chip,
  static int probe_itpm(struct tpm_chip *chip)
  {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
+ 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
++	u8 data_expect_mask = priv->data_expect_mask;
++	u8 data_expect_val = priv->data_expect_val;
  	int rc = 0;
  	u8 cmd_getticks[] = {
-@@ -543,7 +543,7 @@ out:
+ 		0x00, 0xc1, 0x00, 0x00, 0x00, 0x0a,
+@@ -556,13 +560,18 @@ static int probe_itpm(struct tpm_chip *chip)
+ 	release_locality(chip, priv->locality, 0);
  
- static bool tpm_tis_req_canceled(struct tpm_chip *chip, u8 status)
+ 	itpm = true;
++	priv->data_expect_mask = 0;
++	priv->data_expect_val = 0;
+ 
+ 	rc = tpm_tis_send_data(chip, cmd_getticks, len);
+ 	if (rc == 0) {
+ 		dev_info(&chip->dev, "Detected an iTPM.\n");
+ 		rc = 1;
+-	} else
++	} else {
++		priv->data_expect_mask = data_expect_mask;
++		priv->data_expect_val = data_expect_val;
+ 		rc = -EFAULT;
++	}
+ 
+ out:
+ 	itpm = rem_itpm;
+@@ -598,6 +607,11 @@ static const struct tpm_class_ops tpm_tis = {
+ 	.req_canceled = tpm_tis_req_canceled,
+ };
+ 
++static struct tpm_tis_phy_ops tis_phy_ops = {
++	.data_expect_mask = TPM_STS_DATA_EXPECT,
++	.data_expect_val = TPM_STS_DATA_EXPECT,
++};
++
+ static int tpm_mem_read_bytes(struct tpm_chip *chip, u32 addr, u16 len,
+ 			      u8 *result)
  {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+@@ -852,6 +866,8 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+ 	chip->timeout_b = TIS_TIMEOUT_B_MAX;
+ 	chip->timeout_c = TIS_TIMEOUT_C_MAX;
+ 	chip->timeout_d = TIS_TIMEOUT_D_MAX;
++	priv->data_expect_req = TPM_STS_DATA_EXPECT;
++	priv->data_expect_mask = TPM_STS_DATA_EXPECT;
+ 	priv->phy_id = phy;
  
- 	switch (priv->manufacturer_id) {
- 	case TPM_VID_WINBOND:
-@@ -570,7 +570,7 @@ static const struct tpm_class_ops tpm_tis = {
- static irqreturn_t tis_int_handler(int dummy, void *dev_id)
- {
- 	struct tpm_chip *chip = dev_id;
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
- 	u32 interrupt;
- 	int i;
-@@ -608,7 +608,7 @@ static irqreturn_t tis_int_handler(int dummy, void *dev_id)
- static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
- 				    int flags, int irq)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
- 	u8 original_int_vec;
- 
-@@ -662,7 +662,7 @@ static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
-  */
- static void tpm_tis_probe_irq(struct tpm_chip *chip, u32 intmask)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
- 	u8 original_int_vec;
- 	int i;
-@@ -687,7 +687,7 @@ MODULE_PARM_DESC(interrupts, "Enable interrupts");
- 
- static void tpm_tis_remove(struct tpm_chip *chip)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	struct tpm_tis_phy *phy = priv->phy_id;
- 	void __iomem *reg = priv->iobase + TPM_INT_ENABLE(priv->locality);
- 
-@@ -704,10 +704,10 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
- 	u32 vendor, intfcaps, intmask;
- 	int rc, probe;
- 	struct tpm_chip *chip;
--	struct priv_data *priv;
-+	struct tpm_tis_data *priv;
- 	struct tpm_tis_phy *phy;
- 
--	priv = devm_kzalloc(dev, sizeof(struct priv_data), GFP_KERNEL);
-+	priv = devm_kzalloc(dev, sizeof(struct tpm_tis_data), GFP_KERNEL);
- 	if (priv == NULL)
- 		return -ENOMEM;
- 
-@@ -860,7 +860,7 @@ out_err:
- #ifdef CONFIG_PM_SLEEP
- static void tpm_tis_reenable_interrupts(struct tpm_chip *chip)
- {
--	struct priv_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	u32 intmask;
- 
- 	/* reenable interrupts that device may have lost or
+ 	dev_set_drvdata(&chip->dev, priv);
 diff --git a/drivers/char/tpm/tpm_tis_core.h b/drivers/char/tpm/tpm_tis_core.h
-index b28ed00..20f50e5 100644
+index 732f305..cba82f8 100644
 --- a/drivers/char/tpm/tpm_tis_core.h
 +++ b/drivers/char/tpm/tpm_tis_core.h
-@@ -25,7 +25,7 @@
+@@ -36,14 +36,21 @@ struct tpm_tis_class_lowlevel {
+ 	int (*write32)(struct tpm_chip *chip, u32 addr, u32 src);
+ };
  
- #include "tpm.h"
- 
--struct priv_data {
-+struct tpm_tis_data {
++struct tpm_tis_phy_ops {
++	int (*post_probe)(struct tpm_chip *chip);
++};
++
+ struct tpm_tis_data {
  	u16 manufacturer_id;
++	u8 data_expect_mask;
++	u8 data_expect_val;
  	int locality;
  	int irq;
+ 	bool irq_tested;
+ 	wait_queue_head_t int_queue;
+ 	wait_queue_head_t read_queue;
+ 	const struct tpm_tis_class_lowlevel *lowlevel;
++	const struct tpm_tis_phy_ops *phy_ops;
+ 	void *phy_id;
+ };
+ 
 -- 
 2.5.0
 
