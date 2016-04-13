@@ -1,18 +1,15 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix crash in tpm_tis deinitialization
-Date: Wed, 13 Apr 2016 11:04:26 -0600
-Message-ID: <20160413170426.GA28411@obsidianresearch.com>
-References: <1460390720-9509-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<20160411174037.GA371@obsidianresearch.com>
-	<20160412042627.GA6608@intel.com>
-	<20160412172655.GA5759@obsidianresearch.com>
-	<20160413061651.GA6986@intel.com> <20160413065805.GB6986@intel.com>
+Subject: Re: [PATCH v3] tpm: fix crash in tpm_tis
+	deinitialization
+Date: Wed, 13 Apr 2016 11:11:27 -0600
+Message-ID: <20160413171127.GB28411@obsidianresearch.com>
+References: <1460532126-14435-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160413065805.GB6986-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <1460532126-14435-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -25,18 +22,34 @@ To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Apr 13, 2016 at 09:58:05AM +0300, Jarkko Sakkinen wrote:
-> > > It prevents everything including the kernel from issuing a command
-> >                          ^^^^^^^^^^^^^^^^^^^^
-> > 
-> > That lock is not used to exclude kernel access. Read lock is only taken
-> > for the user space device in tpm-dev.c.
+On Wed, Apr 13, 2016 at 10:22:06AM +0300, Jarkko Sakkinen wrote:
+> rmmod crashes the driver because tpm_chip_unregister() already sets ops
+> to NULL. This commit fixes the issue by moving tpm2_shutdown() to
+> tpm_chip_unregister(). This commit is also cleanup because it removes
+> duplicate code from tpm_crb and tpm_tis to the core.
 > 
-> My bad. For the in-kernel API it is taken through tpm_find_get().
+> v2: make sending shutdown command atomic with nulling ops
+> v3: forgot to amend updates, sorry :(
+> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> Fixes: 4d3eac5e156a ("tpm: Provide strong locking for device
+> removal")
 
-Right. At this point any thing that can run in-kernel concurrently
-with the write exclusion is a kernel bug. Those places will need to
-grab the read side of the lock.
+You patch got a little mangled.. The v2/v3 should be after the
+diffstat, not in the commit message and the --- after the SOB section
+is missing..
+
+Otherwise it looks fine
+
+Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+
+>  extern int tpm2_startup(struct tpm_chip *chip, u16 startup_type);
+> -extern void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
+> +void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
+
+Drop this hunk though, doesn't do anything.
+
+If you don't like the unnecessary externs on functions then get rid of
+them all in a patch.
 
 Jason
 
