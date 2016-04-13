@@ -1,8 +1,8 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v2 06/12] tpm: Manage itpm workaround with tis
-	specific data_expect bit
-Date: Wed, 13 Apr 2016 21:55:45 +0200
-Message-ID: <1460577351-24632-7-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH v2 05/12] tpm: Use read/write_bytes for
+	drivers without more specialized methods
+Date: Wed, 13 Apr 2016 21:55:44 +0200
+Message-ID: <1460577351-24632-6-git-send-email-christophe-h.ricard@st.com>
 References: <1460577351-24632-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,119 +21,68 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-In order to keep this itpm workaround available after the tpm_tis rework,
-we are changing the way it is managed by using a tpm_tis_phy_ops structure
-allowing to manage TPM_STS_EXPECT_DATA bit behavior according to different
-TPM vendor.
+Some drivers might choose to implement only functions for transferring an
+arbitrary number of bytes, without special handling of word or dword
+transfers.
 
-Those 2 fields might be used only for tpm_tis (lpc) phy in the future.
-
+Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 ---
- drivers/char/tpm/tpm_tis.c      | 22 +++++++++++++++++++---
- drivers/char/tpm/tpm_tis_core.h |  7 +++++++
- 2 files changed, 26 insertions(+), 3 deletions(-)
+ drivers/char/tpm/tpm_tis_core.h | 27 ++++++++++++++++++++++++---
+ 1 file changed, 24 insertions(+), 3 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index 2056481..a641af0 100644
---- a/drivers/char/tpm/tpm_tis.c
-+++ b/drivers/char/tpm/tpm_tis.c
-@@ -377,7 +377,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 		wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
- 				  &priv->int_queue, false);
- 		status = tpm_tis_status(chip);
--		if (!itpm && (status & TPM_STS_DATA_EXPECT) == 0) {
-+		if ((status & priv->data_expect_mask) !=
-+			      priv->data_expect_val) {
- 			rc = -EIO;
- 			goto out_err;
- 		}
-@@ -391,7 +392,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 	wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
- 			  &priv->int_queue, false);
- 	status = tpm_tis_status(chip);
--	if ((status & TPM_STS_DATA_EXPECT) != 0) {
-+	if ((status & priv->data_expect_mask) ==
-+		      priv->data_expect_mask) {
- 		rc = -EIO;
- 		goto out_err;
- 	}
-@@ -529,6 +531,8 @@ static bool tpm_tis_update_timeouts(struct tpm_chip *chip,
- static int probe_itpm(struct tpm_chip *chip)
- {
- 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	u8 data_expect_mask = priv->data_expect_mask;
-+	u8 data_expect_val = priv->data_expect_val;
- 	int rc = 0;
- 	u8 cmd_getticks[] = {
- 		0x00, 0xc1, 0x00, 0x00, 0x00, 0x0a,
-@@ -556,13 +560,18 @@ static int probe_itpm(struct tpm_chip *chip)
- 	release_locality(chip, priv->locality, 0);
- 
- 	itpm = true;
-+	priv->data_expect_mask = 0;
-+	priv->data_expect_val = 0;
- 
- 	rc = tpm_tis_send_data(chip, cmd_getticks, len);
- 	if (rc == 0) {
- 		dev_info(&chip->dev, "Detected an iTPM.\n");
- 		rc = 1;
--	} else
-+	} else {
-+		priv->data_expect_mask = data_expect_mask;
-+		priv->data_expect_val = data_expect_val;
- 		rc = -EFAULT;
-+	}
- 
- out:
- 	itpm = rem_itpm;
-@@ -598,6 +607,11 @@ static const struct tpm_class_ops tpm_tis = {
- 	.req_canceled = tpm_tis_req_canceled,
- };
- 
-+static struct tpm_tis_phy_ops tis_phy_ops = {
-+	.data_expect_mask = TPM_STS_DATA_EXPECT,
-+	.data_expect_val = TPM_STS_DATA_EXPECT,
-+};
-+
- static int tpm_mem_read_bytes(struct tpm_chip *chip, u32 addr, u16 len,
- 			      u8 *result)
- {
-@@ -852,6 +866,8 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
- 	chip->timeout_b = TIS_TIMEOUT_B_MAX;
- 	chip->timeout_c = TIS_TIMEOUT_C_MAX;
- 	chip->timeout_d = TIS_TIMEOUT_D_MAX;
-+	priv->data_expect_req = TPM_STS_DATA_EXPECT;
-+	priv->data_expect_mask = TPM_STS_DATA_EXPECT;
- 	priv->phy_id = phy;
- 
- 	dev_set_drvdata(&chip->dev, priv);
 diff --git a/drivers/char/tpm/tpm_tis_core.h b/drivers/char/tpm/tpm_tis_core.h
-index 732f305..cba82f8 100644
+index b0f1e3c..732f305 100644
 --- a/drivers/char/tpm/tpm_tis_core.h
 +++ b/drivers/char/tpm/tpm_tis_core.h
-@@ -36,14 +36,21 @@ struct tpm_tis_class_lowlevel {
- 	int (*write32)(struct tpm_chip *chip, u32 addr, u32 src);
- };
+@@ -65,15 +65,31 @@ static inline int tpm_read8(struct tpm_chip *chip, u32 addr, u8 *result)
+ static inline int tpm_read16(struct tpm_chip *chip, u32 addr, u16 *result)
+ {
+ 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
++	int rc;
  
-+struct tpm_tis_phy_ops {
-+	int (*post_probe)(struct tpm_chip *chip);
-+};
+-	return priv->lowlevel->read16(chip, addr, result);
++	if (priv->lowlevel->read16)
++		return priv->lowlevel->read16(chip, addr, result);
 +
- struct tpm_tis_data {
- 	u16 manufacturer_id;
-+	u8 data_expect_mask;
-+	u8 data_expect_val;
- 	int locality;
- 	int irq;
- 	bool irq_tested;
- 	wait_queue_head_t int_queue;
- 	wait_queue_head_t read_queue;
- 	const struct tpm_tis_class_lowlevel *lowlevel;
-+	const struct tpm_tis_phy_ops *phy_ops;
- 	void *phy_id;
- };
++	rc = priv->lowlevel->read_bytes(chip, addr, sizeof(u16), (u8 *)result);
++	if (!rc)
++		*result = le16_to_cpu(*result);
++
++	return rc;
+ }
  
+ static inline u32 tpm_read32(struct tpm_chip *chip, u32 addr, u32 *result)
+ {
+ 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
++	int rc;
++
++	if (priv->lowlevel->read32)
++		return priv->lowlevel->read32(chip, addr, result);
+ 
+-	return priv->lowlevel->read32(chip, addr, result);
++	rc = priv->lowlevel->read_bytes(chip, addr, sizeof(u32), (u8 *)result);
++	if (!rc)
++		*result = le32_to_cpu(*result);
++
++	return rc;
+ }
+ 
+ static inline int tpm_write_bytes(struct tpm_chip *chip, u32 addr, u16 len,
+@@ -95,7 +111,12 @@ static inline int tpm_write32(struct tpm_chip *chip, u32 addr, u32 value)
+ {
+ 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+ 
+-	return priv->lowlevel->write32(chip, addr, value);
++	if (priv->lowlevel->write32)
++		return priv->lowlevel->write32(chip, addr, value);
++
++	value = cpu_to_le32(value);
++	return priv->lowlevel->write_bytes(chip, addr, sizeof(u32),
++					   (u8 *)&value);
+ }
+ 
+ #endif
 -- 
 2.5.0
 
