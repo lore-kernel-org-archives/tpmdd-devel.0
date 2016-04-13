@@ -1,7 +1,7 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH v2] tpm: fix crash in tpm_tis deinitialization
-Date: Wed, 13 Apr 2016 10:17:01 +0300
-Message-ID: <1460531821-13919-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH v3] tpm: fix crash in tpm_tis deinitialization
+Date: Wed, 13 Apr 2016 10:22:06 +0300
+Message-ID: <1460532126-14435-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
@@ -24,29 +24,55 @@ tpm_chip_unregister(). This commit is also cleanup because it removes
 duplicate code from tpm_crb and tpm_tis to the core.
 
 v2: make sending shutdown command atomic with nulling ops
+v3: forgot to amend updates, sorry :(
 
 Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Fixes: 4d3eac5e156a ("tpm: Provide strong locking for device removal")
 ---
- drivers/char/tpm/tpm-chip.c | 3 +++
+ drivers/char/tpm/tpm-chip.c | 1 +
+ drivers/char/tpm/tpm.h      | 2 +-
+ drivers/char/tpm/tpm2-cmd.c | 1 -
  drivers/char/tpm/tpm_crb.c  | 3 ---
  drivers/char/tpm/tpm_tis.c  | 3 ---
- 3 files changed, 3 insertions(+), 6 deletions(-)
+ 5 files changed, 2 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index f62c851..2642cca 100644
+index f62c851..5bc530c 100644
 --- a/drivers/char/tpm/tpm-chip.c
 +++ b/drivers/char/tpm/tpm-chip.c
-@@ -361,6 +361,9 @@ void tpm_chip_unregister(struct tpm_chip *chip)
- 	if (!(chip->flags & TPM_CHIP_FLAG_REGISTERED))
- 		return;
+@@ -269,6 +269,7 @@ static void tpm_del_char_device(struct tpm_chip *chip)
  
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+		tpm2_shutdown(chip, TPM2_SU_CLEAR);
-+
- 	if (!(chip->flags & TPM_CHIP_FLAG_TPM2))
- 		sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
+ 	/* Make the driver uncallable. */
+ 	down_write(&chip->ops_sem);
++	tpm2_shutdown(chip, TPM2_SU_CLEAR);
+ 	chip->ops = NULL;
+ 	up_write(&chip->ops_sem);
+ }
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 8bc6fb8..1156b34 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -522,7 +522,7 @@ ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,
+ 			u32 *value, const char *desc);
  
+ extern int tpm2_startup(struct tpm_chip *chip, u16 startup_type);
+-extern void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
++void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
+ extern unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *, u32);
+ extern int tpm2_do_selftest(struct tpm_chip *chip);
+ extern int tpm2_gen_interrupt(struct tpm_chip *chip);
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index 9ce8031..a1673dc 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -773,7 +773,6 @@ void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type)
+ 		dev_warn(&chip->dev, "transmit returned %d while stopping the TPM",
+ 			 rc);
+ }
+-EXPORT_SYMBOL_GPL(tpm2_shutdown);
+ 
+ /*
+  * tpm2_calc_ordinal_duration() - maximum duration for a command
 diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
 index 20155d5..c31b5a7 100644
 --- a/drivers/char/tpm/tpm_crb.c
