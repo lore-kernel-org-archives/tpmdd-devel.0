@@ -1,8 +1,8 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v10 1/5] tpm: Remove all uses of drvdata from
-	the TPM Core
-Date: Fri, 15 Apr 2016 09:50:12 -0400
-Message-ID: <1460728216-19563-2-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v10 4/5] tpm: Initialize TPM and get durations
+	and timeouts
+Date: Fri, 15 Apr 2016 09:50:15 -0400
+Message-ID: <1460728216-19563-5-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1460728216-19563-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -18,383 +18,205 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: linux-doc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-api-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Add the retrieval of TPM 1.2 durations and timeouts. Since this requires
+the startup of the TPM, do this for TPM 1.2 and TPM 2.
 
-The final thing preventing this was the way the sysfs files were
-attached to the pdev. Follow the approach developed for ppi and move
-the sysfs files to the chip->dev with symlinks from the pdev
-for compatibility. Everything in the core now sanely uses container_of
-to get the chip.
-
-Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
----
- drivers/char/tpm/tpm-chip.c      | 73 ++++++++++++++++++++++++++++------------
- drivers/char/tpm/tpm-interface.c |  7 ++--
- drivers/char/tpm/tpm-sysfs.c     | 61 ++++++++++++++-------------------
- drivers/char/tpm/tpm.h           | 10 +++---
- 4 files changed, 84 insertions(+), 67 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index 5bc530c..7e2c9cf 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -170,9 +170,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
- 	chip->dev.class = tpm_class;
- 	chip->dev.release = tpm_dev_release;
- 	chip->dev.parent = dev;
--#ifdef CONFIG_ACPI
- 	chip->dev.groups = chip->groups;
--#endif
- 
- 	if (chip->dev_num == 0)
- 		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
-@@ -276,14 +274,10 @@ static void tpm_del_char_device(struct tpm_chip *chip)
- 
- static int tpm1_chip_register(struct tpm_chip *chip)
- {
--	int rc;
--
- 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
- 		return 0;
- 
--	rc = tpm_sysfs_add_device(chip);
--	if (rc)
--		return rc;
-+	tpm_sysfs_add_device(chip);
- 
- 	chip->bios_dir = tpm_bios_log_setup(dev_name(&chip->dev));
- 
-@@ -297,10 +291,50 @@ static void tpm1_chip_unregister(struct tpm_chip *chip)
- 
- 	if (chip->bios_dir)
- 		tpm_bios_log_teardown(chip->bios_dir);
-+}
+CC: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+CC: linux-doc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+CC: linux-api-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+---
+ drivers/char/tpm/tpm_vtpm_proxy.c | 96 +++++++++++++++++++++++++++++++++++----
+ 1 file changed, 86 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
+index a81e814..3b09458 100644
+--- a/drivers/char/tpm/tpm_vtpm_proxy.c
++++ b/drivers/char/tpm/tpm_vtpm_proxy.c
+@@ -45,11 +45,15 @@ struct proxy_dev {
+ 	size_t req_len;              /* length of queued TPM request */
+ 	size_t resp_len;             /* length of queued TPM response */
+ 	u8 buffer[TPM_BUFSIZE];      /* request/response buffer */
 +
-+static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
-+{
-+	struct attribute **i;
-+
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+		return;
++	struct work_struct work;     /* task that retrieves TPM timeouts */
+ };
  
--	tpm_sysfs_del_device(chip);
-+	sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
-+
-+	for (i = chip->groups[0]->attrs; *i != NULL; ++i)
-+		sysfs_remove_link(&chip->dev.parent->kobj, (*i)->name);
- }
+ /* all supported flags */
+ #define VTPM_PROXY_FLAGS_ALL  (VTPM_PROXY_FLAG_TPM2)
  
-+/* For compatibility with legacy sysfs paths we provide symlinks from the
-+ * parent dev directory to selected names within the tpm chip directory. Old
-+ * kernel versions created these files directly under the parent.
++static struct workqueue_struct *workqueue;
++
+ static void vtpm_proxy_delete_device(struct proxy_dev *proxy_dev);
+ 
+ /*
+@@ -69,12 +73,19 @@ static ssize_t vtpm_proxy_fops_read(struct file *filp, char __user *buf,
+ 	size_t len;
+ 	int sig, rc;
+ 
+-	sig = wait_event_interruptible(proxy_dev->wq, proxy_dev->req_len != 0);
++	sig = wait_event_interruptible(proxy_dev->wq,
++		proxy_dev->req_len != 0 ||
++		!(proxy_dev->state & STATE_OPENED_FLAG));
+ 	if (sig)
+ 		return -EINTR;
+ 
+ 	mutex_lock(&proxy_dev->buf_lock);
+ 
++	if (!(proxy_dev->state & STATE_OPENED_FLAG)) {
++		mutex_unlock(&proxy_dev->buf_lock);
++		return -EPIPE;
++	}
++
+ 	len = proxy_dev->req_len;
+ 
+ 	if (count < len) {
+@@ -112,6 +123,11 @@ static ssize_t vtpm_proxy_fops_write(struct file *filp, const char __user *buf,
+ 
+ 	mutex_lock(&proxy_dev->buf_lock);
+ 
++	if (!(proxy_dev->state & STATE_OPENED_FLAG)) {
++		mutex_unlock(&proxy_dev->buf_lock);
++		return -EPIPE;
++	}
++
+ 	if (count > sizeof(proxy_dev->buffer) ||
+ 	    !(proxy_dev->state & STATE_WAIT_RESPONSE_FLAG)) {
+ 		mutex_unlock(&proxy_dev->buf_lock);
+@@ -156,6 +172,9 @@ static unsigned int vtpm_proxy_fops_poll(struct file *filp, poll_table *wait)
+ 	if (proxy_dev->req_len)
+ 		ret |= POLLIN | POLLRDNORM;
+ 
++	if (!(proxy_dev->state & STATE_OPENED_FLAG))
++		ret |= POLLHUP;
++
+ 	mutex_unlock(&proxy_dev->buf_lock);
+ 
+ 	return ret;
+@@ -343,6 +362,55 @@ static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
+ };
+ 
+ /*
++ * Code related to the startup of the TPM 2 and startup of TPM 1.2 +
++ * retrieval of timeouts and durations.
 + */
-+static int tpm_add_legacy_sysfs(struct tpm_chip *chip)
++
++static void vtpm_proxy_work(struct work_struct *work)
 +{
-+	struct attribute **i;
++	struct proxy_dev *proxy_dev = container_of(work, struct proxy_dev,
++						   work);
 +	int rc;
 +
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+		return 0;
++	if (proxy_dev->flags & VTPM_PROXY_FLAG_TPM2)
++		rc = tpm2_startup(proxy_dev->chip, TPM2_SU_CLEAR);
++	else
++		rc = tpm_get_timeouts(proxy_dev->chip);
 +
-+	rc = __compat_only_sysfs_link_entry_to_kobj(
-+		    &chip->dev.parent->kobj, &chip->dev.kobj, "ppi");
-+	if (rc && rc != -ENOENT)
-+		return rc;
++	if (rc)
++		goto err;
 +
-+	/* All the names from tpm-sysfs */
-+	for (i = chip->groups[0]->attrs; *i != NULL; ++i) {
-+		rc = __compat_only_sysfs_link_entry_to_kobj(
-+		    &chip->dev.parent->kobj, &chip->dev.kobj, (*i)->name);
-+		if (rc) {
-+			tpm_del_legacy_sysfs(chip);
-+			return rc;
-+		}
-+	}
++	rc = tpm_chip_register(proxy_dev->chip);
++	if (rc)
++		goto err;
 +
-+	return 0;
++	return;
++
++err:
++	vtpm_proxy_fops_undo_open(proxy_dev);
 +}
- /*
-  * tpm_chip_register() - create a character device for the TPM chip
-  * @chip: TPM chip to use.
-@@ -323,24 +357,20 @@ int tpm_chip_register(struct tpm_chip *chip)
- 	tpm_add_ppi(chip);
++
++/*
++ * vtpm_proxy_work_stop: make sure the work has finished
++ *
++ * This function is useful when user space closed the fd
++ * while the driver still determines timeouts.
++ */
++static void vtpm_proxy_work_stop(struct proxy_dev *proxy_dev)
++{
++	vtpm_proxy_fops_undo_open(proxy_dev);
++	flush_work(&proxy_dev->work);
++}
++
++/*
++ * vtpm_proxy_work_start: Schedule the work for TPM 1.2 & 2 initialization
++ */
++static inline void vtpm_proxy_work_start(struct proxy_dev *proxy_dev)
++{
++	queue_work(workqueue, &proxy_dev->work);
++}
++
++/*
+  * Code related to creation and deletion of device pairs
+  */
+ static struct proxy_dev *vtpm_proxy_create_proxy_dev(void)
+@@ -357,6 +425,7 @@ static struct proxy_dev *vtpm_proxy_create_proxy_dev(void)
  
- 	rc = tpm_add_char_device(chip);
+ 	init_waitqueue_head(&proxy_dev->wq);
+ 	mutex_init(&proxy_dev->buf_lock);
++	INIT_WORK(&proxy_dev->work, vtpm_proxy_work);
+ 
+ 	chip = tpm_chip_alloc(NULL, &vtpm_proxy_tpm_ops);
+ 	if (IS_ERR(chip)) {
+@@ -427,9 +496,7 @@ static struct file *vtpm_proxy_create_device(
+ 	if (proxy_dev->flags & VTPM_PROXY_FLAG_TPM2)
+ 		proxy_dev->chip->flags |= TPM_CHIP_FLAG_TPM2;
+ 
+-	rc = tpm_chip_register(proxy_dev->chip);
 -	if (rc)
--		goto out_err;
-+	if (rc) {
-+		tpm1_chip_unregister(chip);
-+		return rc;
-+	}
+-		goto err_vtpm_fput;
++	vtpm_proxy_work_start(proxy_dev);
  
- 	chip->flags |= TPM_CHIP_FLAG_REGISTERED;
+ 	vtpm_new_dev->fd = fd;
+ 	vtpm_new_dev->major = MAJOR(proxy_dev->chip->dev.devt);
+@@ -438,12 +505,6 @@ static struct file *vtpm_proxy_create_device(
  
--	if (!(chip->flags & TPM_CHIP_FLAG_TPM2)) {
--		rc = __compat_only_sysfs_link_entry_to_kobj(
--		    &chip->dev.parent->kobj, &chip->dev.kobj, "ppi");
--		if (rc && rc != -ENOENT) {
--			tpm_chip_unregister(chip);
--			return rc;
--		}
-+	rc = tpm_add_legacy_sysfs(chip);
-+	if (rc) {
-+		tpm_chip_unregister(chip);
-+		return rc;
+ 	return file;
+ 
+-err_vtpm_fput:
+-	put_unused_fd(fd);
+-	fput(file);
+-
+-	return ERR_PTR(rc);
+-
+ err_put_unused_fd:
+ 	put_unused_fd(fd);
+ 
+@@ -458,6 +519,8 @@ err_delete_proxy_dev:
+  */
+ static void vtpm_proxy_delete_device(struct proxy_dev *proxy_dev)
+ {
++	vtpm_proxy_work_stop(proxy_dev);
++
+ 	/*
+ 	 * A client may hold the 'ops' lock, so let it know that the server
+ 	 * side shuts down before we try to grab the 'ops' lock when
+@@ -557,11 +620,24 @@ static int __init vtpm_module_init(void)
+ 		return rc;
  	}
  
++	workqueue = create_workqueue("tpm-vtpm");
++	if (!workqueue) {
++		pr_err("couldn't create workqueue\n");
++		rc = -ENOMEM;
++		goto err_vtpmx_cleanup;
++	}
++
  	return 0;
--out_err:
--	tpm1_chip_unregister(chip);
--	return rc;
++
++err_vtpmx_cleanup:
++	vtpmx_cleanup();
++
++	return rc;
  }
- EXPORT_SYMBOL_GPL(tpm_chip_register);
  
-@@ -362,8 +392,7 @@ void tpm_chip_unregister(struct tpm_chip *chip)
- 	if (!(chip->flags & TPM_CHIP_FLAG_REGISTERED))
- 		return;
- 
--	if (!(chip->flags & TPM_CHIP_FLAG_TPM2))
--		sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
-+	tpm_del_legacy_sysfs(chip);
- 
- 	tpm1_chip_unregister(chip);
- 	tpm_del_char_device(chip);
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 7cba092..080dade 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -432,12 +432,11 @@ static const struct tpm_input_header tpm_getcap_header = {
- 	.ordinal = TPM_ORD_GET_CAP
- };
- 
--ssize_t tpm_getcap(struct device *dev, __be32 subcap_id, cap_t *cap,
-+ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
- 		   const char *desc)
+ static void __exit vtpm_module_exit(void)
  {
- 	struct tpm_cmd_t tpm_cmd;
- 	int rc;
--	struct tpm_chip *chip = dev_get_drvdata(dev);
- 
- 	tpm_cmd.header.in = tpm_getcap_header;
- 	if (subcap_id == CAP_VERSION_1_1 || subcap_id == CAP_VERSION_1_2) {
-@@ -935,7 +934,7 @@ static struct tpm_input_header savestate_header = {
-  */
- int tpm_pm_suspend(struct device *dev)
- {
--	struct tpm_chip *chip = dev_get_drvdata(dev);
-+	struct tpm_chip *chip = to_tpm_chip(dev);
- 	struct tpm_cmd_t cmd;
- 	int rc, try;
- 
-@@ -996,7 +995,7 @@ EXPORT_SYMBOL_GPL(tpm_pm_suspend);
-  */
- int tpm_pm_resume(struct device *dev)
- {
--	struct tpm_chip *chip = dev_get_drvdata(dev);
-+	struct tpm_chip *chip = to_tpm_chip(dev);
- 
- 	if (chip == NULL)
- 		return -ENODEV;
-diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
-index a7c3473..b46cf70 100644
---- a/drivers/char/tpm/tpm-sysfs.c
-+++ b/drivers/char/tpm/tpm-sysfs.c
-@@ -36,7 +36,7 @@ static ssize_t pubek_show(struct device *dev, struct device_attribute *attr,
- 	int i, rc;
- 	char *str = buf;
- 
--	struct tpm_chip *chip = dev_get_drvdata(dev);
-+	struct tpm_chip *chip = to_tpm_chip(dev);
- 
- 	tpm_cmd.header.in = tpm_readpubek_header;
- 	err = tpm_transmit_cmd(chip, &tpm_cmd, READ_PUBEK_RESULT_SIZE,
-@@ -92,9 +92,9 @@ static ssize_t pcrs_show(struct device *dev, struct device_attribute *attr,
- 	ssize_t rc;
- 	int i, j, num_pcrs;
- 	char *str = buf;
--	struct tpm_chip *chip = dev_get_drvdata(dev);
-+	struct tpm_chip *chip = to_tpm_chip(dev);
- 
--	rc = tpm_getcap(dev, TPM_CAP_PROP_PCR, &cap,
-+	rc = tpm_getcap(chip, TPM_CAP_PROP_PCR, &cap,
- 			"attempting to determine the number of PCRS");
- 	if (rc)
- 		return 0;
-@@ -119,8 +119,8 @@ static ssize_t enabled_show(struct device *dev, struct device_attribute *attr,
- 	cap_t cap;
- 	ssize_t rc;
- 
--	rc = tpm_getcap(dev, TPM_CAP_FLAG_PERM, &cap,
--			 "attempting to determine the permanent enabled state");
-+	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_FLAG_PERM, &cap,
-+			"attempting to determine the permanent enabled state");
- 	if (rc)
- 		return 0;
- 
-@@ -135,8 +135,8 @@ static ssize_t active_show(struct device *dev, struct device_attribute *attr,
- 	cap_t cap;
- 	ssize_t rc;
- 
--	rc = tpm_getcap(dev, TPM_CAP_FLAG_PERM, &cap,
--			 "attempting to determine the permanent active state");
-+	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_FLAG_PERM, &cap,
-+			"attempting to determine the permanent active state");
- 	if (rc)
- 		return 0;
- 
-@@ -151,8 +151,8 @@ static ssize_t owned_show(struct device *dev, struct device_attribute *attr,
- 	cap_t cap;
- 	ssize_t rc;
- 
--	rc = tpm_getcap(dev, TPM_CAP_PROP_OWNER, &cap,
--			 "attempting to determine the owner state");
-+	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_PROP_OWNER, &cap,
-+			"attempting to determine the owner state");
- 	if (rc)
- 		return 0;
- 
-@@ -167,8 +167,8 @@ static ssize_t temp_deactivated_show(struct device *dev,
- 	cap_t cap;
- 	ssize_t rc;
- 
--	rc = tpm_getcap(dev, TPM_CAP_FLAG_VOL, &cap,
--			 "attempting to determine the temporary state");
-+	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_FLAG_VOL, &cap,
-+			"attempting to determine the temporary state");
- 	if (rc)
- 		return 0;
- 
-@@ -180,11 +180,12 @@ static DEVICE_ATTR_RO(temp_deactivated);
- static ssize_t caps_show(struct device *dev, struct device_attribute *attr,
- 			 char *buf)
- {
-+	struct tpm_chip *chip = to_tpm_chip(dev);
- 	cap_t cap;
- 	ssize_t rc;
- 	char *str = buf;
- 
--	rc = tpm_getcap(dev, TPM_CAP_PROP_MANUFACTURER, &cap,
-+	rc = tpm_getcap(chip, TPM_CAP_PROP_MANUFACTURER, &cap,
- 			"attempting to determine the manufacturer");
- 	if (rc)
- 		return 0;
-@@ -192,8 +193,8 @@ static ssize_t caps_show(struct device *dev, struct device_attribute *attr,
- 		       be32_to_cpu(cap.manufacturer_id));
- 
- 	/* Try to get a TPM version 1.2 TPM_CAP_VERSION_INFO */
--	rc = tpm_getcap(dev, CAP_VERSION_1_2, &cap,
--			 "attempting to determine the 1.2 version");
-+	rc = tpm_getcap(chip, CAP_VERSION_1_2, &cap,
-+			"attempting to determine the 1.2 version");
- 	if (!rc) {
- 		str += sprintf(str,
- 			       "TCG version: %d.%d\nFirmware version: %d.%d\n",
-@@ -203,7 +204,7 @@ static ssize_t caps_show(struct device *dev, struct device_attribute *attr,
- 			       cap.tpm_version_1_2.revMinor);
- 	} else {
- 		/* Otherwise just use TPM_STRUCT_VER */
--		rc = tpm_getcap(dev, CAP_VERSION_1_1, &cap,
-+		rc = tpm_getcap(chip, CAP_VERSION_1_1, &cap,
- 				"attempting to determine the 1.1 version");
- 		if (rc)
- 			return 0;
-@@ -222,7 +223,7 @@ static DEVICE_ATTR_RO(caps);
- static ssize_t cancel_store(struct device *dev, struct device_attribute *attr,
- 			    const char *buf, size_t count)
- {
--	struct tpm_chip *chip = dev_get_drvdata(dev);
-+	struct tpm_chip *chip = to_tpm_chip(dev);
- 	if (chip == NULL)
- 		return 0;
- 
-@@ -234,7 +235,7 @@ static DEVICE_ATTR_WO(cancel);
- static ssize_t durations_show(struct device *dev, struct device_attribute *attr,
- 			      char *buf)
- {
--	struct tpm_chip *chip = dev_get_drvdata(dev);
-+	struct tpm_chip *chip = to_tpm_chip(dev);
- 
- 	if (chip->duration[TPM_LONG] == 0)
- 		return 0;
-@@ -251,7 +252,7 @@ static DEVICE_ATTR_RO(durations);
- static ssize_t timeouts_show(struct device *dev, struct device_attribute *attr,
- 			     char *buf)
- {
--	struct tpm_chip *chip = dev_get_drvdata(dev);
-+	struct tpm_chip *chip = to_tpm_chip(dev);
- 
- 	return sprintf(buf, "%d %d %d %d [%s]\n",
- 		       jiffies_to_usecs(chip->timeout_a),
-@@ -281,24 +282,12 @@ static const struct attribute_group tpm_dev_group = {
- 	.attrs = tpm_dev_attrs,
- };
- 
--int tpm_sysfs_add_device(struct tpm_chip *chip)
-+void tpm_sysfs_add_device(struct tpm_chip *chip)
- {
--	int err;
--	err = sysfs_create_group(&chip->dev.parent->kobj,
--				 &tpm_dev_group);
--
--	if (err)
--		dev_err(&chip->dev,
--			"failed to create sysfs attributes, %d\n", err);
--	return err;
--}
--
--void tpm_sysfs_del_device(struct tpm_chip *chip)
--{
--	/* The sysfs routines rely on an implicit tpm_try_get_ops, this
--	 * function is called before ops is null'd and the sysfs core
--	 * synchronizes this removal so that no callbacks are running or can
--	 * run again
-+	/* The sysfs routines rely on an implicit tpm_try_get_ops, device_del
-+	 * is called before ops is null'd and the sysfs core synchronizes this
-+	 * removal so that no callbacks are running or can run again
- 	 */
--	sysfs_remove_group(&chip->dev.parent->kobj, &tpm_dev_group);
-+	WARN_ON(chip->groups_cnt != 0);
-+	chip->groups[chip->groups_cnt++] = &tpm_dev_group;
++	destroy_workqueue(workqueue);
+ 	vtpmx_cleanup();
  }
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 8bc6fb8..508e8e0 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -168,9 +168,9 @@ struct tpm_chip {
- 
- 	struct dentry **bios_dir;
- 
--#ifdef CONFIG_ACPI
--	const struct attribute_group *groups[2];
-+	const struct attribute_group *groups[3];
- 	unsigned int groups_cnt;
-+#ifdef CONFIG_ACPI
- 	acpi_handle acpi_dev_handle;
- 	char ppi_version[TPM_PPI_VERSION_LEN + 1];
- #endif /* CONFIG_ACPI */
-@@ -471,7 +471,8 @@ extern dev_t tpm_devt;
- extern const struct file_operations tpm_fops;
- extern struct idr dev_nums_idr;
- 
--ssize_t	tpm_getcap(struct device *, __be32, cap_t *, const char *);
-+ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
-+		   const char *desc);
- ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
- 		     size_t bufsiz);
- ssize_t tpm_transmit_cmd(struct tpm_chip *chip, void *cmd, int len,
-@@ -496,8 +497,7 @@ extern struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
- extern int tpm_chip_register(struct tpm_chip *chip);
- extern void tpm_chip_unregister(struct tpm_chip *chip);
- 
--int tpm_sysfs_add_device(struct tpm_chip *chip);
--void tpm_sysfs_del_device(struct tpm_chip *chip);
-+void tpm_sysfs_add_device(struct tpm_chip *chip);
- 
- int tpm_pcr_read_dev(struct tpm_chip *chip, int pcr_idx, u8 *res_buf);
  
 -- 
 2.4.3
