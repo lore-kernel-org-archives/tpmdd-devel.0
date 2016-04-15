@@ -1,18 +1,11 @@
-From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: Re: [PATCH v2 05/12] tpm: Use read/write_bytes for
- drivers without more specialized methods
-Date: Thu, 14 Apr 2016 23:51:42 +0200
-Message-ID: <571010EE.1030600@gmail.com>
-References: <1460577351-24632-1-git-send-email-christophe-h.ricard@st.com>
-	<1460577351-24632-6-git-send-email-christophe-h.ricard@st.com>
-	<20160413204230.GB3836@obsidianresearch.com>
-	<57100FB9.5050908@gmail.com>
-	<20160414215011.GC14137@obsidianresearch.com>
+From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH v10 0/5] Multi-instance vTPM proxy driver
+Date: Fri, 15 Apr 2016 09:50:11 -0400
+Message-ID: <1460728216-19563-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160414215011.GC14137-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,40 +14,91 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-ok that's clearer.
-Thanks for the idea :)
+The following series of patches implements a multi-instance vTPM 
+proxy driver that can dynamically create TPM 'server' and client device
+pairs.
 
-On 14/04/2016 23:50, Jason Gunthorpe wrote:
-> On Thu, Apr 14, 2016 at 11:46:33PM +0200, Christophe Ricard wrote:
->>
->> On 13/04/2016 22:42, Jason Gunthorpe wrote:
->>> On Wed, Apr 13, 2016 at 09:55:44PM +0200, Christophe Ricard wrote:
->>>> Some drivers might choose to implement only functions for transferring an
->>>> arbitrary number of bytes, without special handling of word or dword
->>>> transfers.
->>> Hurm, better to provide common write/read16/32 helpers that a driver can
->>> just dump into it's function pointers rather than using null,
->>> simpler/faster.
->> It is not really clear to me here. In short, Do you expect me to drop this
->> patch and force drivers to
->> implement their own write/read16/32 helpers so that it will avoid a null
->> check ?
-> No, just do something like
->
-> static const tpm_..ops spi_phy_ops = {
->     .read_bytes = spi_read_bytes,
->     .read16 = tpm_tis_common_read16,
->     .read32 = tpm_tis_common_read32,
-> }
->
-> And have the core provide implementations of tpm_tis_common_readXX
-> that call read_bytes.
->
-> Jason
+Using an ioctl on the provided /dev/vtpmx, a client-side vTPM device
+and a server side file descriptor is created. The file descriptor must
+be passed to a TPM emulator. The device driver will initialize the
+emulated TPM using TPM 1.2 or TPM 2 startup commands and it will read
+the command durations from the device in case of a TPM 1.2. The choice
+of emulated TPM device (1.2 or 2) must be provided with a flag in
+the ioctl.
+
+The patches are based on the tip of a recent checkout of Jarkko's tree
+(master branch).
+
+   Stefan
+
+v9->v10:
+ - add new patch 1 with sysfs related rework; reworked patch 2 as a consequence
+ - patch 3: fixed ioctl from using _IOW to using _IOWR (reinstall headers
+   and rebuild test tools)
+ - patch 3: do not use priv field anymore but uses dev_set_drvdata /
+   dev_get_drvdata instead now
+
+v8->v9:
+ - move constant from public header into tpm_vtpm_proxy.c
+ - Replaced VTPM_PROXY_MAGIC in ioctl definition with its value (0xa1)
+ - Check for the STATE_OPEN_FLAG in wait_event_interruptable and after
+   returning from it
+
+v7->v8:
+ - minor tweaks on the documentation
+ - Reordered function calls in the VTPM proxy driver's server side release
+   function so that a client holding the 'ops' lock releases it before the
+   driver tries to grab the lock when unregistering the device.
+
+v6->v7:
+ - Adjusted name of driver to tpm_vtpm_proxy from tpm_vtpm. Adjust function
+   names, names of structures, and names of constants.
+ - Adjusted IOCTL to use magic 0xa1 rather than the completely used 0xa0.
+ - Extended driver documentation and added documentation of ioctl.
+ - Moved test program to own project (dropped patch 11).
+
+v5->v6:
+ - Adapted errno's for unsupported flags and ioctls following Jason's
+   comments
+
+v4->v5:
+ - Introduced different error codes for unsupported flags and ioctls
+ - Added documentation patch
+
+
+
+
+Jason Gunthorpe (1):
+  tpm: Remove all uses of drvdata from the TPM Core
+
+Stefan Berger (4):
+  tpm: Introduce TPM_CHIP_FLAG_VIRTUAL
+  tpm: Proxy driver for supporting multiple emulated TPMs
+  tpm: Initialize TPM and get durations and timeouts
+  tpm: Add documentation for the tpm_vtpm_proxy device driver
+
+ Documentation/ioctl/ioctl-number.txt |   1 +
+ Documentation/tpm/tpm_vtpm_proxy.txt |  71 ++++
+ drivers/char/tpm/Kconfig             |  10 +
+ drivers/char/tpm/Makefile            |   1 +
+ drivers/char/tpm/tpm-chip.c          |  76 ++--
+ drivers/char/tpm/tpm-interface.c     |   7 +-
+ drivers/char/tpm/tpm-sysfs.c         |  61 ++--
+ drivers/char/tpm/tpm.h               |  11 +-
+ drivers/char/tpm/tpm_vtpm_proxy.c    | 650 +++++++++++++++++++++++++++++++++++
+ include/uapi/linux/Kbuild            |   1 +
+ include/uapi/linux/vtpm_proxy.h      |  36 ++
+ 11 files changed, 858 insertions(+), 67 deletions(-)
+ create mode 100644 Documentation/tpm/tpm_vtpm_proxy.txt
+ create mode 100644 drivers/char/tpm/tpm_vtpm_proxy.c
+ create mode 100644 include/uapi/linux/vtpm_proxy.h
+
+-- 
+2.4.3
 
 
 ------------------------------------------------------------------------------
