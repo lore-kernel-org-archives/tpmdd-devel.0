@@ -1,8 +1,8 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v3 07/12] tpm: Manage itpm workaround with tis
-	specific data_expect bit
-Date: Sat, 16 Apr 2016 08:35:37 +0200
-Message-ID: <1460788542-2455-8-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH v3 08/12] tpm: tpm_tis: Add post_probe phy
+	handler
+Date: Sat, 16 Apr 2016 08:35:38 +0200
+Message-ID: <1460788542-2455-9-git-send-email-christophe-h.ricard@st.com>
 References: <1460788542-2455-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,98 +21,98 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-In order to keep this itpm workaround available after the tpm_tis rework,
-we are changing the way it is managed by using a tpm_tis_phy_ops structure
-allowing to manage TPM_STS_EXPECT_DATA bit behavior according to different
-TPM vendor.
-
-Those 2 fields might be used only for tpm_tis (lpc) phy in the future.
+Add post_probe phy handler in order to execute additional proprietary
+operations after tpm2_probe. For the case of tpm_tis using LPC, itpm
+workaround probing.
 
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 ---
- drivers/char/tpm/tpm_tis.c      | 16 +++++++++++++---
- drivers/char/tpm/tpm_tis_core.h |  3 +++
- 2 files changed, 16 insertions(+), 3 deletions(-)
+ drivers/char/tpm/tpm_tis.c | 46 ++++++++++++++++++++++++++++++----------------
+ 1 file changed, 30 insertions(+), 16 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index 87cbad5..ea95a82 100644
+index ea95a82..236f644 100644
 --- a/drivers/char/tpm/tpm_tis.c
 +++ b/drivers/char/tpm/tpm_tis.c
-@@ -380,7 +380,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 		wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
- 				  &priv->int_queue, false);
- 		status = tpm_tis_status(chip);
--		if (!itpm && (status & TPM_STS_DATA_EXPECT) == 0) {
-+		if ((status & priv->data_expect_mask) !=
-+			      priv->data_expect_val) {
- 			rc = -EIO;
+@@ -657,14 +657,6 @@ static int tpm_mem_write32(struct tpm_chip *chip, u32 addr, u32 value)
+ 	return 0;
+ }
+ 
+-static const struct tpm_tis_phy_ops tpm_mem = {
+-	.read_bytes = tpm_mem_read_bytes,
+-	.write_bytes = tpm_mem_write_bytes,
+-	.read16 = tpm_mem_read16,
+-	.read32 = tpm_mem_read32,
+-	.write32 = tpm_mem_write32,
+-};
+-
+ static irqreturn_t tis_int_handler(int dummy, void *dev_id)
+ {
+ 	struct tpm_chip *chip = dev_id;
+@@ -793,6 +785,32 @@ static void tpm_tis_probe_irq(struct tpm_chip *chip, u32 intmask)
+ 		return;
+ }
+ 
++static int tpm_tis_post_probe(struct tpm_chip *chip)
++{
++	int probe;
++
++	if (!itpm) {
++		probe = probe_itpm(chip);
++		if (probe < 0)
++			return  -ENODEV;
++		itpm = !!probe;
++	}
++
++	if (itpm)
++		dev_info(chip->dev.parent, "Intel iTPM workaround enabled\n");
++
++	return 0;
++}
++
++static const struct tpm_tis_phy_ops tpm_mem = {
++	.read_bytes = tpm_mem_read_bytes,
++	.write_bytes = tpm_mem_write_bytes,
++	.read16 = tpm_mem_read16,
++	.read32 = tpm_mem_read32,
++	.write32 = tpm_mem_write32,
++	.post_probe = tpm_tis_post_probe,
++};
++
+ static bool interrupts = true;
+ module_param(interrupts, bool, 0444);
+ MODULE_PARM_DESC(interrupts, "Enable interrupts");
+@@ -817,7 +835,7 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+ {
+ 	u32 vendor, intfcaps, intmask;
+ 	u8 rid;
+-	int rc, probe;
++	int rc;
+ 	struct tpm_chip *chip;
+ 	struct tpm_tis_lpc_phy *phy;
+ 
+@@ -887,18 +905,14 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+ 		 (chip->flags & TPM_CHIP_FLAG_TPM2) ? "2.0" : "1.2",
+ 		 vendor >> 16, rid);
+ 
+-	if (!itpm) {
+-		probe = probe_itpm(chip);
+-		if (probe < 0) {
++	if (phy->priv.phy_ops->post_probe) {
++		rc = phy->priv.phy_ops->post_probe(chip);
++		if (rc < 0) {
+ 			rc = -ENODEV;
  			goto out_err;
  		}
-@@ -394,7 +395,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 	wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
- 			  &priv->int_queue, false);
- 	status = tpm_tis_status(chip);
--	if ((status & TPM_STS_DATA_EXPECT) != 0) {
-+	if ((status & priv->data_expect_mask) == priv->data_expect_val) {
- 		rc = -EIO;
- 		goto out_err;
+-		itpm = !!probe;
  	}
-@@ -531,6 +532,8 @@ static bool tpm_tis_update_timeouts(struct tpm_chip *chip,
- static int probe_itpm(struct tpm_chip *chip)
- {
- 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	u8 data_expect_mask = priv->data_expect_mask;
-+	u8 data_expect_val = priv->data_expect_val;
- 	int rc = 0;
- 	u8 cmd_getticks[] = {
- 		0x00, 0xc1, 0x00, 0x00, 0x00, 0x0a,
-@@ -558,13 +561,18 @@ static int probe_itpm(struct tpm_chip *chip)
- 	release_locality(chip, priv->locality, 0);
  
- 	itpm = true;
-+	priv->data_expect_mask = 0;
-+	priv->data_expect_val = 0;
- 
- 	rc = tpm_tis_send_data(chip, cmd_getticks, len);
- 	if (rc == 0) {
- 		dev_info(&chip->dev, "Detected an iTPM.\n");
- 		rc = 1;
--	} else
-+	} else {
-+		priv->data_expect_mask = data_expect_mask;
-+		priv->data_expect_val = data_expect_val;
- 		rc = -EFAULT;
-+	}
- 
- out:
- 	itpm = rem_itpm;
-@@ -836,6 +844,8 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
- 	chip->timeout_b = TIS_TIMEOUT_B_MAX;
- 	chip->timeout_c = TIS_TIMEOUT_C_MAX;
- 	chip->timeout_d = TIS_TIMEOUT_D_MAX;
-+	phy->priv.data_expect_val = TPM_STS_DATA_EXPECT;
-+	phy->priv.data_expect_mask = TPM_STS_DATA_EXPECT;
- 
- 	dev_set_drvdata(&chip->dev, &phy->priv);
- 
-diff --git a/drivers/char/tpm/tpm_tis_core.h b/drivers/char/tpm/tpm_tis_core.h
-index 4074c98..c9d7b38 100644
---- a/drivers/char/tpm/tpm_tis_core.h
-+++ b/drivers/char/tpm/tpm_tis_core.h
-@@ -33,10 +33,13 @@ struct tpm_tis_phy_ops {
- 	int (*read16)(struct tpm_chip *chip, u32 addr, u16 *result);
- 	int (*read32)(struct tpm_chip *chip, u32 addr, u32 *result);
- 	int (*write32)(struct tpm_chip *chip, u32 addr, u32 src);
-+	int (*post_probe)(struct tpm_chip *chip);
- };
- 
- struct tpm_tis_data {
- 	u16 manufacturer_id;
-+	u8 data_expect_mask;
-+	u8 data_expect_val;
- 	int locality;
- 	int irq;
- 	bool irq_tested;
+-	if (itpm)
+-		dev_info(dev, "Intel iTPM workaround enabled\n");
+-
+ 	/* Figure out the capabilities */
+ 	rc = tpm_read32(chip, TPM_INTF_CAPS(phy->priv.locality), &intfcaps);
+ 	if (rc < 0)
 -- 
 2.1.4
 
