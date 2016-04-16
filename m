@@ -1,14 +1,12 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v3 06/12] tpm: Use read/write_bytes for
-	drivers without more specialized methods
-Date: Sat, 16 Apr 2016 08:35:36 +0200
-Message-ID: <1460788542-2455-7-git-send-email-christophe-h.ricard@st.com>
-References: <1460788542-2455-1-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH v3 00/12] Rework of tpm_tis to share common
+	logic accross phy's (lpc/spi/-i2c-)
+Date: Sat, 16 Apr 2016 08:35:30 +0200
+Message-ID: <1460788542-2455-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1460788542-2455-1-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,75 +19,67 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Some drivers might need to implement only functions for transferring an
-arbitrary number of bytes. Provides a generic functions for handling  of
-word or dword transfers to be dump into driver functions pointers.
+Hi Jarkko,
 
-Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
----
- drivers/char/tpm/tpm_tis_core.h | 34 ++++++++++++++++++++++++++++++++++
- 1 file changed, 34 insertions(+)
+This serie is including common work from Infineon (Peter Huewe & Alexander Steffen) and ST.
+We propose a common low level API used by a core TIS interface allowing to share
+some protocols behavior between physical layers (lpc, spi, i2c...) or drivers.
 
-diff --git a/drivers/char/tpm/tpm_tis_core.h b/drivers/char/tpm/tpm_tis_core.h
-index 9dd6b41..4074c98 100644
---- a/drivers/char/tpm/tpm_tis_core.h
-+++ b/drivers/char/tpm/tpm_tis_core.h
-@@ -60,6 +60,18 @@ static inline int tpm_read8(struct tpm_chip *chip, u32 addr, u8 *result)
- 	return priv->phy_ops->read_bytes(chip, addr, 1, result);
- }
- 
-+static inline int tpm_tis_common_read16(struct tpm_chip *chip, u32 addr,
-+					u16 *result)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	int rc;
-+
-+	rc = priv->phy_ops->read_bytes(chip, addr, sizeof(u16), (u8 *)result);
-+	if (!rc)
-+		*result = le16_to_cpu(*result);
-+	return rc;
-+}
-+
- static inline int tpm_read16(struct tpm_chip *chip, u32 addr, u16 *result)
- {
- 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-@@ -67,6 +79,18 @@ static inline int tpm_read16(struct tpm_chip *chip, u32 addr, u16 *result)
- 	return priv->phy_ops->read16(chip, addr, result);
- }
- 
-+static inline int tpm_tis_common_read32(struct tpm_chip *chip, u32 addr,
-+					u32 *result)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	int rc;
-+
-+	rc = priv->phy_ops->read_bytes(chip, addr, sizeof(u32), (u8 *)result);
-+	if (!rc)
-+		*result = le32_to_cpu(*result);
-+	return rc;
-+}
-+
- static inline int tpm_read32(struct tpm_chip *chip, u32 addr, u32 *result)
- {
- 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-@@ -89,6 +113,16 @@ static inline int tpm_write8(struct tpm_chip *chip, u32 addr, u8 value)
- 	return priv->phy_ops->write_bytes(chip, addr, 1, &value);
- }
- 
-+static inline int tpm_tis_common_write32(struct tpm_chip *chip, u32 addr,
-+					 u32 value)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+
-+	value = cpu_to_le32(value);
-+	return priv->phy_ops->write_bytes(chip, addr, sizeof(u32),
-+					   (u8 *)&value);
-+}
-+
- static inline int tpm_write32(struct tpm_chip *chip, u32 addr, u32 value)
- {
- 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+To easy the group review, i only send 10 patches showing how we rework the tpm_tis driver
+keeping existing proprietary logic (itpm workaround, irq for tpm_tis ("lpc")).
+Finally we are adding spi support based on TCG PTP specification. This additional driver
+support the SPI bit protocol including optional flow control.
+
+Reworked tpm_tis got validated on a HP 8200 machine with an Infineon TPM
+tpm_tis_spi got validated using Minnowboard Max as well as Raspberry Pi.
+
+v2:
+- Add Rob Herring acks on devicetree specific patch
+- Renamed priv_data tpm_tis_data
+- Moved data_expect_val & data_expect_mask in tpm_tis_data
+- Moved "hal" (e.g: tpm_write_xxx/tpm_read_xxx) in tpm_tis_core.h
+- Reduced list of the exported functions from tpm_tis_core
+- Make tpm_tis ops internal to tpm_tis_core
+
+v3:
+- Merge tpm_class_lowlevel and tpm_tis_phy_ops
+- Changed the way phy specific structure looked like in order to use container_of
+- Cleanup patches with rebase mistakes and build verify them...
+- Moved "Add include guards in tpm.h" at first position
+
+Best Regards
+Christophe
+
+Christophe Ricard (12):
+  tpm: Add include guards in tpm.h
+  tpm: tpm_tis: Share common data between phys
+  tpm: tpm_tis: Rename priv_data structure tpm_tis_data
+  tpm_tis: Introduce intermediate layer for TPM access
+  tpm_tis: Extend low-level interface to support proper return codes
+  tpm: Use read/write_bytes for drivers without more specialized methods
+  tpm: Manage itpm workaround with tis specific data_expect bit
+  tpm: tpm_tis: Add post_probe phy handler
+  devicetree: Add infineon to vendor-prefix.txt
+  devicetree: Add Trusted Computing Group to vendor-prefix.txt
+  tpm/tpm_tis: Split tpm_tis driver into a core and TCG TIS compliant
+    phy
+  tpm/tpm_tis_spi: Add support for spi phy
+
+ .../bindings/security/tpm/tpm_tis_spi.txt          |  24 +
+ .../devicetree/bindings/vendor-prefixes.txt        |   2 +
+ drivers/char/tpm/Kconfig                           |  19 +
+ drivers/char/tpm/Makefile                          |   2 +
+ drivers/char/tpm/tpm.h                             |   5 +
+ drivers/char/tpm/tpm_tis.c                         | 835 +++------------------
+ drivers/char/tpm/tpm_tis_core.c                    | 809 ++++++++++++++++++++
+ drivers/char/tpm/tpm_tis_core.h                    | 202 +++++
+ drivers/char/tpm/tpm_tis_spi.c                     | 251 +++++++
+ 9 files changed, 1407 insertions(+), 742 deletions(-)
+ create mode 100644 Documentation/devicetree/bindings/security/tpm/tpm_tis_spi.txt
+ create mode 100644 drivers/char/tpm/tpm_tis_core.c
+ create mode 100644 drivers/char/tpm/tpm_tis_core.h
+ create mode 100644 drivers/char/tpm/tpm_tis_spi.c
+
 -- 
 2.1.4
 
