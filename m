@@ -1,15 +1,13 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v3 00/12] Rework of tpm_tis to share
- common logic accross phy's (lpc/spi/-i2c-)
-Date: Mon, 18 Apr 2016 11:23:52 -0600
-Message-ID: <20160418172352.GB13979@obsidianresearch.com>
-References: <1460788542-2455-1-git-send-email-christophe-h.ricard@st.com>
+From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH v11 2/4] tpm: Introduce TPM_CHIP_FLAG_VIRTUAL
+Date: Mon, 18 Apr 2016 13:26:14 -0400
+Message-ID: <1461000376-2888-3-git-send-email-stefanb@linux.vnet.ibm.com>
+References: <1461000376-2888-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1460788542-2455-1-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
+In-Reply-To: <1461000376-2888-1-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,23 +16,69 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat, Apr 16, 2016 at 08:35:30AM +0200, Christophe Ricard wrote:
+Introduce TPM_CHIP_FLAG_VIRTUAL to be used when the chip device has no
+parent device.
 
-> This serie is including common work from Infineon (Peter Huewe &
-> Alexander Steffen) and ST.  We propose a common low level API used
-> by a core TIS interface allowing to share some protocols behavior
-> between physical layers (lpc, spi, i2c...) or drivers.
+Prevent sysfs entries requiring a parent device from being created.
 
-This looks pretty reasonable now.
+Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+---
+ drivers/char/tpm/tpm-chip.c | 7 +++++--
+ drivers/char/tpm/tpm.h      | 1 +
+ 2 files changed, 6 insertions(+), 2 deletions(-)
 
-Do you have a github/etc version? It would be nice to check over what
-the final layout looks like.
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 7e2c9cf..a12db8e 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -181,6 +181,9 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
+ 	if (rc)
+ 		goto out;
+ 
++	if (!dev)
++		chip->flags |= TPM_CHIP_FLAG_VIRTUAL;
++
+ 	cdev_init(&chip->cdev, &tpm_fops);
+ 	chip->cdev.owner = THIS_MODULE;
+ 	chip->cdev.kobj.parent = &chip->dev.kobj;
+@@ -297,7 +300,7 @@ static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
+ {
+ 	struct attribute **i;
+ 
+-	if (chip->flags & TPM_CHIP_FLAG_TPM2)
++	if (chip->flags & (TPM_CHIP_FLAG_TPM2 | TPM_CHIP_FLAG_VIRTUAL))
+ 		return;
+ 
+ 	sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
+@@ -315,7 +318,7 @@ static int tpm_add_legacy_sysfs(struct tpm_chip *chip)
+ 	struct attribute **i;
+ 	int rc;
+ 
+-	if (chip->flags & TPM_CHIP_FLAG_TPM2)
++	if (chip->flags & (TPM_CHIP_FLAG_TPM2 | TPM_CHIP_FLAG_VIRTUAL))
+ 		return 0;
+ 
+ 	rc = __compat_only_sysfs_link_entry_to_kobj(
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 508e8e0..ff4e53c 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -138,6 +138,7 @@ enum tpm_chip_flags {
+ 	TPM_CHIP_FLAG_REGISTERED	= BIT(0),
+ 	TPM_CHIP_FLAG_TPM2		= BIT(1),
+ 	TPM_CHIP_FLAG_IRQ		= BIT(2),
++	TPM_CHIP_FLAG_VIRTUAL		= BIT(3),
+ };
+ 
+ struct tpm_chip {
+-- 
+2.4.3
 
-Jason
 
 ------------------------------------------------------------------------------
 Find and fix application performance issues faster with Applications Manager
