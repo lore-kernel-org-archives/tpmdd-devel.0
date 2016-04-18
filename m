@@ -1,8 +1,8 @@
 From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v4 11/12] tpm: Use read/write_bytes for
-	drivers without more specialized methods
-Date: Tue, 19 Apr 2016 00:17:43 +0200
-Message-ID: <1461017864-3903-12-git-send-email-christophe-h.ricard@st.com>
+Subject: [PATCH v4 07/12] tpm: tpm_tis: Add post_probe phy
+	handler
+Date: Tue, 19 Apr 2016 00:17:39 +0200
+Message-ID: <1461017864-3903-8-git-send-email-christophe-h.ricard@st.com>
 References: <1461017864-3903-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,77 +21,98 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Some drivers might need to implement only functions for transferring an
-arbitrary number of bytes. Provides a generic functions for handling  of
-word or dword transfers to be dump into driver functions pointers.
+Add post_probe phy handler in order to execute additional proprietary
+operations after tpm2_probe. For the case of tpm_tis using LPC, itpm
+workaround probing.
 
-Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
 Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
 ---
- drivers/char/tpm/tpm_tis_core.c | 34 ++++++++++++++++++++++++++++++++++
- drivers/char/tpm/tpm_tis_core.h |  4 ++++
- 2 files changed, 38 insertions(+)
+ drivers/char/tpm/tpm_tis.c | 46 ++++++++++++++++++++++++++++++----------------
+ 1 file changed, 30 insertions(+), 16 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-index 09f7822..5933781 100644
---- a/drivers/char/tpm/tpm_tis_core.c
-+++ b/drivers/char/tpm/tpm_tis_core.c
-@@ -803,6 +803,40 @@ int tpm_tis_resume(struct device *dev)
- EXPORT_SYMBOL_GPL(tpm_tis_resume);
- #endif
- 
-+int tpm_tis_common_read16(struct tpm_chip *chip, u32 addr, u16 *result)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	int rc;
-+
-+	rc = priv->phy_ops->read_bytes(chip, addr, sizeof(u16), (u8 *)result);
-+	if (!rc)
-+		*result = le16_to_cpu(*result);
-+	return rc;
-+}
-+EXPORT_SYMBOL_GPL(tpm_tis_common_read16);
-+
-+int tpm_tis_common_read32(struct tpm_chip *chip, u32 addr, u32 *result)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	int rc;
-+
-+	rc = priv->phy_ops->read_bytes(chip, addr, sizeof(u32), (u8 *)result);
-+	if (!rc)
-+		*result = le32_to_cpu(*result);
-+	return rc;
-+}
-+EXPORT_SYMBOL_GPL(tpm_tis_common_read32);
-+
-+int tpm_tis_common_write32(struct tpm_chip *chip, u32 addr, u32 value)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+
-+	value = cpu_to_le32(value);
-+	return priv->phy_ops->write_bytes(chip, addr, sizeof(u32),
-+					   (u8 *)&value);
-+}
-+EXPORT_SYMBOL_GPL(tpm_tis_common_write32);
-+
- MODULE_AUTHOR("Leendert van Doorn (leendert-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org)");
- MODULE_DESCRIPTION("TPM Driver");
- MODULE_VERSION("2.0");
-diff --git a/drivers/char/tpm/tpm_tis_core.h b/drivers/char/tpm/tpm_tis_core.h
-index 157c5c3..6b82944 100644
---- a/drivers/char/tpm/tpm_tis_core.h
-+++ b/drivers/char/tpm/tpm_tis_core.h
-@@ -153,6 +153,10 @@ static inline int tpm_write32(struct tpm_chip *chip, u32 addr, u32 value)
- 	return priv->phy_ops->write32(chip, addr, value);
+diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+index ea95a82..236f644 100644
+--- a/drivers/char/tpm/tpm_tis.c
++++ b/drivers/char/tpm/tpm_tis.c
+@@ -657,14 +657,6 @@ static int tpm_mem_write32(struct tpm_chip *chip, u32 addr, u32 value)
+ 	return 0;
  }
  
-+int tpm_tis_common_read16(struct tpm_chip *chip, u32 addr, u16 *result);
-+int tpm_tis_common_read32(struct tpm_chip *chip, u32 addr, u32 *result);
-+int tpm_tis_common_write32(struct tpm_chip *chip, u32 addr, u32 value);
+-static const struct tpm_tis_phy_ops tpm_mem = {
+-	.read_bytes = tpm_mem_read_bytes,
+-	.write_bytes = tpm_mem_write_bytes,
+-	.read16 = tpm_mem_read16,
+-	.read32 = tpm_mem_read32,
+-	.write32 = tpm_mem_write32,
+-};
+-
+ static irqreturn_t tis_int_handler(int dummy, void *dev_id)
+ {
+ 	struct tpm_chip *chip = dev_id;
+@@ -793,6 +785,32 @@ static void tpm_tis_probe_irq(struct tpm_chip *chip, u32 intmask)
+ 		return;
+ }
+ 
++static int tpm_tis_post_probe(struct tpm_chip *chip)
++{
++	int probe;
 +
- void tpm_tis_ready(struct tpm_chip *chip);
- void release_locality(struct tpm_chip *chip, int l, int force);
- int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len);
++	if (!itpm) {
++		probe = probe_itpm(chip);
++		if (probe < 0)
++			return  -ENODEV;
++		itpm = !!probe;
++	}
++
++	if (itpm)
++		dev_info(chip->dev.parent, "Intel iTPM workaround enabled\n");
++
++	return 0;
++}
++
++static const struct tpm_tis_phy_ops tpm_mem = {
++	.read_bytes = tpm_mem_read_bytes,
++	.write_bytes = tpm_mem_write_bytes,
++	.read16 = tpm_mem_read16,
++	.read32 = tpm_mem_read32,
++	.write32 = tpm_mem_write32,
++	.post_probe = tpm_tis_post_probe,
++};
++
+ static bool interrupts = true;
+ module_param(interrupts, bool, 0444);
+ MODULE_PARM_DESC(interrupts, "Enable interrupts");
+@@ -817,7 +835,7 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+ {
+ 	u32 vendor, intfcaps, intmask;
+ 	u8 rid;
+-	int rc, probe;
++	int rc;
+ 	struct tpm_chip *chip;
+ 	struct tpm_tis_lpc_phy *phy;
+ 
+@@ -887,18 +905,14 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+ 		 (chip->flags & TPM_CHIP_FLAG_TPM2) ? "2.0" : "1.2",
+ 		 vendor >> 16, rid);
+ 
+-	if (!itpm) {
+-		probe = probe_itpm(chip);
+-		if (probe < 0) {
++	if (phy->priv.phy_ops->post_probe) {
++		rc = phy->priv.phy_ops->post_probe(chip);
++		if (rc < 0) {
+ 			rc = -ENODEV;
+ 			goto out_err;
+ 		}
+-		itpm = !!probe;
+ 	}
+ 
+-	if (itpm)
+-		dev_info(dev, "Intel iTPM workaround enabled\n");
+-
+ 	/* Figure out the capabilities */
+ 	rc = tpm_read32(chip, TPM_INTF_CAPS(phy->priv.locality), &intfcaps);
+ 	if (rc < 0)
 -- 
 2.1.4
 
