@@ -1,94 +1,97 @@
-From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: [PATCH v11 0/4] Multi-instance vTPM proxy driver
-Date: Mon, 18 Apr 2016 13:26:12 -0400
-Message-ID: <1461000376-2888-1-git-send-email-stefanb@linux.vnet.ibm.com>
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Sender: owner-linux-security-module@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Stefan Berger <stefanb@linux.vnet.ibm.com>
+From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Subject: [PATCH v4 00/12] Rework of tpm_tis to share common
+	logic accross phy's (lpc/spi/-i2c-)
+Date: Tue, 19 Apr 2016 00:17:32 +0200
+Message-ID: <1461017864-3903-1-git-send-email-christophe-h.ricard@st.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
+Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The following series of patches implements a multi-instance vTPM 
-proxy driver that can dynamically create TPM 'server' and client device
-pairs.
+Hi Jarkko,
 
-Using an ioctl on the provided /dev/vtpmx, a client-side vTPM device
-and a server side file descriptor is created. The file descriptor must
-be passed to a TPM emulator. The device driver will initialize the
-emulated TPM using TPM 1.2 or TPM 2 startup commands and it will read
-the command durations from the device in case of a TPM 1.2. The choice
-of emulated TPM device (1.2 or 2) must be provided with a flag in
-the ioctl.
+This serie is including common work from Infineon (Peter Huewe & Alexander Steffen) and ST.
+We propose a common low level API used by a core TIS interface allowing to share
+some protocols behavior between physical layers (lpc, spi, i2c...) or drivers.
 
-The patches are based on the tip of a recent checkout of Jarkko's tree
-(master branch).
+To easy the group review, i only send 10 patches showing how we rework the tpm_tis driver
+keeping existing proprietary logic (itpm workaround, irq for tpm_tis ("lpc")).
+Finally we are adding spi support based on TCG PTP specification. This additional driver
+support the SPI bit protocol including optional flow control.
 
-   Stefan
+Reworked tpm_tis got validated on a HP 8200 machine with an Infineon TPM
+tpm_tis_spi got validated using Minnowboard Max as well as Raspberry Pi.
 
-v10->v11:
- - patch 3: merge of v10 patches 3 and 4
- - patch 3: removed unnecessary NULL pointer checks
- - Added Jason's Reviewed-by's
+v2:
+- Add Rob Herring acks on devicetree specific patch
+- Renamed priv_data tpm_tis_data
+- Moved data_expect_val & data_expect_mask in tpm_tis_data
+- Moved "hal" (e.g: tpm_write_xxx/tpm_read_xxx) in tpm_tis_core.h
+- Reduced list of the exported functions from tpm_tis_core
+- Make tpm_tis ops internal to tpm_tis_core
 
-v9->v10:
- - add new patch 1 with sysfs related rework; reworked patch 2 as a consequence
- - patch 3: fixed ioctl from using _IOW to using _IOWR (reinstall headers
-   and rebuild test tools)
- - patch 3: do not use priv field anymore but uses dev_set_drvdata /
-   dev_get_drvdata instead now
+v3:
+- Merge tpm_class_lowlevel and tpm_tis_phy_ops
+- Changed the way phy specific structure looked like in order to use container_of
+- Cleanup patches with rebase mistakes and build verify them...
+- Moved "Add include guards in tpm.h" at first position
 
-v8->v9:
- - move constant from public header into tpm_vtpm_proxy.c
- - Replaced VTPM_PROXY_MAGIC in ioctl definition with its value (0xa1)
- - Check for the STATE_OPEN_FLAG in wait_event_interruptable and after
-   returning from it
+v4:
+- Move patch "Use read/write_bytes for drivers without more specialized methods"
+before spi phy patch and rework so that functions are no more inlined and available
+from tpm_tis_core.
 
-v7->v8:
- - minor tweaks on the documentation
- - Reordered function calls in the VTPM proxy driver's server side release
-   function so that a client holding the 'ops' lock releases it before the
-   driver tries to grab the lock when unregistering the device.
+Best Regards
+Christophe
 
-v6->v7:
- - Adjusted name of driver to tpm_vtpm_proxy from tpm_vtpm. Adjust function
-   names, names of structures, and names of constants.
- - Adjusted IOCTL to use magic 0xa1 rather than the completely used 0xa0.
- - Extended driver documentation and added documentation of ioctl.
- - Moved test program to own project (dropped patch 11).
+Christophe Ricard (12):
+  tpm: Add include guards in tpm.h
+  tpm: tpm_tis: Share common data between phys
+  tpm: tpm_tis: Rename priv_data structure tpm_tis_data
+  tpm_tis: Introduce intermediate layer for TPM access
+  tpm_tis: Extend low-level interface to support proper return codes
+  tpm: Manage itpm workaround with tis specific data_expect bit
+  tpm: tpm_tis: Add post_probe phy handler
+  devicetree: Add infineon to vendor-prefix.txt
+  devicetree: Add Trusted Computing Group to vendor-prefix.txt
+  tpm/tpm_tis: Split tpm_tis driver into a core and TCG TIS compliant
+    phy
+  tpm: Use read/write_bytes for drivers without more specialized methods
+  tpm/tpm_tis_spi: Add support for spi phy
 
-v5->v6:
- - Adapted errno's for unsupported flags and ioctls following Jason's
-   comments
-
-v4->v5:
- - Introduced different error codes for unsupported flags and ioctls
- - Added documentation patch
-
-
-Jason Gunthorpe (1):
-  tpm: Remove all uses of drvdata from the TPM Core
-
-Stefan Berger (3):
-  tpm: Introduce TPM_CHIP_FLAG_VIRTUAL
-  tpm: Proxy driver for supporting multiple emulated TPMs
-  tpm: Add documentation for the tpm_vtpm_proxy device driver
-
- Documentation/ioctl/ioctl-number.txt |   1 +
- Documentation/tpm/tpm_vtpm_proxy.txt |  71 ++++
- drivers/char/tpm/Kconfig             |  10 +
- drivers/char/tpm/Makefile            |   1 +
- drivers/char/tpm/tpm-chip.c          |  76 +++--
- drivers/char/tpm/tpm-interface.c     |   7 +-
- drivers/char/tpm/tpm-sysfs.c         |  61 ++--
- drivers/char/tpm/tpm.h               |  11 +-
- drivers/char/tpm/tpm_vtpm_proxy.c    | 644 +++++++++++++++++++++++++++++++++++
- include/uapi/linux/Kbuild            |   1 +
- include/uapi/linux/vtpm_proxy.h      |  36 ++
- 11 files changed, 852 insertions(+), 67 deletions(-)
- create mode 100644 Documentation/tpm/tpm_vtpm_proxy.txt
- create mode 100644 drivers/char/tpm/tpm_vtpm_proxy.c
- create mode 100644 include/uapi/linux/vtpm_proxy.h
+ .../bindings/security/tpm/tpm_tis_spi.txt          |  24 +
+ .../devicetree/bindings/vendor-prefixes.txt        |   2 +
+ drivers/char/tpm/Kconfig                           |  19 +
+ drivers/char/tpm/Makefile                          |   2 +
+ drivers/char/tpm/tpm.h                             |   5 +
+ drivers/char/tpm/tpm_tis.c                         | 835 +++-----------------
+ drivers/char/tpm/tpm_tis_core.c                    | 843 +++++++++++++++++++++
+ drivers/char/tpm/tpm_tis_core.h                    | 172 +++++
+ drivers/char/tpm/tpm_tis_spi.c                     | 251 ++++++
+ 9 files changed, 1411 insertions(+), 742 deletions(-)
+ create mode 100644 Documentation/devicetree/bindings/security/tpm/tpm_tis_spi.txt
+ create mode 100644 drivers/char/tpm/tpm_tis_core.c
+ create mode 100644 drivers/char/tpm/tpm_tis_core.h
+ create mode 100644 drivers/char/tpm/tpm_tis_spi.c
 
 -- 
-2.4.3
+2.1.4
 
+
+------------------------------------------------------------------------------
+Find and fix application performance issues faster with Applications Manager
+Applications Manager provides deep performance insights into multiple tiers of
+your business applications. It resolves application problems quickly and
+reduces your MTTR. Get your free trial!
+https://ad.doubleclick.net/ddm/clk/302982198;130105516;z
