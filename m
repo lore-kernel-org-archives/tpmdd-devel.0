@@ -1,943 +1,374 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v4 04/12] tpm_tis: Introduce intermediate
- layer for TPM access
-Date: Tue, 19 Apr 2016 20:16:25 +0300
-Message-ID: <20160419171625.GA11619@intel.com>
-References: <1461017864-3903-1-git-send-email-christophe-h.ricard@st.com>
-	<1461017864-3903-5-git-send-email-christophe-h.ricard@st.com>
-	<20160419130747.GC4796@intel.com>
-	<CALD+uuxbqVYrPxpAz2gZo5+5hu+Yagt4XkinJUXfZm3fztfKLw@mail.gmail.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v11 1/4] tpm: Remove all uses of drvdata from the TPM Core
+Date: Tue, 19 Apr 2016 20:21:17 +0300
+Message-ID: <20160419172117.GB11619@intel.com>
+References: <1461000376-2888-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <1461000376-2888-2-git-send-email-stefanb@linux.vnet.ibm.com>
+ <20160419101214.GA11574@intel.com>
+ <57160A26.5040805@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="iso-8859-1"
-Content-Transfer-Encoding: quoted-printable
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <CALD+uuxbqVYrPxpAz2gZo5+5hu+Yagt4XkinJUXfZm3fztfKLw-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Cc: Jean-Luc BLANC <jean-luc.blanc-qxv4g6HH51o@public.gmane.org>, "ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org" <ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, Christophe RICARD <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>, Benoit HOUYERE <benoit.houyere-qxv4g6HH51o@public.gmane.org>
+In-Reply-To: <57160A26.5040805@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Apr 19, 2016 at 03:20:25PM +0200, Christophe Ricard wrote:
->    Hi Jarkko,
-> =
+On Tue, Apr 19, 2016 at 06:36:22AM -0400, Stefan Berger wrote:
+> On 04/19/2016 06:12 AM, Jarkko Sakkinen wrote:
+> >On Mon, Apr 18, 2016 at 01:26:13PM -0400, Stefan Berger wrote:
+> >>From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+> >>
+> >>The final thing preventing this was the way the sysfs files were
+> >>attached to the pdev. Follow the approach developed for ppi and move
+> >>the sysfs files to the chip->dev with symlinks from the pdev
+> >>for compatibility. Everything in the core now sanely uses container_of
+> >>to get the chip.
+> >Can you give me a quick recap why this patch was mandatory to make the
+> >patch set work? Which regression in the earlier versions of the patch
+> >set this fixes?
+> 
+> The below patch removes usage of dev_get_drvdata() for retrieving the chip.
+> With Christophe's series dropping the priv field I now can use the drvdata
+> to store proxy_dev rather than re-introducing the priv field in the chip
+> structure. Besides that it doesn't seem necessary to use the drvdata field
+> to get from the chip to the device if a simple container_of can do it.
 
->    Do you thing tpm_tis.c should be renamed tpm_tis_tcg.c as well ?
+Right, ok sounds justified.
 
-Yeah.
-
-I would structure things like this:
-
-* tpm_tis.ko (core stuff)
-* tpm_tis_tcg.ko
-* tpm_tis_spi.ko
-* ...
-
-This would also as a side-effect considerably shrink the code line
-changes since you would not have move generic stuff out of tpm_tis.
-In my opinion this would be more logical way to structure and name
-things.
-
-In this framework you should probably have tpm_tis.h/c for generic
-stuff instead of tpm_tis_core.h/c.
-
-/Jarkko
-
->    Best Regards
->    Christophe
-> =
-
->    2016-04-19 15:07 GMT+02:00 Jarkko Sakkinen
->    <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>:
-> =
-
->      On Tue, Apr 19, 2016 at 12:17:36AM +0200, Christophe Ricard wrote:
->      > This splits tpm_tis in a high-level protocol part and a low-level
->      interface
->      > for the actual TPM communication. The low-level interface can then=
- be
->      > implemented by additional drivers to provide access to TPMs using
->      other
->      > mechanisms, for example native I2C or SPI transfers, while still
->      reusing
->      > the same TIS protocol implementation.
-> =
-
->      I do not see anything obviously wrong in this patch except the use
->      of tpm_mem prefix. Earlier you used LPC which was incorrect. Now you
->      refer to the same entity with this tpm_mem prefix.
-> =
-
->      Maybe tpm_tcg would be the right choice in both cases...
->      /Jarkko
->      > Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
->      > Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
->      > ---
->      >=C2=A0 drivers/char/tpm/tpm_tis.c=C2=A0 =C2=A0 =C2=A0 | 201
->      +++++++++++++++++++++-------------------
->      >=C2=A0 drivers/char/tpm/tpm_tis_core.h |=C2=A0 64 +++++++++++++
->      >=C2=A0 2 files changed, 168 insertions(+), 97 deletions(-)
->      >
->      > diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis=
-.c
->      > index af53747..6df7ddc 100644
->      > --- a/drivers/char/tpm/tpm_tis.c
->      > +++ b/drivers/char/tpm/tpm_tis.c
->      > @@ -131,11 +131,9 @@ static inline int is_itpm(struct acpi_device
->      *dev)
->      >=C2=A0 =C2=A0* correct values in the other bits.' */
->      >=C2=A0 static int wait_startup(struct tpm_chip *chip, int l)
->      >=C2=A0 {
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_drvdata=
-(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0unsigned long stop =3D jiffies + chip->t=
-imeout_a;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0do {
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0if (ioread8(phy->=
-iobase + TPM_ACCESS(l)) &
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0if (tpm_read8(chi=
-p, TPM_ACCESS(l)) &
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=
-=A0TPM_ACCESS_VALID)
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=
-=A0 =C2=A0 =C2=A0return 0;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0msleep(TPM_T=
-IMEOUT);
->      > @@ -146,9 +144,8 @@ static int wait_startup(struct tpm_chip *chip,=
- int
->      l)
->      >=C2=A0 static int check_locality(struct tpm_chip *chip, int l)
->      >=C2=A0 {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_dr=
-vdata(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >
->      > -=C2=A0 =C2=A0 =C2=A0if ((ioread8(phy->iobase + TPM_ACCESS(l)) &
->      > +=C2=A0 =C2=A0 =C2=A0if ((tpm_read8(chip, TPM_ACCESS(l)) &
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 (TPM_ACCESS_ACTIVE_LOCALI=
-TY | TPM_ACCESS_VALID)) =3D=3D
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0(TPM_ACCESS_ACTIVE_LOCALIT=
-Y | TPM_ACCESS_VALID))
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0return priv-=
->locality =3D l;
->      > @@ -158,28 +155,23 @@ static int check_locality(struct tpm_chip *c=
-hip,
->      int l)
->      >
->      >=C2=A0 static void release_locality(struct tpm_chip *chip, int l, i=
-nt
->      force)
->      >=C2=A0 {
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_drvdata=
-(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      > -
->      > -=C2=A0 =C2=A0 =C2=A0if (force || (ioread8(phy->iobase + TPM_ACCES=
-S(l)) &
->      > +=C2=A0 =C2=A0 =C2=A0if (force || (tpm_read8(chip, TPM_ACCESS(l)) &
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=
-=A0 =C2=A0(TPM_ACCESS_REQUEST_PENDING |
->      TPM_ACCESS_VALID)) =3D=3D
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0(TPM_ACCESS_REQUEST_PENDIN=
-G | TPM_ACCESS_VALID))
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0iowrite8(TPM_ACCE=
-SS_ACTIVE_LOCALITY,
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 phy->iobase + TPM_ACCESS(l));
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0tpm_write8(chip, =
-TPM_ACCESS(l),
->      TPM_ACCESS_ACTIVE_LOCALITY);
->      > +
->      >=C2=A0 }
->      >
->      >=C2=A0 static int request_locality(struct tpm_chip *chip, int l)
->      >=C2=A0 {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_dr=
-vdata(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0unsigned long stop, timeout;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0long rc;
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0if (check_locality(chip, l) >=3D 0)
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0return l;
->      >
->      > -=C2=A0 =C2=A0 =C2=A0iowrite8(TPM_ACCESS_REQUEST_USE,
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 phy->iobase + TP=
-M_ACCESS(l));
->      > +=C2=A0 =C2=A0 =C2=A0tpm_write8(chip, TPM_ACCESS(l), TPM_ACCESS_RE=
-QUEST_USE);
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0stop =3D jiffies + chip->timeout_a;
->      >
->      > @@ -213,26 +205,21 @@ again:
->      >=C2=A0 static u8 tpm_tis_status(struct tpm_chip *chip)
->      >=C2=A0 {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_dr=
-vdata(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >
->      > -=C2=A0 =C2=A0 =C2=A0return ioread8(phy->iobase +
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 TPM_STS(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0return tpm_read8(chip, TPM_STS(priv->locality=
-));
->      >=C2=A0 }
->      >
->      >=C2=A0 static void tpm_tis_ready(struct tpm_chip *chip)
->      >=C2=A0 {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_dr=
-vdata(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0/* this causes the current command to be=
- aborted */
->      > -=C2=A0 =C2=A0 =C2=A0iowrite8(TPM_STS_COMMAND_READY,
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 phy->iobase + TP=
-M_STS(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0tpm_write8(chip, TPM_STS(priv->locality),
->      TPM_STS_COMMAND_READY);
->      >=C2=A0 }
->      >
->      >=C2=A0 static int get_burstcount(struct tpm_chip *chip)
->      >=C2=A0 {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_dr=
-vdata(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0unsigned long stop;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0int burstcnt;
->      >
->      > @@ -240,11 +227,8 @@ static int get_burstcount(struct tpm_chip *ch=
-ip)
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0/* which timeout value, spec has 2 answe=
-rs (c & d) */
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0stop =3D jiffies + chip->timeout_d;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0do {
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0burstcnt =3D iore=
-ad8(phy->iobase +
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0
->      TPM_STS(priv->locality) + 1);
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0burstcnt +=3D ior=
-ead8(phy->iobase +
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0
->      =C2=A0TPM_STS(priv->locality) +
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A02) << 8;
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0burstcnt =3D tpm_=
-read8(chip,
->      TPM_STS(priv->locality) + 1);
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0burstcnt +=3D tpm=
-_read8(chip,
->      TPM_STS(priv->locality) + 2) << 8;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0if (burstcnt)
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=
-=A0 =C2=A0 =C2=A0return burstcnt;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0msleep(TPM_T=
-IMEOUT);
->      > @@ -255,18 +239,16 @@ static int get_burstcount(struct tpm_chip *c=
-hip)
->      >=C2=A0 static int recv_data(struct tpm_chip *chip, u8 *buf, size_t =
-count)
->      >=C2=A0 {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_dr=
-vdata(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0int size =3D 0, burstcnt;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0while (size < count &&
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 wait_for_tpm_stat(=
-chip,
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=
-=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 TPM_STS_DATA_AVAIL |
->      TPM_STS_VALID,
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=
-=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 chip->timeout_c,
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 &priv->read_queue, true)
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =3D=3D 0) {
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0burstcnt =3D get_=
-burstcount(chip);
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0for (; burstcnt >=
- 0 && size < count; burstcnt--)
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0buf[size++] =3D ioread8(phy->iobase +
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=
-=A0 =C2=A0
->      =C2=A0TPM_DATA_FIFO(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 &priv->read_queue, true)
->      =3D=3D 0) {
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0burstcnt =3D min_=
-t(int, get_burstcount(chip), count
->      - size);
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0tpm_read_bytes(ch=
-ip,
->      TPM_DATA_FIFO(priv->locality),
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 burstcnt, buf + size);
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0size +=3D burstcn=
-t;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0}
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0return size;
->      >=C2=A0 }
->      > @@ -330,7 +312,6 @@ MODULE_PARM_DESC(itpm, "Force iTPM workarounds
->      (found on some Lenovo laptops)");
->      >=C2=A0 static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf,=
- size_t
->      len)
->      >=C2=A0 {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_dr=
-vdata(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0int rc, status, burstcnt;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0size_t count =3D 0;
->      >
->      > @@ -349,12 +330,10 @@ static int tpm_tis_send_data(struct tpm_chip
->      *chip, u8 *buf, size_t len)
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0}
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0while (count < len - 1) {
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0burstcnt =3D get_=
-burstcount(chip);
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0for (; burstcnt >=
- 0 && count < len - 1;
->      burstcnt--) {
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0iowrite8(buf[count], phy->iobase +
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0
->      TPM_DATA_FIFO(priv->locality));
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0count++;
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0}
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0burstcnt =3D min_=
-t(int, get_burstcount(chip), len -
->      count - 1);
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0tpm_write_bytes(c=
-hip,
->      TPM_DATA_FIFO(priv->locality),
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0burstcnt, buf + count);
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0count +=3D burstc=
-nt;
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0wait_for_tpm=
-_stat(chip, TPM_STS_VALID,
->      chip->timeout_c,
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=
-=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0&priv->int_queue,
->      false);
->      > @@ -366,8 +345,8 @@ static int tpm_tis_send_data(struct tpm_chip
->      *chip, u8 *buf, size_t len)
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0}
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0/* write last byte */
->      > -=C2=A0 =C2=A0 =C2=A0iowrite8(buf[count],
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 phy->iobase + TP=
-M_DATA_FIFO(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0tpm_write8(chip, TPM_DATA_FIFO(priv->locality=
-), buf[count]);
->      > +
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0wait_for_tpm_stat(chip, TPM_STS_VALID, c=
-hip->timeout_c,
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=
-=A0 =C2=A0 =C2=A0 =C2=A0&priv->int_queue, false);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0status =3D tpm_tis_status(chip);
->      > @@ -387,15 +366,12 @@ out_err:
->      >=C2=A0 static void disable_interrupts(struct tpm_chip *chip)
->      >=C2=A0 {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_dr=
-vdata(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0u32 intmask;
->      >
->      > -=C2=A0 =C2=A0 =C2=A0intmask =3D
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0ioread32(phy->iobase +
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 TP=
-M_INT_ENABLE(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0intmask =3D tpm_read32(chip, TPM_INT_ENABLE(p=
-riv->locality));
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0intmask &=3D ~TPM_GLOBAL_INT_ENABLE;
->      > -=C2=A0 =C2=A0 =C2=A0iowrite32(intmask,
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0phy->iobas=
-e + TPM_INT_ENABLE(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0tpm_write32(chip, TPM_INT_ENABLE(priv->locali=
-ty), intmask);
->      > +
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0devm_free_irq(&chip->dev, priv->irq, chi=
-p);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0priv->irq =3D 0;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0chip->flags &=3D ~TPM_CHIP_FLAG_IRQ;
->      > @@ -409,7 +385,6 @@ static void disable_interrupts(struct tpm_chip
->      *chip)
->      >=C2=A0 static int tpm_tis_send_main(struct tpm_chip *chip, u8 *buf,=
- size_t
->      len)
->      >=C2=A0 {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_dr=
-vdata(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0int rc;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0u32 ordinal;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0unsigned long dur;
->      > @@ -419,8 +394,7 @@ static int tpm_tis_send_main(struct tpm_chip
->      *chip, u8 *buf, size_t len)
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0return rc;
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0/* go and do it */
->      > -=C2=A0 =C2=A0 =C2=A0iowrite8(TPM_STS_GO,
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 phy->iobase + TP=
-M_STS(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0tpm_write8(chip, TPM_STS(priv->locality), TPM=
-_STS_GO);
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0if (chip->flags & TPM_CHIP_FLAG_IRQ) {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0ordinal =3D =
-be32_to_cpu(*((__be32 *) (buf + 6)));
->      > @@ -481,12 +455,10 @@ static const struct tis_vendor_timeout_overr=
-ide
->      vendor_timeout_overrides[] =3D {
->      >=C2=A0 static bool tpm_tis_update_timeouts(struct tpm_chip *chip,
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=
-=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0unsigned long
->      *timeout_cap)
->      >=C2=A0 {
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_drvdata=
-(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0int i;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0u32 did_vid;
->      >
->      > -=C2=A0 =C2=A0 =C2=A0did_vid =3D ioread32(phy->iobase + TPM_DID_VI=
-D(0));
->      > +=C2=A0 =C2=A0 =C2=A0did_vid =3D tpm_read32(chip, TPM_DID_VID(0));
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0for (i =3D 0; i !=3D ARRAY_SIZE(vendor_t=
-imeout_overrides); i++)
->      {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0if (vendor_t=
-imeout_overrides[i].did_vid !=3D
->      did_vid)
->      > @@ -507,7 +479,6 @@ static bool tpm_tis_update_timeouts(struct
->      tpm_chip *chip,
->      >=C2=A0 static int probe_itpm(struct tpm_chip *chip)
->      >=C2=A0 {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_dr=
-vdata(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0int rc =3D 0;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0u8 cmd_getticks[] =3D {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A00x00, 0xc1, =
-0x00, 0x00, 0x00, 0x0a,
->      > @@ -515,7 +486,7 @@ static int probe_itpm(struct tpm_chip *chip)
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0};
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0size_t len =3D sizeof(cmd_getticks);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0bool rem_itpm =3D itpm;
->      > -=C2=A0 =C2=A0 =C2=A0u16 vendor =3D ioread16(phy->iobase + TPM_DID=
-_VID(0));
->      > +=C2=A0 =C2=A0 =C2=A0u16 vendor =3D tpm_read16(chip, TPM_DID_VID(0=
-));
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0/* probe only iTPMS */
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0if (vendor !=3D TPM_VID_INTEL)
->      > @@ -573,16 +544,66 @@ static const struct tpm_class_ops tpm_tis =
-=3D {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0.req_canceled =3D tpm_tis_req_canceled,
->      >=C2=A0 };
->      >
->      > +static void tpm_mem_read_bytes(struct tpm_chip *chip, u32 addr, u=
-16
->      len,
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 u8 *result)
->      > +{
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_drvdata=
-(&chip->dev);
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      > +
->      > +=C2=A0 =C2=A0 =C2=A0while (len--)
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0*result++ =3D ior=
-ead8(phy->iobase + addr);
->      > +}
->      > +
->      > +static void tpm_mem_write_bytes(struct tpm_chip *chip, u32 addr, =
-u16
->      len,
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0u8 *value)
->      > +{
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_drvdata=
-(&chip->dev);
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      > +
->      > +=C2=A0 =C2=A0 =C2=A0while (len--)
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0iowrite8(*value++=
-, phy->iobase + addr);
->      > +}
->      > +
->      > +static u16 tpm_mem_read16(struct tpm_chip *chip, u32 addr)
->      > +{
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_drvdata=
-(&chip->dev);
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      > +
->      > +=C2=A0 =C2=A0 =C2=A0return ioread16(phy->iobase + addr);
->      > +}
->      > +
->      > +static u32 tpm_mem_read32(struct tpm_chip *chip, u32 addr)
->      > +{
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_drvdata=
-(&chip->dev);
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      > +
->      > +=C2=A0 =C2=A0 =C2=A0return ioread32(phy->iobase + addr);
->      > +}
->      > +
->      > +static void tpm_mem_write32(struct tpm_chip *chip, u32 addr, u32
->      value)
->      > +{
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_drvdata=
-(&chip->dev);
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      > +
->      > +=C2=A0 =C2=A0 =C2=A0iowrite32(value, phy->iobase + addr);
->      > +}
->      > +
->      > +static const struct tpm_tis_phy_ops tpm_mem =3D {
->      > +=C2=A0 =C2=A0 =C2=A0.read_bytes =3D tpm_mem_read_bytes,
->      > +=C2=A0 =C2=A0 =C2=A0.write_bytes =3D tpm_mem_write_bytes,
->      > +=C2=A0 =C2=A0 =C2=A0.read16 =3D tpm_mem_read16,
->      > +=C2=A0 =C2=A0 =C2=A0.read32 =3D tpm_mem_read32,
->      > +=C2=A0 =C2=A0 =C2=A0.write32 =3D tpm_mem_write32,
->      > +};
->      > +
->      >=C2=A0 static irqreturn_t tis_int_handler(int dummy, void *dev_id)
->      >=C2=A0 {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_chip *chip =3D dev_id;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_dr=
-vdata(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0u32 interrupt;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0int i;
->      >
->      > -=C2=A0 =C2=A0 =C2=A0interrupt =3D ioread32(phy->iobase +
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0
->      TPM_INT_STATUS(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0interrupt =3D tpm_read32(chip, TPM_INT_STATUS=
-(priv->locality));
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0if (interrupt =3D=3D 0)
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0return IRQ_N=
-ONE;
->      > @@ -600,10 +621,8 @@ static irqreturn_t tis_int_handler(int dummy,
->      void *dev_id)
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0wake_up_inte=
-rruptible(&priv->int_queue);
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0/* Clear interrupts handled with TPM_EOI=
- */
->      > -=C2=A0 =C2=A0 =C2=A0iowrite32(interrupt,
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0phy->iobas=
-e +
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0TPM_INT_ST=
-ATUS(priv->locality));
->      > -=C2=A0 =C2=A0 =C2=A0ioread32(phy->iobase + TPM_INT_STATUS(priv->l=
-ocality));
->      > +=C2=A0 =C2=A0 =C2=A0tpm_write32(chip, TPM_INT_STATUS(priv->locali=
-ty), interrupt);
->      > +=C2=A0 =C2=A0 =C2=A0tpm_read32(chip, TPM_INT_STATUS(priv->localit=
-y));
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0return IRQ_HANDLED;
->      >=C2=A0 }
->      >
->      > @@ -615,7 +634,6 @@ static int tpm_tis_probe_irq_single(struct
->      tpm_chip *chip, u32 intmask,
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=
-=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0int flags, int
->      irq)
->      >=C2=A0 {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_dr=
-vdata(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0u8 original_int_vec;
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0if (devm_request_irq(&chip->dev, irq, ti=
-s_int_handler,
->      flags,
->      > @@ -626,19 +644,16 @@ static int tpm_tis_probe_irq_single(struct
->      tpm_chip *chip, u32 intmask,
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0}
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0priv->irq =3D irq;
->      >
->      > -=C2=A0 =C2=A0 =C2=A0original_int_vec =3D ioread8(phy->iobase +
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0
->      TPM_INT_VECTOR(priv->locality));
->      > -=C2=A0 =C2=A0 =C2=A0iowrite8(irq,
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 phy->iobase + TP=
-M_INT_VECTOR(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0original_int_vec =3D tpm_read8(chip,
->      TPM_INT_VECTOR(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0tpm_write8(chip, TPM_INT_VECTOR(priv->localit=
-y), irq);
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0/* Clear all existing */
->      > -=C2=A0 =C2=A0 =C2=A0iowrite32(ioread32(phy->iobase +
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 TPM_INT_STATUS(priv->locality)),
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0phy->iobas=
-e + TPM_INT_STATUS(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0tpm_write32(chip, TPM_INT_STATUS(priv->locali=
-ty),
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0tpm=
-_read32(chip,
->      TPM_INT_STATUS(priv->locality)));
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0/* Turn on */
->      > -=C2=A0 =C2=A0 =C2=A0iowrite32(intmask | TPM_GLOBAL_INT_ENABLE,
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0phy->iobas=
-e + TPM_INT_ENABLE(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0tpm_write32(chip, TPM_INT_ENABLE(priv->locali=
-ty),
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0int=
-mask | TPM_GLOBAL_INT_ENABLE);
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0priv->irq_tested =3D false;
->      >
->      > @@ -654,8 +669,9 @@ static int tpm_tis_probe_irq_single(struct
->      tpm_chip *chip, u32 intmask,
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 * will call disable_irq which undoes al=
-l of the above.
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 */
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0if (!(chip->flags & TPM_CHIP_FLAG_IRQ)) {
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0iowrite8(original=
-_int_vec,
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 phy->iobase +
->      TPM_INT_VECTOR(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0tpm_write8(chip, =
-TPM_INT_VECTOR(priv->locality),
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 original_int_vec);
->      > +
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0return 1;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0}
->      >
->      > @@ -669,12 +685,10 @@ static int tpm_tis_probe_irq_single(struct
->      tpm_chip *chip, u32 intmask,
->      >=C2=A0 static void tpm_tis_probe_irq(struct tpm_chip *chip, u32 int=
-mask)
->      >=C2=A0 {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_dr=
-vdata(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0u8 original_int_vec;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0int i;
->      >
->      > -=C2=A0 =C2=A0 =C2=A0original_int_vec =3D ioread8(phy->iobase +
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0
->      TPM_INT_VECTOR(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0original_int_vec =3D tpm_read8(chip,
->      TPM_INT_VECTOR(priv->locality));
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0if (!original_int_vec) {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0if (IS_ENABL=
-ED(CONFIG_X86))
->      > @@ -694,10 +708,9 @@ MODULE_PARM_DESC(interrupts, "Enable
->      interrupts");
->      >=C2=A0 static void tpm_tis_remove(struct tpm_chip *chip)
->      >=C2=A0 {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_dr=
-vdata(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      > -=C2=A0 =C2=A0 =C2=A0void __iomem *reg =3D phy->iobase +
->      TPM_INT_ENABLE(priv->locality);
->      > +=C2=A0 =C2=A0 =C2=A0u32 reg =3D TPM_INT_ENABLE(priv->locality);
->      >
->      > -=C2=A0 =C2=A0 =C2=A0iowrite32(~TPM_GLOBAL_INT_ENABLE & ioread32(r=
-eg), reg);
->      > +=C2=A0 =C2=A0 =C2=A0tpm_write32(chip, reg, ~TPM_GLOBAL_INT_ENABLE=
- &
->      tpm_read32(chip, reg));
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0release_locality(chip, priv->locality, 1=
-);
->      >=C2=A0 }
->      >
->      > @@ -725,6 +738,8 @@ static int tpm_tis_init(struct device *dev, st=
-ruct
->      tpm_info *tpm_info,
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0if (IS_ERR(phy->iobase))
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0return PTR_E=
-RR(phy->iobase);
->      >
->      > +=C2=A0 =C2=A0 =C2=A0phy->priv.phy_ops =3D &tpm_mem;
->      > +
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0/* Maximum timeouts */
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0chip->timeout_a =3D TIS_TIMEOUT_A_MAX;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0chip->timeout_b =3D TIS_TIMEOUT_B_MAX;
->      > @@ -739,13 +754,11 @@ static int tpm_tis_init(struct device *dev,
->      struct tpm_info *tpm_info,
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0}
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0/* Take control of the TPM's interrupt h=
-ardware and shut it
->      off */
->      > -=C2=A0 =C2=A0 =C2=A0intmask =3D ioread32(phy->iobase +
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0
->      TPM_INT_ENABLE(phy->priv.locality));
->      > +=C2=A0 =C2=A0 =C2=A0intmask =3D tpm_read32(chip,
->      TPM_INT_ENABLE(phy->priv.locality));
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0intmask |=3D TPM_INTF_CMD_READY_INT |
->      TPM_INTF_LOCALITY_CHANGE_INT |
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 TPM_=
-INTF_DATA_AVAIL_INT |
->      TPM_INTF_STS_VALID_INT;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0intmask &=3D ~TPM_GLOBAL_INT_ENABLE;
->      > -=C2=A0 =C2=A0 =C2=A0iowrite32(intmask,
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0phy->iobas=
-e +
->      TPM_INT_ENABLE(phy->priv.locality));
->      > +=C2=A0 =C2=A0 =C2=A0tpm_write32(chip, TPM_INT_ENABLE(phy->priv.lo=
-cality),
->      intmask);
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0if (request_locality(chip, 0) !=3D 0) {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0rc =3D -ENOD=
-EV;
->      > @@ -756,12 +769,12 @@ static int tpm_tis_init(struct device *dev,
->      struct tpm_info *tpm_info,
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0if (rc)
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0goto out_err;
->      >
->      > -=C2=A0 =C2=A0 =C2=A0vendor =3D ioread32(phy->iobase + TPM_DID_VID=
-(0));
->      > +=C2=A0 =C2=A0 =C2=A0vendor =3D tpm_read32(chip, TPM_DID_VID(0));
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0phy->priv.manufacturer_id =3D vendor;
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0dev_info(dev, "%s TPM (device-id 0x%X, r=
-ev-id %d)\n",
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 (chip->flag=
-s & TPM_CHIP_FLAG_TPM2) ? "2.0" :
->      "1.2",
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 vendor >> 16, io=
-read8(phy->iobase +
->      TPM_RID(0)));
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 vendor >> 16, tp=
-m_read8(chip, TPM_RID(0)));
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0if (!itpm) {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0probe =3D pr=
-obe_itpm(chip);
->      > @@ -777,9 +790,7 @@ static int tpm_tis_init(struct device *dev, st=
-ruct
->      tpm_info *tpm_info,
->      >
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0/* Figure out the capabilities */
->      > -=C2=A0 =C2=A0 =C2=A0intfcaps =3D
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0ioread32(phy->iobase +
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 TP=
-M_INTF_CAPS(phy->priv.locality));
->      > +=C2=A0 =C2=A0 =C2=A0intfcaps =3D tpm_read32(chip,
->      TPM_INTF_CAPS(phy->priv.locality));
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0dev_dbg(dev, "TPM interface capabilities=
- (0x%x):\n",
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0intfcaps);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0if (intfcaps & TPM_INTF_BURST_COUNT_STAT=
-IC)
->      > @@ -858,23 +869,19 @@ out_err:
->      >=C2=A0 static void tpm_tis_reenable_interrupts(struct tpm_chip *chi=
-p)
->      >=C2=A0 {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_dr=
-vdata(&chip->dev);
->      > -=C2=A0 =C2=A0 =C2=A0struct tpm_tis_lpc_phy *phy =3D to_tpm_tis_lp=
-c_phy(priv);
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0u32 intmask;
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0/* reenable interrupts that device may h=
-ave lost or
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 BIOS/firmware may have disabled =
-*/
->      > -=C2=A0 =C2=A0 =C2=A0iowrite8(priv->irq, phy->iobase +
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 TPM_INT_VECTOR(p=
-riv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0tpm_write8(chip, TPM_INT_VECTOR(priv->localit=
-y), priv->irq);
->      >
->      > -=C2=A0 =C2=A0 =C2=A0intmask =3D
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0ioread32(phy->iobase + TPM_INT_=
-ENABLE(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0intmask =3D tpm_read32(chip, TPM_INT_ENABLE(p=
-riv->locality));
->      >
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0intmask |=3D TPM_INTF_CMD_READY_INT
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0| TPM_INTF_LOCALITY_CHANGE=
-_INT |
->      TPM_INTF_DATA_AVAIL_INT
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0| TPM_INTF_STS_VALID_INT |=
- TPM_GLOBAL_INT_ENABLE;
->      >
->      > -=C2=A0 =C2=A0 =C2=A0iowrite32(intmask,
->      > -=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0phy->iobas=
-e + TPM_INT_ENABLE(priv->locality));
->      > +=C2=A0 =C2=A0 =C2=A0tpm_write32(chip, TPM_INT_ENABLE(priv->locali=
-ty), intmask);
->      >=C2=A0 }
->      >
->      >=C2=A0 static int tpm_tis_resume(struct device *dev)
->      > diff --git a/drivers/char/tpm/tpm_tis_core.h
->      b/drivers/char/tpm/tpm_tis_core.h
->      > index 2260f89..3e066eb 100644
->      > --- a/drivers/char/tpm/tpm_tis_core.h
->      > +++ b/drivers/char/tpm/tpm_tis_core.h
->      > @@ -25,6 +25,16 @@
->      >
->      >=C2=A0 #include "tpm.h"
->      >
->      > +struct tpm_tis_phy_ops {
->      > +=C2=A0 =C2=A0 =C2=A0void (*read_bytes)(struct tpm_chip *chip, u32=
- addr, u16 len,
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 u8 *result);
->      > +=C2=A0 =C2=A0 =C2=A0void (*write_bytes)(struct tpm_chip *chip, u3=
-2 addr, u16 len,
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0u8 *value);
->      > +=C2=A0 =C2=A0 =C2=A0u16 (*read16)(struct tpm_chip *chip, u32 addr=
-);
->      > +=C2=A0 =C2=A0 =C2=A0u32 (*read32)(struct tpm_chip *chip, u32 addr=
-);
->      > +=C2=A0 =C2=A0 =C2=A0void (*write32)(struct tpm_chip *chip, u32 ad=
-dr, u32 src);
->      > +};
->      > +
->      >=C2=A0 struct tpm_tis_data {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0u16 manufacturer_id;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0int locality;
->      > @@ -32,6 +42,60 @@ struct tpm_tis_data {
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0bool irq_tested;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0wait_queue_head_t int_queue;
->      >=C2=A0 =C2=A0 =C2=A0 =C2=A0wait_queue_head_t read_queue;
->      > +=C2=A0 =C2=A0 =C2=A0const struct tpm_tis_phy_ops *phy_ops;
->      >=C2=A0 };
->      >
->      > +static inline void tpm_read_bytes(struct tpm_chip *chip, u32 addr,
->      u16 len,
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0u8 *result)
->      > +{
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_drvdata=
-(&chip->dev);
->      > +
->      > +=C2=A0 =C2=A0 =C2=A0priv->phy_ops->read_bytes(chip, addr, len, re=
-sult);
->      > +}
->      > +
->      > +static inline u8 tpm_read8(struct tpm_chip *chip, u32 addr)
->      > +{
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_drvdata=
-(&chip->dev);
->      > +=C2=A0 =C2=A0 =C2=A0u8 result;
->      > +
->      > +=C2=A0 =C2=A0 =C2=A0priv->phy_ops->read_bytes(chip, addr, 1, &res=
-ult);
->      > +=C2=A0 =C2=A0 =C2=A0return result;
->      > +}
->      > +
->      > +static inline u16 tpm_read16(struct tpm_chip *chip, u32 addr)
->      > +{
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_drvdata=
-(&chip->dev);
->      > +
->      > +=C2=A0 =C2=A0 =C2=A0return priv->phy_ops->read16(chip, addr);
->      > +}
->      > +
->      > +static inline u32 tpm_read32(struct tpm_chip *chip, u32 addr)
->      > +{
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_drvdata=
-(&chip->dev);
->      > +
->      > +=C2=A0 =C2=A0 =C2=A0return priv->phy_ops->read32(chip, addr);
->      > +}
->      > +
->      > +static inline void tpm_write_bytes(struct tpm_chip *chip, u32 add=
-r,
->      u16 len,
->      > +=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 u8 *value)
->      > +{
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_drvdata=
-(&chip->dev);
->      > +
->      > +=C2=A0 =C2=A0 =C2=A0priv->phy_ops->write_bytes(chip, addr, len, v=
-alue);
->      > +}
->      > +
->      > +static inline void tpm_write8(struct tpm_chip *chip, u32 addr, u8
->      value)
->      > +{
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_drvdata=
-(&chip->dev);
->      > +
->      > +=C2=A0 =C2=A0 =C2=A0priv->phy_ops->write_bytes(chip, addr, 1, &va=
-lue);
->      > +}
->      > +
->      > +static inline void tpm_write32(struct tpm_chip *chip, u32 addr, u=
-32
->      value)
->      > +{
->      > +=C2=A0 =C2=A0 =C2=A0struct tpm_tis_data *priv =3D dev_get_drvdata=
-(&chip->dev);
->      > +
->      > +=C2=A0 =C2=A0 =C2=A0priv->phy_ops->write32(chip, addr, value);
->      > +}
->      > +
->      >=C2=A0 #endif
->      > --
->      > 2.1.4
->      >
-
----------------------------------------------------------------------------=
----
-Find and fix application performance issues faster with Applications Manager
-Applications Manager provides deep performance insights into multiple tiers=
- of
-your business applications. It resolves application problems quickly and
-reduces your MTTR. Get your free trial!
-https://ad.doubleclick.net/ddm/clk/302982198;130105516;z
+>     Stefan
+> 
+> >
+> >/Jarkko
+> >
+> >>Signed-off-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+> >>Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+> >>---
+> >>  drivers/char/tpm/tpm-chip.c      | 73 ++++++++++++++++++++++++++++------------
+> >>  drivers/char/tpm/tpm-interface.c |  7 ++--
+> >>  drivers/char/tpm/tpm-sysfs.c     | 61 ++++++++++++++-------------------
+> >>  drivers/char/tpm/tpm.h           | 10 +++---
+> >>  4 files changed, 84 insertions(+), 67 deletions(-)
+> >>
+> >>diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> >>index 5bc530c..7e2c9cf 100644
+> >>--- a/drivers/char/tpm/tpm-chip.c
+> >>+++ b/drivers/char/tpm/tpm-chip.c
+> >>@@ -170,9 +170,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
+> >>  	chip->dev.class = tpm_class;
+> >>  	chip->dev.release = tpm_dev_release;
+> >>  	chip->dev.parent = dev;
+> >>-#ifdef CONFIG_ACPI
+> >>  	chip->dev.groups = chip->groups;
+> >>-#endif
+> >>  	if (chip->dev_num == 0)
+> >>  		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
+> >>@@ -276,14 +274,10 @@ static void tpm_del_char_device(struct tpm_chip *chip)
+> >>  static int tpm1_chip_register(struct tpm_chip *chip)
+> >>  {
+> >>-	int rc;
+> >>-
+> >>  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> >>  		return 0;
+> >>-	rc = tpm_sysfs_add_device(chip);
+> >>-	if (rc)
+> >>-		return rc;
+> >>+	tpm_sysfs_add_device(chip);
+> >>  	chip->bios_dir = tpm_bios_log_setup(dev_name(&chip->dev));
+> >>@@ -297,10 +291,50 @@ static void tpm1_chip_unregister(struct tpm_chip *chip)
+> >>  	if (chip->bios_dir)
+> >>  		tpm_bios_log_teardown(chip->bios_dir);
+> >>+}
+> >>+
+> >>+static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
+> >>+{
+> >>+	struct attribute **i;
+> >>+
+> >>+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> >>+		return;
+> >>-	tpm_sysfs_del_device(chip);
+> >>+	sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
+> >>+
+> >>+	for (i = chip->groups[0]->attrs; *i != NULL; ++i)
+> >>+		sysfs_remove_link(&chip->dev.parent->kobj, (*i)->name);
+> >>  }
+> >>+/* For compatibility with legacy sysfs paths we provide symlinks from the
+> >>+ * parent dev directory to selected names within the tpm chip directory. Old
+> >>+ * kernel versions created these files directly under the parent.
+> >>+ */
+> >>+static int tpm_add_legacy_sysfs(struct tpm_chip *chip)
+> >>+{
+> >>+	struct attribute **i;
+> >>+	int rc;
+> >>+
+> >>+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> >>+		return 0;
+> >>+
+> >>+	rc = __compat_only_sysfs_link_entry_to_kobj(
+> >>+		    &chip->dev.parent->kobj, &chip->dev.kobj, "ppi");
+> >>+	if (rc && rc != -ENOENT)
+> >>+		return rc;
+> >>+
+> >>+	/* All the names from tpm-sysfs */
+> >>+	for (i = chip->groups[0]->attrs; *i != NULL; ++i) {
+> >>+		rc = __compat_only_sysfs_link_entry_to_kobj(
+> >>+		    &chip->dev.parent->kobj, &chip->dev.kobj, (*i)->name);
+> >>+		if (rc) {
+> >>+			tpm_del_legacy_sysfs(chip);
+> >>+			return rc;
+> >>+		}
+> >>+	}
+> >>+
+> >>+	return 0;
+> >>+}
+> >>  /*
+> >>   * tpm_chip_register() - create a character device for the TPM chip
+> >>   * @chip: TPM chip to use.
+> >>@@ -323,24 +357,20 @@ int tpm_chip_register(struct tpm_chip *chip)
+> >>  	tpm_add_ppi(chip);
+> >>  	rc = tpm_add_char_device(chip);
+> >>-	if (rc)
+> >>-		goto out_err;
+> >>+	if (rc) {
+> >>+		tpm1_chip_unregister(chip);
+> >>+		return rc;
+> >>+	}
+> >>  	chip->flags |= TPM_CHIP_FLAG_REGISTERED;
+> >>-	if (!(chip->flags & TPM_CHIP_FLAG_TPM2)) {
+> >>-		rc = __compat_only_sysfs_link_entry_to_kobj(
+> >>-		    &chip->dev.parent->kobj, &chip->dev.kobj, "ppi");
+> >>-		if (rc && rc != -ENOENT) {
+> >>-			tpm_chip_unregister(chip);
+> >>-			return rc;
+> >>-		}
+> >>+	rc = tpm_add_legacy_sysfs(chip);
+> >>+	if (rc) {
+> >>+		tpm_chip_unregister(chip);
+> >>+		return rc;
+> >>  	}
+> >>  	return 0;
+> >>-out_err:
+> >>-	tpm1_chip_unregister(chip);
+> >>-	return rc;
+> >>  }
+> >>  EXPORT_SYMBOL_GPL(tpm_chip_register);
+> >>@@ -362,8 +392,7 @@ void tpm_chip_unregister(struct tpm_chip *chip)
+> >>  	if (!(chip->flags & TPM_CHIP_FLAG_REGISTERED))
+> >>  		return;
+> >>-	if (!(chip->flags & TPM_CHIP_FLAG_TPM2))
+> >>-		sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
+> >>+	tpm_del_legacy_sysfs(chip);
+> >>  	tpm1_chip_unregister(chip);
+> >>  	tpm_del_char_device(chip);
+> >>diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> >>index 7cba092..080dade 100644
+> >>--- a/drivers/char/tpm/tpm-interface.c
+> >>+++ b/drivers/char/tpm/tpm-interface.c
+> >>@@ -432,12 +432,11 @@ static const struct tpm_input_header tpm_getcap_header = {
+> >>  	.ordinal = TPM_ORD_GET_CAP
+> >>  };
+> >>-ssize_t tpm_getcap(struct device *dev, __be32 subcap_id, cap_t *cap,
+> >>+ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
+> >>  		   const char *desc)
+> >>  {
+> >>  	struct tpm_cmd_t tpm_cmd;
+> >>  	int rc;
+> >>-	struct tpm_chip *chip = dev_get_drvdata(dev);
+> >>  	tpm_cmd.header.in = tpm_getcap_header;
+> >>  	if (subcap_id == CAP_VERSION_1_1 || subcap_id == CAP_VERSION_1_2) {
+> >>@@ -935,7 +934,7 @@ static struct tpm_input_header savestate_header = {
+> >>   */
+> >>  int tpm_pm_suspend(struct device *dev)
+> >>  {
+> >>-	struct tpm_chip *chip = dev_get_drvdata(dev);
+> >>+	struct tpm_chip *chip = to_tpm_chip(dev);
+> >>  	struct tpm_cmd_t cmd;
+> >>  	int rc, try;
+> >>@@ -996,7 +995,7 @@ EXPORT_SYMBOL_GPL(tpm_pm_suspend);
+> >>   */
+> >>  int tpm_pm_resume(struct device *dev)
+> >>  {
+> >>-	struct tpm_chip *chip = dev_get_drvdata(dev);
+> >>+	struct tpm_chip *chip = to_tpm_chip(dev);
+> >>  	if (chip == NULL)
+> >>  		return -ENODEV;
+> >>diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+> >>index a7c3473..b46cf70 100644
+> >>--- a/drivers/char/tpm/tpm-sysfs.c
+> >>+++ b/drivers/char/tpm/tpm-sysfs.c
+> >>@@ -36,7 +36,7 @@ static ssize_t pubek_show(struct device *dev, struct device_attribute *attr,
+> >>  	int i, rc;
+> >>  	char *str = buf;
+> >>-	struct tpm_chip *chip = dev_get_drvdata(dev);
+> >>+	struct tpm_chip *chip = to_tpm_chip(dev);
+> >>  	tpm_cmd.header.in = tpm_readpubek_header;
+> >>  	err = tpm_transmit_cmd(chip, &tpm_cmd, READ_PUBEK_RESULT_SIZE,
+> >>@@ -92,9 +92,9 @@ static ssize_t pcrs_show(struct device *dev, struct device_attribute *attr,
+> >>  	ssize_t rc;
+> >>  	int i, j, num_pcrs;
+> >>  	char *str = buf;
+> >>-	struct tpm_chip *chip = dev_get_drvdata(dev);
+> >>+	struct tpm_chip *chip = to_tpm_chip(dev);
+> >>-	rc = tpm_getcap(dev, TPM_CAP_PROP_PCR, &cap,
+> >>+	rc = tpm_getcap(chip, TPM_CAP_PROP_PCR, &cap,
+> >>  			"attempting to determine the number of PCRS");
+> >>  	if (rc)
+> >>  		return 0;
+> >>@@ -119,8 +119,8 @@ static ssize_t enabled_show(struct device *dev, struct device_attribute *attr,
+> >>  	cap_t cap;
+> >>  	ssize_t rc;
+> >>-	rc = tpm_getcap(dev, TPM_CAP_FLAG_PERM, &cap,
+> >>-			 "attempting to determine the permanent enabled state");
+> >>+	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_FLAG_PERM, &cap,
+> >>+			"attempting to determine the permanent enabled state");
+> >>  	if (rc)
+> >>  		return 0;
+> >>@@ -135,8 +135,8 @@ static ssize_t active_show(struct device *dev, struct device_attribute *attr,
+> >>  	cap_t cap;
+> >>  	ssize_t rc;
+> >>-	rc = tpm_getcap(dev, TPM_CAP_FLAG_PERM, &cap,
+> >>-			 "attempting to determine the permanent active state");
+> >>+	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_FLAG_PERM, &cap,
+> >>+			"attempting to determine the permanent active state");
+> >>  	if (rc)
+> >>  		return 0;
+> >>@@ -151,8 +151,8 @@ static ssize_t owned_show(struct device *dev, struct device_attribute *attr,
+> >>  	cap_t cap;
+> >>  	ssize_t rc;
+> >>-	rc = tpm_getcap(dev, TPM_CAP_PROP_OWNER, &cap,
+> >>-			 "attempting to determine the owner state");
+> >>+	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_PROP_OWNER, &cap,
+> >>+			"attempting to determine the owner state");
+> >>  	if (rc)
+> >>  		return 0;
+> >>@@ -167,8 +167,8 @@ static ssize_t temp_deactivated_show(struct device *dev,
+> >>  	cap_t cap;
+> >>  	ssize_t rc;
+> >>-	rc = tpm_getcap(dev, TPM_CAP_FLAG_VOL, &cap,
+> >>-			 "attempting to determine the temporary state");
+> >>+	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_FLAG_VOL, &cap,
+> >>+			"attempting to determine the temporary state");
+> >>  	if (rc)
+> >>  		return 0;
+> >>@@ -180,11 +180,12 @@ static DEVICE_ATTR_RO(temp_deactivated);
+> >>  static ssize_t caps_show(struct device *dev, struct device_attribute *attr,
+> >>  			 char *buf)
+> >>  {
+> >>+	struct tpm_chip *chip = to_tpm_chip(dev);
+> >>  	cap_t cap;
+> >>  	ssize_t rc;
+> >>  	char *str = buf;
+> >>-	rc = tpm_getcap(dev, TPM_CAP_PROP_MANUFACTURER, &cap,
+> >>+	rc = tpm_getcap(chip, TPM_CAP_PROP_MANUFACTURER, &cap,
+> >>  			"attempting to determine the manufacturer");
+> >>  	if (rc)
+> >>  		return 0;
+> >>@@ -192,8 +193,8 @@ static ssize_t caps_show(struct device *dev, struct device_attribute *attr,
+> >>  		       be32_to_cpu(cap.manufacturer_id));
+> >>  	/* Try to get a TPM version 1.2 TPM_CAP_VERSION_INFO */
+> >>-	rc = tpm_getcap(dev, CAP_VERSION_1_2, &cap,
+> >>-			 "attempting to determine the 1.2 version");
+> >>+	rc = tpm_getcap(chip, CAP_VERSION_1_2, &cap,
+> >>+			"attempting to determine the 1.2 version");
+> >>  	if (!rc) {
+> >>  		str += sprintf(str,
+> >>  			       "TCG version: %d.%d\nFirmware version: %d.%d\n",
+> >>@@ -203,7 +204,7 @@ static ssize_t caps_show(struct device *dev, struct device_attribute *attr,
+> >>  			       cap.tpm_version_1_2.revMinor);
+> >>  	} else {
+> >>  		/* Otherwise just use TPM_STRUCT_VER */
+> >>-		rc = tpm_getcap(dev, CAP_VERSION_1_1, &cap,
+> >>+		rc = tpm_getcap(chip, CAP_VERSION_1_1, &cap,
+> >>  				"attempting to determine the 1.1 version");
+> >>  		if (rc)
+> >>  			return 0;
+> >>@@ -222,7 +223,7 @@ static DEVICE_ATTR_RO(caps);
+> >>  static ssize_t cancel_store(struct device *dev, struct device_attribute *attr,
+> >>  			    const char *buf, size_t count)
+> >>  {
+> >>-	struct tpm_chip *chip = dev_get_drvdata(dev);
+> >>+	struct tpm_chip *chip = to_tpm_chip(dev);
+> >>  	if (chip == NULL)
+> >>  		return 0;
+> >>@@ -234,7 +235,7 @@ static DEVICE_ATTR_WO(cancel);
+> >>  static ssize_t durations_show(struct device *dev, struct device_attribute *attr,
+> >>  			      char *buf)
+> >>  {
+> >>-	struct tpm_chip *chip = dev_get_drvdata(dev);
+> >>+	struct tpm_chip *chip = to_tpm_chip(dev);
+> >>  	if (chip->duration[TPM_LONG] == 0)
+> >>  		return 0;
+> >>@@ -251,7 +252,7 @@ static DEVICE_ATTR_RO(durations);
+> >>  static ssize_t timeouts_show(struct device *dev, struct device_attribute *attr,
+> >>  			     char *buf)
+> >>  {
+> >>-	struct tpm_chip *chip = dev_get_drvdata(dev);
+> >>+	struct tpm_chip *chip = to_tpm_chip(dev);
+> >>  	return sprintf(buf, "%d %d %d %d [%s]\n",
+> >>  		       jiffies_to_usecs(chip->timeout_a),
+> >>@@ -281,24 +282,12 @@ static const struct attribute_group tpm_dev_group = {
+> >>  	.attrs = tpm_dev_attrs,
+> >>  };
+> >>-int tpm_sysfs_add_device(struct tpm_chip *chip)
+> >>+void tpm_sysfs_add_device(struct tpm_chip *chip)
+> >>  {
+> >>-	int err;
+> >>-	err = sysfs_create_group(&chip->dev.parent->kobj,
+> >>-				 &tpm_dev_group);
+> >>-
+> >>-	if (err)
+> >>-		dev_err(&chip->dev,
+> >>-			"failed to create sysfs attributes, %d\n", err);
+> >>-	return err;
+> >>-}
+> >>-
+> >>-void tpm_sysfs_del_device(struct tpm_chip *chip)
+> >>-{
+> >>-	/* The sysfs routines rely on an implicit tpm_try_get_ops, this
+> >>-	 * function is called before ops is null'd and the sysfs core
+> >>-	 * synchronizes this removal so that no callbacks are running or can
+> >>-	 * run again
+> >>+	/* The sysfs routines rely on an implicit tpm_try_get_ops, device_del
+> >>+	 * is called before ops is null'd and the sysfs core synchronizes this
+> >>+	 * removal so that no callbacks are running or can run again
+> >>  	 */
+> >>-	sysfs_remove_group(&chip->dev.parent->kobj, &tpm_dev_group);
+> >>+	WARN_ON(chip->groups_cnt != 0);
+> >>+	chip->groups[chip->groups_cnt++] = &tpm_dev_group;
+> >>  }
+> >>diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> >>index 8bc6fb8..508e8e0 100644
+> >>--- a/drivers/char/tpm/tpm.h
+> >>+++ b/drivers/char/tpm/tpm.h
+> >>@@ -168,9 +168,9 @@ struct tpm_chip {
+> >>  	struct dentry **bios_dir;
+> >>-#ifdef CONFIG_ACPI
+> >>-	const struct attribute_group *groups[2];
+> >>+	const struct attribute_group *groups[3];
+> >>  	unsigned int groups_cnt;
+> >>+#ifdef CONFIG_ACPI
+> >>  	acpi_handle acpi_dev_handle;
+> >>  	char ppi_version[TPM_PPI_VERSION_LEN + 1];
+> >>  #endif /* CONFIG_ACPI */
+> >>@@ -471,7 +471,8 @@ extern dev_t tpm_devt;
+> >>  extern const struct file_operations tpm_fops;
+> >>  extern struct idr dev_nums_idr;
+> >>-ssize_t	tpm_getcap(struct device *, __be32, cap_t *, const char *);
+> >>+ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
+> >>+		   const char *desc);
+> >>  ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
+> >>  		     size_t bufsiz);
+> >>  ssize_t tpm_transmit_cmd(struct tpm_chip *chip, void *cmd, int len,
+> >>@@ -496,8 +497,7 @@ extern struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
+> >>  extern int tpm_chip_register(struct tpm_chip *chip);
+> >>  extern void tpm_chip_unregister(struct tpm_chip *chip);
+> >>-int tpm_sysfs_add_device(struct tpm_chip *chip);
+> >>-void tpm_sysfs_del_device(struct tpm_chip *chip);
+> >>+void tpm_sysfs_add_device(struct tpm_chip *chip);
+> >>  int tpm_pcr_read_dev(struct tpm_chip *chip, int pcr_idx, u8 *res_buf);
+> >>-- 
+> >>2.4.3
+> >>
+> 
