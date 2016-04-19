@@ -1,112 +1,176 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm_crb: fix mapping of the buffers
-Date: Tue, 19 Apr 2016 13:00:27 +0300
-Message-ID: <20160419100027.GA10080@intel.com>
-References: <1461059658-8884-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re:
+ 0001-added-tpm-2.0-support-to-nuvoton-i2c-driver.patch
+Date: Tue, 19 Apr 2016 13:02:03 +0300
+Message-ID: <20160419100203.GB10080@intel.com>
+References: <20160419050442.7048840F8@taln70.nuvoton.co.il>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="iso-8859-1"
+Content-Transfer-Encoding: quoted-printable
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1461059658-8884-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Peter Huewe <peterhuewe@gmx.de>
-Cc: linux-security-module@vger.kernel.org, stable@vger.kernel.org, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+In-Reply-To: <20160419050442.7048840F8-1UdtCKOZWuXOzY7siszIiwMMGMOHi2eC@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: "Andrew Zamansky (NTIL)" <Andrew.Zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+Cc: shmulik.hager-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, dan.morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, --@taln70.nuvoton.co.il
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Apr 19, 2016 at 12:54:18PM +0300, Jarkko Sakkinen wrote:
-> On my Lenovo x250 the following situation occurs:
-> 
-> [18697.813871] tpm_crb MSFT0101:00: can't request region for resource
-> [mem 0xacdff080-0xacdfffff]
-> 
-> The mapping of the control area overlaps the mapping of the command
-> buffer. The control area is mapped over page, which is not right. It
-> should mapped over sizeof(struct crb_control_area).
-> 
-> Fixing this issue unmasks another issue. Command and response buffers
-> can overlap and they do interleave on this machine. According to the PTP
-> specification the overlapping means that they are mapped to the same
-> buffer.
-> 
-> The commit has been also on a Haswell NUC where things worked before
-> applying this fix so that the both code paths for response buffer
-> initialization are tested.
-> 
-> Cc: stable@vger.kernel.org
-> Fixes: 1bd047be37d9 ("tpm_crb: Use devm_ioremap_resource")
-> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+On Tue, Apr 19, 2016 at 08:04:42AM +0300, Andrew Zamansky (NTIL) wrote:
+> >From b1503617a4c2b89f5a366a3d38b303b5de606c59 Mon Sep 17 00:00:00 2001
+> From: andrew azmansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+> Date: Thu, 7 Apr 2016 09:19:57 +0300
+> Subject: [PATCH 1/1] added tpm 2.0 support to nuvoton i2c driver
+> =
 
-Forgot to add --subject-prefix="PATCH v2", sorry.
+> add tpm 2.0 support to nuvoton i2c tpm driver
+> =
+
+> Signed-off-by: andrew azmansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+
+
+https://www.kernel.org/doc/Documentation/SubmittingPatches
 
 /Jarkko
 
 > ---
->  drivers/char/tpm/tpm_crb.c | 39 ++++++++++++++++++++++++++++-----------
->  1 file changed, 28 insertions(+), 11 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> index 733cd0e..5afe684 100644
-> --- a/drivers/char/tpm/tpm_crb.c
-> +++ b/drivers/char/tpm/tpm_crb.c
-> @@ -259,7 +259,10 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
->  	struct list_head resources;
->  	struct resource io_res;
->  	struct device *dev = &device->dev;
-> -	u64 pa;
-> +	u64 cmd_pa;
-> +	u32 cmd_size;
-> +	u64 rsp_pa;
-> +	u32 rsp_size;
->  	int ret;
->  
->  	INIT_LIST_HEAD(&resources);
-> @@ -280,22 +283,36 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
->  		return PTR_ERR(priv->iobase);
->  
->  	priv->cca = crb_map_res(dev, priv, &io_res, buf->control_address,
-> -				0x1000);
-> +				sizeof(struct crb_control_area));
->  	if (IS_ERR(priv->cca))
->  		return PTR_ERR(priv->cca);
->  
-> -	pa = ((u64) ioread32(&priv->cca->cmd_pa_high) << 32) |
-> -	      (u64) ioread32(&priv->cca->cmd_pa_low);
-> -	priv->cmd = crb_map_res(dev, priv, &io_res, pa,
-> -				ioread32(&priv->cca->cmd_size));
-> +	cmd_pa = ((u64) ioread32(&priv->cca->cmd_pa_high) << 32) |
-> +		  (u64) ioread32(&priv->cca->cmd_pa_low);
-> +	cmd_size = ioread32(&priv->cca->cmd_size);
-> +	priv->cmd = crb_map_res(dev, priv, &io_res, cmd_pa, cmd_size);
->  	if (IS_ERR(priv->cmd))
->  		return PTR_ERR(priv->cmd);
->  
-> -	memcpy_fromio(&pa, &priv->cca->rsp_pa, 8);
-> -	pa = le64_to_cpu(pa);
-> -	priv->rsp = crb_map_res(dev, priv, &io_res, pa,
-> -				ioread32(&priv->cca->rsp_size));
-> -	return PTR_ERR_OR_ZERO(priv->rsp);
-> +	memcpy_fromio(&rsp_pa, &priv->cca->rsp_pa, 8);
-> +	rsp_pa = le64_to_cpu(rsp_pa);
-> +	rsp_size = ioread32(&priv->cca->rsp_size);
-> +
-> +	if (cmd_pa != rsp_pa) {
-> +		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa, rsp_size);
-> +		return PTR_ERR_OR_ZERO(priv->rsp);
-> +	}
-> +
-> +	/* According to the PTP specification, overlapping command and response
-> +	 * buffer sizes must be identical.
-> +	 */
-> +	if (cmd_size != rsp_size) {
-> +		dev_err(dev, FW_BUG "overlapping command and response buffer sizes are not identical");
-> +		return -EINVAL;
-> +	}
-> +
-> +	priv->rsp = priv->cmd;
-> +	return 0;
+>  .../devicetree/bindings/i2c/trivial-devices.txt    |  1 +
+>  drivers/char/tpm/tpm_i2c_nuvoton.c                 | 25 ++++++++++++++++=
++++---
+>  2 files changed, 23 insertions(+), 3 deletions(-)
+> =
+
+> diff --git a/Documentation/devicetree/bindings/i2c/trivial-devices.txt b/=
+Documentation/devicetree/bindings/i2c/trivial-devices.txt
+> index 53987449..0a07cbc 100644
+> --- a/Documentation/devicetree/bindings/i2c/trivial-devices.txt
+> +++ b/Documentation/devicetree/bindings/i2c/trivial-devices.txt
+> @@ -62,6 +62,7 @@ national,lm80         Serial Interface ACPI-Compatible =
+Microprocessor System Hardware M
+>  national,lm85          Temperature sensor with integrated fan control
+>  national,lm92          =B10.33=B0C Accurate, 12-Bit + Sign Temperature S=
+ensor and Thermal Window Comparator with Two-Wire Interface
+>  nuvoton,npct501                i2c trusted platform module (TPM)
+> +nuvoton,npct6xx                i2c trusted platform module (TPM) 6xx ser=
+ies
+>  nxp,pca9556            Octal SMBus and I2C registered interface
+>  nxp,pca9557            8-bit I2C-bus and SMBus I/O port with reset
+>  nxp,pcf8563            Real-time clock/calendar
+> diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2=
+c_nuvoton.c
+> index 847f159..215a2b4 100644
+> --- a/drivers/char/tpm/tpm_i2c_nuvoton.c
+> +++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
+> @@ -1,5 +1,5 @@
+>  /***********************************************************************=
+*******
+> - * Nuvoton TPM I2C Device Driver Interface for WPCT301/NPCT501,
+> + * Nuvoton TPM I2C Device Driver Interface for WPCT301/NPCT501/NPCT6XX,
+>   * based on the TCG TPM Interface Spec version 1.2.
+>   * Specifications at www.trustedcomputinggroup.org
+>   *
+> @@ -163,7 +163,7 @@ static int i2c_nuvoton_get_burstcount(struct i2c_clie=
+nt *client,
 >  }
->  
->  static int crb_acpi_add(struct acpi_device *device)
-> -- 
-> 2.7.4
-> 
+> =
+
+>  /*
+> - * WPCT301/NPCT501 SINT# supports only dataAvail
+> + * WPCT301/NPCT501/NPCT6XX SINT# supports only dataAvail
+>   * any call to this function which is not waiting for dataAvail will
+>   * set queue to NULL to avoid waiting for interrupt
+>   */
+> @@ -601,10 +601,28 @@ static int i2c_nuvoton_probe(struct i2c_client *cli=
+ent,
+>                 }
+>         }
+> =
+
+> +       rc =3D tpm2_probe(chip);
+> +       if (rc)
+> +               return rc;
+> +
+>         if (tpm_get_timeouts(chip))
+>                 return -ENODEV;
+> =
+
+> -       if (tpm_do_selftest(chip))
+> +       if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+> +
+> +               rc =3D tpm2_do_selftest(chip);
+> +               if (rc =3D=3D TPM2_RC_INITIALIZE) {
+> +                       if (tpm2_startup(chip, TPM2_SU_CLEAR))
+> +                               return -ENODEV;
+> +
+> +                       rc =3D tpm2_do_selftest(chip);
+> +               }
+> +
+> +       } else {
+> +               rc =3D tpm_do_selftest(chip);
+> +       }
+> +
+> +       if (rc)
+>                 return -ENODEV;
+> =
+
+>         return tpm_chip_register(chip);
+> @@ -628,6 +646,7 @@ MODULE_DEVICE_TABLE(i2c, i2c_nuvoton_id);
+>  static const struct of_device_id i2c_nuvoton_of_match[] =3D {
+>         {.compatible =3D "nuvoton,npct501"},
+>         {.compatible =3D "winbond,wpct301"},
+> +       {.compatible =3D "nuvoton,npct6xx"},
+>         {},
+>  };
+>  MODULE_DEVICE_TABLE(of, i2c_nuvoton_of_match);
+> --
+> 1.9.1
+> =
+
+> =
+
+> =
+
+> =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
+> The privileged confidential information contained in this email is intend=
+ed for use only by the addressees as indicated by the original sender of th=
+is email. If you are not the addressee indicated in this email or are not r=
+esponsible for delivery of the email to such a person, please kindly reply =
+to the sender indicating this fact and delete all copies of it from your co=
+mputer and network server immediately. Your cooperation is highly appreciat=
+ed. It is advised that any unauthorized use of confidential information of =
+Nuvoton is strictly prohibited; and any information in this email irrelevan=
+t to the official business of Nuvoton shall be deemed as neither given nor =
+endorsed by Nuvoton.
+> =
+
+> -------------------------------------------------------------------------=
+-----
+> Find and fix application performance issues faster with Applications Mana=
+ger
+> Applications Manager provides deep performance insights into multiple tie=
+rs of
+> your business applications. It resolves application problems quickly and
+> reduces your MTTR. Get your free trial!
+> https://ad.doubleclick.net/ddm/clk/302982198;130105516;z
+> _______________________________________________
+> tpmdd-devel mailing list
+> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+
+---------------------------------------------------------------------------=
+---
+Find and fix application performance issues faster with Applications Manager
+Applications Manager provides deep performance insights into multiple tiers=
+ of
+your business applications. It resolves application problems quickly and
+reduces your MTTR. Get your free trial!
+https://ad.doubleclick.net/ddm/clk/302982198;130105516;z
