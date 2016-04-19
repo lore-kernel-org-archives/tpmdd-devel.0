@@ -1,70 +1,60 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm_crb: fix mapping of the buffers
-Date: Tue, 19 Apr 2016 21:47:58 +0300
-Message-ID: <20160419184758.GA13115@intel.com>
-References: <1461059658-8884-1-git-send-email-jarkko.sakkinen@linux.intel.com>
- <20160419170953.GB20844@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v4 04/12] tpm_tis: Introduce intermediate
+ layer for TPM access
+Date: Tue, 19 Apr 2016 21:56:05 +0300
+Message-ID: <20160419185605.GB13115@intel.com>
+References: <1461017864-3903-1-git-send-email-christophe-h.ricard@st.com>
+	<1461017864-3903-5-git-send-email-christophe-h.ricard@st.com>
+	<20160419130747.GC4796@intel.com>
+	<CALD+uuxbqVYrPxpAz2gZo5+5hu+Yagt4XkinJUXfZm3fztfKLw@mail.gmail.com>
+	<20160419171625.GA11619@intel.com>
+	<20160419173934.GA26460@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160419170953.GB20844@obsidianresearch.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, linux-security-module@vger.kernel.org, stable@vger.kernel.org, Marcel Selhorst <tpmdd@selhorst.net>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+In-Reply-To: <20160419173934.GA26460-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, "ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org" <ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org>, Jean-Luc BLANC <jean-luc.blanc-qxv4g6HH51o@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, Christophe RICARD <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>, Benoit HOUYERE <benoit.houyere-qxv4g6HH51o@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Apr 19, 2016 at 11:09:53AM -0600, Jason Gunthorpe wrote:
-> On Tue, Apr 19, 2016 at 12:54:18PM +0300, Jarkko Sakkinen wrote:
-> > Cc: stable@vger.kernel.org
-> > Fixes: 1bd047be37d9 ("tpm_crb: Use devm_ioremap_resource")
-> > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-> >  drivers/char/tpm/tpm_crb.c | 39 ++++++++++++++++++++++++++++-----------
-> >  1 file changed, 28 insertions(+), 11 deletions(-)
+On Tue, Apr 19, 2016 at 11:39:34AM -0600, Jason Gunthorpe wrote:
+> On Tue, Apr 19, 2016 at 08:16:25PM +0300, Jarkko Sakkinen wrote:
+> > On Tue, Apr 19, 2016 at 03:20:25PM +0200, Christophe Ricard wrote:
+> > >    Hi Jarkko,
+> > > 
+> > >    Do you thing tpm_tis.c should be renamed tpm_tis_tcg.c as well ?
+> > 
+> > Yeah.
+> > 
+> > I would structure things like this:
+> > 
+> > * tpm_tis.ko (core stuff)
+> > * tpm_tis_tcg.ko
+> > * tpm_tis_spi.ko
+> > * ...
 > 
-> This looks OK
-> 
-> Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+> No. We shouldn't change the module name for the LPC driver, that
+> breaks the uAPI in a visible way.
 
-Thanks!
-
-> > +	if (cmd_pa != rsp_pa) {
-> > +		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa, rsp_size);
-> > +		return PTR_ERR_OR_ZERO(priv->rsp);
-> > +	}
-> 
-> I would use an else here, 'exit on success' is considered an
-> anti-pattern.
-
-> Eg:
-> 
-> if (cmd_pa == rsp_pa) {
-> 	/* According to the PTP specification, overlapping command and response
-> 	 * buffer sizes must be identical.
-> 	 */
-> 	if (cmd_size != rsp_size) {
-> 		dev_err(dev, FW_BUG "overlapping command and response buffer sizes are not identical");
-> 		return -EINVAL;
-> 	}
-> 	priv->rsp = priv->cmd;
-> }
-> else {
-> 	priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa, rsp_size);
->         if (IS_ERR(priv->rsp))
-> 	   	return PTR_ERR(priv->rsp);
-> }
-> 
-> return 0;
-
-I have to (in order to do right things right):
-
-1. Update the patch.
-2. Smoke test with the machines that I have.
-3. Send a new version for review (because of the revamped control flow).
-
-It's not that I wouldn't be willing to do this. I just don't think
-this matters enough to be worth of the trouble.
+Right. Lets keep the filename also as tpm_tis.c then...
 
 > Jason
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Find and fix application performance issues faster with Applications Manager
+Applications Manager provides deep performance insights into multiple tiers of
+your business applications. It resolves application problems quickly and
+reduces your MTTR. Get your free trial!
+https://ad.doubleclick.net/ddm/clk/302982198;130105516;z
