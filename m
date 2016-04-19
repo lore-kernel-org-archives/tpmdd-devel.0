@@ -1,173 +1,138 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm_crb: fix mapping of the buffers
-Date: Tue, 19 Apr 2016 07:59:24 +0300
-Message-ID: <20160419045924.GA10220@intel.com>
-References: <1461020880-10914-1-git-send-email-jarkko.sakkinen@linux.intel.com>
- <20160418233457.GA20319@obsidianresearch.com>
+From: "Andrew Zamansky (NTIL)" <Andrew.Zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+Subject: 0001-added-tpm-2.0-support-to-nuvoton-i2c-driver.patch
+Date: Tue, 19 Apr 2016 08:04:42 +0300
+Message-ID: <20160419050442.7048840F8@taln70.nuvoton.co.il>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20160418233457.GA20319@obsidianresearch.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, linux-security-module@vger.kernel.org, stable@vger.kernel.org, Marcel Selhorst <tpmdd@selhorst.net>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="iso-8859-1"
+Content-Transfer-Encoding: quoted-printable
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, --@taln70.nuvoton.co.ilandrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, shmulik.hager-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, dan.morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org, peterhuewe-Mmb7MZpHnFY@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Apr 18, 2016 at 05:34:57PM -0600, Jason Gunthorpe wrote:
-> On Tue, Apr 19, 2016 at 02:08:00AM +0300, Jarkko Sakkinen wrote:
-> > On my Lenovo x250 the following situation occurs:
-> > 
-> > [18697.813871] tpm_crb MSFT0101:00: can't request region for resource
-> > [mem 0xacdff080-0xacdfffff]
-> 
-> Sigh, the BIOS vendors seem to be screwing this up a lot.. No doubt
-> because the spec doesn't really say what to do very well...
-> 
-> > The mapping of the control area interleaves the mapping of the command
-> > buffer. The control area is mapped over page, which is not right. It
-> > should mapped over sizeof(struct crb_control_area).
-> 
-> Good
-> 
-> > Fixing this issue unmasks another issue. Command and response buffers
-> > can interleave and they do interleave on this machine.
-> 
-> Do they 100% overlap because one is 'read' and the other is 'write'?
+>From b1503617a4c2b89f5a366a3d38b303b5de606c59 Mon Sep 17 00:00:00 2001
+From: andrew azmansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+Date: Thu, 7 Apr 2016 09:19:57 +0300
+Subject: [PATCH 1/1] added tpm 2.0 support to nuvoton i2c driver
 
-100% so it is kind of sane configuration.
+add tpm 2.0 support to nuvoton i2c tpm driver
 
-> Or did the BIOS guys screw up the length of one of the regions, and
-> they were supposed to be back to back? In which case it is just luck
-> this proposed patch solves the issue :(
-> 
-> The request_io stuff is there specifically to prevent two peices of
-> code from trying to control the same registers, I'm really reluctant to
-> work-around it like this, though granted, crazy BIOS is a fine good reason.
-> 
-> Is this patch below enough to deal with it sanely?
-> 
-> If you do stick with this then:
-> 
-> > -static void __iomem *crb_map_res(struct device *dev, struct crb_priv *priv,
-> > -				 struct resource *io_res, u64 start, u32 size)
-> > +static int crb_map_res(struct device *dev, struct crb_priv *priv,
-> > +		       int res_i, u64 start, u32 size)
-> 
-> I wouldn't change the signature at all, just add a counter to the priv and
-> 'append to the list'
-> 
-> This change is creating a lot of needless churn which is not good at
-> all for the stable rules.
-> 
-> Removing the pointer return is not an improvement..
+Signed-off-by: andrew azmansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+---
+ .../devicetree/bindings/i2c/trivial-devices.txt    |  1 +
+ drivers/char/tpm/tpm_i2c_nuvoton.c                 | 25 ++++++++++++++++++=
++---
+ 2 files changed, 23 insertions(+), 3 deletions(-)
 
-Point taken but then it is better to make the fix even more localized. If
-the physical addresses are equal, check the buffer sizes for sanity.
-If they are not equal, emit FW_BUG and return -EINVAL.
+diff --git a/Documentation/devicetree/bindings/i2c/trivial-devices.txt b/Do=
+cumentation/devicetree/bindings/i2c/trivial-devices.txt
+index 53987449..0a07cbc 100644
+--- a/Documentation/devicetree/bindings/i2c/trivial-devices.txt
++++ b/Documentation/devicetree/bindings/i2c/trivial-devices.txt
+@@ -62,6 +62,7 @@ national,lm80         Serial Interface ACPI-Compatible Mi=
+croprocessor System Hardware M
+ national,lm85          Temperature sensor with integrated fan control
+ national,lm92          =B10.33=B0C Accurate, 12-Bit + Sign Temperature Sen=
+sor and Thermal Window Comparator with Two-Wire Interface
+ nuvoton,npct501                i2c trusted platform module (TPM)
++nuvoton,npct6xx                i2c trusted platform module (TPM) 6xx series
+ nxp,pca9556            Octal SMBus and I2C registered interface
+ nxp,pca9557            8-bit I2C-bus and SMBus I/O port with reset
+ nxp,pcf8563            Real-time clock/calendar
+diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_=
+nuvoton.c
+index 847f159..215a2b4 100644
+--- a/drivers/char/tpm/tpm_i2c_nuvoton.c
++++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
+@@ -1,5 +1,5 @@
+ /*************************************************************************=
+*****
+- * Nuvoton TPM I2C Device Driver Interface for WPCT301/NPCT501,
++ * Nuvoton TPM I2C Device Driver Interface for WPCT301/NPCT501/NPCT6XX,
+  * based on the TCG TPM Interface Spec version 1.2.
+  * Specifications at www.trustedcomputinggroup.org
+  *
+@@ -163,7 +163,7 @@ static int i2c_nuvoton_get_burstcount(struct i2c_client=
+ *client,
+ }
 
-I'll send an updated patch after I've done all testing rounds with my
-laptop and Haswell NUC.
+ /*
+- * WPCT301/NPCT501 SINT# supports only dataAvail
++ * WPCT301/NPCT501/NPCT6XX SINT# supports only dataAvail
+  * any call to this function which is not waiting for dataAvail will
+  * set queue to NULL to avoid waiting for interrupt
+  */
+@@ -601,10 +601,28 @@ static int i2c_nuvoton_probe(struct i2c_client *clien=
+t,
+                }
+        }
 
-/Jarkko
++       rc =3D tpm2_probe(chip);
++       if (rc)
++               return rc;
++
+        if (tpm_get_timeouts(chip))
+                return -ENODEV;
 
-> >  {
-> > +	u8 __iomem *ptr;
-> > +	int i;
-> > +
-> >  	struct resource new_res = {
-> >  		.start	= start,
-> >  		.end	= start + size - 1,
-> > @@ -245,12 +257,25 @@ static void __iomem *crb_map_res(struct device *dev, struct crb_priv *priv,
-> >  
-> >  	/* Detect a 64 bit address on a 32 bit system */
-> >  	if (start != new_res.start)
-> > -		return ERR_PTR(-EINVAL);
-> > +		return -EINVAL;
-> >  
-> > -	if (!resource_contains(io_res, &new_res))
-> > -		return devm_ioremap_resource(dev, &new_res);
-> > +	for (i = 0; i < CRB_NR_RESOURCES; i++) {
-> > +		if (resource_contains(&priv->res[i], &new_res)) {
-> > +			priv->res[res_i] = new_res;
-> > +			priv->res_ptr[res_i] = priv->res_ptr[i] +
-> > +				(new_res.start - priv->res[i].start);
-> > +			return 0;
-> > +		}
-> > +	}
-> 
-> 
-> Just add:
-> 
->    id = priv->num_res++;
->    priv->res[id] = *io_res;
->    priv->res_ptr[id] = priv->iobase + (new_res.start  - io_res->start);
->    return priv->res_ptr[id];
-> 
-> And drop all the other hunks, except for the sizeof change and the
-> above loop.
-> 
-> Maybe print a FW bug if it overlaps with id != 0, that is just
-> crazy beans.
-> 
-> Jason
-> 
-> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> index 20155d55a62b..0a87c813d004 100644
-> --- a/drivers/char/tpm/tpm_crb.c
-> +++ b/drivers/char/tpm/tpm_crb.c
-> @@ -253,7 +253,7 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
->  	struct list_head resources;
->  	struct resource io_res;
->  	struct device *dev = &device->dev;
-> -	u64 pa;
-> +	u64 cmd_pa,rsp_pa;
->  	int ret;
->  
->  	INIT_LIST_HEAD(&resources);
-> @@ -274,22 +274,33 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
->  		return PTR_ERR(priv->iobase);
->  
->  	priv->cca = crb_map_res(dev, priv, &io_res, buf->control_address,
-> -				0x1000);
-> +				sizeof(*priv->cca));
->  	if (IS_ERR(priv->cca))
->  		return PTR_ERR(priv->cca);
->  
-> -	pa = ((u64) ioread32(&priv->cca->cmd_pa_high) << 32) |
-> -	      (u64) ioread32(&priv->cca->cmd_pa_low);
-> -	priv->cmd = crb_map_res(dev, priv, &io_res, pa,
-> -				ioread32(&priv->cca->cmd_size));
-> -	if (IS_ERR(priv->cmd))
-> -		return PTR_ERR(priv->cmd);
-> -
-> +	cmd_pa = ((u64) ioread32(&priv->cca->cmd_pa_high) << 32) |
-> +		(u64) ioread32(&priv->cca->cmd_pa_low);
->  	memcpy_fromio(&pa, &priv->cca->rsp_pa, 8);
-> -	pa = le64_to_cpu(pa);
-> -	priv->rsp = crb_map_res(dev, priv, &io_res, pa,
-> -				ioread32(&priv->cca->rsp_size));
-> -	return PTR_ERR_OR_ZERO(priv->rsp);
-> +	rsp_pa = le64_to_cpu(pa);
-> +
-> +	if (cmd_pa == rsp_pa) {
-> +		u32 len = max_t(size_t,ioread32(&priv->cca->cmd_size),
-> +				   ioread32(&priv->cca->rsp_size));
-> +		priv->cmd = crb_map_res(dev, priv, &io_res, cmd_pa, len);
-> +		if (IS_ERR(priv->cmd))
-> +			return PTR_ERR(priv->cmd);
-> +		priv->rsp = priv->cmd;
-> +	} else {
-> +		priv->cmd = crb_map_res(dev, priv, &io_res, cmd_pa,
-> +					ioread32(&priv->cca->rsp_size));
-> +		if (IS_ERR(priv->cmd))
-> +			return PTR_ERR(priv->cmd);
-> +		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa,
-> +					ioread32(&priv->cca->rsp_size));
-> +		if (IS_ERR(priv->rsp))
-> +			return PTR_ERR(priv->rsp);
-> +	}
-> +	return 0;
->  }
->  
->  static int crb_acpi_add(struct acpi_device *device)
+-       if (tpm_do_selftest(chip))
++       if (chip->flags & TPM_CHIP_FLAG_TPM2) {
++
++               rc =3D tpm2_do_selftest(chip);
++               if (rc =3D=3D TPM2_RC_INITIALIZE) {
++                       if (tpm2_startup(chip, TPM2_SU_CLEAR))
++                               return -ENODEV;
++
++                       rc =3D tpm2_do_selftest(chip);
++               }
++
++       } else {
++               rc =3D tpm_do_selftest(chip);
++       }
++
++       if (rc)
+                return -ENODEV;
+
+        return tpm_chip_register(chip);
+@@ -628,6 +646,7 @@ MODULE_DEVICE_TABLE(i2c, i2c_nuvoton_id);
+ static const struct of_device_id i2c_nuvoton_of_match[] =3D {
+        {.compatible =3D "nuvoton,npct501"},
+        {.compatible =3D "winbond,wpct301"},
++       {.compatible =3D "nuvoton,npct6xx"},
+        {},
+ };
+ MODULE_DEVICE_TABLE(of, i2c_nuvoton_of_match);
+--
+1.9.1
+
+
+
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
+The privileged confidential information contained in this email is intended=
+ for use only by the addressees as indicated by the original sender of this=
+ email. If you are not the addressee indicated in this email or are not res=
+ponsible for delivery of the email to such a person, please kindly reply to=
+ the sender indicating this fact and delete all copies of it from your comp=
+uter and network server immediately. Your cooperation is highly appreciated=
+. It is advised that any unauthorized use of confidential information of Nu=
+voton is strictly prohibited; and any information in this email irrelevant =
+to the official business of Nuvoton shall be deemed as neither given nor en=
+dorsed by Nuvoton.
+
+---------------------------------------------------------------------------=
+---
+Find and fix application performance issues faster with Applications Manager
+Applications Manager provides deep performance insights into multiple tiers=
+ of
+your business applications. It resolves application problems quickly and
+reduces your MTTR. Get your free trial!
+https://ad.doubleclick.net/ddm/clk/302982198;130105516;z
