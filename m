@@ -1,14 +1,16 @@
-From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v5 6/8] tpm/tpm_tis: Split tpm_tis driver into
-	a core and TCG TIS compliant phy
-Date: Fri, 22 Apr 2016 00:04:41 +0200
-Message-ID: <1461276283-2453-7-git-send-email-christophe-h.ricard@st.com>
-References: <1461276283-2453-1-git-send-email-christophe-h.ricard@st.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v11 1/4] tpm: Remove all uses of drvdata
+	from the TPM Core
+Date: Fri, 22 Apr 2016 18:06:45 +0300
+Message-ID: <20160422150645.GA21128@intel.com>
+References: <1461000376-2888-1-git-send-email-stefanb@linux.vnet.ibm.com>
+	<1461000376-2888-2-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1461276283-2453-1-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <1461000376-2888-2-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,2057 +19,411 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
-Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>, benoit.houyere-qxv4g6HH51o@public.gmane.org
+To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-To avoid code duplication between the old tpm_tis and the new and future
-native tcg tis driver(ie: spi, i2c...), the tpm_tis driver was reworked,
-so that all common logic is extracted and can be reused from all drivers.
+On Mon, Apr 18, 2016 at 01:26:13PM -0400, Stefan Berger wrote:
+> From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> 
+> The final thing preventing this was the way the sysfs files were
+> attached to the pdev. Follow the approach developed for ppi and move
+> the sysfs files to the chip->dev with symlinks from the pdev
+> for compatibility. Everything in the core now sanely uses container_of
+> to get the chip.
+> 
+> Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 
-The core methods can also be used from other TIS like drivers.
+Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
-itpm workaround is now managed with a specific tis flag
-TPM_TIS_ITPM_POSSIBLE.
+Three configurations:
 
-Signed-off-by: Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
----
- drivers/char/tpm/Kconfig        |   7 +
- drivers/char/tpm/Makefile       |   1 +
- drivers/char/tpm/tpm_tis.c      | 901 +---------------------------------------
- drivers/char/tpm/tpm_tis_core.c | 860 ++++++++++++++++++++++++++++++++++++++
- drivers/char/tpm/tpm_tis_core.h | 154 +++++++
- 5 files changed, 1043 insertions(+), 880 deletions(-)
- create mode 100644 drivers/char/tpm/tpm_tis_core.c
- create mode 100644 drivers/char/tpm/tpm_tis_core.h
+* Haswell NUC with PTT (tpm_crb)
+* Another NUC with dTPM 2.0 chip
+* Dell E6420, which has TPM 1.2 chip
 
-diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
-index 3b84a8b..b217308 100644
---- a/drivers/char/tpm/Kconfig
-+++ b/drivers/char/tpm/Kconfig
-@@ -24,9 +24,16 @@ menuconfig TCG_TPM
- 
- if TCG_TPM
- 
-+config TCG_TIS_CORE
-+	tristate
-+	---help---
-+	TCG TIS TPM core driver. It implements the TPM TCG TIS logic and hooks
-+	into the TPM kernel APIs. Physical layers will register against it.
-+
- config TCG_TIS
- 	tristate "TPM Interface Specification 1.2 Interface / TPM 2.0 FIFO Interface"
- 	depends on X86
-+	select TCG_TIS_CORE
- 	---help---
- 	  If you have a TPM security chip that is compliant with the
- 	  TCG TIS 1.2 TPM specification (TPM1.2) or the TCG PTP FIFO
-diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
-index 56e8f1f..80be5b2 100644
---- a/drivers/char/tpm/Makefile
-+++ b/drivers/char/tpm/Makefile
-@@ -12,6 +12,7 @@ ifdef CONFIG_TCG_IBMVTPM
- 	tpm-y += tpm_eventlog.o tpm_of.o
- endif
- endif
-+obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
- obj-$(CONFIG_TCG_TIS) += tpm_tis.o
- obj-$(CONFIG_TCG_TIS_I2C_ATMEL) += tpm_i2c_atmel.o
- obj-$(CONFIG_TCG_TIS_I2C_INFINEON) += tpm_i2c_infineon.o
-diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index 27a7802..eaf5730 100644
---- a/drivers/char/tpm/tpm_tis.c
-+++ b/drivers/char/tpm/tpm_tis.c
-@@ -29,41 +29,7 @@
- #include <linux/acpi.h>
- #include <linux/freezer.h>
- #include "tpm.h"
--#include "tpm_tis.h"
--
--enum tis_access {
--	TPM_ACCESS_VALID = 0x80,
--	TPM_ACCESS_ACTIVE_LOCALITY = 0x20,
--	TPM_ACCESS_REQUEST_PENDING = 0x04,
--	TPM_ACCESS_REQUEST_USE = 0x02,
--};
--
--enum tis_status {
--	TPM_STS_VALID = 0x80,
--	TPM_STS_COMMAND_READY = 0x40,
--	TPM_STS_GO = 0x20,
--	TPM_STS_DATA_AVAIL = 0x10,
--	TPM_STS_DATA_EXPECT = 0x08,
--};
--
--enum tis_int_flags {
--	TPM_GLOBAL_INT_ENABLE = 0x80000000,
--	TPM_INTF_BURST_COUNT_STATIC = 0x100,
--	TPM_INTF_CMD_READY_INT = 0x080,
--	TPM_INTF_INT_EDGE_FALLING = 0x040,
--	TPM_INTF_INT_EDGE_RISING = 0x020,
--	TPM_INTF_INT_LEVEL_LOW = 0x010,
--	TPM_INTF_INT_LEVEL_HIGH = 0x008,
--	TPM_INTF_LOCALITY_CHANGE_INT = 0x004,
--	TPM_INTF_STS_VALID_INT = 0x002,
--	TPM_INTF_DATA_AVAIL_INT = 0x001,
--};
--
--enum tis_defaults {
--	TIS_MEM_LEN = 0x5000,
--	TIS_SHORT_TIMEOUT = 750,	/* ms */
--	TIS_LONG_TIMEOUT = 2000,	/* 2 sec */
--};
-+#include "tpm_tis_core.h"
- 
- struct tpm_info {
- 	struct resource res;
-@@ -74,26 +40,6 @@ struct tpm_info {
- 	int irq;
- };
- 
--/* Some timeout values are needed before it is known whether the chip is
-- * TPM 1.0 or TPM 2.0.
-- */
--#define TIS_TIMEOUT_A_MAX	max(TIS_SHORT_TIMEOUT, TPM2_TIMEOUT_A)
--#define TIS_TIMEOUT_B_MAX	max(TIS_LONG_TIMEOUT, TPM2_TIMEOUT_B)
--#define TIS_TIMEOUT_C_MAX	max(TIS_SHORT_TIMEOUT, TPM2_TIMEOUT_C)
--#define TIS_TIMEOUT_D_MAX	max(TIS_SHORT_TIMEOUT, TPM2_TIMEOUT_D)
--
--#define	TPM_ACCESS(l)			(0x0000 | ((l) << 12))
--#define	TPM_INT_ENABLE(l)		(0x0008 | ((l) << 12))
--#define	TPM_INT_VECTOR(l)		(0x000C | ((l) << 12))
--#define	TPM_INT_STATUS(l)		(0x0010 | ((l) << 12))
--#define	TPM_INTF_CAPS(l)		(0x0014 | ((l) << 12))
--#define	TPM_STS(l)			(0x0018 | ((l) << 12))
--#define	TPM_STS3(l)			(0x001b | ((l) << 12))
--#define	TPM_DATA_FIFO(l)		(0x0024 | ((l) << 12))
--
--#define	TPM_DID_VID(l)			(0x0F00 | ((l) << 12))
--#define	TPM_RID(l)			(0x0F04 | ((l) << 12))
--
- struct tpm_tis_tcg_phy {
- 	struct tpm_tis_data priv;
- 	void __iomem *iobase;
-@@ -104,6 +50,20 @@ static inline struct tpm_tis_tcg_phy *to_tpm_tis_tcg_phy(struct tpm_tis_data *da
- 	return container_of(data, struct tpm_tis_tcg_phy, priv);
- }
- 
-+static bool interrupts = true;
-+module_param(interrupts, bool, 0444);
-+MODULE_PARM_DESC(interrupts, "Enable interrupts");
-+
-+static bool itpm;
-+module_param(itpm, bool, 0444);
-+MODULE_PARM_DESC(itpm, "Force iTPM workarounds (found on some Lenovo laptops)");
-+
-+static bool force;
-+#ifdef CONFIG_X86
-+module_param(force, bool, 0444);
-+MODULE_PARM_DESC(force, "Force device probe rather than using ACPI entry");
-+#endif
-+
- #if defined(CONFIG_PNP) && defined(CONFIG_ACPI)
- static int has_hid(struct acpi_device *dev, const char *hid)
- {
-@@ -127,484 +87,6 @@ static inline int is_itpm(struct acpi_device *dev)
- }
- #endif
- 
--/* Before we attempt to access the TPM we must see that the valid bit is set.
-- * The specification says that this bit is 0 at reset and remains 0 until the
-- * 'TPM has gone through its self test and initialization and has established
-- * correct values in the other bits.' */
--static int wait_startup(struct tpm_chip *chip, int l)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	unsigned long stop = jiffies + chip->timeout_a;
--	int rc;
--	u8 access;
--
--	do {
--		rc = tpm_read8(priv, TPM_ACCESS(l), &access);
--		if (rc < 0)
--			return rc;
--
--		if (access & TPM_ACCESS_VALID)
--			return 0;
--		msleep(TPM_TIMEOUT);
--	} while (time_before(jiffies, stop));
--	return -1;
--}
--
--static int check_locality(struct tpm_chip *chip, int l)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	int rc;
--	u8 access;
--
--	rc = tpm_read8(priv, TPM_ACCESS(l), &access);
--	if (rc < 0)
--		return rc;
--
--	if ((access & (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID)) ==
--	    (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID))
--		return priv->locality = l;
--
--	return -1;
--}
--
--static void release_locality(struct tpm_chip *chip, int l, int force)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	int rc;
--	u8 access;
--
--	rc = tpm_read8(priv, TPM_ACCESS(l), &access);
--	if (rc < 0)
--		return;
--
--	if (force || (access &
--		      (TPM_ACCESS_REQUEST_PENDING | TPM_ACCESS_VALID)) ==
--	    (TPM_ACCESS_REQUEST_PENDING | TPM_ACCESS_VALID))
--		tpm_write8(priv, TPM_ACCESS(l), TPM_ACCESS_ACTIVE_LOCALITY);
--
--}
--
--static int request_locality(struct tpm_chip *chip, int l)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	unsigned long stop, timeout;
--	long rc;
--
--	if (check_locality(chip, l) >= 0)
--		return l;
--
--	rc = tpm_write8(priv, TPM_ACCESS(l), TPM_ACCESS_REQUEST_USE);
--	if (rc < 0)
--		return rc;
--
--	stop = jiffies + chip->timeout_a;
--
--	if (chip->flags & TPM_CHIP_FLAG_IRQ) {
--again:
--		timeout = stop - jiffies;
--		if ((long)timeout <= 0)
--			return -1;
--		rc = wait_event_interruptible_timeout(priv->int_queue,
--						      (check_locality
--						       (chip, l) >= 0),
--						      timeout);
--		if (rc > 0)
--			return l;
--		if (rc == -ERESTARTSYS && freezing(current)) {
--			clear_thread_flag(TIF_SIGPENDING);
--			goto again;
--		}
--	} else {
--		/* wait for burstcount */
--		do {
--			if (check_locality(chip, l) >= 0)
--				return l;
--			msleep(TPM_TIMEOUT);
--		}
--		while (time_before(jiffies, stop));
--	}
--	return -1;
--}
--
--static u8 tpm_tis_status(struct tpm_chip *chip)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	int rc;
--	u8 status;
--
--	rc = tpm_read8(priv, TPM_STS(priv->locality), &status);
--	if (rc < 0)
--		return 0;
--
--	return status;
--}
--
--static void tpm_tis_ready(struct tpm_chip *chip)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--
--	/* this causes the current command to be aborted */
--	tpm_write8(priv, TPM_STS(priv->locality), TPM_STS_COMMAND_READY);
--}
--
--static int get_burstcount(struct tpm_chip *chip)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	unsigned long stop;
--	int burstcnt, rc;
--	u8 value;
--
--	/* wait for burstcount */
--	/* which timeout value, spec has 2 answers (c & d) */
--	stop = jiffies + chip->timeout_d;
--	do {
--		rc = tpm_read8(priv, TPM_STS(priv->locality) + 1, &value);
--		if (rc < 0)
--			return rc;
--
--		burstcnt = value;
--		rc = tpm_read8(priv, TPM_STS(priv->locality) + 2, &value);
--		if (rc < 0)
--			return rc;
--
--		burstcnt += value << 8;
--		if (burstcnt)
--			return burstcnt;
--		msleep(TPM_TIMEOUT);
--	} while (time_before(jiffies, stop));
--	return -EBUSY;
--}
--
--static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	int size = 0, burstcnt, rc;
--
--	while (size < count &&
--	       wait_for_tpm_stat(chip,
--				 TPM_STS_DATA_AVAIL | TPM_STS_VALID,
--				 chip->timeout_c,
--				 &priv->read_queue, true) == 0) {
--		burstcnt = min_t(int, get_burstcount(chip), count - size);
--		rc = tpm_read_bytes(priv, TPM_DATA_FIFO(priv->locality),
--				    burstcnt, buf + size);
--		if (rc < 0)
--			return rc;
--
--		size += burstcnt;
--	}
--	return size;
--}
--
--static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	int size = 0;
--	int expected, status;
--
--	if (count < TPM_HEADER_SIZE) {
--		size = -EIO;
--		goto out;
--	}
--
--	/* read first 10 bytes, including tag, paramsize, and result */
--	if ((size =
--	     recv_data(chip, buf, TPM_HEADER_SIZE)) < TPM_HEADER_SIZE) {
--		dev_err(&chip->dev, "Unable to read header\n");
--		goto out;
--	}
--
--	expected = be32_to_cpu(*(__be32 *) (buf + 2));
--	if (expected > count) {
--		size = -EIO;
--		goto out;
--	}
--
--	if ((size +=
--	     recv_data(chip, &buf[TPM_HEADER_SIZE],
--		       expected - TPM_HEADER_SIZE)) < expected) {
--		dev_err(&chip->dev, "Unable to read remainder of result\n");
--		size = -ETIME;
--		goto out;
--	}
--
--	wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
--			  &priv->int_queue, false);
--	status = tpm_tis_status(chip);
--	if (status & TPM_STS_DATA_AVAIL) {	/* retry? */
--		dev_err(&chip->dev, "Error left over data\n");
--		size = -EIO;
--		goto out;
--	}
--
--out:
--	tpm_tis_ready(chip);
--	release_locality(chip, priv->locality, 0);
--	return size;
--}
--
--static bool itpm;
--module_param(itpm, bool, 0444);
--MODULE_PARM_DESC(itpm, "Force iTPM workarounds (found on some Lenovo laptops)");
--
--/*
-- * If interrupts are used (signaled by an irq set in the vendor structure)
-- * tpm.c can skip polling for the data to be available as the interrupt is
-- * waited for here
-- */
--static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	int rc, status, burstcnt;
--	size_t count = 0;
--
--	if (request_locality(chip, 0) < 0)
--		return -EBUSY;
--
--	status = tpm_tis_status(chip);
--	if ((status & TPM_STS_COMMAND_READY) == 0) {
--		tpm_tis_ready(chip);
--		if (wait_for_tpm_stat
--		    (chip, TPM_STS_COMMAND_READY, chip->timeout_b,
--		     &priv->int_queue, false) < 0) {
--			rc = -ETIME;
--			goto out_err;
--		}
--	}
--
--	while (count < len - 1) {
--		burstcnt = min_t(int, get_burstcount(chip), len - count - 1);
--		rc = tpm_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
--				     burstcnt, buf + count);
--		if (rc < 0)
--			goto out_err;
--
--		count += burstcnt;
--
--		wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
--				  &priv->int_queue, false);
--		status = tpm_tis_status(chip);
--		if (!itpm && (status & TPM_STS_DATA_EXPECT) == 0) {
--			rc = -EIO;
--			goto out_err;
--		}
--	}
--
--	/* write last byte */
--	rc = tpm_write8(priv, TPM_DATA_FIFO(priv->locality), buf[count]);
--	if (rc < 0)
--		goto out_err;
--
--	wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
--			  &priv->int_queue, false);
--	status = tpm_tis_status(chip);
--	if ((status & TPM_STS_DATA_EXPECT) != 0) {
--		rc = -EIO;
--		goto out_err;
--	}
--
--	return 0;
--
--out_err:
--	tpm_tis_ready(chip);
--	release_locality(chip, priv->locality, 0);
--	return rc;
--}
--
--static void disable_interrupts(struct tpm_chip *chip)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	u32 intmask;
--	int rc;
--
--	rc = tpm_read32(priv, TPM_INT_ENABLE(priv->locality), &intmask);
--	if (rc < 0)
--		intmask = 0;
--
--	intmask &= ~TPM_GLOBAL_INT_ENABLE;
--	tpm_write32(priv, TPM_INT_ENABLE(priv->locality), intmask);
--
--	devm_free_irq(&chip->dev, priv->irq, chip);
--	priv->irq = 0;
--	chip->flags &= ~TPM_CHIP_FLAG_IRQ;
--}
--
--/*
-- * If interrupts are used (signaled by an irq set in the vendor structure)
-- * tpm.c can skip polling for the data to be available as the interrupt is
-- * waited for here
-- */
--static int tpm_tis_send_main(struct tpm_chip *chip, u8 *buf, size_t len)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	int rc;
--	u32 ordinal;
--	unsigned long dur;
--
--	rc = tpm_tis_send_data(chip, buf, len);
--	if (rc < 0)
--		return rc;
--
--	/* go and do it */
--	rc = tpm_write8(priv, TPM_STS(priv->locality), TPM_STS_GO);
--	if (rc < 0)
--		return rc;
--
--	if (chip->flags & TPM_CHIP_FLAG_IRQ) {
--		ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
--
--		if (chip->flags & TPM_CHIP_FLAG_TPM2)
--			dur = tpm2_calc_ordinal_duration(chip, ordinal);
--		else
--			dur = tpm_calc_ordinal_duration(chip, ordinal);
--
--		if (wait_for_tpm_stat
--		    (chip, TPM_STS_DATA_AVAIL | TPM_STS_VALID, dur,
--		     &priv->read_queue, false) < 0) {
--			rc = -ETIME;
--			goto out_err;
--		}
--	}
--	return len;
--out_err:
--	tpm_tis_ready(chip);
--	release_locality(chip, priv->locality, 0);
--	return rc;
--}
--
--static int tpm_tis_send(struct tpm_chip *chip, u8 *buf, size_t len)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	int rc, irq;
--
--	if (!(chip->flags & TPM_CHIP_FLAG_IRQ) || priv->irq_tested)
--		return tpm_tis_send_main(chip, buf, len);
--
--	/* Verify receipt of the expected IRQ */
--	irq = priv->irq;
--	priv->irq = 0;
--	chip->flags &= ~TPM_CHIP_FLAG_IRQ;
--	rc = tpm_tis_send_main(chip, buf, len);
--	priv->irq = irq;
--	chip->flags |= TPM_CHIP_FLAG_IRQ;
--	if (!priv->irq_tested)
--		msleep(1);
--	if (!priv->irq_tested)
--		disable_interrupts(chip);
--	priv->irq_tested = true;
--	return rc;
--}
--
--struct tis_vendor_timeout_override {
--	u32 did_vid;
--	unsigned long timeout_us[4];
--};
--
--static const struct tis_vendor_timeout_override vendor_timeout_overrides[] = {
--	/* Atmel 3204 */
--	{ 0x32041114, { (TIS_SHORT_TIMEOUT*1000), (TIS_LONG_TIMEOUT*1000),
--			(TIS_SHORT_TIMEOUT*1000), (TIS_SHORT_TIMEOUT*1000) } },
--};
--
--static bool tpm_tis_update_timeouts(struct tpm_chip *chip,
--				    unsigned long *timeout_cap)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	int i, rc;
--	u32 did_vid;
--
--	rc = tpm_read32(priv, TPM_DID_VID(0), &did_vid);
--	if (rc < 0)
--		return rc;
--
--	for (i = 0; i != ARRAY_SIZE(vendor_timeout_overrides); i++) {
--		if (vendor_timeout_overrides[i].did_vid != did_vid)
--			continue;
--		memcpy(timeout_cap, vendor_timeout_overrides[i].timeout_us,
--		       sizeof(vendor_timeout_overrides[i].timeout_us));
--		return true;
--	}
--
--	return false;
--}
--
--/*
-- * Early probing for iTPM with STS_DATA_EXPECT flaw.
-- * Try sending command without itpm flag set and if that
-- * fails, repeat with itpm flag set.
-- */
--static int probe_itpm(struct tpm_chip *chip)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	int rc = 0;
--	u8 cmd_getticks[] = {
--		0x00, 0xc1, 0x00, 0x00, 0x00, 0x0a,
--		0x00, 0x00, 0x00, 0xf1
--	};
--	size_t len = sizeof(cmd_getticks);
--	bool rem_itpm = itpm;
--	u16 vendor;
--
--	rc = tpm_read16(priv, TPM_DID_VID(0), &vendor);
--	if (rc < 0)
--		return rc;
--
--	/* probe only iTPMS */
--	if (vendor != TPM_VID_INTEL)
--		return 0;
--
--	itpm = false;
--
--	rc = tpm_tis_send_data(chip, cmd_getticks, len);
--	if (rc == 0)
--		goto out;
--
--	tpm_tis_ready(chip);
--	release_locality(chip, priv->locality, 0);
--
--	itpm = true;
--
--	rc = tpm_tis_send_data(chip, cmd_getticks, len);
--	if (rc == 0) {
--		dev_info(&chip->dev, "Detected an iTPM.\n");
--		rc = 1;
--	} else
--		rc = -EFAULT;
--
--out:
--	itpm = rem_itpm;
--	tpm_tis_ready(chip);
--	release_locality(chip, priv->locality, 0);
--
--	return rc;
--}
--
--static bool tpm_tis_req_canceled(struct tpm_chip *chip, u8 status)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--
--	switch (priv->manufacturer_id) {
--	case TPM_VID_WINBOND:
--		return ((status == TPM_STS_VALID) ||
--			(status == (TPM_STS_VALID | TPM_STS_COMMAND_READY)));
--	case TPM_VID_STM:
--		return (status == (TPM_STS_VALID | TPM_STS_COMMAND_READY));
--	default:
--		return (status == TPM_STS_COMMAND_READY);
--	}
--}
--
--static const struct tpm_class_ops tpm_tis = {
--	.status = tpm_tis_status,
--	.recv = tpm_tis_recv,
--	.send = tpm_tis_send,
--	.cancel = tpm_tis_ready,
--	.update_timeouts = tpm_tis_update_timeouts,
--	.req_complete_mask = TPM_STS_DATA_AVAIL | TPM_STS_VALID,
--	.req_complete_val = TPM_STS_DATA_AVAIL | TPM_STS_VALID,
--	.req_canceled = tpm_tis_req_canceled,
--};
--
- static int tpm_tcg_read_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
- 			      u8 *result)
- {
-@@ -657,364 +139,29 @@ static const struct tpm_tis_phy_ops tpm_tcg = {
- 	.write32 = tpm_tcg_write32,
- };
- 
--static irqreturn_t tis_int_handler(int dummy, void *dev_id)
--{
--	struct tpm_chip *chip = dev_id;
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	u32 interrupt;
--	int i, rc;
--
--	rc = tpm_read32(priv, TPM_INT_STATUS(priv->locality), &interrupt);
--	if (rc < 0)
--		return IRQ_NONE;
--
--	if (interrupt == 0)
--		return IRQ_NONE;
--
--	priv->irq_tested = true;
--	if (interrupt & TPM_INTF_DATA_AVAIL_INT)
--		wake_up_interruptible(&priv->read_queue);
--	if (interrupt & TPM_INTF_LOCALITY_CHANGE_INT)
--		for (i = 0; i < 5; i++)
--			if (check_locality(chip, i) >= 0)
--				break;
--	if (interrupt &
--	    (TPM_INTF_LOCALITY_CHANGE_INT | TPM_INTF_STS_VALID_INT |
--	     TPM_INTF_CMD_READY_INT))
--		wake_up_interruptible(&priv->int_queue);
--
--	/* Clear interrupts handled with TPM_EOI */
--	rc = tpm_write32(priv, TPM_INT_STATUS(priv->locality), interrupt);
--	if (rc < 0)
--		return IRQ_NONE;
--
--	tpm_read32(priv, TPM_INT_STATUS(priv->locality), &interrupt);
--	return IRQ_HANDLED;
--}
--
--/* Register the IRQ and issue a command that will cause an interrupt. If an
-- * irq is seen then leave the chip setup for IRQ operation, otherwise reverse
-- * everything and leave in polling mode. Returns 0 on success.
-- */
--static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
--				    int flags, int irq)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	u8 original_int_vec;
--	int rc;
--	u32 int_status;
--
--	if (devm_request_irq(&chip->dev, irq, tis_int_handler, flags,
--			     dev_name(&chip->dev), chip) != 0) {
--		dev_info(&chip->dev, "Unable to request irq: %d for probe\n",
--			 irq);
--		return -1;
--	}
--	priv->irq = irq;
--
--	rc = tpm_read8(priv, TPM_INT_VECTOR(priv->locality), &original_int_vec);
--	if (rc < 0)
--		return rc;
--
--	rc = tpm_write8(priv, TPM_INT_VECTOR(priv->locality), irq);
--	if (rc < 0)
--		return rc;
--
--	rc = tpm_read32(priv, TPM_INT_STATUS(priv->locality), &int_status);
--	if (rc < 0)
--		return rc;
--
--	/* Clear all existing */
--	rc = tpm_write32(priv, TPM_INT_STATUS(priv->locality), int_status);
--	if (rc < 0)
--		return rc;
--
--	/* Turn on */
--	rc = tpm_write32(priv, TPM_INT_ENABLE(priv->locality),
--			 intmask | TPM_GLOBAL_INT_ENABLE);
--	if (rc < 0)
--		return rc;
--
--	priv->irq_tested = false;
--
--	/* Generate an interrupt by having the core call through to
--	 * tpm_tis_send
--	 */
--	if (chip->flags & TPM_CHIP_FLAG_TPM2)
--		tpm2_gen_interrupt(chip);
--	else
--		tpm_gen_interrupt(chip);
--
--	/* tpm_tis_send will either confirm the interrupt is working or it
--	 * will call disable_irq which undoes all of the above.
--	 */
--	if (!(chip->flags & TPM_CHIP_FLAG_IRQ)) {
--		rc = tpm_write8(priv, TPM_INT_VECTOR(priv->locality),
--				original_int_vec);
--		if (rc < 0)
--			return rc;
--
--		return 1;
--	}
--
--	return 0;
--}
--
--/* Try to find the IRQ the TPM is using. This is for legacy x86 systems that
-- * do not have ACPI/etc. We typically expect the interrupt to be declared if
-- * present.
-- */
--static void tpm_tis_probe_irq(struct tpm_chip *chip, u32 intmask)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	u8 original_int_vec;
--	int i, rc;
--
--	rc = tpm_read8(priv, TPM_INT_VECTOR(priv->locality), &original_int_vec);
--	if (rc < 0)
--		return;
--
--	if (!original_int_vec) {
--		if (IS_ENABLED(CONFIG_X86))
--			for (i = 3; i <= 15; i++)
--				if (!tpm_tis_probe_irq_single(chip, intmask, 0,
--							      i))
--					return;
--	} else if (!tpm_tis_probe_irq_single(chip, intmask, 0,
--					     original_int_vec))
--		return;
--}
--
--static bool interrupts = true;
--module_param(interrupts, bool, 0444);
--MODULE_PARM_DESC(interrupts, "Enable interrupts");
--
--static void tpm_tis_remove(struct tpm_chip *chip)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	u32 reg = TPM_INT_ENABLE(priv->locality);
--	u32 interrupt;
--	int rc;
--
--	rc = tpm_read32(priv, reg, &interrupt);
--	if (rc < 0)
--		interrupt = 0;
--
--	tpm_write32(priv, reg, ~TPM_GLOBAL_INT_ENABLE & interrupt);
--	release_locality(chip, priv->locality, 1);
--}
--
- static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
- 			acpi_handle acpi_dev_handle)
- {
--	u32 vendor, intfcaps, intmask;
--	u8 rid;
--	int rc, probe;
--	struct tpm_chip *chip;
- 	struct tpm_tis_tcg_phy *phy;
-+	int irq = -1;
- 
- 	phy = devm_kzalloc(dev, sizeof(struct tpm_tis_tcg_phy), GFP_KERNEL);
- 	if (phy == NULL)
- 		return -ENOMEM;
- 
--	chip = tpmm_chip_alloc(dev, &tpm_tis);
--	if (IS_ERR(chip))
--		return PTR_ERR(chip);
--
--#ifdef CONFIG_ACPI
--	chip->acpi_dev_handle = acpi_dev_handle;
--#endif
--
- 	phy->iobase = devm_ioremap_resource(dev, &tpm_info->res);
- 	if (IS_ERR(phy->iobase))
- 		return PTR_ERR(phy->iobase);
- 
--	phy->priv.phy_ops = &tpm_tcg;
--
--	/* Maximum timeouts */
--	chip->timeout_a = TIS_TIMEOUT_A_MAX;
--	chip->timeout_b = TIS_TIMEOUT_B_MAX;
--	chip->timeout_c = TIS_TIMEOUT_C_MAX;
--	chip->timeout_d = TIS_TIMEOUT_D_MAX;
--
--	dev_set_drvdata(&chip->dev, &phy->priv);
--
--	if (wait_startup(chip, 0) != 0) {
--		rc = -ENODEV;
--		goto out_err;
--	}
--
--	/* Take control of the TPM's interrupt hardware and shut it off */
--	rc = tpm_read32(&phy->priv, TPM_INT_ENABLE(phy->priv.locality),
--			&intmask);
--	if (rc < 0)
--		goto out_err;
--
--	intmask |= TPM_INTF_CMD_READY_INT | TPM_INTF_LOCALITY_CHANGE_INT |
--		   TPM_INTF_DATA_AVAIL_INT | TPM_INTF_STS_VALID_INT;
--	intmask &= ~TPM_GLOBAL_INT_ENABLE;
--	tpm_write32(&phy->priv, TPM_INT_ENABLE(phy->priv.locality), intmask);
--
--	if (request_locality(chip, 0) != 0) {
--		rc = -ENODEV;
--		goto out_err;
--	}
--
--	rc = tpm2_probe(chip);
--	if (rc)
--		goto out_err;
--
--	rc = tpm_read32(&phy->priv, TPM_DID_VID(0), &vendor);
--	if (rc < 0)
--		goto out_err;
--
--	phy->priv.manufacturer_id = vendor;
--
--	rc = tpm_read8(&phy->priv, TPM_RID(0), &rid);
--	if (rc < 0)
--		goto out_err;
--
--	dev_info(dev, "%s TPM (device-id 0x%X, rev-id %d)\n",
--		 (chip->flags & TPM_CHIP_FLAG_TPM2) ? "2.0" : "1.2",
--		 vendor >> 16, rid);
--
--	if (!itpm) {
--		probe = probe_itpm(chip);
--		if (probe < 0) {
--			rc = -ENODEV;
--			goto out_err;
--		}
--		itpm = !!probe;
--	}
-+	if (interrupts)
-+		irq = tpm_info->irq;
- 
- 	if (itpm)
--		dev_info(dev, "Intel iTPM workaround enabled\n");
--
--	/* Figure out the capabilities */
--	rc = tpm_read32(&phy->priv, TPM_INTF_CAPS(phy->priv.locality),
--			&intfcaps);
--	if (rc < 0)
--		goto out_err;
--
--	dev_dbg(dev, "TPM interface capabilities (0x%x):\n",
--		intfcaps);
--	if (intfcaps & TPM_INTF_BURST_COUNT_STATIC)
--		dev_dbg(dev, "\tBurst Count Static\n");
--	if (intfcaps & TPM_INTF_CMD_READY_INT)
--		dev_dbg(dev, "\tCommand Ready Int Support\n");
--	if (intfcaps & TPM_INTF_INT_EDGE_FALLING)
--		dev_dbg(dev, "\tInterrupt Edge Falling\n");
--	if (intfcaps & TPM_INTF_INT_EDGE_RISING)
--		dev_dbg(dev, "\tInterrupt Edge Rising\n");
--	if (intfcaps & TPM_INTF_INT_LEVEL_LOW)
--		dev_dbg(dev, "\tInterrupt Level Low\n");
--	if (intfcaps & TPM_INTF_INT_LEVEL_HIGH)
--		dev_dbg(dev, "\tInterrupt Level High\n");
--	if (intfcaps & TPM_INTF_LOCALITY_CHANGE_INT)
--		dev_dbg(dev, "\tLocality Change Int Support\n");
--	if (intfcaps & TPM_INTF_STS_VALID_INT)
--		dev_dbg(dev, "\tSts Valid Int Support\n");
--	if (intfcaps & TPM_INTF_DATA_AVAIL_INT)
--		dev_dbg(dev, "\tData Avail Int Support\n");
--
--	/* Very early on issue a command to the TPM in polling mode to make
--	 * sure it works. May as well use that command to set the proper
--	 *  timeouts for the driver.
--	 */
--	if (tpm_get_timeouts(chip)) {
--		dev_err(dev, "Could not get TPM timeouts and durations\n");
--		rc = -ENODEV;
--		goto out_err;
--	}
-+		phy->priv.flags |= TPM_TIS_ITPM_POSSIBLE;
- 
--	/* INTERRUPT Setup */
--	init_waitqueue_head(&phy->priv.read_queue);
--	init_waitqueue_head(&phy->priv.int_queue);
--	if (interrupts && tpm_info->irq != -1) {
--		if (tpm_info->irq) {
--			tpm_tis_probe_irq_single(chip, intmask, IRQF_SHARED,
--						 tpm_info->irq);
--			if (!(chip->flags & TPM_CHIP_FLAG_IRQ))
--				dev_err(&chip->dev, FW_BUG
--					"TPM interrupt not working, polling instead\n");
--		} else
--			tpm_tis_probe_irq(chip, intmask);
--	}
--
--	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
--		rc = tpm2_do_selftest(chip);
--		if (rc == TPM2_RC_INITIALIZE) {
--			dev_warn(dev, "Firmware has not started TPM\n");
--			rc  = tpm2_startup(chip, TPM2_SU_CLEAR);
--			if (!rc)
--				rc = tpm2_do_selftest(chip);
--		}
--
--		if (rc) {
--			dev_err(dev, "TPM self test failed\n");
--			if (rc > 0)
--				rc = -ENODEV;
--			goto out_err;
--		}
--	} else {
--		if (tpm_do_selftest(chip)) {
--			dev_err(dev, "TPM self test failed\n");
--			rc = -ENODEV;
--			goto out_err;
--		}
--	}
--
--	return tpm_chip_register(chip);
--out_err:
--	tpm_tis_remove(chip);
--	return rc;
--}
--
--#ifdef CONFIG_PM_SLEEP
--static void tpm_tis_reenable_interrupts(struct tpm_chip *chip)
--{
--	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	u32 intmask;
--	int rc;
--
--	/* reenable interrupts that device may have lost or
--	   BIOS/firmware may have disabled */
--	rc = tpm_write8(priv, TPM_INT_VECTOR(priv->locality), priv->irq);
--	if (rc < 0)
--		return;
--
--	rc = tpm_read32(priv, TPM_INT_ENABLE(priv->locality), &intmask);
--	if (rc < 0)
--		return;
--
--	intmask |= TPM_INTF_CMD_READY_INT
--	    | TPM_INTF_LOCALITY_CHANGE_INT | TPM_INTF_DATA_AVAIL_INT
--	    | TPM_INTF_STS_VALID_INT | TPM_GLOBAL_INT_ENABLE;
--
--	tpm_write32(priv, TPM_INT_ENABLE(priv->locality), intmask);
--}
--
--static int tpm_tis_resume(struct device *dev)
--{
--	struct tpm_chip *chip = dev_get_drvdata(dev);
--	int ret;
--
--	if (chip->flags & TPM_CHIP_FLAG_IRQ)
--		tpm_tis_reenable_interrupts(chip);
--
--	ret = tpm_pm_resume(dev);
--	if (ret)
--		return ret;
--
--	/* TPM 1.2 requires self-test on resume. This function actually returns
--	 * an error code but for unknown reason it isn't handled.
--	 */
--	if (!(chip->flags & TPM_CHIP_FLAG_TPM2))
--		tpm_do_selftest(chip);
--
--	return 0;
-+	return tpm_tis_core_init(dev, &phy->priv, irq, &tpm_tcg,
-+				 acpi_dev_handle);
- }
--#endif
- 
- static SIMPLE_DEV_PM_OPS(tpm_tis_pm, tpm_pm_suspend, tpm_tis_resume);
- 
-@@ -1216,12 +363,6 @@ static struct platform_driver tis_drv = {
- 	},
- };
- 
--static bool force;
--#ifdef CONFIG_X86
--module_param(force, bool, 0444);
--MODULE_PARM_DESC(force, "Force device probe rather than using ACPI entry");
--#endif
--
- static int tpm_tis_force_device(void)
- {
- 	struct platform_device *pdev;
-diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-new file mode 100644
-index 0000000..f4e05ac
---- /dev/null
-+++ b/drivers/char/tpm/tpm_tis_core.c
-@@ -0,0 +1,860 @@
-+/*
-+ * Copyright (C) 2005, 2006 IBM Corporation
-+ * Copyright (C) 2014, 2015 Intel Corporation
-+ *
-+ * Authors:
-+ * Leendert van Doorn <leendert-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
-+ * Kylene Hall <kjhall-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-+ *
-+ * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-+ *
-+ * Device driver for TCG/TCPA TPM (trusted platform module).
-+ * Specifications at www.trustedcomputinggroup.org
-+ *
-+ * This device driver implements the TPM interface as defined in
-+ * the TCG TPM Interface Spec version 1.2, revision 1.0.
-+ *
-+ * This program is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU General Public License as
-+ * published by the Free Software Foundation, version 2 of the
-+ * License.
-+ */
-+#include <linux/init.h>
-+#include <linux/module.h>
-+#include <linux/moduleparam.h>
-+#include <linux/pnp.h>
-+#include <linux/slab.h>
-+#include <linux/interrupt.h>
-+#include <linux/wait.h>
-+#include <linux/acpi.h>
-+#include <linux/freezer.h>
-+#include "tpm.h"
-+#include "tpm_tis_core.h"
-+
-+/* Before we attempt to access the TPM we must see that the valid bit is set.
-+ * The specification says that this bit is 0 at reset and remains 0 until the
-+ * 'TPM has gone through its self test and initialization and has established
-+ * correct values in the other bits.'
-+ */
-+static int wait_startup(struct tpm_chip *chip, int l)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	unsigned long stop = jiffies + chip->timeout_a;
-+
-+	do {
-+		int rc;
-+		u8 access;
-+
-+		rc = tpm_read8(priv, TPM_ACCESS(l), &access);
-+		if (rc < 0)
-+			return rc;
-+
-+		if (access & TPM_ACCESS_VALID)
-+			return 0;
-+		msleep(TPM_TIMEOUT);
-+	} while (time_before(jiffies, stop));
-+	return -1;
-+}
-+
-+static int check_locality(struct tpm_chip *chip, int l)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	int rc;
-+	u8 access;
-+
-+	rc = tpm_read8(priv, TPM_ACCESS(l), &access);
-+	if (rc < 0)
-+		return rc;
-+
-+	if ((access & (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID)) ==
-+	    (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID))
-+		return priv->locality = l;
-+
-+	return -1;
-+}
-+
-+static void release_locality(struct tpm_chip *chip, int l, int force)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	int rc;
-+	u8 access;
-+
-+	rc = tpm_read8(priv, TPM_ACCESS(l), &access);
-+	if (rc < 0)
-+		return;
-+
-+	if (force || (access &
-+		      (TPM_ACCESS_REQUEST_PENDING | TPM_ACCESS_VALID)) ==
-+	    (TPM_ACCESS_REQUEST_PENDING | TPM_ACCESS_VALID))
-+		tpm_write8(priv, TPM_ACCESS(l), TPM_ACCESS_ACTIVE_LOCALITY);
-+
-+}
-+
-+static int request_locality(struct tpm_chip *chip, int l)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	unsigned long stop, timeout;
-+	long rc;
-+
-+	if (check_locality(chip, l) >= 0)
-+		return l;
-+
-+	rc = tpm_write8(priv, TPM_ACCESS(l), TPM_ACCESS_REQUEST_USE);
-+	if (rc < 0)
-+		return rc;
-+
-+	stop = jiffies + chip->timeout_a;
-+
-+	if (chip->flags & TPM_CHIP_FLAG_IRQ) {
-+again:
-+		timeout = stop - jiffies;
-+		if ((long)timeout <= 0)
-+			return -1;
-+		rc = wait_event_interruptible_timeout(priv->int_queue,
-+						      (check_locality
-+						       (chip, l) >= 0),
-+						      timeout);
-+		if (rc > 0)
-+			return l;
-+		if (rc == -ERESTARTSYS && freezing(current)) {
-+			clear_thread_flag(TIF_SIGPENDING);
-+			goto again;
-+		}
-+	} else {
-+		/* wait for burstcount */
-+		do {
-+			if (check_locality(chip, l) >= 0)
-+				return l;
-+			msleep(TPM_TIMEOUT);
-+		} while (time_before(jiffies, stop));
-+	}
-+	return -1;
-+}
-+
-+static u8 tpm_tis_status(struct tpm_chip *chip)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	int rc;
-+	u8 status;
-+
-+	rc = tpm_read8(priv, TPM_STS(priv->locality), &status);
-+	if (rc < 0)
-+		return 0;
-+
-+	return status;
-+}
-+
-+static void tpm_tis_ready(struct tpm_chip *chip)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+
-+	/* this causes the current command to be aborted */
-+	tpm_write8(priv, TPM_STS(priv->locality), TPM_STS_COMMAND_READY);
-+}
-+
-+static int get_burstcount(struct tpm_chip *chip)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	unsigned long stop;
-+	int burstcnt, rc;
-+	u8 value;
-+
-+	/* wait for burstcount */
-+	/* which timeout value, spec has 2 answers (c & d) */
-+	stop = jiffies + chip->timeout_d;
-+	do {
-+		rc = tpm_read8(priv, TPM_STS(priv->locality) + 1, &value);
-+		if (rc < 0)
-+			return rc;
-+
-+		burstcnt = value;
-+		rc = tpm_read8(priv, TPM_STS(priv->locality) + 2, &value);
-+		if (rc < 0)
-+			return rc;
-+
-+		burstcnt += value << 8;
-+		if (burstcnt)
-+			return burstcnt;
-+		msleep(TPM_TIMEOUT);
-+	} while (time_before(jiffies, stop));
-+	return -EBUSY;
-+}
-+
-+static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	int size = 0, burstcnt, rc;
-+
-+	while (size < count &&
-+	       wait_for_tpm_stat(chip,
-+				 TPM_STS_DATA_AVAIL | TPM_STS_VALID,
-+				 chip->timeout_c,
-+				 &priv->read_queue, true) == 0) {
-+		burstcnt = min_t(int, get_burstcount(chip), count - size);
-+
-+		rc = tpm_read_bytes(priv, TPM_DATA_FIFO(priv->locality),
-+				    burstcnt, buf + size);
-+		if (rc < 0)
-+			return rc;
-+
-+		size += burstcnt;
-+	}
-+	return size;
-+}
-+
-+static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	int size = 0;
-+	int expected, status;
-+
-+	if (count < TPM_HEADER_SIZE) {
-+		size = -EIO;
-+		goto out;
-+	}
-+
-+	size = recv_data(chip, buf, TPM_HEADER_SIZE);
-+	/* read first 10 bytes, including tag, paramsize, and result */
-+	if (size < TPM_HEADER_SIZE) {
-+		dev_err(&chip->dev, "Unable to read header\n");
-+		goto out;
-+	}
-+
-+	expected = be32_to_cpu(*(__be32 *) (buf + 2));
-+	if (expected > count) {
-+		size = -EIO;
-+		goto out;
-+	}
-+
-+	size += recv_data(chip, &buf[TPM_HEADER_SIZE],
-+			  expected - TPM_HEADER_SIZE);
-+	if (size < expected) {
-+		dev_err(&chip->dev, "Unable to read remainder of result\n");
-+		size = -ETIME;
-+		goto out;
-+	}
-+
-+	wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
-+			  &priv->int_queue, false);
-+	status = tpm_tis_status(chip);
-+	if (status & TPM_STS_DATA_AVAIL) {	/* retry? */
-+		dev_err(&chip->dev, "Error left over data\n");
-+		size = -EIO;
-+		goto out;
-+	}
-+
-+out:
-+	tpm_tis_ready(chip);
-+	release_locality(chip, priv->locality, 0);
-+	return size;
-+}
-+
-+/*
-+ * If interrupts are used (signaled by an irq set in the vendor structure)
-+ * tpm.c can skip polling for the data to be available as the interrupt is
-+ * waited for here
-+ */
-+static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	int rc, status, burstcnt;
-+	size_t count = 0;
-+	bool itpm = priv->flags & TPM_TIS_ITPM_POSSIBLE;
-+
-+	if (request_locality(chip, 0) < 0)
-+		return -EBUSY;
-+
-+	status = tpm_tis_status(chip);
-+	if ((status & TPM_STS_COMMAND_READY) == 0) {
-+		tpm_tis_ready(chip);
-+		if (wait_for_tpm_stat
-+		    (chip, TPM_STS_COMMAND_READY, chip->timeout_b,
-+		     &priv->int_queue, false) < 0) {
-+			rc = -ETIME;
-+			goto out_err;
-+		}
-+	}
-+
-+	while (count < len - 1) {
-+		burstcnt = min_t(int, get_burstcount(chip), len - count - 1);
-+		rc = tpm_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
-+				     burstcnt, buf + count);
-+		if (rc < 0)
-+			goto out_err;
-+
-+		count += burstcnt;
-+
-+		wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
-+				  &priv->int_queue, false);
-+		status = tpm_tis_status(chip);
-+		if (!itpm && (status & TPM_STS_DATA_EXPECT) == 0) {
-+			rc = -EIO;
-+			goto out_err;
-+		}
-+	}
-+
-+	/* write last byte */
-+	rc = tpm_write8(priv, TPM_DATA_FIFO(priv->locality), buf[count]);
-+	if (rc < 0)
-+		goto out_err;
-+
-+	wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
-+			  &priv->int_queue, false);
-+	status = tpm_tis_status(chip);
-+	if (!itpm && (status & TPM_STS_DATA_EXPECT) != 0) {
-+		rc = -EIO;
-+		goto out_err;
-+	}
-+
-+	return 0;
-+
-+out_err:
-+	tpm_tis_ready(chip);
-+	release_locality(chip, priv->locality, 0);
-+	return rc;
-+}
-+
-+static void disable_interrupts(struct tpm_chip *chip)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	u32 intmask;
-+	int rc;
-+
-+	rc = tpm_read32(priv, TPM_INT_ENABLE(priv->locality), &intmask);
-+	if (rc < 0)
-+		intmask = 0;
-+
-+	intmask &= ~TPM_GLOBAL_INT_ENABLE;
-+	rc = tpm_write32(priv, TPM_INT_ENABLE(priv->locality), intmask);
-+
-+	devm_free_irq(&chip->dev, priv->irq, chip);
-+	priv->irq = 0;
-+	chip->flags &= ~TPM_CHIP_FLAG_IRQ;
-+}
-+
-+/*
-+ * If interrupts are used (signaled by an irq set in the vendor structure)
-+ * tpm.c can skip polling for the data to be available as the interrupt is
-+ * waited for here
-+ */
-+static int tpm_tis_send_main(struct tpm_chip *chip, u8 *buf, size_t len)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	int rc;
-+	u32 ordinal;
-+	unsigned long dur;
-+
-+	rc = tpm_tis_send_data(chip, buf, len);
-+	if (rc < 0)
-+		return rc;
-+
-+	/* go and do it */
-+	rc = tpm_write8(priv, TPM_STS(priv->locality), TPM_STS_GO);
-+	if (rc < 0)
-+		goto out_err;
-+
-+	if (chip->flags & TPM_CHIP_FLAG_IRQ) {
-+		ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
-+
-+		if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+			dur = tpm2_calc_ordinal_duration(chip, ordinal);
-+		else
-+			dur = tpm_calc_ordinal_duration(chip, ordinal);
-+
-+		if (wait_for_tpm_stat
-+		    (chip, TPM_STS_DATA_AVAIL | TPM_STS_VALID, dur,
-+		     &priv->read_queue, false) < 0) {
-+			rc = -ETIME;
-+			goto out_err;
-+		}
-+	}
-+	return len;
-+out_err:
-+	tpm_tis_ready(chip);
-+	release_locality(chip, priv->locality, 0);
-+	return rc;
-+}
-+
-+static int tpm_tis_send(struct tpm_chip *chip, u8 *buf, size_t len)
-+{
-+	int rc, irq;
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+
-+	if (!(chip->flags & TPM_CHIP_FLAG_IRQ) || priv->irq_tested)
-+		return tpm_tis_send_main(chip, buf, len);
-+
-+	/* Verify receipt of the expected IRQ */
-+	irq = priv->irq;
-+	priv->irq = 0;
-+	chip->flags &= ~TPM_CHIP_FLAG_IRQ;
-+	rc = tpm_tis_send_main(chip, buf, len);
-+	priv->irq = irq;
-+	chip->flags |= TPM_CHIP_FLAG_IRQ;
-+	if (!priv->irq_tested)
-+		msleep(1);
-+	if (!priv->irq_tested)
-+		disable_interrupts(chip);
-+	priv->irq_tested = true;
-+	return rc;
-+}
-+
-+struct tis_vendor_timeout_override {
-+	u32 did_vid;
-+	unsigned long timeout_us[4];
-+};
-+
-+static const struct tis_vendor_timeout_override vendor_timeout_overrides[] = {
-+	/* Atmel 3204 */
-+	{ 0x32041114, { (TIS_SHORT_TIMEOUT*1000), (TIS_LONG_TIMEOUT*1000),
-+			(TIS_SHORT_TIMEOUT*1000), (TIS_SHORT_TIMEOUT*1000) } },
-+};
-+
-+static bool tpm_tis_update_timeouts(struct tpm_chip *chip,
-+				    unsigned long *timeout_cap)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	int i, rc;
-+	u32 did_vid;
-+
-+	rc = tpm_read32(priv, TPM_DID_VID(0), &did_vid);
-+	if (rc < 0)
-+		return rc;
-+
-+	for (i = 0; i != ARRAY_SIZE(vendor_timeout_overrides); i++) {
-+		if (vendor_timeout_overrides[i].did_vid != did_vid)
-+			continue;
-+		memcpy(timeout_cap, vendor_timeout_overrides[i].timeout_us,
-+		       sizeof(vendor_timeout_overrides[i].timeout_us));
-+		return true;
-+	}
-+
-+	return false;
-+}
-+
-+/*
-+ * Early probing for iTPM with STS_DATA_EXPECT flaw.
-+ * Try sending command without itpm flag set and if that
-+ * fails, repeat with itpm flag set.
-+ */
-+static int probe_itpm(struct tpm_chip *chip)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	int rc = 0;
-+	u8 cmd_getticks[] = {
-+		0x00, 0xc1, 0x00, 0x00, 0x00, 0x0a,
-+		0x00, 0x00, 0x00, 0xf1
-+	};
-+	size_t len = sizeof(cmd_getticks);
-+	bool itpm;
-+	u16 vendor;
-+
-+	rc = tpm_read16(priv, TPM_DID_VID(0), &vendor);
-+	if (rc < 0)
-+		return rc;
-+
-+	/* probe only iTPMS */
-+	if (vendor != TPM_VID_INTEL)
-+		return 0;
-+
-+	itpm = false;
-+
-+	rc = tpm_tis_send_data(chip, cmd_getticks, len);
-+	if (rc == 0)
-+		goto out;
-+
-+	tpm_tis_ready(chip);
-+	release_locality(chip, priv->locality, 0);
-+
-+	itpm = true;
-+
-+	rc = tpm_tis_send_data(chip, cmd_getticks, len);
-+	if (rc == 0) {
-+		dev_info(&chip->dev, "Detected an iTPM.\n");
-+		rc = 1;
-+	} else
-+		rc = -EFAULT;
-+
-+out:
-+	tpm_tis_ready(chip);
-+	release_locality(chip, priv->locality, 0);
-+
-+	return rc;
-+}
-+
-+static bool tpm_tis_req_canceled(struct tpm_chip *chip, u8 status)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+
-+	switch (priv->manufacturer_id) {
-+	case TPM_VID_WINBOND:
-+		return ((status == TPM_STS_VALID) ||
-+			(status == (TPM_STS_VALID | TPM_STS_COMMAND_READY)));
-+	case TPM_VID_STM:
-+		return (status == (TPM_STS_VALID | TPM_STS_COMMAND_READY));
-+	default:
-+		return (status == TPM_STS_COMMAND_READY);
-+	}
-+}
-+
-+static irqreturn_t tis_int_handler(int dummy, void *dev_id)
-+{
-+	struct tpm_chip *chip = dev_id;
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	u32 interrupt;
-+	int i, rc;
-+
-+	rc = tpm_read32(priv, TPM_INT_STATUS(priv->locality), &interrupt);
-+	if (rc < 0)
-+		return IRQ_NONE;
-+
-+	if (interrupt == 0)
-+		return IRQ_NONE;
-+
-+	priv->irq_tested = true;
-+	if (interrupt & TPM_INTF_DATA_AVAIL_INT)
-+		wake_up_interruptible(&priv->read_queue);
-+	if (interrupt & TPM_INTF_LOCALITY_CHANGE_INT)
-+		for (i = 0; i < 5; i++)
-+			if (check_locality(chip, i) >= 0)
-+				break;
-+	if (interrupt &
-+	    (TPM_INTF_LOCALITY_CHANGE_INT | TPM_INTF_STS_VALID_INT |
-+	     TPM_INTF_CMD_READY_INT))
-+		wake_up_interruptible(&priv->int_queue);
-+
-+	/* Clear interrupts handled with TPM_EOI */
-+	rc = tpm_write32(priv, TPM_INT_STATUS(priv->locality), interrupt);
-+	if (rc < 0)
-+		return IRQ_NONE;
-+
-+	tpm_read32(priv, TPM_INT_STATUS(priv->locality), &interrupt);
-+	return IRQ_HANDLED;
-+}
-+
-+/* Register the IRQ and issue a command that will cause an interrupt. If an
-+ * irq is seen then leave the chip setup for IRQ operation, otherwise reverse
-+ * everything and leave in polling mode. Returns 0 on success.
-+ */
-+static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
-+				    int flags, int irq)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	u8 original_int_vec;
-+	int rc;
-+	u32 int_status;
-+
-+	if (devm_request_irq(&chip->dev, irq, tis_int_handler, flags,
-+			     dev_name(&chip->dev), chip) != 0) {
-+		dev_info(&chip->dev, "Unable to request irq: %d for probe\n",
-+			 irq);
-+		return -1;
-+	}
-+	priv->irq = irq;
-+
-+	rc = tpm_read8(priv, TPM_INT_VECTOR(priv->locality), &original_int_vec);
-+	if (rc < 0)
-+		return rc;
-+
-+	rc = tpm_write8(priv, TPM_INT_VECTOR(priv->locality), irq);
-+	if (rc < 0)
-+		return rc;
-+
-+	rc = tpm_read32(priv, TPM_INT_STATUS(priv->locality), &int_status);
-+	if (rc < 0)
-+		return rc;
-+
-+	/* Clear all existing */
-+	rc = tpm_write32(priv, TPM_INT_STATUS(priv->locality), int_status);
-+	if (rc < 0)
-+		return rc;
-+
-+	/* Turn on */
-+	rc = tpm_write32(priv, TPM_INT_ENABLE(priv->locality),
-+			 intmask | TPM_GLOBAL_INT_ENABLE);
-+	if (rc < 0)
-+		return rc;
-+
-+	priv->irq_tested = false;
-+
-+	/* Generate an interrupt by having the core call through to
-+	 * tpm_tis_send
-+	 */
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+		tpm2_gen_interrupt(chip);
-+	else
-+		tpm_gen_interrupt(chip);
-+
-+	/* tpm_tis_send will either confirm the interrupt is working or it
-+	 * will call disable_irq which undoes all of the above.
-+	 */
-+	if (!(chip->flags & TPM_CHIP_FLAG_IRQ)) {
-+		rc = tpm_write8(priv, original_int_vec,
-+				TPM_INT_VECTOR(priv->locality));
-+		if (rc < 0)
-+			return rc;
-+
-+		return 1;
-+	}
-+
-+	return 0;
-+}
-+
-+/* Try to find the IRQ the TPM is using. This is for legacy x86 systems that
-+ * do not have ACPI/etc. We typically expect the interrupt to be declared if
-+ * present.
-+ */
-+static void tpm_tis_probe_irq(struct tpm_chip *chip, u32 intmask)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	u8 original_int_vec;
-+	int i, rc;
-+
-+	rc = tpm_read8(priv, TPM_INT_VECTOR(priv->locality), &original_int_vec);
-+	if (rc < 0)
-+		return;
-+
-+	if (!original_int_vec) {
-+		if (IS_ENABLED(CONFIG_X86))
-+			for (i = 3; i <= 15; i++)
-+				if (!tpm_tis_probe_irq_single(chip, intmask, 0,
-+							      i))
-+					return;
-+	} else if (!tpm_tis_probe_irq_single(chip, intmask, 0,
-+					     original_int_vec))
-+		return;
-+}
-+
-+void tpm_tis_remove(struct tpm_chip *chip)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	u32 reg = TPM_INT_ENABLE(priv->locality);
-+	u32 interrupt;
-+	int rc;
-+
-+	rc = tpm_read32(priv, reg, &interrupt);
-+	if (rc < 0)
-+		interrupt = 0;
-+
-+	tpm_write32(priv, reg, ~TPM_GLOBAL_INT_ENABLE & interrupt);
-+	release_locality(chip, priv->locality, 1);
-+}
-+EXPORT_SYMBOL_GPL(tpm_tis_remove);
-+
-+static const struct tpm_class_ops tpm_tis = {
-+	.status = tpm_tis_status,
-+	.recv = tpm_tis_recv,
-+	.send = tpm_tis_send,
-+	.cancel = tpm_tis_ready,
-+	.update_timeouts = tpm_tis_update_timeouts,
-+	.req_complete_mask = TPM_STS_DATA_AVAIL | TPM_STS_VALID,
-+	.req_complete_val = TPM_STS_DATA_AVAIL | TPM_STS_VALID,
-+	.req_canceled = tpm_tis_req_canceled,
-+};
-+
-+int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
-+		      const struct tpm_tis_phy_ops *phy_ops,
-+		      acpi_handle acpi_dev_handle)
-+{
-+	u32 vendor, intfcaps, intmask;
-+	u8 rid;
-+	int rc, probe;
-+	struct tpm_chip *chip;
-+
-+	chip = tpmm_chip_alloc(dev, &tpm_tis);
-+	if (IS_ERR(chip))
-+		return PTR_ERR(chip);
-+
-+#ifdef CONFIG_ACPI
-+	chip->acpi_dev_handle = acpi_dev_handle;
-+#endif
-+
-+	/* Maximum timeouts */
-+	chip->timeout_a = TIS_TIMEOUT_A_MAX;
-+	chip->timeout_b = TIS_TIMEOUT_B_MAX;
-+	chip->timeout_c = TIS_TIMEOUT_C_MAX;
-+	chip->timeout_d = TIS_TIMEOUT_D_MAX;
-+	priv->phy_ops = phy_ops;
-+	dev_set_drvdata(&chip->dev, priv);
-+
-+	if (wait_startup(chip, 0) != 0) {
-+		rc = -ENODEV;
-+		goto out_err;
-+	}
-+
-+	/* Take control of the TPM's interrupt hardware and shut it off */
-+	rc = tpm_read32(priv, TPM_INT_ENABLE(priv->locality), &intmask);
-+	if (rc < 0)
-+		goto out_err;
-+
-+	intmask |= TPM_INTF_CMD_READY_INT | TPM_INTF_LOCALITY_CHANGE_INT |
-+		   TPM_INTF_DATA_AVAIL_INT | TPM_INTF_STS_VALID_INT;
-+	intmask &= ~TPM_GLOBAL_INT_ENABLE;
-+	tpm_write32(priv, TPM_INT_ENABLE(priv->locality), intmask);
-+
-+	if (request_locality(chip, 0) != 0) {
-+		rc = -ENODEV;
-+		goto out_err;
-+	}
-+
-+	rc = tpm2_probe(chip);
-+	if (rc)
-+		goto out_err;
-+
-+	rc = tpm_read32(priv, TPM_DID_VID(0), &vendor);
-+	if (rc < 0)
-+		goto out_err;
-+
-+	priv->manufacturer_id = vendor;
-+
-+	rc = tpm_read8(priv, TPM_RID(0), &rid);
-+	if (rc < 0)
-+		goto out_err;
-+
-+	dev_info(dev, "%s TPM (device-id 0x%X, rev-id %d)\n",
-+		 (chip->flags & TPM_CHIP_FLAG_TPM2) ? "2.0" : "1.2",
-+		 vendor >> 16, rid);
-+
-+	if (!(priv->flags & TPM_TIS_ITPM_POSSIBLE)) {
-+		probe = probe_itpm(chip);
-+		if (probe < 0) {
-+			rc = -ENODEV;
-+			goto out_err;
-+		}
-+
-+		if (!!probe)
-+			priv->flags |= TPM_TIS_ITPM_POSSIBLE;
-+	}
-+
-+	/* Figure out the capabilities */
-+	rc = tpm_read32(priv, TPM_INTF_CAPS(priv->locality), &intfcaps);
-+	if (rc < 0)
-+		goto out_err;
-+
-+	dev_dbg(dev, "TPM interface capabilities (0x%x):\n",
-+		intfcaps);
-+	if (intfcaps & TPM_INTF_BURST_COUNT_STATIC)
-+		dev_dbg(dev, "\tBurst Count Static\n");
-+	if (intfcaps & TPM_INTF_CMD_READY_INT)
-+		dev_dbg(dev, "\tCommand Ready Int Support\n");
-+	if (intfcaps & TPM_INTF_INT_EDGE_FALLING)
-+		dev_dbg(dev, "\tInterrupt Edge Falling\n");
-+	if (intfcaps & TPM_INTF_INT_EDGE_RISING)
-+		dev_dbg(dev, "\tInterrupt Edge Rising\n");
-+	if (intfcaps & TPM_INTF_INT_LEVEL_LOW)
-+		dev_dbg(dev, "\tInterrupt Level Low\n");
-+	if (intfcaps & TPM_INTF_INT_LEVEL_HIGH)
-+		dev_dbg(dev, "\tInterrupt Level High\n");
-+	if (intfcaps & TPM_INTF_LOCALITY_CHANGE_INT)
-+		dev_dbg(dev, "\tLocality Change Int Support\n");
-+	if (intfcaps & TPM_INTF_STS_VALID_INT)
-+		dev_dbg(dev, "\tSts Valid Int Support\n");
-+	if (intfcaps & TPM_INTF_DATA_AVAIL_INT)
-+		dev_dbg(dev, "\tData Avail Int Support\n");
-+
-+	/* Very early on issue a command to the TPM in polling mode to make
-+	 * sure it works. May as well use that command to set the proper
-+	 *  timeouts for the driver.
-+	 */
-+	if (tpm_get_timeouts(chip)) {
-+		dev_err(dev, "Could not get TPM timeouts and durations\n");
-+		rc = -ENODEV;
-+		goto out_err;
-+	}
-+
-+	/* INTERRUPT Setup */
-+	init_waitqueue_head(&priv->read_queue);
-+	init_waitqueue_head(&priv->int_queue);
-+	if (irq != -1) {
-+		if (irq) {
-+			tpm_tis_probe_irq_single(chip, intmask, IRQF_SHARED,
-+						 irq);
-+			if (!(chip->flags & TPM_CHIP_FLAG_IRQ))
-+				dev_err(&chip->dev, FW_BUG
-+					"TPM interrupt not working, polling instead\n");
-+		} else {
-+			tpm_tis_probe_irq(chip, intmask);
-+		}
-+	}
-+
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
-+		rc = tpm2_do_selftest(chip);
-+		if (rc == TPM2_RC_INITIALIZE) {
-+			dev_warn(dev, "Firmware has not started TPM\n");
-+			rc  = tpm2_startup(chip, TPM2_SU_CLEAR);
-+			if (!rc)
-+				rc = tpm2_do_selftest(chip);
-+		}
-+
-+		if (rc) {
-+			dev_err(dev, "TPM self test failed\n");
-+			if (rc > 0)
-+				rc = -ENODEV;
-+			goto out_err;
-+		}
-+	} else {
-+		if (tpm_do_selftest(chip)) {
-+			dev_err(dev, "TPM self test failed\n");
-+			rc = -ENODEV;
-+			goto out_err;
-+		}
-+	}
-+
-+	return tpm_chip_register(chip);
-+out_err:
-+	tpm_tis_remove(chip);
-+	return rc;
-+}
-+EXPORT_SYMBOL_GPL(tpm_tis_core_init);
-+
-+#ifdef CONFIG_PM_SLEEP
-+static void tpm_tis_reenable_interrupts(struct tpm_chip *chip)
-+{
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	u32 intmask;
-+	int rc;
-+
-+	/* reenable interrupts that device may have lost or
-+	 * BIOS/firmware may have disabled
-+	 */
-+	rc = tpm_write8(priv, TPM_INT_VECTOR(priv->locality), priv->irq);
-+	if (rc < 0)
-+		return;
-+
-+	rc = tpm_read32(priv, TPM_INT_ENABLE(priv->locality), &intmask);
-+	if (rc < 0)
-+		return;
-+
-+	intmask |= TPM_INTF_CMD_READY_INT
-+	    | TPM_INTF_LOCALITY_CHANGE_INT | TPM_INTF_DATA_AVAIL_INT
-+	    | TPM_INTF_STS_VALID_INT | TPM_GLOBAL_INT_ENABLE;
-+
-+	tpm_write32(priv, TPM_INT_ENABLE(priv->locality), intmask);
-+}
-+
-+int tpm_tis_resume(struct device *dev)
-+{
-+	struct tpm_chip *chip = dev_get_drvdata(dev);
-+	int ret;
-+
-+	if (chip->flags & TPM_CHIP_FLAG_IRQ)
-+		tpm_tis_reenable_interrupts(chip);
-+
-+	ret = tpm_pm_resume(dev);
-+	if (ret)
-+		return ret;
-+
-+	/* TPM 1.2 requires self-test on resume. This function actually returns
-+	 * an error code but for unknown reason it isn't handled.
-+	 */
-+	if (!(chip->flags & TPM_CHIP_FLAG_TPM2))
-+		tpm_do_selftest(chip);
-+
-+	return 0;
-+}
-+EXPORT_SYMBOL_GPL(tpm_tis_resume);
-+#endif
-+
-+MODULE_AUTHOR("Leendert van Doorn (leendert-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org)");
-+MODULE_DESCRIPTION("TPM Driver");
-+MODULE_VERSION("2.0");
-+MODULE_LICENSE("GPL");
-diff --git a/drivers/char/tpm/tpm_tis_core.h b/drivers/char/tpm/tpm_tis_core.h
-new file mode 100644
-index 0000000..76899d8
---- /dev/null
-+++ b/drivers/char/tpm/tpm_tis_core.h
-@@ -0,0 +1,154 @@
-+/*
-+ * Copyright (C) 2005, 2006 IBM Corporation
-+ * Copyright (C) 2014, 2015 Intel Corporation
-+ *
-+ * Authors:
-+ * Leendert van Doorn <leendert-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
-+ * Kylene Hall <kjhall-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-+ *
-+ * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-+ *
-+ * Device driver for TCG/TCPA TPM (trusted platform module).
-+ * Specifications at www.trustedcomputinggroup.org
-+ *
-+ * This device driver implements the TPM interface as defined in
-+ * the TCG TPM Interface Spec version 1.2, revision 1.0.
-+ *
-+ * This program is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU General Public License as
-+ * published by the Free Software Foundation, version 2 of the
-+ * License.
-+ */
-+
-+#ifndef __TPM_TIS_CORE_H__
-+#define __TPM_TIS_CORE_H__
-+
-+#include "tpm.h"
-+
-+enum tis_access {
-+	TPM_ACCESS_VALID = 0x80,
-+	TPM_ACCESS_ACTIVE_LOCALITY = 0x20,
-+	TPM_ACCESS_REQUEST_PENDING = 0x04,
-+	TPM_ACCESS_REQUEST_USE = 0x02,
-+};
-+
-+enum tis_status {
-+	TPM_STS_VALID = 0x80,
-+	TPM_STS_COMMAND_READY = 0x40,
-+	TPM_STS_GO = 0x20,
-+	TPM_STS_DATA_AVAIL = 0x10,
-+	TPM_STS_DATA_EXPECT = 0x08,
-+};
-+
-+enum tis_int_flags {
-+	TPM_GLOBAL_INT_ENABLE = 0x80000000,
-+	TPM_INTF_BURST_COUNT_STATIC = 0x100,
-+	TPM_INTF_CMD_READY_INT = 0x080,
-+	TPM_INTF_INT_EDGE_FALLING = 0x040,
-+	TPM_INTF_INT_EDGE_RISING = 0x020,
-+	TPM_INTF_INT_LEVEL_LOW = 0x010,
-+	TPM_INTF_INT_LEVEL_HIGH = 0x008,
-+	TPM_INTF_LOCALITY_CHANGE_INT = 0x004,
-+	TPM_INTF_STS_VALID_INT = 0x002,
-+	TPM_INTF_DATA_AVAIL_INT = 0x001,
-+};
-+
-+enum tis_defaults {
-+	TIS_MEM_LEN = 0x5000,
-+	TIS_SHORT_TIMEOUT = 750,	/* ms */
-+	TIS_LONG_TIMEOUT = 2000,	/* 2 sec */
-+};
-+
-+/* Some timeout values are needed before it is known whether the chip is
-+ * TPM 1.0 or TPM 2.0.
-+ */
-+#define TIS_TIMEOUT_A_MAX	max(TIS_SHORT_TIMEOUT, TPM2_TIMEOUT_A)
-+#define TIS_TIMEOUT_B_MAX	max(TIS_LONG_TIMEOUT, TPM2_TIMEOUT_B)
-+#define TIS_TIMEOUT_C_MAX	max(TIS_SHORT_TIMEOUT, TPM2_TIMEOUT_C)
-+#define TIS_TIMEOUT_D_MAX	max(TIS_SHORT_TIMEOUT, TPM2_TIMEOUT_D)
-+
-+#define	TPM_ACCESS(l)			(0x0000 | ((l) << 12))
-+#define	TPM_INT_ENABLE(l)		(0x0008 | ((l) << 12))
-+#define	TPM_INT_VECTOR(l)		(0x000C | ((l) << 12))
-+#define	TPM_INT_STATUS(l)		(0x0010 | ((l) << 12))
-+#define	TPM_INTF_CAPS(l)		(0x0014 | ((l) << 12))
-+#define	TPM_STS(l)			(0x0018 | ((l) << 12))
-+#define	TPM_STS3(l)			(0x001b | ((l) << 12))
-+#define	TPM_DATA_FIFO(l)		(0x0024 | ((l) << 12))
-+
-+#define	TPM_DID_VID(l)			(0x0F00 | ((l) << 12))
-+#define	TPM_RID(l)			(0x0F04 | ((l) << 12))
-+
-+enum tpm_tis_flags {
-+	TPM_TIS_ITPM_POSSIBLE		= BIT(0),
-+};
-+
-+struct tpm_tis_data {
-+	u16 manufacturer_id;
-+	int locality;
-+	int irq;
-+	bool irq_tested;
-+	unsigned int flags;
-+	wait_queue_head_t int_queue;
-+	wait_queue_head_t read_queue;
-+	const struct tpm_tis_phy_ops *phy_ops;
-+};
-+
-+struct tpm_tis_phy_ops {
-+	int (*read_bytes)(struct tpm_tis_data *data, u32 addr, u16 len,
-+			  u8 *result);
-+	int (*write_bytes)(struct tpm_tis_data *data, u32 addr, u16 len,
-+			   u8 *value);
-+	int (*read16)(struct tpm_tis_data *data, u32 addr, u16 *result);
-+	int (*read32)(struct tpm_tis_data *data, u32 addr, u32 *result);
-+	int (*write32)(struct tpm_tis_data *data, u32 addr, u32 src);
-+	int (*post_probe)(struct tpm_chip *chip);
-+};
-+
-+static inline int tpm_read_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
-+				 u8 *result)
-+{
-+	return data->phy_ops->read_bytes(data, addr, len, result);
-+}
-+
-+static inline int tpm_read8(struct tpm_tis_data *data, u32 addr, u8 *result)
-+{
-+	return data->phy_ops->read_bytes(data, addr, 1, result);
-+}
-+
-+static inline int tpm_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
-+{
-+	return data->phy_ops->read16(data, addr, result);
-+}
-+
-+static inline int tpm_read32(struct tpm_tis_data *data, u32 addr, u32 *result)
-+{
-+	return data->phy_ops->read32(data, addr, result);
-+}
-+
-+static inline int tpm_write_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
-+				  u8 *value)
-+{
-+	return data->phy_ops->write_bytes(data, addr, len, value);
-+}
-+
-+static inline int tpm_write8(struct tpm_tis_data *data, u32 addr, u8 value)
-+{
-+	return data->phy_ops->write_bytes(data, addr, 1, &value);
-+}
-+
-+static inline int tpm_write32(struct tpm_tis_data *data, u32 addr, u32 value)
-+{
-+	return data->phy_ops->write32(data, addr, value);
-+}
-+
-+void tpm_tis_remove(struct tpm_chip *chip);
-+int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
-+		      const struct tpm_tis_phy_ops *phy_ops,
-+		      acpi_handle acpi_dev_handle);
-+
-+#ifdef CONFIG_PM_SLEEP
-+int tpm_tis_resume(struct device *dev);
-+#endif
-+
-+#endif
--- 
-2.1.4
+Things seem to be unbroken.
 
+Stefan, have you verified that sysfs attributes work through routes:
+
+1. From char device sysfs directory
+2. Through link
+
+An also tried insmod/rmmod couple of rounds?
+
+If you have and things continue work could you give this Tested-by?
+
+/Jarkko
+
+> ---
+>  drivers/char/tpm/tpm-chip.c      | 73 ++++++++++++++++++++++++++++------------
+>  drivers/char/tpm/tpm-interface.c |  7 ++--
+>  drivers/char/tpm/tpm-sysfs.c     | 61 ++++++++++++++-------------------
+>  drivers/char/tpm/tpm.h           | 10 +++---
+>  4 files changed, 84 insertions(+), 67 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index 5bc530c..7e2c9cf 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -170,9 +170,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
+>  	chip->dev.class = tpm_class;
+>  	chip->dev.release = tpm_dev_release;
+>  	chip->dev.parent = dev;
+> -#ifdef CONFIG_ACPI
+>  	chip->dev.groups = chip->groups;
+> -#endif
+>  
+>  	if (chip->dev_num == 0)
+>  		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
+> @@ -276,14 +274,10 @@ static void tpm_del_char_device(struct tpm_chip *chip)
+>  
+>  static int tpm1_chip_register(struct tpm_chip *chip)
+>  {
+> -	int rc;
+> -
+>  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+>  		return 0;
+>  
+> -	rc = tpm_sysfs_add_device(chip);
+> -	if (rc)
+> -		return rc;
+> +	tpm_sysfs_add_device(chip);
+>  
+>  	chip->bios_dir = tpm_bios_log_setup(dev_name(&chip->dev));
+>  
+> @@ -297,10 +291,50 @@ static void tpm1_chip_unregister(struct tpm_chip *chip)
+>  
+>  	if (chip->bios_dir)
+>  		tpm_bios_log_teardown(chip->bios_dir);
+> +}
+> +
+> +static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
+> +{
+> +	struct attribute **i;
+> +
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		return;
+>  
+> -	tpm_sysfs_del_device(chip);
+> +	sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
+> +
+> +	for (i = chip->groups[0]->attrs; *i != NULL; ++i)
+> +		sysfs_remove_link(&chip->dev.parent->kobj, (*i)->name);
+>  }
+>  
+> +/* For compatibility with legacy sysfs paths we provide symlinks from the
+> + * parent dev directory to selected names within the tpm chip directory. Old
+> + * kernel versions created these files directly under the parent.
+> + */
+> +static int tpm_add_legacy_sysfs(struct tpm_chip *chip)
+> +{
+> +	struct attribute **i;
+> +	int rc;
+> +
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		return 0;
+> +
+> +	rc = __compat_only_sysfs_link_entry_to_kobj(
+> +		    &chip->dev.parent->kobj, &chip->dev.kobj, "ppi");
+> +	if (rc && rc != -ENOENT)
+> +		return rc;
+> +
+> +	/* All the names from tpm-sysfs */
+> +	for (i = chip->groups[0]->attrs; *i != NULL; ++i) {
+> +		rc = __compat_only_sysfs_link_entry_to_kobj(
+> +		    &chip->dev.parent->kobj, &chip->dev.kobj, (*i)->name);
+> +		if (rc) {
+> +			tpm_del_legacy_sysfs(chip);
+> +			return rc;
+> +		}
+> +	}
+> +
+> +	return 0;
+> +}
+>  /*
+>   * tpm_chip_register() - create a character device for the TPM chip
+>   * @chip: TPM chip to use.
+> @@ -323,24 +357,20 @@ int tpm_chip_register(struct tpm_chip *chip)
+>  	tpm_add_ppi(chip);
+>  
+>  	rc = tpm_add_char_device(chip);
+> -	if (rc)
+> -		goto out_err;
+> +	if (rc) {
+> +		tpm1_chip_unregister(chip);
+> +		return rc;
+> +	}
+>  
+>  	chip->flags |= TPM_CHIP_FLAG_REGISTERED;
+>  
+> -	if (!(chip->flags & TPM_CHIP_FLAG_TPM2)) {
+> -		rc = __compat_only_sysfs_link_entry_to_kobj(
+> -		    &chip->dev.parent->kobj, &chip->dev.kobj, "ppi");
+> -		if (rc && rc != -ENOENT) {
+> -			tpm_chip_unregister(chip);
+> -			return rc;
+> -		}
+> +	rc = tpm_add_legacy_sysfs(chip);
+> +	if (rc) {
+> +		tpm_chip_unregister(chip);
+> +		return rc;
+>  	}
+>  
+>  	return 0;
+> -out_err:
+> -	tpm1_chip_unregister(chip);
+> -	return rc;
+>  }
+>  EXPORT_SYMBOL_GPL(tpm_chip_register);
+>  
+> @@ -362,8 +392,7 @@ void tpm_chip_unregister(struct tpm_chip *chip)
+>  	if (!(chip->flags & TPM_CHIP_FLAG_REGISTERED))
+>  		return;
+>  
+> -	if (!(chip->flags & TPM_CHIP_FLAG_TPM2))
+> -		sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
+> +	tpm_del_legacy_sysfs(chip);
+>  
+>  	tpm1_chip_unregister(chip);
+>  	tpm_del_char_device(chip);
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index 7cba092..080dade 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -432,12 +432,11 @@ static const struct tpm_input_header tpm_getcap_header = {
+>  	.ordinal = TPM_ORD_GET_CAP
+>  };
+>  
+> -ssize_t tpm_getcap(struct device *dev, __be32 subcap_id, cap_t *cap,
+> +ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
+>  		   const char *desc)
+>  {
+>  	struct tpm_cmd_t tpm_cmd;
+>  	int rc;
+> -	struct tpm_chip *chip = dev_get_drvdata(dev);
+>  
+>  	tpm_cmd.header.in = tpm_getcap_header;
+>  	if (subcap_id == CAP_VERSION_1_1 || subcap_id == CAP_VERSION_1_2) {
+> @@ -935,7 +934,7 @@ static struct tpm_input_header savestate_header = {
+>   */
+>  int tpm_pm_suspend(struct device *dev)
+>  {
+> -	struct tpm_chip *chip = dev_get_drvdata(dev);
+> +	struct tpm_chip *chip = to_tpm_chip(dev);
+>  	struct tpm_cmd_t cmd;
+>  	int rc, try;
+>  
+> @@ -996,7 +995,7 @@ EXPORT_SYMBOL_GPL(tpm_pm_suspend);
+>   */
+>  int tpm_pm_resume(struct device *dev)
+>  {
+> -	struct tpm_chip *chip = dev_get_drvdata(dev);
+> +	struct tpm_chip *chip = to_tpm_chip(dev);
+>  
+>  	if (chip == NULL)
+>  		return -ENODEV;
+> diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+> index a7c3473..b46cf70 100644
+> --- a/drivers/char/tpm/tpm-sysfs.c
+> +++ b/drivers/char/tpm/tpm-sysfs.c
+> @@ -36,7 +36,7 @@ static ssize_t pubek_show(struct device *dev, struct device_attribute *attr,
+>  	int i, rc;
+>  	char *str = buf;
+>  
+> -	struct tpm_chip *chip = dev_get_drvdata(dev);
+> +	struct tpm_chip *chip = to_tpm_chip(dev);
+>  
+>  	tpm_cmd.header.in = tpm_readpubek_header;
+>  	err = tpm_transmit_cmd(chip, &tpm_cmd, READ_PUBEK_RESULT_SIZE,
+> @@ -92,9 +92,9 @@ static ssize_t pcrs_show(struct device *dev, struct device_attribute *attr,
+>  	ssize_t rc;
+>  	int i, j, num_pcrs;
+>  	char *str = buf;
+> -	struct tpm_chip *chip = dev_get_drvdata(dev);
+> +	struct tpm_chip *chip = to_tpm_chip(dev);
+>  
+> -	rc = tpm_getcap(dev, TPM_CAP_PROP_PCR, &cap,
+> +	rc = tpm_getcap(chip, TPM_CAP_PROP_PCR, &cap,
+>  			"attempting to determine the number of PCRS");
+>  	if (rc)
+>  		return 0;
+> @@ -119,8 +119,8 @@ static ssize_t enabled_show(struct device *dev, struct device_attribute *attr,
+>  	cap_t cap;
+>  	ssize_t rc;
+>  
+> -	rc = tpm_getcap(dev, TPM_CAP_FLAG_PERM, &cap,
+> -			 "attempting to determine the permanent enabled state");
+> +	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_FLAG_PERM, &cap,
+> +			"attempting to determine the permanent enabled state");
+>  	if (rc)
+>  		return 0;
+>  
+> @@ -135,8 +135,8 @@ static ssize_t active_show(struct device *dev, struct device_attribute *attr,
+>  	cap_t cap;
+>  	ssize_t rc;
+>  
+> -	rc = tpm_getcap(dev, TPM_CAP_FLAG_PERM, &cap,
+> -			 "attempting to determine the permanent active state");
+> +	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_FLAG_PERM, &cap,
+> +			"attempting to determine the permanent active state");
+>  	if (rc)
+>  		return 0;
+>  
+> @@ -151,8 +151,8 @@ static ssize_t owned_show(struct device *dev, struct device_attribute *attr,
+>  	cap_t cap;
+>  	ssize_t rc;
+>  
+> -	rc = tpm_getcap(dev, TPM_CAP_PROP_OWNER, &cap,
+> -			 "attempting to determine the owner state");
+> +	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_PROP_OWNER, &cap,
+> +			"attempting to determine the owner state");
+>  	if (rc)
+>  		return 0;
+>  
+> @@ -167,8 +167,8 @@ static ssize_t temp_deactivated_show(struct device *dev,
+>  	cap_t cap;
+>  	ssize_t rc;
+>  
+> -	rc = tpm_getcap(dev, TPM_CAP_FLAG_VOL, &cap,
+> -			 "attempting to determine the temporary state");
+> +	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_FLAG_VOL, &cap,
+> +			"attempting to determine the temporary state");
+>  	if (rc)
+>  		return 0;
+>  
+> @@ -180,11 +180,12 @@ static DEVICE_ATTR_RO(temp_deactivated);
+>  static ssize_t caps_show(struct device *dev, struct device_attribute *attr,
+>  			 char *buf)
+>  {
+> +	struct tpm_chip *chip = to_tpm_chip(dev);
+>  	cap_t cap;
+>  	ssize_t rc;
+>  	char *str = buf;
+>  
+> -	rc = tpm_getcap(dev, TPM_CAP_PROP_MANUFACTURER, &cap,
+> +	rc = tpm_getcap(chip, TPM_CAP_PROP_MANUFACTURER, &cap,
+>  			"attempting to determine the manufacturer");
+>  	if (rc)
+>  		return 0;
+> @@ -192,8 +193,8 @@ static ssize_t caps_show(struct device *dev, struct device_attribute *attr,
+>  		       be32_to_cpu(cap.manufacturer_id));
+>  
+>  	/* Try to get a TPM version 1.2 TPM_CAP_VERSION_INFO */
+> -	rc = tpm_getcap(dev, CAP_VERSION_1_2, &cap,
+> -			 "attempting to determine the 1.2 version");
+> +	rc = tpm_getcap(chip, CAP_VERSION_1_2, &cap,
+> +			"attempting to determine the 1.2 version");
+>  	if (!rc) {
+>  		str += sprintf(str,
+>  			       "TCG version: %d.%d\nFirmware version: %d.%d\n",
+> @@ -203,7 +204,7 @@ static ssize_t caps_show(struct device *dev, struct device_attribute *attr,
+>  			       cap.tpm_version_1_2.revMinor);
+>  	} else {
+>  		/* Otherwise just use TPM_STRUCT_VER */
+> -		rc = tpm_getcap(dev, CAP_VERSION_1_1, &cap,
+> +		rc = tpm_getcap(chip, CAP_VERSION_1_1, &cap,
+>  				"attempting to determine the 1.1 version");
+>  		if (rc)
+>  			return 0;
+> @@ -222,7 +223,7 @@ static DEVICE_ATTR_RO(caps);
+>  static ssize_t cancel_store(struct device *dev, struct device_attribute *attr,
+>  			    const char *buf, size_t count)
+>  {
+> -	struct tpm_chip *chip = dev_get_drvdata(dev);
+> +	struct tpm_chip *chip = to_tpm_chip(dev);
+>  	if (chip == NULL)
+>  		return 0;
+>  
+> @@ -234,7 +235,7 @@ static DEVICE_ATTR_WO(cancel);
+>  static ssize_t durations_show(struct device *dev, struct device_attribute *attr,
+>  			      char *buf)
+>  {
+> -	struct tpm_chip *chip = dev_get_drvdata(dev);
+> +	struct tpm_chip *chip = to_tpm_chip(dev);
+>  
+>  	if (chip->duration[TPM_LONG] == 0)
+>  		return 0;
+> @@ -251,7 +252,7 @@ static DEVICE_ATTR_RO(durations);
+>  static ssize_t timeouts_show(struct device *dev, struct device_attribute *attr,
+>  			     char *buf)
+>  {
+> -	struct tpm_chip *chip = dev_get_drvdata(dev);
+> +	struct tpm_chip *chip = to_tpm_chip(dev);
+>  
+>  	return sprintf(buf, "%d %d %d %d [%s]\n",
+>  		       jiffies_to_usecs(chip->timeout_a),
+> @@ -281,24 +282,12 @@ static const struct attribute_group tpm_dev_group = {
+>  	.attrs = tpm_dev_attrs,
+>  };
+>  
+> -int tpm_sysfs_add_device(struct tpm_chip *chip)
+> +void tpm_sysfs_add_device(struct tpm_chip *chip)
+>  {
+> -	int err;
+> -	err = sysfs_create_group(&chip->dev.parent->kobj,
+> -				 &tpm_dev_group);
+> -
+> -	if (err)
+> -		dev_err(&chip->dev,
+> -			"failed to create sysfs attributes, %d\n", err);
+> -	return err;
+> -}
+> -
+> -void tpm_sysfs_del_device(struct tpm_chip *chip)
+> -{
+> -	/* The sysfs routines rely on an implicit tpm_try_get_ops, this
+> -	 * function is called before ops is null'd and the sysfs core
+> -	 * synchronizes this removal so that no callbacks are running or can
+> -	 * run again
+> +	/* The sysfs routines rely on an implicit tpm_try_get_ops, device_del
+> +	 * is called before ops is null'd and the sysfs core synchronizes this
+> +	 * removal so that no callbacks are running or can run again
+>  	 */
+> -	sysfs_remove_group(&chip->dev.parent->kobj, &tpm_dev_group);
+> +	WARN_ON(chip->groups_cnt != 0);
+> +	chip->groups[chip->groups_cnt++] = &tpm_dev_group;
+>  }
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 8bc6fb8..508e8e0 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -168,9 +168,9 @@ struct tpm_chip {
+>  
+>  	struct dentry **bios_dir;
+>  
+> -#ifdef CONFIG_ACPI
+> -	const struct attribute_group *groups[2];
+> +	const struct attribute_group *groups[3];
+>  	unsigned int groups_cnt;
+> +#ifdef CONFIG_ACPI
+>  	acpi_handle acpi_dev_handle;
+>  	char ppi_version[TPM_PPI_VERSION_LEN + 1];
+>  #endif /* CONFIG_ACPI */
+> @@ -471,7 +471,8 @@ extern dev_t tpm_devt;
+>  extern const struct file_operations tpm_fops;
+>  extern struct idr dev_nums_idr;
+>  
+> -ssize_t	tpm_getcap(struct device *, __be32, cap_t *, const char *);
+> +ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
+> +		   const char *desc);
+>  ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
+>  		     size_t bufsiz);
+>  ssize_t tpm_transmit_cmd(struct tpm_chip *chip, void *cmd, int len,
+> @@ -496,8 +497,7 @@ extern struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
+>  extern int tpm_chip_register(struct tpm_chip *chip);
+>  extern void tpm_chip_unregister(struct tpm_chip *chip);
+>  
+> -int tpm_sysfs_add_device(struct tpm_chip *chip);
+> -void tpm_sysfs_del_device(struct tpm_chip *chip);
+> +void tpm_sysfs_add_device(struct tpm_chip *chip);
+>  
+>  int tpm_pcr_read_dev(struct tpm_chip *chip, int pcr_idx, u8 *res_buf);
+>  
+> -- 
+> 2.4.3
+> 
 
 ------------------------------------------------------------------------------
 Find and fix application performance issues faster with Applications Manager
