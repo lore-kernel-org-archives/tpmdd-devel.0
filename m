@@ -1,42 +1,53 @@
-From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH] tpm: check for TPM_CHIP_FLAG_TPM2 before
- calling tpm2_shutdown()
-Date: Mon, 25 Apr 2016 15:09:15 -0400
-Message-ID: <571E6B5B.6020701@linux.vnet.ibm.com>
-References: <1461576090-24813-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<20160425175720.GB7675@obsidianresearch.com>
+From: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Subject: Re: [PATCH v11 1/4] tpm: Remove all uses of drvdata from the TPM Core
+Date: Mon, 25 Apr 2016 15:13:26 -0400
+Message-ID: <571E6C56.4080305@linux.vnet.ibm.com>
+References: <1461000376-2888-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <1461000376-2888-2-git-send-email-stefanb@linux.vnet.ibm.com>
+ <20160422150645.GA21128@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset=windows-1252; format=flowed
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160425175720.GB7675-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20160422150645.GA21128@intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 04/25/2016 01:57 PM, Jason Gunthorpe wrote:
-> On Mon, Apr 25, 2016 at 12:21:30PM +0300, Jarkko Sakkinen wrote:
->> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
->> Reported-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
->>   drivers/char/tpm/tpm-chip.c | 3 ++-
->>   1 file changed, 2 insertions(+), 1 deletion(-)
-> Reviewed-By: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> Fixes: 20e0152393b41 ("tpm: fix crash in tpm_tis deinitialization")
+On 04/22/2016 11:06 AM, Jarkko Sakkinen wrote:
+> On Mon, Apr 18, 2016 at 01:26:13PM -0400, Stefan Berger wrote:
+>> From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+>>
+>> The final thing preventing this was the way the sysfs files were
+>> attached to the pdev. Follow the approach developed for ppi and move
+>> the sysfs files to the chip->dev with symlinks from the pdev
+>> for compatibility. Everything in the core now sanely uses container_of
+>> to get the chip.
+>>
+>> Signed-off-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+>> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+> Tested-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+>
+> Three configurations:
+>
+> * Haswell NUC with PTT (tpm_crb)
+> * Another NUC with dTPM 2.0 chip
+> * Dell E6420, which has TPM 1.2 chip
+>
+> Things seem to be unbroken.
+>
+> Stefan, have you verified that sysfs attributes work through routes:
+>
+> 1. From char device sysfs directory
+> 2. Through link
 
-Tested-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Tested-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
 
+>
+> An also tried insmod/rmmod couple of rounds?
 
-------------------------------------------------------------------------------
-Find and fix application performance issues faster with Applications Manager
-Applications Manager provides deep performance insights into multiple tiers of
-your business applications. It resolves application problems quickly and
-reduces your MTTR. Get your free trial!
-https://ad.doubleclick.net/ddm/clk/302982198;130105516;z
+Works as-is in polling mode but requires Jason's patch "tpm: Fix IRQ 
+unwind ordering in TIS" for interrupt mode to not throw errors on 'rmmod'.
+
+Tested-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
