@@ -1,7 +1,7 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH] tpm: use devm_add_action_or_reset
-Date: Mon, 25 Apr 2016 14:57:18 -0600
-Message-ID: <20160425205718.GD15367@obsidianresearch.com>
+Date: Tue, 26 Apr 2016 11:30:14 +0300
+Message-ID: <20160426083014.GA29628@intel.com>
 References: <1461617198-32351-1-git-send-email-sudipm.mukherjee@gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -26,9 +26,37 @@ On Mon, Apr 25, 2016 at 09:46:38PM +0100, Sudip Mukherjee wrote:
 > in the error path. Lets use the helper function devm_add_action_or_reset()
 > and return directly as we know the cleanup has been done by the helper.
 
-Seems reasonable to me.
+Have you verified that this compiles against my tree?
 
-Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+/Jarkko
+
+> Signed-off-by: Sudip Mukherjee <sudip.mukherjee-4yDnlxn2s6sWdaTGBSpHTA@public.gmane.org>
+> ---
+>  drivers/char/tpm/tpm-chip.c | 7 +++----
+>  1 file changed, 3 insertions(+), 4 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index 5bc530c..aca4505 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -212,11 +212,10 @@ struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
+>  	if (IS_ERR(chip))
+>  		return chip;
+>  
+> -	rc = devm_add_action(pdev, (void (*)(void *)) put_device, &chip->dev);
+> -	if (rc) {
+> -		put_device(&chip->dev);
+> +	rc = devm_add_action_or_reset(pdev, (void (*)(void *)) put_device,
+> +				      &chip->dev);
+> +	if (rc)
+>  		return ERR_PTR(rc);
+> -	}
+>  
+>  	dev_set_drvdata(pdev, chip);
+>  
+> -- 
+> 1.9.1
+> 
 
 ------------------------------------------------------------------------------
 Find and fix application performance issues faster with Applications Manager
