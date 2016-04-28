@@ -1,14 +1,11 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: Fix IRQ unwind ordering in TIS
-Date: Thu, 28 Apr 2016 11:53:16 +0300
-Message-ID: <1461833596.3482.2.camel@linux.intel.com>
-References: <20160427165846.GA17064@obsidianresearch.com>
-	<1461830953.3482.1.camel@linux.intel.com>
+From: Arnd Bergmann <arnd-r2nGTMty4D4@public.gmane.org>
+Subject: [PATCH] tpm: select ANON_INODES for proxy driver
+Date: Thu, 28 Apr 2016 12:46:13 +0200
+Message-ID: <1461840382-2996256-1-git-send-email-arnd@arndb.de>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1461830953.3482.1.camel-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,50 +14,44 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Arnd Bergmann <arnd-r2nGTMty4D4@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gVGh1LCAyMDE2LTA0LTI4IGF0IDExOjA5ICswMzAwLCBKYXJra28gU2Fra2luZW4gd3JvdGU6
-Cj4gT24gV2VkLCAyMDE2LTA0LTI3IGF0IDEwOjU4IC0wNjAwLCBKYXNvbiBHdW50aG9ycGUgd3Jv
-dGU6Cj4gPiAKPiA+IFRoZSBkZXZtIGZvciB0aGUgSVJRIHdhcyBwbGFjZWQgb24gdGhlIGNoaXAs
-IG5vdCB0aGUgcGRldi4gVGhpcyBjYW4KPiA+IGNhdXNlIHRoZSBpcnEgdG8gYmUgc3RpbGwgY2Fs
-bGFibGUgYWZ0ZXIgdGhlIHBkZXYgaGFzIGJlZW4gY2xlYW5lZCB1cAo+ID4gKGVnIHByaXYga2Zy
-ZWUnZCkuCj4gPiDCoAo+ID4gRm91bmQgYnkgQ09ORklHX0RFQlVHX1NISVJRPXkKPiA+IMKgCj4g
-PiBSZXBvcnRlZC1ieTogU3RlZmFuIEJlcmdlciA8c3RlZmFuYkBsaW51eC52bmV0LmlibS5jb20+
-Cj4gPiBGaXhlczogMjMzYTA2NWUwY2QwICgidHBtOiBHZXQgcmlkIG9mIGNoaXAtPnBkZXYiKQo+
-ID4gU2lnbmVkLW9mZi1ieTogSmFzb24gR3VudGhvcnBlIDxqZ3VudGhvcnBlQG9ic2lkaWFucmVz
-ZWFyY2guY29tPgo+ID4gVGVzdGVkLWJ5OsKgwqBTdGVmYW4gQmVyZ2VyIDxzdGVmYW5iQGxpbnV4
-LnZuZXQuaWJtLmNvbT4KPiBSZXZpZXdlZC1ieTogSmFya2tvIFNha2tpbmVuIDxqYXJra28uc2Fr
-a2luZW5AbGludXguaW50ZWwuY29tPgoKQW5kIGFwcGxpZWQgwqBhbmQgbWVyZ2VkIHRvIG5leHQu
-CgovSmFya2tvCgo+IC9KYXJra28KPiAKPiA+IAo+ID4gLS0tCj4gPiDCoGRyaXZlcnMvY2hhci90
-cG0vdHBtX3Rpcy5jIHwgNCArKy0tCj4gPiDCoDEgZmlsZSBjaGFuZ2VkLCAyIGluc2VydGlvbnMo
-KyksIDIgZGVsZXRpb25zKC0pCj4gPiDCoAo+ID4gZGlmZiAtLWdpdCBhL2RyaXZlcnMvY2hhci90
-cG0vdHBtX3Rpcy5jIGIvZHJpdmVycy9jaGFyL3RwbS90cG1fdGlzLmMKPiA+IGluZGV4IGE2YjJk
-NDYwYmZjMC4uZDg4ODI3MDQ2YTQyIDEwMDY0NAo+ID4gLS0tIGEvZHJpdmVycy9jaGFyL3RwbS90
-cG1fdGlzLmMKPiA+ICsrKyBiL2RyaXZlcnMvY2hhci90cG0vdHBtX3Rpcy5jCj4gPiBAQCAtMzg3
-LDcgKzM4Nyw3IEBAIHN0YXRpYyB2b2lkIGRpc2FibGVfaW50ZXJydXB0cyhzdHJ1Y3QgdHBtX2No
-aXAgKmNoaXApCj4gPiDCoAlpbnRtYXNrICY9IH5UUE1fR0xPQkFMX0lOVF9FTkFCTEU7Cj4gPiDC
-oAlpb3dyaXRlMzIoaW50bWFzaywKPiA+IMKgCQnCoMKgcHJpdi0+aW9iYXNlICsgVFBNX0lOVF9F
-TkFCTEUocHJpdi0+bG9jYWxpdHkpKTsKPiA+IC0JZGV2bV9mcmVlX2lycSgmY2hpcC0+ZGV2LCBw
-cml2LT5pcnEsIGNoaXApOwo+ID4gKwlkZXZtX2ZyZWVfaXJxKGNoaXAtPmRldi5wYXJlbnQsIHBy
-aXYtPmlycSwgY2hpcCk7Cj4gPiDCoAlwcml2LT5pcnEgPSAwOwo+ID4gwqAJY2hpcC0+ZmxhZ3Mg
-Jj0gflRQTV9DSElQX0ZMQUdfSVJROwo+ID4gwqB9Cj4gPiBAQCAtNjA0LDcgKzYwNCw3IEBAIHN0
-YXRpYyBpbnQgdHBtX3Rpc19wcm9iZV9pcnFfc2luZ2xlKHN0cnVjdCB0cG1fY2hpcCAqY2hpcCwg
-dTMyCj4gPiBpbnRtYXNrLAo+ID4gwqAJc3RydWN0IHByaXZfZGF0YSAqcHJpdiA9IGRldl9nZXRf
-ZHJ2ZGF0YSgmY2hpcC0+ZGV2KTsKPiA+IMKgCXU4IG9yaWdpbmFsX2ludF92ZWM7Cj4gPiDCoAo+
-ID4gLQlpZiAoZGV2bV9yZXF1ZXN0X2lycSgmY2hpcC0+ZGV2LCBpcnEsIHRpc19pbnRfaGFuZGxl
-ciwgZmxhZ3MsCj4gPiArCWlmIChkZXZtX3JlcXVlc3RfaXJxKGNoaXAtPmRldi5wYXJlbnQsIGly
-cSwgdGlzX2ludF9oYW5kbGVyLCBmbGFncywKPiA+IMKgCQkJwqDCoMKgwqDCoGRldl9uYW1lKCZj
-aGlwLT5kZXYpLCBjaGlwKSAhPSAwKSB7Cj4gPiDCoAkJZGV2X2luZm8oJmNoaXAtPmRldiwgIlVu
-YWJsZSB0byByZXF1ZXN0IGlycTogJWQgZm9yIHByb2JlXG4iLAo+ID4gwqAJCQnCoGlycSk7Cgot
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0KRmluZCBhbmQgZml4IGFwcGxpY2F0aW9uIHBlcmZvcm1hbmNl
-IGlzc3VlcyBmYXN0ZXIgd2l0aCBBcHBsaWNhdGlvbnMgTWFuYWdlcgpBcHBsaWNhdGlvbnMgTWFu
-YWdlciBwcm92aWRlcyBkZWVwIHBlcmZvcm1hbmNlIGluc2lnaHRzIGludG8gbXVsdGlwbGUgdGll
-cnMgb2YKeW91ciBidXNpbmVzcyBhcHBsaWNhdGlvbnMuIEl0IHJlc29sdmVzIGFwcGxpY2F0aW9u
-IHByb2JsZW1zIHF1aWNrbHkgYW5kCnJlZHVjZXMgeW91ciBNVFRSLiBHZXQgeW91ciBmcmVlIHRy
-aWFsIQpodHRwczovL2FkLmRvdWJsZWNsaWNrLm5ldC9kZG0vY2xrLzMwMjk4MjE5ODsxMzAxMDU1
-MTY7egpfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwp0cG1k
-ZC1kZXZlbCBtYWlsaW5nIGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0
-dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
+The newly added vtpmx driver fails to build if CONFIG_ANON_INODES
+is disabled:
+
+drivers/char/built-in.o: In function `vtpmx_fops_ioctl':
+(.text+0x97f8): undefined reference to `anon_inode_getfile'
+
+This adds a Kconfig 'select' statement to ensure it's always there
+when we need it.
+
+Signed-off-by: Arnd Bergmann <arnd-r2nGTMty4D4@public.gmane.org>
+Fixes: 794c38e01358 ("tpm: Proxy driver for supporting multiple emulated TPMs")
+---
+ drivers/char/tpm/Kconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
+index 0eac596e33d1..bfdc5c0486aa 100644
+--- a/drivers/char/tpm/Kconfig
++++ b/drivers/char/tpm/Kconfig
+@@ -125,6 +125,7 @@ config TCG_CRB
+ config TCG_VTPM_PROXY
+ 	tristate "VTPM Proxy Interface"
+ 	depends on TCG_TPM
++	select ANON_INODES
+ 	---help---
+ 	  This driver proxies for an emulated TPM (vTPM) running in userspace.
+ 	  A device /dev/vtpmx is provided that creates a device pair
+-- 
+2.7.0
+
+
+------------------------------------------------------------------------------
+Find and fix application performance issues faster with Applications Manager
+Applications Manager provides deep performance insights into multiple tiers of
+your business applications. It resolves application problems quickly and
+reduces your MTTR. Get your free trial!
+https://ad.doubleclick.net/ddm/clk/302982198;130105516;z
