@@ -1,66 +1,66 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH] tpm: Fix IRQ unwind ordering in TIS
-Date: Thu, 28 Apr 2016 11:09:13 +0300
-Message-ID: <1461830953.3482.1.camel@linux.intel.com>
+Date: Thu, 28 Apr 2016 11:53:16 +0300
+Message-ID: <1461833596.3482.2.camel@linux.intel.com>
 References: <20160427165846.GA17064@obsidianresearch.com>
+	<1461830953.3482.1.camel@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: QUOTED-PRINTABLE
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20160427165846.GA17064@obsidianresearch.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Stefan Berger <stefanb@linux.vnet.ibm.com>, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1461830953.3482.1.camel-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, 2016-04-27 at 10:58 -0600, Jason Gunthorpe wrote:
-> The devm for the IRQ was placed on the chip, not the pdev. This can
-> cause the irq to be still callable after the pdev has been cleaned up
-> (eg priv kfree'd).
->=C2=A0
-> Found by CONFIG_DEBUG_SHIRQ=3Dy
->=C2=A0
-> Reported-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
-> Fixes: 233a065e0cd0 ("tpm: Get rid of chip->pdev")
-> Signed-off-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-> Tested-by:=C2=A0=C2=A0Stefan Berger <stefanb@linux.vnet.ibm.com>
-
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-
-/Jarkko
-
-> ---
-> =C2=A0drivers/char/tpm/tpm_tis.c | 4 ++--
-> =C2=A01 file changed, 2 insertions(+), 2 deletions(-)
->=C2=A0
-> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-> index a6b2d460bfc0..d88827046a42 100644
-> --- a/drivers/char/tpm/tpm_tis.c
-> +++ b/drivers/char/tpm/tpm_tis.c
-> @@ -387,7 +387,7 @@ static void disable_interrupts(struct tpm_chip *c=
-hip)
-> =C2=A0	intmask &=3D ~TPM_GLOBAL_INT_ENABLE;
-> =C2=A0	iowrite32(intmask,
-> =C2=A0		=C2=A0=C2=A0priv->iobase + TPM_INT_ENABLE(priv->locality));
-> -	devm_free_irq(&chip->dev, priv->irq, chip);
-> +	devm_free_irq(chip->dev.parent, priv->irq, chip);
-> =C2=A0	priv->irq =3D 0;
-> =C2=A0	chip->flags &=3D ~TPM_CHIP_FLAG_IRQ;
-> =C2=A0}
-> @@ -604,7 +604,7 @@ static int tpm_tis_probe_irq_single(struct tpm_ch=
-ip *chip, u32
-> intmask,
-> =C2=A0	struct priv_data *priv =3D dev_get_drvdata(&chip->dev);
-> =C2=A0	u8 original_int_vec;
-> =C2=A0
-> -	if (devm_request_irq(&chip->dev, irq, tis_int_handler, flags,
-> +	if (devm_request_irq(chip->dev.parent, irq, tis_int_handler, flags,
-> =C2=A0			=C2=A0=C2=A0=C2=A0=C2=A0=C2=A0dev_name(&chip->dev), chip) !=3D=
- 0) {
-> =C2=A0		dev_info(&chip->dev, "Unable to request irq: %d for probe\n",
-> =C2=A0			=C2=A0irq);
---
-To unsubscribe from this list: send the line "unsubscribe linux-securit=
-y-module" in
-the body of a message to majordomo@vger.kernel.org
-More majordomo info at  http://vger.kernel.org/majordomo-info.html
+T24gVGh1LCAyMDE2LTA0LTI4IGF0IDExOjA5ICswMzAwLCBKYXJra28gU2Fra2luZW4gd3JvdGU6
+Cj4gT24gV2VkLCAyMDE2LTA0LTI3IGF0IDEwOjU4IC0wNjAwLCBKYXNvbiBHdW50aG9ycGUgd3Jv
+dGU6Cj4gPiAKPiA+IFRoZSBkZXZtIGZvciB0aGUgSVJRIHdhcyBwbGFjZWQgb24gdGhlIGNoaXAs
+IG5vdCB0aGUgcGRldi4gVGhpcyBjYW4KPiA+IGNhdXNlIHRoZSBpcnEgdG8gYmUgc3RpbGwgY2Fs
+bGFibGUgYWZ0ZXIgdGhlIHBkZXYgaGFzIGJlZW4gY2xlYW5lZCB1cAo+ID4gKGVnIHByaXYga2Zy
+ZWUnZCkuCj4gPiDCoAo+ID4gRm91bmQgYnkgQ09ORklHX0RFQlVHX1NISVJRPXkKPiA+IMKgCj4g
+PiBSZXBvcnRlZC1ieTogU3RlZmFuIEJlcmdlciA8c3RlZmFuYkBsaW51eC52bmV0LmlibS5jb20+
+Cj4gPiBGaXhlczogMjMzYTA2NWUwY2QwICgidHBtOiBHZXQgcmlkIG9mIGNoaXAtPnBkZXYiKQo+
+ID4gU2lnbmVkLW9mZi1ieTogSmFzb24gR3VudGhvcnBlIDxqZ3VudGhvcnBlQG9ic2lkaWFucmVz
+ZWFyY2guY29tPgo+ID4gVGVzdGVkLWJ5OsKgwqBTdGVmYW4gQmVyZ2VyIDxzdGVmYW5iQGxpbnV4
+LnZuZXQuaWJtLmNvbT4KPiBSZXZpZXdlZC1ieTogSmFya2tvIFNha2tpbmVuIDxqYXJra28uc2Fr
+a2luZW5AbGludXguaW50ZWwuY29tPgoKQW5kIGFwcGxpZWQgwqBhbmQgbWVyZ2VkIHRvIG5leHQu
+CgovSmFya2tvCgo+IC9KYXJra28KPiAKPiA+IAo+ID4gLS0tCj4gPiDCoGRyaXZlcnMvY2hhci90
+cG0vdHBtX3Rpcy5jIHwgNCArKy0tCj4gPiDCoDEgZmlsZSBjaGFuZ2VkLCAyIGluc2VydGlvbnMo
+KyksIDIgZGVsZXRpb25zKC0pCj4gPiDCoAo+ID4gZGlmZiAtLWdpdCBhL2RyaXZlcnMvY2hhci90
+cG0vdHBtX3Rpcy5jIGIvZHJpdmVycy9jaGFyL3RwbS90cG1fdGlzLmMKPiA+IGluZGV4IGE2YjJk
+NDYwYmZjMC4uZDg4ODI3MDQ2YTQyIDEwMDY0NAo+ID4gLS0tIGEvZHJpdmVycy9jaGFyL3RwbS90
+cG1fdGlzLmMKPiA+ICsrKyBiL2RyaXZlcnMvY2hhci90cG0vdHBtX3Rpcy5jCj4gPiBAQCAtMzg3
+LDcgKzM4Nyw3IEBAIHN0YXRpYyB2b2lkIGRpc2FibGVfaW50ZXJydXB0cyhzdHJ1Y3QgdHBtX2No
+aXAgKmNoaXApCj4gPiDCoAlpbnRtYXNrICY9IH5UUE1fR0xPQkFMX0lOVF9FTkFCTEU7Cj4gPiDC
+oAlpb3dyaXRlMzIoaW50bWFzaywKPiA+IMKgCQnCoMKgcHJpdi0+aW9iYXNlICsgVFBNX0lOVF9F
+TkFCTEUocHJpdi0+bG9jYWxpdHkpKTsKPiA+IC0JZGV2bV9mcmVlX2lycSgmY2hpcC0+ZGV2LCBw
+cml2LT5pcnEsIGNoaXApOwo+ID4gKwlkZXZtX2ZyZWVfaXJxKGNoaXAtPmRldi5wYXJlbnQsIHBy
+aXYtPmlycSwgY2hpcCk7Cj4gPiDCoAlwcml2LT5pcnEgPSAwOwo+ID4gwqAJY2hpcC0+ZmxhZ3Mg
+Jj0gflRQTV9DSElQX0ZMQUdfSVJROwo+ID4gwqB9Cj4gPiBAQCAtNjA0LDcgKzYwNCw3IEBAIHN0
+YXRpYyBpbnQgdHBtX3Rpc19wcm9iZV9pcnFfc2luZ2xlKHN0cnVjdCB0cG1fY2hpcCAqY2hpcCwg
+dTMyCj4gPiBpbnRtYXNrLAo+ID4gwqAJc3RydWN0IHByaXZfZGF0YSAqcHJpdiA9IGRldl9nZXRf
+ZHJ2ZGF0YSgmY2hpcC0+ZGV2KTsKPiA+IMKgCXU4IG9yaWdpbmFsX2ludF92ZWM7Cj4gPiDCoAo+
+ID4gLQlpZiAoZGV2bV9yZXF1ZXN0X2lycSgmY2hpcC0+ZGV2LCBpcnEsIHRpc19pbnRfaGFuZGxl
+ciwgZmxhZ3MsCj4gPiArCWlmIChkZXZtX3JlcXVlc3RfaXJxKGNoaXAtPmRldi5wYXJlbnQsIGly
+cSwgdGlzX2ludF9oYW5kbGVyLCBmbGFncywKPiA+IMKgCQkJwqDCoMKgwqDCoGRldl9uYW1lKCZj
+aGlwLT5kZXYpLCBjaGlwKSAhPSAwKSB7Cj4gPiDCoAkJZGV2X2luZm8oJmNoaXAtPmRldiwgIlVu
+YWJsZSB0byByZXF1ZXN0IGlycTogJWQgZm9yIHByb2JlXG4iLAo+ID4gwqAJCQnCoGlycSk7Cgot
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0KRmluZCBhbmQgZml4IGFwcGxpY2F0aW9uIHBlcmZvcm1hbmNl
+IGlzc3VlcyBmYXN0ZXIgd2l0aCBBcHBsaWNhdGlvbnMgTWFuYWdlcgpBcHBsaWNhdGlvbnMgTWFu
+YWdlciBwcm92aWRlcyBkZWVwIHBlcmZvcm1hbmNlIGluc2lnaHRzIGludG8gbXVsdGlwbGUgdGll
+cnMgb2YKeW91ciBidXNpbmVzcyBhcHBsaWNhdGlvbnMuIEl0IHJlc29sdmVzIGFwcGxpY2F0aW9u
+IHByb2JsZW1zIHF1aWNrbHkgYW5kCnJlZHVjZXMgeW91ciBNVFRSLiBHZXQgeW91ciBmcmVlIHRy
+aWFsIQpodHRwczovL2FkLmRvdWJsZWNsaWNrLm5ldC9kZG0vY2xrLzMwMjk4MjE5ODsxMzAxMDU1
+MTY7egpfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwp0cG1k
+ZC1kZXZlbCBtYWlsaW5nIGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0
+dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
