@@ -1,16 +1,16 @@
-From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH v6 7/8] tpm: Use read/write_bytes for
  drivers without more specialized methods
-Date: Tue, 3 May 2016 22:28:56 +0200
-Message-ID: <57290A08.20403@gmail.com>
+Date: Wed, 04 May 2016 13:52:20 +0300
+Message-ID: <1462359140.10036.5.camel@linux.intel.com>
 References: <1461363085-9908-1-git-send-email-christophe-h.ricard@st.com>
 	<1461363085-9908-8-git-send-email-christophe-h.ricard@st.com>
-	<20160502203236.GA5415@intel.com>
+	<20160502203236.GA5415@intel.com> <57290A08.20403@gmail.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160502203236.GA5415-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <57290A08.20403-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,93 +19,75 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Ok will do
-
-On 02/05/2016 22:32, Jarkko Sakkinen wrote:
-> On Sat, Apr 23, 2016 at 12:11:24AM +0200, Christophe Ricard wrote:
->> Some drivers might need to implement only functions for transferring an
->> arbitrary number of bytes. Provides a generic functions for handling  of
->> word or dword transfers to be dump into driver functions pointers.
->>
->> Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
->> Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
-> Ignore my comment for 6/8. This patch is not necessary for the series.
->
-> /Jarkko
->
->> ---
->>   drivers/char/tpm/tpm_tis_core.c | 30 ++++++++++++++++++++++++++++++
->>   drivers/char/tpm/tpm_tis_core.h |  4 ++++
->>   2 files changed, 34 insertions(+)
->>
->> diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
->> index f4e05ac..fd9c6a5 100644
->> --- a/drivers/char/tpm/tpm_tis_core.c
->> +++ b/drivers/char/tpm/tpm_tis_core.c
->> @@ -854,6 +854,36 @@ int tpm_tis_resume(struct device *dev)
->>   EXPORT_SYMBOL_GPL(tpm_tis_resume);
->>   #endif
->>   
->> +int tpm_tis_common_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
->> +{
->> +	int rc;
->> +
->> +	rc = data->phy_ops->read_bytes(data, addr, sizeof(u16), (u8 *)result);
->> +	if (!rc)
->> +		*result = le16_to_cpu(*result);
->> +	return rc;
->> +}
->> +EXPORT_SYMBOL_GPL(tpm_tis_common_read16);
->> +
->> +int tpm_tis_common_read32(struct tpm_tis_data *data, u32 addr, u32 *result)
->> +{
->> +	int rc;
->> +
->> +	rc = data->phy_ops->read_bytes(data, addr, sizeof(u32), (u8 *)result);
->> +	if (!rc)
->> +		*result = le32_to_cpu(*result);
->> +	return rc;
->> +}
->> +EXPORT_SYMBOL_GPL(tpm_tis_common_read32);
->> +
->> +int tpm_tis_common_write32(struct tpm_tis_data *data, u32 addr, u32 value)
->> +{
->> +	value = cpu_to_le32(value);
->> +	return data->phy_ops->write_bytes(data, addr, sizeof(u32),
->> +					   (u8 *)&value);
->> +}
->> +EXPORT_SYMBOL_GPL(tpm_tis_common_write32);
->> +
->>   MODULE_AUTHOR("Leendert van Doorn (leendert-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org)");
->>   MODULE_DESCRIPTION("TPM Driver");
->>   MODULE_VERSION("2.0");
->> diff --git a/drivers/char/tpm/tpm_tis_core.h b/drivers/char/tpm/tpm_tis_core.h
->> index 91aa305..bdc7899 100644
->> --- a/drivers/char/tpm/tpm_tis_core.h
->> +++ b/drivers/char/tpm/tpm_tis_core.h
->> @@ -141,6 +141,10 @@ static inline int tpm_write32(struct tpm_tis_data *data, u32 addr, u32 value)
->>   	return data->phy_ops->write32(data, addr, value);
->>   }
->>   
->> +int tpm_tis_common_read16(struct tpm_tis_data *data, u32 addr, u16 *result);
->> +int tpm_tis_common_read32(struct tpm_tis_data *data, u32 addr, u32 *result);
->> +int tpm_tis_common_write32(struct tpm_tis_data *data, u32 addr, u32 value);
->> +
->>   void tpm_tis_remove(struct tpm_chip *chip);
->>   int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
->>   		      const struct tpm_tis_phy_ops *phy_ops,
->> -- 
->> 2.1.4
->>
-
-
-------------------------------------------------------------------------------
-Find and fix application performance issues faster with Applications Manager
-Applications Manager provides deep performance insights into multiple tiers of
-your business applications. It resolves application problems quickly and
-reduces your MTTR. Get your free trial!
-https://ad.doubleclick.net/ddm/clk/302982198;130105516;z
+T24gVHVlLCAyMDE2LTA1LTAzIGF0IDIyOjI4ICswMjAwLCBDaHJpc3RvcGhlIFJpY2FyZCB3cm90
+ZToKPiBPayB3aWxsIGRvCgpHcmVhdCwgSSdsbCBzdGFydCB0ZXN0aW5nIHRoZSBuZXh0IHZlcnNp
+b24gaWYgdGhleSBhcHBseSBjbGVhbmx5IHRvIG15CnRyZWUuCgovSmFya2tvCgo+IE9uIDAyLzA1
+LzIwMTYgMjI6MzIsIEphcmtrbyBTYWtraW5lbiB3cm90ZToKPiA+IAo+ID4gT24gU2F0LCBBcHIg
+MjMsIDIwMTYgYXQgMTI6MTE6MjRBTSArMDIwMCwgQ2hyaXN0b3BoZSBSaWNhcmQgd3JvdGU6Cj4g
+PiA+IAo+ID4gPiBTb21lIGRyaXZlcnMgbWlnaHQgbmVlZCB0byBpbXBsZW1lbnQgb25seSBmdW5j
+dGlvbnMgZm9yIHRyYW5zZmVycmluZyBhbgo+ID4gPiBhcmJpdHJhcnkgbnVtYmVyIG9mIGJ5dGVz
+LiBQcm92aWRlcyBhIGdlbmVyaWMgZnVuY3Rpb25zIGZvciBoYW5kbGluZ8KgwqBvZgo+ID4gPiB3
+b3JkIG9yIGR3b3JkIHRyYW5zZmVycyB0byBiZSBkdW1wIGludG8gZHJpdmVyIGZ1bmN0aW9ucyBw
+b2ludGVycy4KPiA+ID4gCj4gPiA+IFNpZ25lZC1vZmYtYnk6IEFsZXhhbmRlciBTdGVmZmVuIDxB
+bGV4YW5kZXIuU3RlZmZlbkBpbmZpbmVvbi5jb20+Cj4gPiA+IFNpZ25lZC1vZmYtYnk6IENocmlz
+dG9waGUgUmljYXJkIDxjaHJpc3RvcGhlLWgucmljYXJkQHN0LmNvbT4KPiA+IElnbm9yZSBteSBj
+b21tZW50IGZvciA2LzguIFRoaXMgcGF0Y2ggaXMgbm90IG5lY2Vzc2FyeSBmb3IgdGhlIHNlcmll
+cy4KPiA+IAo+ID4gL0phcmtrbwo+ID4gCj4gPiA+IAo+ID4gPiAtLS0KPiA+ID4gwqAgZHJpdmVy
+cy9jaGFyL3RwbS90cG1fdGlzX2NvcmUuYyB8IDMwICsrKysrKysrKysrKysrKysrKysrKysrKysr
+KysrKwo+ID4gPiDCoCBkcml2ZXJzL2NoYXIvdHBtL3RwbV90aXNfY29yZS5oIHzCoMKgNCArKysr
+Cj4gPiA+IMKgIDIgZmlsZXMgY2hhbmdlZCwgMzQgaW5zZXJ0aW9ucygrKQo+ID4gPiAKPiA+ID4g
+ZGlmZiAtLWdpdCBhL2RyaXZlcnMvY2hhci90cG0vdHBtX3Rpc19jb3JlLmMgYi9kcml2ZXJzL2No
+YXIvdHBtL3RwbV90aXNfY29yZS5jCj4gPiA+IGluZGV4IGY0ZTA1YWMuLmZkOWM2YTUgMTAwNjQ0
+Cj4gPiA+IC0tLSBhL2RyaXZlcnMvY2hhci90cG0vdHBtX3Rpc19jb3JlLmMKPiA+ID4gKysrIGIv
+ZHJpdmVycy9jaGFyL3RwbS90cG1fdGlzX2NvcmUuYwo+ID4gPiBAQCAtODU0LDYgKzg1NCwzNiBA
+QCBpbnQgdHBtX3Rpc19yZXN1bWUoc3RydWN0IGRldmljZSAqZGV2KQo+ID4gPiDCoCBFWFBPUlRf
+U1lNQk9MX0dQTCh0cG1fdGlzX3Jlc3VtZSk7Cj4gPiA+IMKgICNlbmRpZgo+ID4gPiDCoMKgCj4g
+PiA+ICtpbnQgdHBtX3Rpc19jb21tb25fcmVhZDE2KHN0cnVjdCB0cG1fdGlzX2RhdGEgKmRhdGEs
+IHUzMiBhZGRyLCB1MTYgKnJlc3VsdCkKPiA+ID4gK3sKPiA+ID4gKwlpbnQgcmM7Cj4gPiA+ICsK
+PiA+ID4gKwlyYyA9IGRhdGEtPnBoeV9vcHMtPnJlYWRfYnl0ZXMoZGF0YSwgYWRkciwgc2l6ZW9m
+KHUxNiksICh1OCAqKXJlc3VsdCk7Cj4gPiA+ICsJaWYgKCFyYykKPiA+ID4gKwkJKnJlc3VsdCA9
+IGxlMTZfdG9fY3B1KCpyZXN1bHQpOwo+ID4gPiArCXJldHVybiByYzsKPiA+ID4gK30KPiA+ID4g
+K0VYUE9SVF9TWU1CT0xfR1BMKHRwbV90aXNfY29tbW9uX3JlYWQxNik7Cj4gPiA+ICsKPiA+ID4g
+K2ludCB0cG1fdGlzX2NvbW1vbl9yZWFkMzIoc3RydWN0IHRwbV90aXNfZGF0YSAqZGF0YSwgdTMy
+IGFkZHIsIHUzMiAqcmVzdWx0KQo+ID4gPiArewo+ID4gPiArCWludCByYzsKPiA+ID4gKwo+ID4g
+PiArCXJjID0gZGF0YS0+cGh5X29wcy0+cmVhZF9ieXRlcyhkYXRhLCBhZGRyLCBzaXplb2YodTMy
+KSwgKHU4ICopcmVzdWx0KTsKPiA+ID4gKwlpZiAoIXJjKQo+ID4gPiArCQkqcmVzdWx0ID0gbGUz
+Ml90b19jcHUoKnJlc3VsdCk7Cj4gPiA+ICsJcmV0dXJuIHJjOwo+ID4gPiArfQo+ID4gPiArRVhQ
+T1JUX1NZTUJPTF9HUEwodHBtX3Rpc19jb21tb25fcmVhZDMyKTsKPiA+ID4gKwo+ID4gPiAraW50
+IHRwbV90aXNfY29tbW9uX3dyaXRlMzIoc3RydWN0IHRwbV90aXNfZGF0YSAqZGF0YSwgdTMyIGFk
+ZHIsIHUzMiB2YWx1ZSkKPiA+ID4gK3sKPiA+ID4gKwl2YWx1ZSA9IGNwdV90b19sZTMyKHZhbHVl
+KTsKPiA+ID4gKwlyZXR1cm4gZGF0YS0+cGh5X29wcy0+d3JpdGVfYnl0ZXMoZGF0YSwgYWRkciwg
+c2l6ZW9mKHUzMiksCj4gPiA+ICsJCQkJCcKgwqDCoCh1OCAqKSZ2YWx1ZSk7Cj4gPiA+ICt9Cj4g
+PiA+ICtFWFBPUlRfU1lNQk9MX0dQTCh0cG1fdGlzX2NvbW1vbl93cml0ZTMyKTsKPiA+ID4gKwo+
+ID4gPiDCoCBNT0RVTEVfQVVUSE9SKCJMZWVuZGVydCB2YW4gRG9vcm4gKGxlZW5kZXJ0QHdhdHNv
+bi5pYm0uY29tKSIpOwo+ID4gPiDCoCBNT0RVTEVfREVTQ1JJUFRJT04oIlRQTSBEcml2ZXIiKTsK
+PiA+ID4gwqAgTU9EVUxFX1ZFUlNJT04oIjIuMCIpOwo+ID4gPiBkaWZmIC0tZ2l0IGEvZHJpdmVy
+cy9jaGFyL3RwbS90cG1fdGlzX2NvcmUuaCBiL2RyaXZlcnMvY2hhci90cG0vdHBtX3Rpc19jb3Jl
+LmgKPiA+ID4gaW5kZXggOTFhYTMwNS4uYmRjNzg5OSAxMDA2NDQKPiA+ID4gLS0tIGEvZHJpdmVy
+cy9jaGFyL3RwbS90cG1fdGlzX2NvcmUuaAo+ID4gPiArKysgYi9kcml2ZXJzL2NoYXIvdHBtL3Rw
+bV90aXNfY29yZS5oCj4gPiA+IEBAIC0xNDEsNiArMTQxLDEwIEBAIHN0YXRpYyBpbmxpbmUgaW50
+IHRwbV93cml0ZTMyKHN0cnVjdCB0cG1fdGlzX2RhdGEgKmRhdGEsIHUzMgo+ID4gPiBhZGRyLCB1
+MzIgdmFsdWUpCj4gPiA+IMKgwqAJcmV0dXJuIGRhdGEtPnBoeV9vcHMtPndyaXRlMzIoZGF0YSwg
+YWRkciwgdmFsdWUpOwo+ID4gPiDCoCB9Cj4gPiA+IMKgwqAKPiA+ID4gK2ludCB0cG1fdGlzX2Nv
+bW1vbl9yZWFkMTYoc3RydWN0IHRwbV90aXNfZGF0YSAqZGF0YSwgdTMyIGFkZHIsIHUxNiAqcmVz
+dWx0KTsKPiA+ID4gK2ludCB0cG1fdGlzX2NvbW1vbl9yZWFkMzIoc3RydWN0IHRwbV90aXNfZGF0
+YSAqZGF0YSwgdTMyIGFkZHIsIHUzMiAqcmVzdWx0KTsKPiA+ID4gK2ludCB0cG1fdGlzX2NvbW1v
+bl93cml0ZTMyKHN0cnVjdCB0cG1fdGlzX2RhdGEgKmRhdGEsIHUzMiBhZGRyLCB1MzIgdmFsdWUp
+Owo+ID4gPiArCj4gPiA+IMKgIHZvaWQgdHBtX3Rpc19yZW1vdmUoc3RydWN0IHRwbV9jaGlwICpj
+aGlwKTsKPiA+ID4gwqAgaW50IHRwbV90aXNfY29yZV9pbml0KHN0cnVjdCBkZXZpY2UgKmRldiwg
+c3RydWN0IHRwbV90aXNfZGF0YSAqcHJpdiwgaW50IGlycSwKPiA+ID4gwqDCoAkJwqDCoMKgwqDC
+oMKgY29uc3Qgc3RydWN0IHRwbV90aXNfcGh5X29wcyAqcGh5X29wcywKCi0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLQpGaW5kIGFuZCBmaXggYXBwbGljYXRpb24gcGVyZm9ybWFuY2UgaXNzdWVzIGZhc3Rl
+ciB3aXRoIEFwcGxpY2F0aW9ucyBNYW5hZ2VyCkFwcGxpY2F0aW9ucyBNYW5hZ2VyIHByb3ZpZGVz
+IGRlZXAgcGVyZm9ybWFuY2UgaW5zaWdodHMgaW50byBtdWx0aXBsZSB0aWVycyBvZgp5b3VyIGJ1
+c2luZXNzIGFwcGxpY2F0aW9ucy4gSXQgcmVzb2x2ZXMgYXBwbGljYXRpb24gcHJvYmxlbXMgcXVp
+Y2tseSBhbmQKcmVkdWNlcyB5b3VyIE1UVFIuIEdldCB5b3VyIGZyZWUgdHJpYWwhCmh0dHBzOi8v
+YWQuZG91YmxlY2xpY2submV0L2RkbS9jbGsvMzAyOTgyMTk4OzEzMDEwNTUxNjt6Cl9fX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fCnRwbWRkLWRldmVsIG1haWxp
+bmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9saXN0cy5z
+b3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwK
