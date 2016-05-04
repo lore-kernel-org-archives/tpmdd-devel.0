@@ -1,16 +1,12 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v6 7/8] tpm: Use read/write_bytes for
- drivers without more specialized methods
-Date: Wed, 04 May 2016 13:52:20 +0300
-Message-ID: <1462359140.10036.5.camel@linux.intel.com>
-References: <1461363085-9908-1-git-send-email-christophe-h.ricard@st.com>
-	<1461363085-9908-8-git-send-email-christophe-h.ricard@st.com>
-	<20160502203236.GA5415@intel.com> <57290A08.20403@gmail.com>
+From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Subject: [PATCH v7 0/7] Rework of tpm_tis to share common
+	logic accross phy's (lpc/spi/-i2c-)
+Date: Wed,  4 May 2016 21:06:21 +0200
+Message-ID: <1462388788-2410-1-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <57290A08.20403-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,75 +15,94 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
 Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gVHVlLCAyMDE2LTA1LTAzIGF0IDIyOjI4ICswMjAwLCBDaHJpc3RvcGhlIFJpY2FyZCB3cm90
-ZToKPiBPayB3aWxsIGRvCgpHcmVhdCwgSSdsbCBzdGFydCB0ZXN0aW5nIHRoZSBuZXh0IHZlcnNp
-b24gaWYgdGhleSBhcHBseSBjbGVhbmx5IHRvIG15CnRyZWUuCgovSmFya2tvCgo+IE9uIDAyLzA1
-LzIwMTYgMjI6MzIsIEphcmtrbyBTYWtraW5lbiB3cm90ZToKPiA+IAo+ID4gT24gU2F0LCBBcHIg
-MjMsIDIwMTYgYXQgMTI6MTE6MjRBTSArMDIwMCwgQ2hyaXN0b3BoZSBSaWNhcmQgd3JvdGU6Cj4g
-PiA+IAo+ID4gPiBTb21lIGRyaXZlcnMgbWlnaHQgbmVlZCB0byBpbXBsZW1lbnQgb25seSBmdW5j
-dGlvbnMgZm9yIHRyYW5zZmVycmluZyBhbgo+ID4gPiBhcmJpdHJhcnkgbnVtYmVyIG9mIGJ5dGVz
-LiBQcm92aWRlcyBhIGdlbmVyaWMgZnVuY3Rpb25zIGZvciBoYW5kbGluZ8KgwqBvZgo+ID4gPiB3
-b3JkIG9yIGR3b3JkIHRyYW5zZmVycyB0byBiZSBkdW1wIGludG8gZHJpdmVyIGZ1bmN0aW9ucyBw
-b2ludGVycy4KPiA+ID4gCj4gPiA+IFNpZ25lZC1vZmYtYnk6IEFsZXhhbmRlciBTdGVmZmVuIDxB
-bGV4YW5kZXIuU3RlZmZlbkBpbmZpbmVvbi5jb20+Cj4gPiA+IFNpZ25lZC1vZmYtYnk6IENocmlz
-dG9waGUgUmljYXJkIDxjaHJpc3RvcGhlLWgucmljYXJkQHN0LmNvbT4KPiA+IElnbm9yZSBteSBj
-b21tZW50IGZvciA2LzguIFRoaXMgcGF0Y2ggaXMgbm90IG5lY2Vzc2FyeSBmb3IgdGhlIHNlcmll
-cy4KPiA+IAo+ID4gL0phcmtrbwo+ID4gCj4gPiA+IAo+ID4gPiAtLS0KPiA+ID4gwqAgZHJpdmVy
-cy9jaGFyL3RwbS90cG1fdGlzX2NvcmUuYyB8IDMwICsrKysrKysrKysrKysrKysrKysrKysrKysr
-KysrKwo+ID4gPiDCoCBkcml2ZXJzL2NoYXIvdHBtL3RwbV90aXNfY29yZS5oIHzCoMKgNCArKysr
-Cj4gPiA+IMKgIDIgZmlsZXMgY2hhbmdlZCwgMzQgaW5zZXJ0aW9ucygrKQo+ID4gPiAKPiA+ID4g
-ZGlmZiAtLWdpdCBhL2RyaXZlcnMvY2hhci90cG0vdHBtX3Rpc19jb3JlLmMgYi9kcml2ZXJzL2No
-YXIvdHBtL3RwbV90aXNfY29yZS5jCj4gPiA+IGluZGV4IGY0ZTA1YWMuLmZkOWM2YTUgMTAwNjQ0
-Cj4gPiA+IC0tLSBhL2RyaXZlcnMvY2hhci90cG0vdHBtX3Rpc19jb3JlLmMKPiA+ID4gKysrIGIv
-ZHJpdmVycy9jaGFyL3RwbS90cG1fdGlzX2NvcmUuYwo+ID4gPiBAQCAtODU0LDYgKzg1NCwzNiBA
-QCBpbnQgdHBtX3Rpc19yZXN1bWUoc3RydWN0IGRldmljZSAqZGV2KQo+ID4gPiDCoCBFWFBPUlRf
-U1lNQk9MX0dQTCh0cG1fdGlzX3Jlc3VtZSk7Cj4gPiA+IMKgICNlbmRpZgo+ID4gPiDCoMKgCj4g
-PiA+ICtpbnQgdHBtX3Rpc19jb21tb25fcmVhZDE2KHN0cnVjdCB0cG1fdGlzX2RhdGEgKmRhdGEs
-IHUzMiBhZGRyLCB1MTYgKnJlc3VsdCkKPiA+ID4gK3sKPiA+ID4gKwlpbnQgcmM7Cj4gPiA+ICsK
-PiA+ID4gKwlyYyA9IGRhdGEtPnBoeV9vcHMtPnJlYWRfYnl0ZXMoZGF0YSwgYWRkciwgc2l6ZW9m
-KHUxNiksICh1OCAqKXJlc3VsdCk7Cj4gPiA+ICsJaWYgKCFyYykKPiA+ID4gKwkJKnJlc3VsdCA9
-IGxlMTZfdG9fY3B1KCpyZXN1bHQpOwo+ID4gPiArCXJldHVybiByYzsKPiA+ID4gK30KPiA+ID4g
-K0VYUE9SVF9TWU1CT0xfR1BMKHRwbV90aXNfY29tbW9uX3JlYWQxNik7Cj4gPiA+ICsKPiA+ID4g
-K2ludCB0cG1fdGlzX2NvbW1vbl9yZWFkMzIoc3RydWN0IHRwbV90aXNfZGF0YSAqZGF0YSwgdTMy
-IGFkZHIsIHUzMiAqcmVzdWx0KQo+ID4gPiArewo+ID4gPiArCWludCByYzsKPiA+ID4gKwo+ID4g
-PiArCXJjID0gZGF0YS0+cGh5X29wcy0+cmVhZF9ieXRlcyhkYXRhLCBhZGRyLCBzaXplb2YodTMy
-KSwgKHU4ICopcmVzdWx0KTsKPiA+ID4gKwlpZiAoIXJjKQo+ID4gPiArCQkqcmVzdWx0ID0gbGUz
-Ml90b19jcHUoKnJlc3VsdCk7Cj4gPiA+ICsJcmV0dXJuIHJjOwo+ID4gPiArfQo+ID4gPiArRVhQ
-T1JUX1NZTUJPTF9HUEwodHBtX3Rpc19jb21tb25fcmVhZDMyKTsKPiA+ID4gKwo+ID4gPiAraW50
-IHRwbV90aXNfY29tbW9uX3dyaXRlMzIoc3RydWN0IHRwbV90aXNfZGF0YSAqZGF0YSwgdTMyIGFk
-ZHIsIHUzMiB2YWx1ZSkKPiA+ID4gK3sKPiA+ID4gKwl2YWx1ZSA9IGNwdV90b19sZTMyKHZhbHVl
-KTsKPiA+ID4gKwlyZXR1cm4gZGF0YS0+cGh5X29wcy0+d3JpdGVfYnl0ZXMoZGF0YSwgYWRkciwg
-c2l6ZW9mKHUzMiksCj4gPiA+ICsJCQkJCcKgwqDCoCh1OCAqKSZ2YWx1ZSk7Cj4gPiA+ICt9Cj4g
-PiA+ICtFWFBPUlRfU1lNQk9MX0dQTCh0cG1fdGlzX2NvbW1vbl93cml0ZTMyKTsKPiA+ID4gKwo+
-ID4gPiDCoCBNT0RVTEVfQVVUSE9SKCJMZWVuZGVydCB2YW4gRG9vcm4gKGxlZW5kZXJ0QHdhdHNv
-bi5pYm0uY29tKSIpOwo+ID4gPiDCoCBNT0RVTEVfREVTQ1JJUFRJT04oIlRQTSBEcml2ZXIiKTsK
-PiA+ID4gwqAgTU9EVUxFX1ZFUlNJT04oIjIuMCIpOwo+ID4gPiBkaWZmIC0tZ2l0IGEvZHJpdmVy
-cy9jaGFyL3RwbS90cG1fdGlzX2NvcmUuaCBiL2RyaXZlcnMvY2hhci90cG0vdHBtX3Rpc19jb3Jl
-LmgKPiA+ID4gaW5kZXggOTFhYTMwNS4uYmRjNzg5OSAxMDA2NDQKPiA+ID4gLS0tIGEvZHJpdmVy
-cy9jaGFyL3RwbS90cG1fdGlzX2NvcmUuaAo+ID4gPiArKysgYi9kcml2ZXJzL2NoYXIvdHBtL3Rw
-bV90aXNfY29yZS5oCj4gPiA+IEBAIC0xNDEsNiArMTQxLDEwIEBAIHN0YXRpYyBpbmxpbmUgaW50
-IHRwbV93cml0ZTMyKHN0cnVjdCB0cG1fdGlzX2RhdGEgKmRhdGEsIHUzMgo+ID4gPiBhZGRyLCB1
-MzIgdmFsdWUpCj4gPiA+IMKgwqAJcmV0dXJuIGRhdGEtPnBoeV9vcHMtPndyaXRlMzIoZGF0YSwg
-YWRkciwgdmFsdWUpOwo+ID4gPiDCoCB9Cj4gPiA+IMKgwqAKPiA+ID4gK2ludCB0cG1fdGlzX2Nv
-bW1vbl9yZWFkMTYoc3RydWN0IHRwbV90aXNfZGF0YSAqZGF0YSwgdTMyIGFkZHIsIHUxNiAqcmVz
-dWx0KTsKPiA+ID4gK2ludCB0cG1fdGlzX2NvbW1vbl9yZWFkMzIoc3RydWN0IHRwbV90aXNfZGF0
-YSAqZGF0YSwgdTMyIGFkZHIsIHUzMiAqcmVzdWx0KTsKPiA+ID4gK2ludCB0cG1fdGlzX2NvbW1v
-bl93cml0ZTMyKHN0cnVjdCB0cG1fdGlzX2RhdGEgKmRhdGEsIHUzMiBhZGRyLCB1MzIgdmFsdWUp
-Owo+ID4gPiArCj4gPiA+IMKgIHZvaWQgdHBtX3Rpc19yZW1vdmUoc3RydWN0IHRwbV9jaGlwICpj
-aGlwKTsKPiA+ID4gwqAgaW50IHRwbV90aXNfY29yZV9pbml0KHN0cnVjdCBkZXZpY2UgKmRldiwg
-c3RydWN0IHRwbV90aXNfZGF0YSAqcHJpdiwgaW50IGlycSwKPiA+ID4gwqDCoAkJwqDCoMKgwqDC
-oMKgY29uc3Qgc3RydWN0IHRwbV90aXNfcGh5X29wcyAqcGh5X29wcywKCi0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLQpGaW5kIGFuZCBmaXggYXBwbGljYXRpb24gcGVyZm9ybWFuY2UgaXNzdWVzIGZhc3Rl
-ciB3aXRoIEFwcGxpY2F0aW9ucyBNYW5hZ2VyCkFwcGxpY2F0aW9ucyBNYW5hZ2VyIHByb3ZpZGVz
-IGRlZXAgcGVyZm9ybWFuY2UgaW5zaWdodHMgaW50byBtdWx0aXBsZSB0aWVycyBvZgp5b3VyIGJ1
-c2luZXNzIGFwcGxpY2F0aW9ucy4gSXQgcmVzb2x2ZXMgYXBwbGljYXRpb24gcHJvYmxlbXMgcXVp
-Y2tseSBhbmQKcmVkdWNlcyB5b3VyIE1UVFIuIEdldCB5b3VyIGZyZWUgdHJpYWwhCmh0dHBzOi8v
-YWQuZG91YmxlY2xpY2submV0L2RkbS9jbGsvMzAyOTgyMTk4OzEzMDEwNTUxNjt6Cl9fX19fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fCnRwbWRkLWRldmVsIG1haWxp
-bmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9saXN0cy5z
-b3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwK
+Hi Jarkko,
+
+This serie is including common work from Infineon (Peter Huewe & Alexander Steffen) and ST.
+We propose a common low level API used by a core TIS interface allowing to share
+some protocols behavior between physical layers (lpc, spi, i2c...) or drivers.
+
+To easy the group review, i only send 10 patches showing how we rework the tpm_tis driver
+keeping existing proprietary logic (itpm workaround, irq for tpm_tis ("lpc")).
+Finally we are adding spi support based on TCG PTP specification. This additional driver
+support the SPI bit protocol including optional flow control.
+
+Reworked tpm_tis got validated on a HP 8200 machine with an Infineon TPM
+tpm_tis_spi got validated using Minnowboard Max as well as Raspberry Pi.
+
+v2:
+- Add Rob Herring acks on devicetree specific patch
+- Renamed priv_data tpm_tis_data
+- Moved data_expect_val & data_expect_mask in tpm_tis_data
+- Moved "hal" (e.g: tpm_write_xxx/tpm_read_xxx) in tpm_tis_core.h
+- Reduced list of the exported functions from tpm_tis_core
+- Make tpm_tis ops internal to tpm_tis_core
+
+v3:
+- Merge tpm_class_lowlevel and tpm_tis_phy_ops
+- Changed the way phy specific structure looked like in order to use container_of
+- Cleanup patches with rebase mistakes and build verify them...
+- Moved "Add include guards in tpm.h" at first position
+
+v4:
+- Move patch "Use read/write_bytes for drivers without more specialized methods"
+before spi phy patch and rework so that functions are no more inlined and available
+from tpm_tis_core.
+
+v5:
+- Squashed several patch together. (2, 3, 4).
+- Renammed tpm_tis_lpc_data --> tpm_tis_tcg_data.
+- Change tpm_tis_read_xxx/tpm_tis_write_xx parameters to take a struct tpm_tis_data* instead of a struct tpm_chip*.
+- Manage itpm workaround internally to the tpm_tis_core and add a TIS flag (TPM_TIS_ITPM_POSSIBLE).
+- Several fixes in the spi phy.
+- Use chip->ops->cancel(chip) instead of tpm_tis_ready out of tpm_tis_core.
+- Reworked Makefile
+
+v6:
+- Fix rebase mistaked in patch 2 and 3.
+- Remove post_probe handler from tpm_tis_phy_ops in "Split tpm_tis driver into a core and TCG TIS compliant phy"
+
+v7:
+- Merge patch 7 in patch 8 as requested by Jarkko.
+
+You can check this work on:
+https://github.com/cricard13/linux-tpmdd tpm_tis_core_v7
+
+Christophe Ricard (7):
+  tpm: Add include guards in tpm.h
+  tpm: tpm_tis: Share common data between phys
+  tpm_tis: Introduce intermediate layer for TPM access
+  devicetree: Add infineon to vendor-prefix.txt
+  devicetree: Add Trusted Computing Group to vendor-prefix.txt
+  tpm/tpm_tis: Split tpm_tis driver into a core and TCG TIS compliant
+    phy
+  tpm/tpm_tis_spi: Add support for spi phy
+
+ .../bindings/security/tpm/tpm_tis_spi.txt          |  24 +
+ .../devicetree/bindings/vendor-prefixes.txt        |   2 +
+ drivers/char/tpm/Kconfig                           |  19 +
+ drivers/char/tpm/Makefile                          |   2 +
+ drivers/char/tpm/tpm.h                             |   5 +
+ drivers/char/tpm/tpm_tis.c                         | 851 ++------------------
+ drivers/char/tpm/tpm_tis_core.c                    | 860 +++++++++++++++++++++
+ drivers/char/tpm/tpm_tis_core.h                    | 153 ++++
+ drivers/char/tpm/tpm_tis_spi.c                     | 272 +++++++
+ 9 files changed, 1400 insertions(+), 788 deletions(-)
+ create mode 100644 Documentation/devicetree/bindings/security/tpm/tpm_tis_spi.txt
+ create mode 100644 drivers/char/tpm/tpm_tis_core.c
+ create mode 100644 drivers/char/tpm/tpm_tis_core.h
+ create mode 100644 drivers/char/tpm/tpm_tis_spi.c
+
+-- 
+2.1.4
+
+
+------------------------------------------------------------------------------
+Find and fix application performance issues faster with Applications Manager
+Applications Manager provides deep performance insights into multiple tiers of
+your business applications. It resolves application problems quickly and
+reduces your MTTR. Get your free trial!
+https://ad.doubleclick.net/ddm/clk/302982198;130105516;z
