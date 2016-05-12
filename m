@@ -1,7 +1,7 @@
-From: Jeremiah Mahler <jmmahler-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH v2] tpm: Fix suspend regression
-Date: Wed, 11 May 2016 18:06:09 -0700
-Message-ID: <20160512010609.GA3035@hudson.localdomain>
+Date: Thu, 12 May 2016 16:49:53 +0300
+Message-ID: <20160512134952.GA13575@intel.com>
 References: <1462980507-21682-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -18,10 +18,8 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmmahler-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
-
-Hi Stefan,
 
 On Wed, May 11, 2016 at 11:28:27AM -0400, Stefan Berger wrote:
 > Fix the suspend regression due to the wrong way of retrieving the
@@ -34,6 +32,11 @@ On Wed, May 11, 2016 at 11:28:27AM -0400, Stefan Berger wrote:
 > Tested-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 > Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 > Tested-by: Jeremiah Mahler <jmmahler-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+
+Acked-by: Jarkko Sakkinen <jarkko.sakkine-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+
+/Jarkko
+
 > ---
 >  drivers/char/tpm/tpm-interface.c | 4 ++--
 >  1 file changed, 2 insertions(+), 2 deletions(-)
@@ -63,11 +66,6 @@ On Wed, May 11, 2016 at 11:28:27AM -0400, Stefan Berger wrote:
 > -- 
 > 2.4.3
 > 
-
-The patch looks good, thanks :-)
-
--- 
-- Jeremiah Mahler
 
 ------------------------------------------------------------------------------
 Mobile security can be enabling, not merely restricting. Employees who
