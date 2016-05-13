@@ -1,409 +1,629 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v7 7/7] tpm/tpm_tis_spi: Add support for
-	spi phy
-Date: Fri, 13 May 2016 16:13:00 +0300
-Message-ID: <20160513131300.GC28421@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v7 2/7] tpm: tpm_tis: Share common data between phys
+Date: Fri, 13 May 2016 16:28:03 +0300
+Message-ID: <20160513132803.GA30825@intel.com>
 References: <1462388788-2410-1-git-send-email-christophe-h.ricard@st.com>
-	<1462388788-2410-8-git-send-email-christophe-h.ricard@st.com>
+ <1462388788-2410-3-git-send-email-christophe-h.ricard@st.com>
+ <20160509132312.GA21366@intel.com>
+ <8646C2A85C5D44419E1B33F16B0BD501024C7CEDBF@SAFEX1MAIL1.st.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1462388788-2410-8-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>, benoit.houyere-qxv4g6HH51o@public.gmane.org
+In-Reply-To: <8646C2A85C5D44419E1B33F16B0BD501024C7CEDBF@SAFEX1MAIL1.st.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Christophe Henri RICARD <christophe-h.ricard@st.com>
+Cc: linux-security-module@vger.kernel.org, Christophe Ricard <christophe.ricard@gmail.com>, "jgunthorpe@obsidianresearch.com" <jgunthorpe@obsidianresearch.com>, "peterhuewe@gmx.de" <peterhuewe@gmx.de>, "ashley@ashleylai.com" <ashley@ashleylai.com>, "tpmdd@selhorst.net" <tpmdd@selhorst.net>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, Jean-Luc BLANC <jean-luc.blanc@st.com>, Benoit HOUYERE <benoit.houyere@st.com>, "Alexander.Steffen@infineon.com" <Alexander.Steffen@infineon.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, May 04, 2016 at 09:06:28PM +0200, Christophe Ricard wrote:
-> Spi protocol standardized by the TCG is now supported by most of TPM
-> vendors.
+On Fri, May 13, 2016 at 10:34:15AM +0200, Christophe Henri RICARD wrote:
+> Hi Jarkko,
 > 
-> It supports SPI Bit Protocol as describe in the TCG PTP
-> specification (chapter 6.4.6 SPI Bit Protocol).
-> 
-> Irq mode is not supported.
-> 
-> Signed-off-by: Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-> Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-> Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
+> Any chance to merge this serie on your tree so that other people can test on their side ?
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+I don't see why I couldn't apply this to my master branch in order to
+give it some exposure (done).
 
-> ---
->  .../bindings/security/tpm/tpm_tis_spi.txt          |  24 ++
->  drivers/char/tpm/Kconfig                           |  12 +
->  drivers/char/tpm/Makefile                          |   1 +
->  drivers/char/tpm/tpm_tis_spi.c                     | 272 +++++++++++++++++++++
->  4 files changed, 309 insertions(+)
->  create mode 100644 Documentation/devicetree/bindings/security/tpm/tpm_tis_spi.txt
->  create mode 100644 drivers/char/tpm/tpm_tis_spi.c
-> 
-> diff --git a/Documentation/devicetree/bindings/security/tpm/tpm_tis_spi.txt b/Documentation/devicetree/bindings/security/tpm/tpm_tis_spi.txt
-> new file mode 100644
-> index 0000000..85741cd
-> --- /dev/null
-> +++ b/Documentation/devicetree/bindings/security/tpm/tpm_tis_spi.txt
-> @@ -0,0 +1,24 @@
-> +Required properties:
-> +- compatible: should be one of the following
-> +    "st,st33htpm-spi"
-> +    "infineon,slb9670"
-> +    "tcg,tpm_tis-spi"
-> +- spi-max-frequency: Maximum SPI frequency (depends on TPMs).
-> +
-> +Optional SoC Specific Properties:
-> +- pinctrl-names: Contains only one value - "default".
-> +- pintctrl-0: Specifies the pin control groups used for this controller.
-> +
-> +Example (for ARM-based BeagleBoard xM with TPM_TIS on SPI4):
-> +
-> +&mcspi4 {
-> +
-> +        status = "okay";
-> +
-> +        tpm_tis@0 {
-> +
-> +                compatible = "tcg,tpm_tis-spi";
-> +
-> +                spi-max-frequency = <10000000>;
-> +        };
-> +};
-> diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
-> index 241ff4c..9faa0b1 100644
-> --- a/drivers/char/tpm/Kconfig
-> +++ b/drivers/char/tpm/Kconfig
-> @@ -41,6 +41,18 @@ config TCG_TIS
->  	  within Linux. To compile this driver as a module, choose  M here;
->  	  the module will be called tpm_tis.
->  
-> +config TCG_TIS_SPI
-> +	tristate "TPM Interface Specification 1.3 Interface / TPM 2.0 FIFO Interface - (SPI)"
-> +	depends on SPI
-> +	select TCG_TIS_CORE
-> +	---help---
-> +	  If you have a TPM security chip which is connected to a regular,
-> +	  non-tcg SPI master (i.e. most embedded platforms) that is compliant with the
-> +	  TCG TIS 1.3 TPM specification (TPM1.2) or the TCG PTP FIFO
-> +	  specification (TPM2.0) say Yes and it will be accessible from
-> +	  within Linux. To compile this driver as a module, choose  M here;
-> +	  the module will be called tpm_tis_spi.
-> +
->  config TCG_TIS_I2C_ATMEL
->  	tristate "TPM Interface Specification 1.2 Interface (I2C - Atmel)"
->  	depends on I2C
-> diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
-> index 662221f..a385fb8 100644
-> --- a/drivers/char/tpm/Makefile
-> +++ b/drivers/char/tpm/Makefile
-> @@ -14,6 +14,7 @@ endif
->  endif
->  obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
->  obj-$(CONFIG_TCG_TIS) += tpm_tis.o
-> +obj-$(CONFIG_TCG_TIS_SPI) += tpm_tis_spi.o
->  obj-$(CONFIG_TCG_TIS_I2C_ATMEL) += tpm_i2c_atmel.o
->  obj-$(CONFIG_TCG_TIS_I2C_INFINEON) += tpm_i2c_infineon.o
->  obj-$(CONFIG_TCG_TIS_I2C_NUVOTON) += tpm_i2c_nuvoton.o
-> diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
-> new file mode 100644
-> index 0000000..dbaad9c
-> --- /dev/null
-> +++ b/drivers/char/tpm/tpm_tis_spi.c
-> @@ -0,0 +1,272 @@
-> +/*
-> + * Copyright (C) 2015 Infineon Technologies AG
-> + * Copyright (C) 2016 STMicroelectronics SAS
-> + *
-> + * Authors:
-> + * Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-> + * Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
-> + *
-> + * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-> + *
-> + * Device driver for TCG/TCPA TPM (trusted platform module).
-> + * Specifications at www.trustedcomputinggroup.org
-> + *
-> + * This device driver implements the TPM interface as defined in
-> + * the TCG TPM Interface Spec version 1.3, revision 27 via _raw/native
-> + * SPI access_.
-> + *
-> + * It is based on the original tpm_tis device driver from Leendert van
-> + * Dorn and Kyleen Hall and Jarko Sakkinnen.
+I still want the style issues to be sorted out.
 
-I think that it is sufficient to say that this would just say that this
-is derived works from the original tpm_tis driver. No need for author
-names.
+I would hope that Jason, Stefan or someone else with more gray knowledge
+of the TIS driver would help with reviewing v7. Don't rush with v8
+because this will not make into Linux 4.7 but is applied earliest to the
+next branch when 4.7-rc5 comes out.
+
+PS. It would be also good to CC to linux-security-module mailing list.
+Add it when you send v8. Thanks.
+
+> Best Regards
+> Christophe
 
 /Jarkko
 
-> + *
-> + * This program is free software; you can redistribute it and/or
-> + * modify it under the terms of the GNU General Public License as
-> + * published by the Free Software Foundation, version 2 of the
-> + * License.
-> + */
-> +
-> +#include <linux/init.h>
-> +#include <linux/module.h>
-> +#include <linux/moduleparam.h>
-> +#include <linux/slab.h>
-> +#include <linux/interrupt.h>
-> +#include <linux/wait.h>
-> +#include <linux/acpi.h>
-> +#include <linux/freezer.h>
-> +
-> +#include <linux/module.h>
-> +#include <linux/spi/spi.h>
-> +#include <linux/gpio.h>
-> +#include <linux/of_irq.h>
-> +#include <linux/of_gpio.h>
-> +#include <linux/tpm.h>
-> +#include "tpm.h"
-> +#include "tpm_tis_core.h"
-> +
-> +#define MAX_SPI_FRAMESIZE 64
-> +
-> +struct tpm_tis_spi_phy {
-> +	struct tpm_tis_data priv;
-> +	struct spi_device *spi_device;
-> +
-> +	u8 tx_buf[MAX_SPI_FRAMESIZE + 4];
-> +	u8 rx_buf[MAX_SPI_FRAMESIZE + 4];
-> +};
-> +
-> +static inline struct tpm_tis_spi_phy *to_tpm_tis_spi_phy(struct tpm_tis_data *data)
-> +{
-> +	return container_of(data, struct tpm_tis_spi_phy, priv);
-> +}
-> +
-> +static int tpm_tis_spi_read_bytes(struct tpm_tis_data *data, u32 addr,
-> +				  u16 len, u8 *result)
-> +{
-> +	struct tpm_tis_spi_phy *phy = to_tpm_tis_spi_phy(data);
-> +	int ret, i;
-> +	struct spi_message m;
-> +	struct spi_transfer spi_xfer = {
-> +		.tx_buf = phy->tx_buf,
-> +		.rx_buf = phy->rx_buf,
-> +		.len = 4,
-> +	};
-> +
-> +	if (len > MAX_SPI_FRAMESIZE)
-> +		return -ENOMEM;
-> +
-> +	phy->tx_buf[0] = 0x80 | (len - 1);
-> +	phy->tx_buf[1] = 0xd4;
-> +	phy->tx_buf[2] = (addr >> 8)  & 0xFF;
-> +	phy->tx_buf[3] = addr	      & 0xFF;
-> +
-> +	spi_xfer.cs_change = 1;
-> +	spi_message_init(&m);
-> +	spi_message_add_tail(&spi_xfer, &m);
-> +
-> +	spi_bus_lock(phy->spi_device->master);
-> +	ret = spi_sync_locked(phy->spi_device, &m);
-> +	if (ret < 0)
-> +		goto exit;
-> +
-> +	memset(phy->tx_buf, 0, len);
-> +
-> +	/* According to TCG PTP specification, if there is no TPM present at
-> +	 * all, then the design has a weak pull-up on MISO. If a TPM is not
-> +	 * present, a pull-up on MISO means that the SB controller sees a 1,
-> +	 * and will latch in 0xFF on the read.
-> +	 */
-> +	for (i = 0; (phy->rx_buf[0] & 0x01) == 0 && i < TPM_RETRY; i++) {
-> +		spi_xfer.len = 1;
-> +		spi_message_init(&m);
-> +		spi_message_add_tail(&spi_xfer, &m);
-> +		ret = spi_sync_locked(phy->spi_device, &m);
-> +		if (ret < 0)
-> +			goto exit;
-> +	}
-> +
-> +	spi_xfer.cs_change = 0;
-> +	spi_xfer.len = len;
-> +	spi_xfer.rx_buf = result;
-> +
-> +	spi_message_init(&m);
-> +	spi_message_add_tail(&spi_xfer, &m);
-> +	ret = spi_sync_locked(phy->spi_device, &m);
-> +
-> +exit:
-> +	spi_bus_unlock(phy->spi_device->master);
-> +	return ret;
-> +}
-> +
-> +static int tpm_tis_spi_write_bytes(struct tpm_tis_data *data, u32 addr,
-> +				   u16 len, u8 *value)
-> +{
-> +	struct tpm_tis_spi_phy *phy = to_tpm_tis_spi_phy(data);
-> +	int ret, i;
-> +	struct spi_message m;
-> +	struct spi_transfer spi_xfer = {
-> +		.tx_buf = phy->tx_buf,
-> +		.rx_buf = phy->rx_buf,
-> +		.len = 4,
-> +	};
-> +
-> +	if (len > MAX_SPI_FRAMESIZE)
-> +		return -ENOMEM;
-> +
-> +	phy->tx_buf[0] = len - 1;
-> +	phy->tx_buf[1] = 0xd4;
-> +	phy->tx_buf[2] = (addr >> 8)  & 0xFF;
-> +	phy->tx_buf[3] = addr         & 0xFF;
-> +
-> +	spi_xfer.cs_change = 1;
-> +	spi_message_init(&m);
-> +	spi_message_add_tail(&spi_xfer, &m);
-> +
-> +	spi_bus_lock(phy->spi_device->master);
-> +	ret = spi_sync_locked(phy->spi_device, &m);
-> +	if (ret < 0)
-> +		goto exit;
-> +
-> +	memset(phy->tx_buf, 0, len);
-> +
-> +	/* According to TCG PTP specification, if there is no TPM present at
-> +	 * all, then the design has a weak pull-up on MISO. If a TPM is not
-> +	 * present, a pull-up on MISO means that the SB controller sees a 1,
-> +	 * and will latch in 0xFF on the read.
-> +	 */
-> +	for (i = 0; (phy->rx_buf[0] & 0x01) == 0 && i < TPM_RETRY; i++) {
-> +		spi_xfer.len = 1;
-> +		spi_message_init(&m);
-> +		spi_message_add_tail(&spi_xfer, &m);
-> +		ret = spi_sync_locked(phy->spi_device, &m);
-> +		if (ret < 0)
-> +			goto exit;
-> +	}
-> +
-> +	spi_xfer.len = len;
-> +	spi_xfer.tx_buf = value;
-> +	spi_xfer.cs_change = 0;
-> +	spi_xfer.tx_buf = value;
-> +	spi_message_init(&m);
-> +	spi_message_add_tail(&spi_xfer, &m);
-> +	ret = spi_sync_locked(phy->spi_device, &m);
-> +
-> +exit:
-> +	spi_bus_unlock(phy->spi_device->master);
-> +	return ret;
-> +}
-> +
-> +static int tpm_tis_spi_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
-> +{
-> +	int rc;
-> +
-> +	rc = data->phy_ops->read_bytes(data, addr, sizeof(u16), (u8 *)result);
-> +	if (!rc)
-> +		*result = le16_to_cpu(*result);
-> +	return rc;
-> +}
-> +
-> +static int tpm_tis_spi_read32(struct tpm_tis_data *data, u32 addr, u32 *result)
-> +{
-> +	int rc;
-> +
-> +	rc = data->phy_ops->read_bytes(data, addr, sizeof(u32), (u8 *)result);
-> +	if (!rc)
-> +		*result = le32_to_cpu(*result);
-> +	return rc;
-> +}
-> +
-> +static int tpm_tis_spi_write32(struct tpm_tis_data *data, u32 addr, u32 value)
-> +{
-> +	value = cpu_to_le32(value);
-> +	return data->phy_ops->write_bytes(data, addr, sizeof(u32),
-> +					   (u8 *)&value);
-> +}
-> +
-> +static const struct tpm_tis_phy_ops tpm_spi_phy_ops = {
-> +	.read_bytes = tpm_tis_spi_read_bytes,
-> +	.write_bytes = tpm_tis_spi_write_bytes,
-> +	.read16 = tpm_tis_spi_read16,
-> +	.read32 = tpm_tis_spi_read32,
-> +	.write32 = tpm_tis_spi_write32,
-> +};
-> +
-> +static int tpm_tis_spi_probe(struct spi_device *dev)
-> +{
-> +	struct tpm_tis_spi_phy *phy;
-> +
-> +	phy = devm_kzalloc(&dev->dev, sizeof(struct tpm_tis_spi_phy),
-> +			   GFP_KERNEL);
-> +	if (!phy)
-> +		return -ENOMEM;
-> +
-> +	phy->spi_device = dev;
-> +
-> +	return tpm_tis_core_init(&dev->dev, &phy->priv, -1, &tpm_spi_phy_ops,
-> +				 NULL);
-> +}
-> +
-> +static SIMPLE_DEV_PM_OPS(tpm_tis_pm, tpm_pm_suspend, tpm_tis_resume);
-> +
-> +static int tpm_tis_spi_remove(struct spi_device *dev)
-> +{
-> +	struct tpm_chip *chip = spi_get_drvdata(dev);
-> +
-> +	tpm_chip_unregister(chip);
-> +	tpm_tis_remove(chip);
-> +	return 0;
-> +}
-> +
-> +static const struct spi_device_id tpm_tis_spi_id[] = {
-> +	{"tpm_tis_spi", 0},
-> +	{}
-> +};
-> +MODULE_DEVICE_TABLE(spi, tpm_tis_spi_id);
-> +
-> +static const struct of_device_id of_tis_spi_match[] = {
-> +	{ .compatible = "st,st33htpm-spi", },
-> +	{ .compatible = "infineon,slb9670", },
-> +	{ .compatible = "tcg,tpm_tis-spi", },
-> +	{}
-> +};
-> +MODULE_DEVICE_TABLE(of, of_tis_spi_match);
-> +
-> +static const struct acpi_device_id acpi_tis_spi_match[] = {
-> +	{"SMO0768", 0},
-> +	{}
-> +};
-> +MODULE_DEVICE_TABLE(acpi, acpi_tis_spi_match);
-> +
-> +static struct spi_driver tpm_tis_spi_driver = {
-> +	.driver = {
-> +		.owner = THIS_MODULE,
-> +		.name = "tpm_tis_spi",
-> +		.pm = &tpm_tis_pm,
-> +		.of_match_table = of_match_ptr(of_tis_spi_match),
-> +		.acpi_match_table = ACPI_PTR(acpi_tis_spi_match),
-> +	},
-> +	.probe = tpm_tis_spi_probe,
-> +	.remove = tpm_tis_spi_remove,
-> +	.id_table = tpm_tis_spi_id,
-> +};
-> +module_spi_driver(tpm_tis_spi_driver);
-> +
-> +MODULE_DESCRIPTION("TPM Driver for native SPI access");
-> +MODULE_LICENSE("GPL");
-> -- 
-> 2.1.4
 > 
-
-------------------------------------------------------------------------------
-Mobile security can be enabling, not merely restricting. Employees who
-bring their own devices (BYOD) to work are irked by the imposition of MDM
-restrictions. Mobile Device Manager Plus allows you to control only the
-apps on BYO-devices by containerizing them, leaving personal data untouched!
-https://ad.doubleclick.net/ddm/clk/304595813;131938128;j
+> -----Original Message-----
+> From: Jarkko Sakkinen [mailto:jarkko.sakkinen@linux.intel.com]
+> Sent: lundi 9 mai 2016 15:23
+> To: Christophe Ricard <christophe.ricard@gmail.com>
+> Cc: jgunthorpe@obsidianresearch.com; peterhuewe@gmx.de; ashley@ashleylai.com; tpmdd@selhorst.net; tpmdd-devel@lists.sourceforge.net; Christophe Henri RICARD <christophe-h.ricard@st.com>; Jean-Luc BLANC <jean-luc.blanc@st.com>; Benoit HOUYERE <benoit.houyere@st.com>; Alexander.Steffen@infineon.com
+> Subject: Re: [PATCH v7 2/7] tpm: tpm_tis: Share common data between phys
+> 
+> On Wed, May 04, 2016 at 09:06:23PM +0200, Christophe Ricard wrote:
+> > Split priv_data structure in common and phy specific structures. This
+> > will allow in future patches to reuse the same tis logic on top of new
+> > phy such as spi and i2c. Ultimately, other drivers may reuse this tis logic.
+> > (e.g: st33zp24...)
+> >
+> > iobase field is specific to TPM addressed on 0xFED4xxxx on LPC/SPI bus.
+> >
+> > Signed-off-by: Christophe Ricard <christophe-h.ricard@st.com>
+> 
+> Tested-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> 
+> I run
+> 
+>   sudo python -m unittest -v tpm2_smoke.SmokeTest
+> 
+> and
+> 
+>  ./keyctl-smoke.sh
+> 
+> from
+> 
+>  http://git.infradead.org/users/jjs/tpm2-scripts.git
+> 
+> Tests were executed with a dTPM using TCG FIFO interface.
+> 
+> > ---
+> >  drivers/char/tpm/tpm_tis.c      | 171 ++++++++++++++++++++++------------------
+> >  drivers/char/tpm/tpm_tis_core.h |  37 +++++++++
+> >  2 files changed, 132 insertions(+), 76 deletions(-)  create mode
+> > 100644 drivers/char/tpm/tpm_tis_core.h
+> >
+> > diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+> > index d888270..cd5bb63 100644
+> > --- a/drivers/char/tpm/tpm_tis.c
+> > +++ b/drivers/char/tpm/tpm_tis.c
+> > @@ -29,6 +29,7 @@
+> >  #include <linux/acpi.h>
+> >  #include <linux/freezer.h>
+> >  #include "tpm.h"
+> > +#include "tpm_tis_core.h"
+> >
+> >  enum tis_access {
+> >       TPM_ACCESS_VALID = 0x80,
+> > @@ -93,16 +94,16 @@ struct tpm_info {
+> >  #define      TPM_DID_VID(l)                  (0x0F00 | ((l) << 12))
+> >  #define      TPM_RID(l)                      (0x0F04 | ((l) << 12))
+> >
+> > -struct priv_data {
+> > +struct tpm_tis_tcg_phy {
+> > +     struct tpm_tis_data priv;
+> >       void __iomem *iobase;
+> > -     u16 manufacturer_id;
+> > -     int locality;
+> > -     int irq;
+> > -     bool irq_tested;
+> > -     wait_queue_head_t int_queue;
+> > -     wait_queue_head_t read_queue;
+> >  };
+> >
+> > +static inline struct tpm_tis_tcg_phy *to_tpm_tis_tcg_phy(struct
+> > +tpm_tis_data *data) {
+> > +     return container_of(data, struct tpm_tis_tcg_phy, priv); }
+> > +
+> >  #if defined(CONFIG_PNP) && defined(CONFIG_ACPI)  static int
+> > has_hid(struct acpi_device *dev, const char *hid)  { @@ -132,10
+> > +133,11 @@ static inline int is_itpm(struct acpi_device *dev)
+> >   * correct values in the other bits.' */  static int
+> > wait_startup(struct tpm_chip *chip, int l)  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >       unsigned long stop = jiffies + chip->timeout_a;
+> >       do {
+> > -             if (ioread8(priv->iobase + TPM_ACCESS(l)) &
+> > +             if (ioread8(phy->iobase + TPM_ACCESS(l)) &
+> >                   TPM_ACCESS_VALID)
+> >                       return 0;
+> >               msleep(TPM_TIMEOUT);
+> > @@ -145,9 +147,10 @@ static int wait_startup(struct tpm_chip *chip,
+> > int l)
+> >
+> >  static int check_locality(struct tpm_chip *chip, int l)  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >
+> > -     if ((ioread8(priv->iobase + TPM_ACCESS(l)) &
+> > +     if ((ioread8(phy->iobase + TPM_ACCESS(l)) &
+> >            (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID)) ==
+> >           (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID))
+> >               return priv->locality = l;
+> > @@ -157,18 +160,20 @@ static int check_locality(struct tpm_chip *chip,
+> > int l)
+> >
+> >  static void release_locality(struct tpm_chip *chip, int l, int force)
+> > {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >
+> > -     if (force || (ioread8(priv->iobase + TPM_ACCESS(l)) &
+> > +     if (force || (ioread8(phy->iobase + TPM_ACCESS(l)) &
+> >                     (TPM_ACCESS_REQUEST_PENDING | TPM_ACCESS_VALID)) ==
+> >           (TPM_ACCESS_REQUEST_PENDING | TPM_ACCESS_VALID))
+> >               iowrite8(TPM_ACCESS_ACTIVE_LOCALITY,
+> > -                      priv->iobase + TPM_ACCESS(l));
+> > +                      phy->iobase + TPM_ACCESS(l));
+> >  }
+> >
+> >  static int request_locality(struct tpm_chip *chip, int l)  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >       unsigned long stop, timeout;
+> >       long rc;
+> >
+> > @@ -176,7 +181,7 @@ static int request_locality(struct tpm_chip *chip, int l)
+> >               return l;
+> >
+> >       iowrite8(TPM_ACCESS_REQUEST_USE,
+> > -              priv->iobase + TPM_ACCESS(l));
+> > +              phy->iobase + TPM_ACCESS(l));
+> >
+> >       stop = jiffies + chip->timeout_a;
+> >
+> > @@ -209,24 +214,27 @@ again:
+> >
+> >  static u8 tpm_tis_status(struct tpm_chip *chip)  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >
+> > -     return ioread8(priv->iobase +
+> > +     return ioread8(phy->iobase +
+> >                      TPM_STS(priv->locality));
+> >  }
+> >
+> >  static void tpm_tis_ready(struct tpm_chip *chip)  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >
+> >       /* this causes the current command to be aborted */
+> >       iowrite8(TPM_STS_COMMAND_READY,
+> > -              priv->iobase + TPM_STS(priv->locality));
+> > +              phy->iobase + TPM_STS(priv->locality));
+> >  }
+> >
+> >  static int get_burstcount(struct tpm_chip *chip)  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >       unsigned long stop;
+> >       int burstcnt;
+> >
+> > @@ -234,9 +242,9 @@ static int get_burstcount(struct tpm_chip *chip)
+> >       /* which timeout value, spec has 2 answers (c & d) */
+> >       stop = jiffies + chip->timeout_d;
+> >       do {
+> > -             burstcnt = ioread8(priv->iobase +
+> > +             burstcnt = ioread8(phy->iobase +
+> >                                  TPM_STS(priv->locality) + 1);
+> > -             burstcnt += ioread8(priv->iobase +
+> > +             burstcnt += ioread8(phy->iobase +
+> >                                   TPM_STS(priv->locality) +
+> >                                   2) << 8;
+> >               if (burstcnt)
+> > @@ -248,7 +256,8 @@ static int get_burstcount(struct tpm_chip *chip)
+> >
+> >  static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >       int size = 0, burstcnt;
+> >       while (size < count &&
+> >              wait_for_tpm_stat(chip,
+> > @@ -258,7 +267,7 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
+> >              == 0) {
+> >               burstcnt = get_burstcount(chip);
+> >               for (; burstcnt > 0 && size < count; burstcnt--)
+> > -                     buf[size++] = ioread8(priv->iobase +
+> > +                     buf[size++] = ioread8(phy->iobase +
+> >                                             TPM_DATA_FIFO(priv->locality));
+> >       }
+> >       return size;
+> > @@ -266,7 +275,7 @@ static int recv_data(struct tpm_chip *chip, u8
+> > *buf, size_t count)
+> >
+> >  static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+> > {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> >       int size = 0;
+> >       int expected, status;
+> >
+> > @@ -322,7 +331,8 @@ MODULE_PARM_DESC(itpm, "Force iTPM workarounds (found on some Lenovo laptops)");
+> >   */
+> >  static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t
+> > len)  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >       int rc, status, burstcnt;
+> >       size_t count = 0;
+> >
+> > @@ -343,7 +353,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+> >       while (count < len - 1) {
+> >               burstcnt = get_burstcount(chip);
+> >               for (; burstcnt > 0 && count < len - 1; burstcnt--) {
+> > -                     iowrite8(buf[count], priv->iobase +
+> > +                     iowrite8(buf[count], phy->iobase +
+> >                                TPM_DATA_FIFO(priv->locality));
+> >                       count++;
+> >               }
+> > @@ -359,7 +369,7 @@ static int tpm_tis_send_data(struct tpm_chip
+> > *chip, u8 *buf, size_t len)
+> >
+> >       /* write last byte */
+> >       iowrite8(buf[count],
+> > -              priv->iobase + TPM_DATA_FIFO(priv->locality));
+> > +              phy->iobase + TPM_DATA_FIFO(priv->locality));
+> >       wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
+> >                         &priv->int_queue, false);
+> >       status = tpm_tis_status(chip);
+> > @@ -378,15 +388,16 @@ out_err:
+> >
+> >  static void disable_interrupts(struct tpm_chip *chip)  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >       u32 intmask;
+> >
+> >       intmask =
+> > -         ioread32(priv->iobase +
+> > +         ioread32(phy->iobase +
+> >                    TPM_INT_ENABLE(priv->locality));
+> >       intmask &= ~TPM_GLOBAL_INT_ENABLE;
+> >       iowrite32(intmask,
+> > -               priv->iobase + TPM_INT_ENABLE(priv->locality));
+> > +               phy->iobase + TPM_INT_ENABLE(priv->locality));
+> >       devm_free_irq(chip->dev.parent, priv->irq, chip);
+> >       priv->irq = 0;
+> >       chip->flags &= ~TPM_CHIP_FLAG_IRQ;
+> > @@ -399,7 +410,8 @@ static void disable_interrupts(struct tpm_chip *chip)
+> >   */
+> >  static int tpm_tis_send_main(struct tpm_chip *chip, u8 *buf, size_t
+> > len)  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >       int rc;
+> >       u32 ordinal;
+> >       unsigned long dur;
+> > @@ -410,7 +422,7 @@ static int tpm_tis_send_main(struct tpm_chip
+> > *chip, u8 *buf, size_t len)
+> >
+> >       /* go and do it */
+> >       iowrite8(TPM_STS_GO,
+> > -              priv->iobase + TPM_STS(priv->locality));
+> > +              phy->iobase + TPM_STS(priv->locality));
+> >
+> >       if (chip->flags & TPM_CHIP_FLAG_IRQ) {
+> >               ordinal = be32_to_cpu(*((__be32 *) (buf + 6))); @@ -436,8 +448,8 @@
+> > out_err:
+> >
+> >  static int tpm_tis_send(struct tpm_chip *chip, u8 *buf, size_t len)
+> > {
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> >       int rc, irq;
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> >
+> >       if (!(chip->flags & TPM_CHIP_FLAG_IRQ) || priv->irq_tested)
+> >               return tpm_tis_send_main(chip, buf, len); @@ -471,11 +483,12 @@
+> > static const struct tis_vendor_timeout_override
+> > vendor_timeout_overrides[] = {  static bool tpm_tis_update_timeouts(struct tpm_chip *chip,
+> >                                   unsigned long *timeout_cap)
+> >  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >       int i;
+> >       u32 did_vid;
+> >
+> > -     did_vid = ioread32(priv->iobase + TPM_DID_VID(0));
+> > +     did_vid = ioread32(phy->iobase + TPM_DID_VID(0));
+> >
+> >       for (i = 0; i != ARRAY_SIZE(vendor_timeout_overrides); i++) {
+> >               if (vendor_timeout_overrides[i].did_vid != did_vid) @@ -495,7
+> > +508,8 @@ static bool tpm_tis_update_timeouts(struct tpm_chip *chip,
+> >   */
+> >  static int probe_itpm(struct tpm_chip *chip)  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >       int rc = 0;
+> >       u8 cmd_getticks[] = {
+> >               0x00, 0xc1, 0x00, 0x00, 0x00, 0x0a, @@ -503,7 +517,7 @@ static int
+> > probe_itpm(struct tpm_chip *chip)
+> >       };
+> >       size_t len = sizeof(cmd_getticks);
+> >       bool rem_itpm = itpm;
+> > -     u16 vendor = ioread16(priv->iobase + TPM_DID_VID(0));
+> > +     u16 vendor = ioread16(phy->iobase + TPM_DID_VID(0));
+> >
+> >       /* probe only iTPMS */
+> >       if (vendor != TPM_VID_INTEL)
+> > @@ -537,7 +551,7 @@ out:
+> >
+> >  static bool tpm_tis_req_canceled(struct tpm_chip *chip, u8 status)  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> >
+> >       switch (priv->manufacturer_id) {
+> >       case TPM_VID_WINBOND:
+> > @@ -564,11 +578,12 @@ static const struct tpm_class_ops tpm_tis = {
+> > static irqreturn_t tis_int_handler(int dummy, void *dev_id)  {
+> >       struct tpm_chip *chip = dev_id;
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >       u32 interrupt;
+> >       int i;
+> >
+> > -     interrupt = ioread32(priv->iobase +
+> > +     interrupt = ioread32(phy->iobase +
+> >                            TPM_INT_STATUS(priv->locality));
+> >
+> >       if (interrupt == 0)
+> > @@ -588,9 +603,9 @@ static irqreturn_t tis_int_handler(int dummy, void
+> > *dev_id)
+> >
+> >       /* Clear interrupts handled with TPM_EOI */
+> >       iowrite32(interrupt,
+> > -               priv->iobase +
+> > +               phy->iobase +
+> >                 TPM_INT_STATUS(priv->locality));
+> > -     ioread32(priv->iobase + TPM_INT_STATUS(priv->locality));
+> > +     ioread32(phy->iobase + TPM_INT_STATUS(priv->locality));
+> >       return IRQ_HANDLED;
+> >  }
+> >
+> > @@ -601,7 +616,8 @@ static irqreturn_t tis_int_handler(int dummy, void
+> > *dev_id)  static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
+> >                                   int flags, int irq)
+> >  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >       u8 original_int_vec;
+> >
+> >       if (devm_request_irq(chip->dev.parent, irq, tis_int_handler, flags,
+> > @@ -612,19 +628,19 @@ static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
+> >       }
+> >       priv->irq = irq;
+> >
+> > -     original_int_vec = ioread8(priv->iobase +
+> > +     original_int_vec = ioread8(phy->iobase +
+> >                                  TPM_INT_VECTOR(priv->locality));
+> >       iowrite8(irq,
+> > -              priv->iobase + TPM_INT_VECTOR(priv->locality));
+> > +              phy->iobase + TPM_INT_VECTOR(priv->locality));
+> >
+> >       /* Clear all existing */
+> > -     iowrite32(ioread32(priv->iobase +
+> > +     iowrite32(ioread32(phy->iobase +
+> >                          TPM_INT_STATUS(priv->locality)),
+> > -               priv->iobase + TPM_INT_STATUS(priv->locality));
+> > +               phy->iobase + TPM_INT_STATUS(priv->locality));
+> >
+> >       /* Turn on */
+> >       iowrite32(intmask | TPM_GLOBAL_INT_ENABLE,
+> > -               priv->iobase + TPM_INT_ENABLE(priv->locality));
+> > +               phy->iobase + TPM_INT_ENABLE(priv->locality));
+> >
+> >       priv->irq_tested = false;
+> >
+> > @@ -641,7 +657,7 @@ static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
+> >        */
+> >       if (!(chip->flags & TPM_CHIP_FLAG_IRQ)) {
+> >               iowrite8(original_int_vec,
+> > -                      priv->iobase + TPM_INT_VECTOR(priv->locality));
+> > +                      phy->iobase + TPM_INT_VECTOR(priv->locality));
+> >               return 1;
+> >       }
+> >
+> > @@ -654,11 +670,12 @@ static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
+> >   */
+> >  static void tpm_tis_probe_irq(struct tpm_chip *chip, u32 intmask)  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >       u8 original_int_vec;
+> >       int i;
+> >
+> > -     original_int_vec = ioread8(priv->iobase +
+> > +     original_int_vec = ioread8(phy->iobase +
+> >                                  TPM_INT_VECTOR(priv->locality));
+> >
+> >       if (!original_int_vec) {
+> > @@ -678,8 +695,9 @@ MODULE_PARM_DESC(interrupts, "Enable interrupts");
+> >
+> >  static void tpm_tis_remove(struct tpm_chip *chip)  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > -     void __iomem *reg = priv->iobase + TPM_INT_ENABLE(priv->locality);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> > +     void __iomem *reg = phy->iobase + TPM_INT_ENABLE(priv->locality);
+> >
+> >       iowrite32(~TPM_GLOBAL_INT_ENABLE & ioread32(reg), reg);
+> >       release_locality(chip, priv->locality, 1); @@ -691,10 +709,10 @@
+> > static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+> >       u32 vendor, intfcaps, intmask;
+> >       int rc, probe;
+> >       struct tpm_chip *chip;
+> > -     struct priv_data *priv;
+> > +     struct tpm_tis_tcg_phy *phy;
+> >
+> > -     priv = devm_kzalloc(dev, sizeof(struct priv_data), GFP_KERNEL);
+> > -     if (priv == NULL)
+> > +     phy = devm_kzalloc(dev, sizeof(struct tpm_tis_tcg_phy), GFP_KERNEL);
+> > +     if (phy == NULL)
+> >               return -ENOMEM;
+> >
+> >       chip = tpmm_chip_alloc(dev, &tpm_tis); @@ -705,9 +723,9 @@ static
+> > int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+> >       chip->acpi_dev_handle = acpi_dev_handle;  #endif
+> >
+> > -     priv->iobase = devm_ioremap_resource(dev, &tpm_info->res);
+> > -     if (IS_ERR(priv->iobase))
+> > -             return PTR_ERR(priv->iobase);
+> > +     phy->iobase = devm_ioremap_resource(dev, &tpm_info->res);
+> > +     if (IS_ERR(phy->iobase))
+> > +             return PTR_ERR(phy->iobase);
+> >
+> >       /* Maximum timeouts */
+> >       chip->timeout_a = TIS_TIMEOUT_A_MAX; @@ -715,7 +733,7 @@ static int
+> > tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+> >       chip->timeout_c = TIS_TIMEOUT_C_MAX;
+> >       chip->timeout_d = TIS_TIMEOUT_D_MAX;
+> >
+> > -     dev_set_drvdata(&chip->dev, priv);
+> > +     dev_set_drvdata(&chip->dev, &phy->priv);
+> >
+> >       if (wait_startup(chip, 0) != 0) {
+> >               rc = -ENODEV;
+> > @@ -723,13 +741,13 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+> >       }
+> >
+> >       /* Take control of the TPM's interrupt hardware and shut it off */
+> > -     intmask = ioread32(priv->iobase +
+> > -                        TPM_INT_ENABLE(priv->locality));
+> > +     intmask = ioread32(phy->iobase +
+> > +                        TPM_INT_ENABLE(phy->priv.locality));
+> >       intmask |= TPM_INTF_CMD_READY_INT | TPM_INTF_LOCALITY_CHANGE_INT |
+> >                  TPM_INTF_DATA_AVAIL_INT | TPM_INTF_STS_VALID_INT;
+> >       intmask &= ~TPM_GLOBAL_INT_ENABLE;
+> >       iowrite32(intmask,
+> > -               priv->iobase + TPM_INT_ENABLE(priv->locality));
+> > +               phy->iobase + TPM_INT_ENABLE(phy->priv.locality));
+> >
+> >       if (request_locality(chip, 0) != 0) {
+> >               rc = -ENODEV;
+> > @@ -740,12 +758,12 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+> >       if (rc)
+> >               goto out_err;
+> >
+> > -     vendor = ioread32(priv->iobase + TPM_DID_VID(0));
+> > -     priv->manufacturer_id = vendor;
+> > +     vendor = ioread32(phy->iobase + TPM_DID_VID(0));
+> > +     phy->priv.manufacturer_id = vendor;
+> >
+> >       dev_info(dev, "%s TPM (device-id 0x%X, rev-id %d)\n",
+> >                (chip->flags & TPM_CHIP_FLAG_TPM2) ? "2.0" : "1.2",
+> > -              vendor >> 16, ioread8(priv->iobase + TPM_RID(0)));
+> > +              vendor >> 16, ioread8(phy->iobase + TPM_RID(0)));
+> >
+> >       if (!itpm) {
+> >               probe = probe_itpm(chip);
+> > @@ -762,8 +780,8 @@ static int tpm_tis_init(struct device *dev, struct
+> > tpm_info *tpm_info,
+> >
+> >       /* Figure out the capabilities */
+> >       intfcaps =
+> > -         ioread32(priv->iobase +
+> > -                  TPM_INTF_CAPS(priv->locality));
+> > +         ioread32(phy->iobase +
+> > +                  TPM_INTF_CAPS(phy->priv.locality));
+> >       dev_dbg(dev, "TPM interface capabilities (0x%x):\n",
+> >               intfcaps);
+> >       if (intfcaps & TPM_INTF_BURST_COUNT_STATIC) @@ -796,8 +814,8 @@
+> > static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+> >       }
+> >
+> >       /* INTERRUPT Setup */
+> > -     init_waitqueue_head(&priv->read_queue);
+> > -     init_waitqueue_head(&priv->int_queue);
+> > +     init_waitqueue_head(&phy->priv.read_queue);
+> > +     init_waitqueue_head(&phy->priv.int_queue);
+> >       if (interrupts && tpm_info->irq != -1) {
+> >               if (tpm_info->irq) {
+> >                       tpm_tis_probe_irq_single(chip, intmask, IRQF_SHARED, @@ -841,23
+> > +859,24 @@ out_err:
+> >  #ifdef CONFIG_PM_SLEEP
+> >  static void tpm_tis_reenable_interrupts(struct tpm_chip *chip)  {
+> > -     struct priv_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> > +     struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+> >       u32 intmask;
+> >
+> >       /* reenable interrupts that device may have lost or
+> >          BIOS/firmware may have disabled */
+> > -     iowrite8(priv->irq, priv->iobase +
+> > +     iowrite8(priv->irq, phy->iobase +
+> >                TPM_INT_VECTOR(priv->locality));
+> >
+> >       intmask =
+> > -         ioread32(priv->iobase + TPM_INT_ENABLE(priv->locality));
+> > +         ioread32(phy->iobase + TPM_INT_ENABLE(priv->locality));
+> >
+> >       intmask |= TPM_INTF_CMD_READY_INT
+> >           | TPM_INTF_LOCALITY_CHANGE_INT | TPM_INTF_DATA_AVAIL_INT
+> >           | TPM_INTF_STS_VALID_INT | TPM_GLOBAL_INT_ENABLE;
+> >
+> >       iowrite32(intmask,
+> > -               priv->iobase + TPM_INT_ENABLE(priv->locality));
+> > +               phy->iobase + TPM_INT_ENABLE(priv->locality));
+> >  }
+> >
+> >  static int tpm_tis_resume(struct device *dev) diff --git
+> > a/drivers/char/tpm/tpm_tis_core.h b/drivers/char/tpm/tpm_tis_core.h
+> > new file mode 100644 index 0000000..2260f89
+> > --- /dev/null
+> > +++ b/drivers/char/tpm/tpm_tis_core.h
+> > @@ -0,0 +1,37 @@
+> > +/*
+> > + * Copyright (C) 2005, 2006 IBM Corporation
+> > + * Copyright (C) 2014, 2015 Intel Corporation
+> > + *
+> > + * Authors:
+> > + * Leendert van Doorn <leendert@watson.ibm.com>
+> > + * Kylene Hall <kjhall@us.ibm.com>
+> > + *
+> > + * Maintained by: <tpmdd-devel@lists.sourceforge.net>
+> > + *
+> > + * Device driver for TCG/TCPA TPM (trusted platform module).
+> > + * Specifications at www.trustedcomputinggroup.org
+> > + *
+> > + * This device driver implements the TPM interface as defined in
+> > + * the TCG TPM Interface Spec version 1.2, revision 1.0.
+> > + *
+> > + * This program is free software; you can redistribute it and/or
+> > + * modify it under the terms of the GNU General Public License as
+> > + * published by the Free Software Foundation, version 2 of the
+> > + * License.
+> > + */
+> > +
+> > +#ifndef __TPM_TIS_CORE_H__
+> > +#define __TPM_TIS_CORE_H__
+> > +
+> > +#include "tpm.h"
+> > +
+> > +struct tpm_tis_data {
+> > +     u16 manufacturer_id;
+> > +     int locality;
+> > +     int irq;
+> > +     bool irq_tested;
+> > +     wait_queue_head_t int_queue;
+> > +     wait_queue_head_t read_queue;
+> > +};
+> > +
+> > +#endif
+> 
+> #endif /* __TPM_TIS_CORE_H__ */
+> 
+> > --
+> > 2.1.4
+> >
+> 
+> /Jarkko
