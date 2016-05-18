@@ -1,43 +1,64 @@
-From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH v2] tpm: Factor out common startup code
-Date: Tue, 17 May 2016 10:53:04 -0600
-Message-ID: <20160517165304.GA19976@obsidianresearch.com>
+Date: Wed, 18 May 2016 12:59:24 +0300
+Message-ID: <20160518095924.GA7177@intel.com>
 References: <1463423147-9874-1-git-send-email-jgunthorpe@obsidianresearch.com>
- <20160517041557.GA29299@intel.com>
+	<20160517041557.GA29299@intel.com>
+	<20160517165304.GA19976@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160517041557.GA29299@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: andrew.zamansky@nuvoton.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+In-Reply-To: <20160517165304.GA19976-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, May 17, 2016 at 07:15:57AM +0300, Jarkko Sakkinen wrote:
-> On Mon, May 16, 2016 at 12:25:47PM -0600, Jason Gunthorpe wrote:
-> > Provide some flags in tpm_class_ops to allow drivers to opt-in to the
-> > common startup sequence. This is the sequence used by tpm_tis and
-> > tpm_crb.
+On Tue, May 17, 2016 at 10:53:04AM -0600, Jason Gunthorpe wrote:
+> On Tue, May 17, 2016 at 07:15:57AM +0300, Jarkko Sakkinen wrote:
+> > On Mon, May 16, 2016 at 12:25:47PM -0600, Jason Gunthorpe wrote:
+> > > Provide some flags in tpm_class_ops to allow drivers to opt-in to the
+> > > common startup sequence. This is the sequence used by tpm_tis and
+> > > tpm_crb.
+> > > 
+> > > All drivers should set this flag.
 > > 
-> > All drivers should set this flag.
+> > The commit message should be a much much more verbose I cannot include
+> > this without a better explanation. Please update this for the next
+> > revision.
 > 
-> The commit message should be a much much more verbose I cannot include
-> this without a better explanation. Please update this for the next
-> revision.
+> What more description do you want to see?
 
-What more description do you want to see?
+It is lacking a lot of relevant information:
 
-> > +	if (chip->ops->flags & TPM_OPS_PROBE_TPM2) {
-> > +		rc = tpm2_probe(chip);
-> > +		if (rc)
-> > +			return rc;
-> > +	}
-> 
-> Dead code.
+* It should explain what you mean by startup sequence".
+* It should describe the constant TPM_OPS_AUTO_STARTUP
+* It should explain what drivers are doing at the moment (before
+  this feature).
+* It should explain what is the benefit for different HW drivers
+  after applying this patch.
+* It should explain why you call the executed sequence "automatic"
+  and also use the word "standard". Yeah, I didn't understand this,
+  this not me being picky. Maybe it should be DEFAULT_STARTUP??
 
-Yes, this is used by the follow on driver updates. Andrew is going to
-be sending a patch that uses it right away. I don't really care if it
-gets shifted to that patch or not..
+Your commit message is as good as no commit message at all. I only got
+picture what the patch does by reading the code.  I see the commit
+message as or sometimes more important than the code change itself.
 
-Jason
+/Jarkko
+
+------------------------------------------------------------------------------
+Mobile security can be enabling, not merely restricting. Employees who
+bring their own devices (BYOD) to work are irked by the imposition of MDM
+restrictions. Mobile Device Manager Plus allows you to control only the
+apps on BYO-devices by containerizing them, leaving personal data untouched!
+https://ad.doubleclick.net/ddm/clk/304595813;131938128;j
