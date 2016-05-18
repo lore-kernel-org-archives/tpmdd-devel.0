@@ -1,63 +1,38 @@
-From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v8 1/7] tpm: Add include guards in tpm.h
-Date: Thu, 19 May 2016 00:35:47 +0200
-Message-ID: <1463610953-2766-2-git-send-email-christophe-h.ricard@st.com>
+From: Christophe Ricard <christophe.ricard@gmail.com>
+Subject: [PATCH v8 4/7] devicetree: Add infineon to vendor-prefix.txt
+Date: Thu, 19 May 2016 00:35:50 +0200
+Message-ID: <1463610953-2766-5-git-send-email-christophe-h.ricard@st.com>
 References: <1463610953-2766-1-git-send-email-christophe-h.ricard@st.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1463610953-2766-1-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
-Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>, benoit.houyere-qxv4g6HH51o@public.gmane.org
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <1463610953-2766-1-git-send-email-christophe-h.ricard@st.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: jarkko.sakkinen@linux.intel.com
+Cc: jgunthorpe@obsidianresearch.com, peterhuewe@gmx.de, ashley@ashleylai.com, tpmdd@selhorst.net, tpmdd-devel@lists.sourceforge.net, christophe-h.ricard@st.com, jean-luc.blanc@st.com, benoit.houyere@st.com, Alexander.Steffen@infineon.com, linux-security-module@vger.kernel.org, Christophe Ricard <christophe.ricard@gmail.com>, devicetree@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+From: Christophe Ricard <christophe.ricard@gmail.com>
 
-Add missing include guards in tpm.h
+Add missing vendor to vendor-prefix.txt
 
-Signed-off-by: Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: devicetree@vger.kernel.org
+Signed-off-by: Christophe Ricard <christophe-h.ricard@st.com>
+Acked-by: Rob Herring <robh@kernel.org>
 ---
- drivers/char/tpm/tpm.h | 5 +++++
- 1 file changed, 5 insertions(+)
+ Documentation/devicetree/bindings/vendor-prefixes.txt | 1 +
+ 1 file changed, 1 insertion(+)
 
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index ff4e53c..8890df2 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -19,6 +19,10 @@
-  * License.
-  *
-  */
-+
-+#ifndef __TPM_H__
-+#define __TPM_H__
-+
- #include <linux/module.h>
- #include <linux/delay.h>
- #include <linux/fs.h>
-@@ -528,3 +532,4 @@ extern unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *, u32);
- extern int tpm2_do_selftest(struct tpm_chip *chip);
- extern int tpm2_gen_interrupt(struct tpm_chip *chip);
- extern int tpm2_probe(struct tpm_chip *chip);
-+#endif
+diff --git a/Documentation/devicetree/bindings/vendor-prefixes.txt b/Documentation/devicetree/bindings/vendor-prefixes.txt
+index 72e2c5a..6c3d970 100644
+--- a/Documentation/devicetree/bindings/vendor-prefixes.txt
++++ b/Documentation/devicetree/bindings/vendor-prefixes.txt
+@@ -113,6 +113,7 @@ ibm	International Business Machines (IBM)
+ idt	Integrated Device Technologies, Inc.
+ iom	Iomega Corporation
+ img	Imagination Technologies Ltd.
++infineon Infineon Technologies
+ ingenic	Ingenic Semiconductor
+ innolux	Innolux Corporation
+ intel	Intel Corporation
 -- 
 2.1.4
 
-
-------------------------------------------------------------------------------
-Mobile security can be enabling, not merely restricting. Employees who
-bring their own devices (BYOD) to work are irked by the imposition of MDM
-restrictions. Mobile Device Manager Plus allows you to control only the
-apps on BYO-devices by containerizing them, leaving personal data untouched!
-https://ad.doubleclick.net/ddm/clk/304595813;131938128;j
