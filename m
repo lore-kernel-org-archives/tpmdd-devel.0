@@ -1,57 +1,48 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v8 3/7] tpm_tis: Introduce intermediate
- layer for TPM access
-Date: Tue, 24 May 2016 00:20:09 +0300
-Message-ID: <20160523212009.GA30456@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v8 4/7] devicetree: Add infineon to vendor-prefix.txt
+Date: Tue, 24 May 2016 00:21:40 +0300
+Message-ID: <20160523212140.GB30456@intel.com>
 References: <1463610953-2766-1-git-send-email-christophe-h.ricard@st.com>
-	<1463610953-2766-4-git-send-email-christophe-h.ricard@st.com>
+ <1463610953-2766-5-git-send-email-christophe-h.ricard@st.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1463610953-2766-4-git-send-email-christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Cc: jean-luc.blanc-qxv4g6HH51o@public.gmane.org, ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org
+In-Reply-To: <1463610953-2766-5-git-send-email-christophe-h.ricard@st.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Christophe Ricard <christophe.ricard@gmail.com>
+Cc: jgunthorpe@obsidianresearch.com, peterhuewe@gmx.de, ashley@ashleylai.com, tpmdd@selhorst.net, tpmdd-devel@lists.sourceforge.net, christophe-h.ricard@st.com, jean-luc.blanc@st.com, benoit.houyere@st.com, Alexander.Steffen@infineon.com, linux-security-module@vger.kernel.org, devicetree@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, May 19, 2016 at 12:35:49AM +0200, Christophe Ricard wrote:
-> From: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+On Thu, May 19, 2016 at 12:35:50AM +0200, Christophe Ricard wrote:
+> From: Christophe Ricard <christophe.ricard@gmail.com>
 > 
-> This splits tpm_tis in a high-level protocol part and a low-level interface
-> for the actual TPM communication. The low-level interface can then be
-> implemented by additional drivers to provide access to TPMs using other
-> mechanisms, for example native I2C or SPI transfers, while still reusing
-> the same TIS protocol implementation.
+> Add missing vendor to vendor-prefix.txt
 > 
-> Though the ioread/iowrite calls cannot fail, other implementations of this
-> interface might want to return error codes if their communication fails.
-> 
-> This follows the usual pattern of negative values representing errors and
-> zero representing success. Positive values are not used (yet).
-> 
-> Errors are passed back to the caller if possible. If the interface of a
-> function does not allow that, it tries to do the most sensible thing it
-> can, but this might also mean ignoring the error in this instance.
-> 
-> Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-> Signed-off-by: Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
+> Cc: devicetree@vger.kernel.org
+> Signed-off-by: Christophe Ricard <christophe-h.ricard@st.com>
+> Acked-by: Rob Herring <robh@kernel.org>
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Acked-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
 /Jarkko
 
-------------------------------------------------------------------------------
-Mobile security can be enabling, not merely restricting. Employees who
-bring their own devices (BYOD) to work are irked by the imposition of MDM
-restrictions. Mobile Device Manager Plus allows you to control only the
-apps on BYO-devices by containerizing them, leaving personal data untouched!
-https://ad.doubleclick.net/ddm/clk/304595813;131938128;j
+> ---
+>  Documentation/devicetree/bindings/vendor-prefixes.txt | 1 +
+>  1 file changed, 1 insertion(+)
+> 
+> diff --git a/Documentation/devicetree/bindings/vendor-prefixes.txt b/Documentation/devicetree/bindings/vendor-prefixes.txt
+> index 72e2c5a..6c3d970 100644
+> --- a/Documentation/devicetree/bindings/vendor-prefixes.txt
+> +++ b/Documentation/devicetree/bindings/vendor-prefixes.txt
+> @@ -113,6 +113,7 @@ ibm	International Business Machines (IBM)
+>  idt	Integrated Device Technologies, Inc.
+>  iom	Iomega Corporation
+>  img	Imagination Technologies Ltd.
+> +infineon Infineon Technologies
+>  ingenic	Ingenic Semiconductor
+>  innolux	Innolux Corporation
+>  intel	Intel Corporation
+> -- 
+> 2.1.4
+> 
