@@ -1,36 +1,45 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v8 6/7] tpm/tpm_tis: Split tpm_tis driver into a core and
- TCG TIS compliant phy
-Date: Tue, 24 May 2016 09:58:21 +0300
-Message-ID: <20160524065821.GA4993@intel.com>
-References: <1463610953-2766-1-git-send-email-christophe-h.ricard@st.com>
- <1463610953-2766-7-git-send-email-christophe-h.ricard@st.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v2] tpm: Factor out common startup code
+Date: Thu, 26 May 2016 15:23:43 +0300
+Message-ID: <20160526122343.GA31501@intel.com>
+References: <1463423147-9874-1-git-send-email-jgunthorpe@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1463610953-2766-7-git-send-email-christophe-h.ricard@st.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Christophe Ricard <christophe.ricard@gmail.com>
-Cc: jgunthorpe@obsidianresearch.com, peterhuewe@gmx.de, ashley@ashleylai.com, tpmdd@selhorst.net, tpmdd-devel@lists.sourceforge.net, christophe-h.ricard@st.com, jean-luc.blanc@st.com, benoit.houyere@st.com, Alexander.Steffen@infineon.com, linux-security-module@vger.kernel.org, Peter Huewe <peter.huewe@infineon.com>
+In-Reply-To: <1463423147-9874-1-git-send-email-jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, May 19, 2016 at 12:35:52AM +0200, Christophe Ricard wrote:
-> From: Christophe Ricard <christophe.ricard@gmail.com>
+On Mon, May 16, 2016 at 12:25:47PM -0600, Jason Gunthorpe wrote:
+> Provide some flags in tpm_class_ops to allow drivers to opt-in to the
+> common startup sequence. This is the sequence used by tpm_tis and
+> tpm_crb.
 > 
-> To avoid code duplication between the old tpm_tis and the new and future
-> native tcg tis driver(ie: spi, i2c...), the tpm_tis driver was reworked,
-> so that all common logic is extracted and can be reused from all drivers.
+> All drivers should set this flag.
 > 
-> The core methods can also be used from other TIS like drivers.
-> 
-> itpm workaround is now managed with a specific tis flag
-> TPM_TIS_ITPM_POSSIBLE.
-> 
-> Signed-off-by: Peter Huewe <peter.huewe@infineon.com>
-> Signed-off-by: Christophe Ricard <christophe-h.ricard@st.com>
+> Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> Tested-by: Andrew Zamansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Tested-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+I assume there is coming a patch set of which part this patch will be?
+In that patch set (whoever makes it) could you put the updated
+description in place?
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Mobile security can be enabling, not merely restricting. Employees who
+bring their own devices (BYOD) to work are irked by the imposition of MDM
+restrictions. Mobile Device Manager Plus allows you to control only the
+apps on BYO-devices by containerizing them, leaving personal data untouched!
+https://ad.doubleclick.net/ddm/clk/304595813;131938128;j
