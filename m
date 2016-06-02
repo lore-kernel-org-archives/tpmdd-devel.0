@@ -1,44 +1,87 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: Re: [PATCH v8 0/7] Rework of tpm_tis to share common logic
- across phy's (lpc/spi/-i2c-)
-Date: Mon, 30 May 2016 21:36:14 +0300
-Message-ID: <20160530183614.GA17850@intel.com>
-References: <1463610953-2766-1-git-send-email-christophe-h.ricard@st.com>
- <20160526122635.GA31557@intel.com>
- <trinity-dc78c674-69c6-4d45-b57b-a9bb890cf963-1464425950732@3capp-gmx-bs40>
+From: andrew <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+Subject: [PATCH] adding tpm2.0 support to nuvoton drivers and
+	adding npct6xx
+Date: Thu, 2 Jun 2016 14:06:34 +0300
+Message-ID: <20160602140634.6ab408bc@andrew-desktop>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <trinity-dc78c674-69c6-4d45-b57b-a9bb890cf963-1464425950732@3capp-gmx-bs40>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Peter Huewe <PeterHuewe@gmx.de>
-Cc: Christophe Ricard <christophe.ricard@gmail.com>, jgunthorpe@obsidianresearch.com, ashley@ashleylai.com, tpmdd@selhorst.net, tpmdd-devel@lists.sourceforge.net, christophe-h.ricard@st.com, jean-luc.blanc@st.com, benoit.houyere@st.com, Alexander.Steffen@infineon.com, linux-security-module@vger.kernel.org
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org, jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
+Cc: andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, Dan.Morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, stimpy1-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Thanks Peter! I'll add your and Stefans Reviewed/Tested-by's before
-I merge these to next (will happen around rc5).
-
-/Jarkko
-
-On Sat, May 28, 2016 at 10:59:10AM +0200, Peter Huewe wrote:
-> Thanks for all your efforts!!! I'm sorry I couldn't participate more. :(
-> So thanks a lot to all of you for taking care of this.
-> 
-> 
-> a quick testrun (x86) seemed okay and the patchset looks good to me
-> reviewed-by: Peter Huewe <peterhuewe@gmx.de>
-> tested-by: Peter Huewe <peterhuewe@gmx.de>
-> 
-> 
-> I'll try to give it a more detailled testrun on the spi and i2c tpms I have and let you know if I find something.
-> 
-> 
-> Since we are making a big change in the subsystem - does it make sense to deprecate, the old, vendor specific, mainly 1.1b, tpm drivers?
-> Every time I check on a system, they initally are running on these old drivers instead of tpm_tis. :/
-> For now I would probably group them under a new kconfig symbol (deprecated vendor specific drivers) so they are still available for users who really want to use them, but don't get selected by default in distro kernels.
-> 
-> 
-> Thanks,
-> Peter
-> 
+RnJvbSA0MDEyMTRiZmJlY2UzMWUzZWY3ODNmMTNiNzYyZGE2ZjgzZDEwZjg0IE1vbiBTZXAgMTcg
+MDA6MDA6MDAgMjAwMQpGcm9tOiBhbmRyZXcgYXptYW5za3kgPGFuZHJldy56YW1hbnNreUBudXZv
+dG9uLmNvbT4KRGF0ZTogVGh1LCAyIEp1biAyMDE2IDA5OjEzOjI4ICswMzAwClN1YmplY3Q6IFtQ
+QVRDSF0gYWRkaW5nIHRwbTIuMCBzdXBwb3J0IHRvIG51dm90b24gZHJpdmVycyBhbmQgYWRkaW5n
+IG5wY3Q2eHgKIHRvIGRldmljZSB0cmVlCgpTaWduZWQtb2ZmLWJ5OiBBbmRyZXcgWmFtYW5za3kg
+PGFuZHJldy56YW1hbnNreUBudXZvdG9uLmNvbT4KCi0tLQogRG9jdW1lbnRhdGlvbi9kZXZpY2V0
+cmVlL2JpbmRpbmdzL2kyYy90cml2aWFsLWRldmljZXMudHh0IHwgMSArCiBkcml2ZXJzL2NoYXIv
+dHBtL3RwbV9pMmNfbnV2b3Rvbi5jICAgICAgICAgICAgICAgICAgICAgICAgfCA1ICsrKy0tCiBk
+cml2ZXJzL2NoYXIvdHBtL3RwbV90aXMuYyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+fCAyICstCiAzIGZpbGVzIGNoYW5nZWQsIDUgaW5zZXJ0aW9ucygrKSwgMyBkZWxldGlvbnMoLSkK
+CmRpZmYgLS1naXQgYS9Eb2N1bWVudGF0aW9uL2RldmljZXRyZWUvYmluZGluZ3MvaTJjL3RyaXZp
+YWwtZGV2aWNlcy50eHQgYi9Eb2N1bWVudGF0aW9uL2RldmljZXRyZWUvYmluZGluZ3MvaTJjL3Ry
+aXZpYWwtZGV2aWNlcy50eHQKaW5kZXggNTM5ODc0NC4uMGEwN2NiYyAxMDA2NDQKLS0tIGEvRG9j
+dW1lbnRhdGlvbi9kZXZpY2V0cmVlL2JpbmRpbmdzL2kyYy90cml2aWFsLWRldmljZXMudHh0Cisr
+KyBiL0RvY3VtZW50YXRpb24vZGV2aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJpdmlhbC1kZXZpY2Vz
+LnR4dApAQCAtNjIsNiArNjIsNyBAQCBuYXRpb25hbCxsbTgwCQlTZXJpYWwgSW50ZXJmYWNlIEFD
+UEktQ29tcGF0aWJsZSBNaWNyb3Byb2Nlc3NvciBTeXN0ZW0gSGFyZHdhcmUgTQogbmF0aW9uYWws
+bG04NQkJVGVtcGVyYXR1cmUgc2Vuc29yIHdpdGggaW50ZWdyYXRlZCBmYW4gY29udHJvbAogbmF0
+aW9uYWwsbG05MgkJwrEwLjMzwrBDIEFjY3VyYXRlLCAxMi1CaXQgKyBTaWduIFRlbXBlcmF0dXJl
+IFNlbnNvciBhbmQgVGhlcm1hbCBXaW5kb3cgQ29tcGFyYXRvciB3aXRoIFR3by1XaXJlIEludGVy
+ZmFjZQogbnV2b3RvbixucGN0NTAxCQlpMmMgdHJ1c3RlZCBwbGF0Zm9ybSBtb2R1bGUgKFRQTSkK
+K251dm90b24sbnBjdDZ4eAkJaTJjIHRydXN0ZWQgcGxhdGZvcm0gbW9kdWxlIChUUE0pIDZ4eCBz
+ZXJpZXMKIG54cCxwY2E5NTU2CQlPY3RhbCBTTUJ1cyBhbmQgSTJDIHJlZ2lzdGVyZWQgaW50ZXJm
+YWNlCiBueHAscGNhOTU1NwkJOC1iaXQgSTJDLWJ1cyBhbmQgU01CdXMgSS9PIHBvcnQgd2l0aCBy
+ZXNldAogbnhwLHBjZjg1NjMJCVJlYWwtdGltZSBjbG9jay9jYWxlbmRhcgpkaWZmIC0tZ2l0IGEv
+ZHJpdmVycy9jaGFyL3RwbS90cG1faTJjX251dm90b24uYyBiL2RyaXZlcnMvY2hhci90cG0vdHBt
+X2kyY19udXZvdG9uLmMKaW5kZXggYjY0ZWZmYy4uN2ZiMGU2YyAxMDA2NDQKLS0tIGEvZHJpdmVy
+cy9jaGFyL3RwbS90cG1faTJjX251dm90b24uYworKysgYi9kcml2ZXJzL2NoYXIvdHBtL3RwbV9p
+MmNfbnV2b3Rvbi5jCkBAIC0xLDUgKzEsNSBAQAogLyoqKioqKioqKioqKioqKioqKioqKioqKioq
+KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKgotICog
+TnV2b3RvbiBUUE0gSTJDIERldmljZSBEcml2ZXIgSW50ZXJmYWNlIGZvciBXUENUMzAxL05QQ1Q1
+MDEsCisgKiBOdXZvdG9uIFRQTSBJMkMgRGV2aWNlIERyaXZlciBJbnRlcmZhY2UgZm9yIFdQQ1Qz
+MDEvTlBDVDUwMS9OUENUNlhYLAogICogYmFzZWQgb24gdGhlIFRDRyBUUE0gSW50ZXJmYWNlIFNw
+ZWMgdmVyc2lvbiAxLjIuCiAgKiBTcGVjaWZpY2F0aW9ucyBhdCB3d3cudHJ1c3RlZGNvbXB1dGlu
+Z2dyb3VwLm9yZwogICoKQEAgLTQ1Niw3ICs0NTYsNyBAQCBzdGF0aWMgYm9vbCBpMmNfbnV2b3Rv
+bl9yZXFfY2FuY2VsZWQoc3RydWN0IHRwbV9jaGlwICpjaGlwLCB1OCBzdGF0dXMpCiB9CiAKIHN0
+YXRpYyBjb25zdCBzdHJ1Y3QgdHBtX2NsYXNzX29wcyB0cG1faTJjID0gewotCS5mbGFncyA9IFRQ
+TV9PUFNfQVVUT19TVEFSVFVQLAorCS5mbGFncyA9IFRQTV9PUFNfQVVUT19TVEFSVFVQIHwgVFBN
+X09QU19QUk9CRV9UUE0yLAogCS5zdGF0dXMgPSBpMmNfbnV2b3Rvbl9yZWFkX3N0YXR1cywKIAku
+cmVjdiA9IGkyY19udXZvdG9uX3JlY3YsCiAJLnNlbmQgPSBpMmNfbnV2b3Rvbl9zZW5kLApAQCAt
+NjIzLDYgKzYyMyw3IEBAIE1PRFVMRV9ERVZJQ0VfVEFCTEUoaTJjLCBpMmNfbnV2b3Rvbl9pZCk7
+CiBzdGF0aWMgY29uc3Qgc3RydWN0IG9mX2RldmljZV9pZCBpMmNfbnV2b3Rvbl9vZl9tYXRjaFtd
+ID0gewogCXsuY29tcGF0aWJsZSA9ICJudXZvdG9uLG5wY3Q1MDEifSwKIAl7LmNvbXBhdGlibGUg
+PSAid2luYm9uZCx3cGN0MzAxIn0sCisJey5jb21wYXRpYmxlID0gIm51dm90b24sbnBjdDZ4eCJ9
+LAogCXt9LAogfTsKIE1PRFVMRV9ERVZJQ0VfVEFCTEUob2YsIGkyY19udXZvdG9uX29mX21hdGNo
+KTsKZGlmZiAtLWdpdCBhL2RyaXZlcnMvY2hhci90cG0vdHBtX3Rpcy5jIGIvZHJpdmVycy9jaGFy
+L3RwbS90cG1fdGlzLmMKaW5kZXggMzBhZmY1Yi4uYmM1ZmJhMyAxMDA2NDQKLS0tIGEvZHJpdmVy
+cy9jaGFyL3RwbS90cG1fdGlzLmMKKysrIGIvZHJpdmVycy9jaGFyL3RwbS90cG1fdGlzLmMKQEAg
+LTUyNCw3ICs1MjQsNyBAQCBzdGF0aWMgYm9vbCB0cG1fdGlzX3JlcV9jYW5jZWxlZChzdHJ1Y3Qg
+dHBtX2NoaXAgKmNoaXAsIHU4IHN0YXR1cykKIH0KIAogc3RhdGljIGNvbnN0IHN0cnVjdCB0cG1f
+Y2xhc3Nfb3BzIHRwbV90aXMgPSB7Ci0JLmZsYWdzID0gVFBNX09QU19BVVRPX1NUQVJUVVAsCisJ
+LmZsYWdzID0gVFBNX09QU19BVVRPX1NUQVJUVVAgIHwgVFBNX09QU19QUk9CRV9UUE0yLAogCS5z
+dGF0dXMgPSB0cG1fdGlzX3N0YXR1cywKIAkucmVjdiA9IHRwbV90aXNfcmVjdiwKIAkuc2VuZCA9
+IHRwbV90aXNfc2VuZCwKLS0gCjEuOS4xCgp0aGlzIHBhdGNoIHJlcXVpcmVzIEphc29uJ3MgbGF0
+ZXN0IHBhdGNoIAoKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCldoYXQgTmV0RmxvdyBBbmFseXplciBj
+YW4gZG8gZm9yIHlvdT8gTW9uaXRvcnMgbmV0d29yayBiYW5kd2lkdGggYW5kIHRyYWZmaWMKcGF0
+dGVybnMgYXQgYW4gaW50ZXJmYWNlLWxldmVsLiBSZXZlYWxzIHdoaWNoIHVzZXJzLCBhcHBzLCBh
+bmQgcHJvdG9jb2xzIGFyZSAKY29uc3VtaW5nIHRoZSBtb3N0IGJhbmR3aWR0aC4gUHJvdmlkZXMg
+bXVsdGktdmVuZG9yIHN1cHBvcnQgZm9yIE5ldEZsb3csIApKLUZsb3csIHNGbG93IGFuZCBvdGhl
+ciBmbG93cy4gTWFrZSBpbmZvcm1lZCBkZWNpc2lvbnMgdXNpbmcgY2FwYWNpdHkgCnBsYW5uaW5n
+IHJlcG9ydHMuIGh0dHBzOi8vYWQuZG91YmxlY2xpY2submV0L2RkbS9jbGsvMzA1Mjk1MjIwOzEz
+MjY1OTU4MjtlCl9fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
+CnRwbWRkLWRldmVsIG1haWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5u
+ZXQKaHR0cHM6Ly9saXN0cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2
+ZWwK
