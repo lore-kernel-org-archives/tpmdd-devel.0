@@ -1,12 +1,15 @@
-From: andrew <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
-Subject: [PATCH] adding tpm2.0 support to nuvoton drivers and
-	adding npct6xx
-Date: Thu, 2 Jun 2016 14:06:34 +0300
-Message-ID: <20160602140634.6ab408bc@andrew-desktop>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] adding tpm2.0 support to nuvoton drivers
+ and adding npct6xx
+Date: Fri, 3 Jun 2016 11:30:01 +0300
+Message-ID: <20160603083001.GA30613@intel.com>
+References: <20160602140634.6ab408bc@andrew-desktop>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="iso-8859-1"
+Content-Transfer-Encoding: quoted-printable
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20160602140634.6ab408bc@andrew-desktop>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -15,73 +18,111 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org, jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
-Cc: andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, Dan.Morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, stimpy1-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
+To: andrew <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+Cc: Dan.Morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, stimpy1-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-RnJvbSA0MDEyMTRiZmJlY2UzMWUzZWY3ODNmMTNiNzYyZGE2ZjgzZDEwZjg0IE1vbiBTZXAgMTcg
-MDA6MDA6MDAgMjAwMQpGcm9tOiBhbmRyZXcgYXptYW5za3kgPGFuZHJldy56YW1hbnNreUBudXZv
-dG9uLmNvbT4KRGF0ZTogVGh1LCAyIEp1biAyMDE2IDA5OjEzOjI4ICswMzAwClN1YmplY3Q6IFtQ
-QVRDSF0gYWRkaW5nIHRwbTIuMCBzdXBwb3J0IHRvIG51dm90b24gZHJpdmVycyBhbmQgYWRkaW5n
-IG5wY3Q2eHgKIHRvIGRldmljZSB0cmVlCgpTaWduZWQtb2ZmLWJ5OiBBbmRyZXcgWmFtYW5za3kg
-PGFuZHJldy56YW1hbnNreUBudXZvdG9uLmNvbT4KCi0tLQogRG9jdW1lbnRhdGlvbi9kZXZpY2V0
-cmVlL2JpbmRpbmdzL2kyYy90cml2aWFsLWRldmljZXMudHh0IHwgMSArCiBkcml2ZXJzL2NoYXIv
-dHBtL3RwbV9pMmNfbnV2b3Rvbi5jICAgICAgICAgICAgICAgICAgICAgICAgfCA1ICsrKy0tCiBk
-cml2ZXJzL2NoYXIvdHBtL3RwbV90aXMuYyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-fCAyICstCiAzIGZpbGVzIGNoYW5nZWQsIDUgaW5zZXJ0aW9ucygrKSwgMyBkZWxldGlvbnMoLSkK
-CmRpZmYgLS1naXQgYS9Eb2N1bWVudGF0aW9uL2RldmljZXRyZWUvYmluZGluZ3MvaTJjL3RyaXZp
-YWwtZGV2aWNlcy50eHQgYi9Eb2N1bWVudGF0aW9uL2RldmljZXRyZWUvYmluZGluZ3MvaTJjL3Ry
-aXZpYWwtZGV2aWNlcy50eHQKaW5kZXggNTM5ODc0NC4uMGEwN2NiYyAxMDA2NDQKLS0tIGEvRG9j
-dW1lbnRhdGlvbi9kZXZpY2V0cmVlL2JpbmRpbmdzL2kyYy90cml2aWFsLWRldmljZXMudHh0Cisr
-KyBiL0RvY3VtZW50YXRpb24vZGV2aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJpdmlhbC1kZXZpY2Vz
-LnR4dApAQCAtNjIsNiArNjIsNyBAQCBuYXRpb25hbCxsbTgwCQlTZXJpYWwgSW50ZXJmYWNlIEFD
-UEktQ29tcGF0aWJsZSBNaWNyb3Byb2Nlc3NvciBTeXN0ZW0gSGFyZHdhcmUgTQogbmF0aW9uYWws
-bG04NQkJVGVtcGVyYXR1cmUgc2Vuc29yIHdpdGggaW50ZWdyYXRlZCBmYW4gY29udHJvbAogbmF0
-aW9uYWwsbG05MgkJwrEwLjMzwrBDIEFjY3VyYXRlLCAxMi1CaXQgKyBTaWduIFRlbXBlcmF0dXJl
-IFNlbnNvciBhbmQgVGhlcm1hbCBXaW5kb3cgQ29tcGFyYXRvciB3aXRoIFR3by1XaXJlIEludGVy
-ZmFjZQogbnV2b3RvbixucGN0NTAxCQlpMmMgdHJ1c3RlZCBwbGF0Zm9ybSBtb2R1bGUgKFRQTSkK
-K251dm90b24sbnBjdDZ4eAkJaTJjIHRydXN0ZWQgcGxhdGZvcm0gbW9kdWxlIChUUE0pIDZ4eCBz
-ZXJpZXMKIG54cCxwY2E5NTU2CQlPY3RhbCBTTUJ1cyBhbmQgSTJDIHJlZ2lzdGVyZWQgaW50ZXJm
-YWNlCiBueHAscGNhOTU1NwkJOC1iaXQgSTJDLWJ1cyBhbmQgU01CdXMgSS9PIHBvcnQgd2l0aCBy
-ZXNldAogbnhwLHBjZjg1NjMJCVJlYWwtdGltZSBjbG9jay9jYWxlbmRhcgpkaWZmIC0tZ2l0IGEv
-ZHJpdmVycy9jaGFyL3RwbS90cG1faTJjX251dm90b24uYyBiL2RyaXZlcnMvY2hhci90cG0vdHBt
-X2kyY19udXZvdG9uLmMKaW5kZXggYjY0ZWZmYy4uN2ZiMGU2YyAxMDA2NDQKLS0tIGEvZHJpdmVy
-cy9jaGFyL3RwbS90cG1faTJjX251dm90b24uYworKysgYi9kcml2ZXJzL2NoYXIvdHBtL3RwbV9p
-MmNfbnV2b3Rvbi5jCkBAIC0xLDUgKzEsNSBAQAogLyoqKioqKioqKioqKioqKioqKioqKioqKioq
-KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKgotICog
-TnV2b3RvbiBUUE0gSTJDIERldmljZSBEcml2ZXIgSW50ZXJmYWNlIGZvciBXUENUMzAxL05QQ1Q1
-MDEsCisgKiBOdXZvdG9uIFRQTSBJMkMgRGV2aWNlIERyaXZlciBJbnRlcmZhY2UgZm9yIFdQQ1Qz
-MDEvTlBDVDUwMS9OUENUNlhYLAogICogYmFzZWQgb24gdGhlIFRDRyBUUE0gSW50ZXJmYWNlIFNw
-ZWMgdmVyc2lvbiAxLjIuCiAgKiBTcGVjaWZpY2F0aW9ucyBhdCB3d3cudHJ1c3RlZGNvbXB1dGlu
-Z2dyb3VwLm9yZwogICoKQEAgLTQ1Niw3ICs0NTYsNyBAQCBzdGF0aWMgYm9vbCBpMmNfbnV2b3Rv
-bl9yZXFfY2FuY2VsZWQoc3RydWN0IHRwbV9jaGlwICpjaGlwLCB1OCBzdGF0dXMpCiB9CiAKIHN0
-YXRpYyBjb25zdCBzdHJ1Y3QgdHBtX2NsYXNzX29wcyB0cG1faTJjID0gewotCS5mbGFncyA9IFRQ
-TV9PUFNfQVVUT19TVEFSVFVQLAorCS5mbGFncyA9IFRQTV9PUFNfQVVUT19TVEFSVFVQIHwgVFBN
-X09QU19QUk9CRV9UUE0yLAogCS5zdGF0dXMgPSBpMmNfbnV2b3Rvbl9yZWFkX3N0YXR1cywKIAku
-cmVjdiA9IGkyY19udXZvdG9uX3JlY3YsCiAJLnNlbmQgPSBpMmNfbnV2b3Rvbl9zZW5kLApAQCAt
-NjIzLDYgKzYyMyw3IEBAIE1PRFVMRV9ERVZJQ0VfVEFCTEUoaTJjLCBpMmNfbnV2b3Rvbl9pZCk7
-CiBzdGF0aWMgY29uc3Qgc3RydWN0IG9mX2RldmljZV9pZCBpMmNfbnV2b3Rvbl9vZl9tYXRjaFtd
-ID0gewogCXsuY29tcGF0aWJsZSA9ICJudXZvdG9uLG5wY3Q1MDEifSwKIAl7LmNvbXBhdGlibGUg
-PSAid2luYm9uZCx3cGN0MzAxIn0sCisJey5jb21wYXRpYmxlID0gIm51dm90b24sbnBjdDZ4eCJ9
-LAogCXt9LAogfTsKIE1PRFVMRV9ERVZJQ0VfVEFCTEUob2YsIGkyY19udXZvdG9uX29mX21hdGNo
-KTsKZGlmZiAtLWdpdCBhL2RyaXZlcnMvY2hhci90cG0vdHBtX3Rpcy5jIGIvZHJpdmVycy9jaGFy
-L3RwbS90cG1fdGlzLmMKaW5kZXggMzBhZmY1Yi4uYmM1ZmJhMyAxMDA2NDQKLS0tIGEvZHJpdmVy
-cy9jaGFyL3RwbS90cG1fdGlzLmMKKysrIGIvZHJpdmVycy9jaGFyL3RwbS90cG1fdGlzLmMKQEAg
-LTUyNCw3ICs1MjQsNyBAQCBzdGF0aWMgYm9vbCB0cG1fdGlzX3JlcV9jYW5jZWxlZChzdHJ1Y3Qg
-dHBtX2NoaXAgKmNoaXAsIHU4IHN0YXR1cykKIH0KIAogc3RhdGljIGNvbnN0IHN0cnVjdCB0cG1f
-Y2xhc3Nfb3BzIHRwbV90aXMgPSB7Ci0JLmZsYWdzID0gVFBNX09QU19BVVRPX1NUQVJUVVAsCisJ
-LmZsYWdzID0gVFBNX09QU19BVVRPX1NUQVJUVVAgIHwgVFBNX09QU19QUk9CRV9UUE0yLAogCS5z
-dGF0dXMgPSB0cG1fdGlzX3N0YXR1cywKIAkucmVjdiA9IHRwbV90aXNfcmVjdiwKIAkuc2VuZCA9
-IHRwbV90aXNfc2VuZCwKLS0gCjEuOS4xCgp0aGlzIHBhdGNoIHJlcXVpcmVzIEphc29uJ3MgbGF0
-ZXN0IHBhdGNoIAoKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCldoYXQgTmV0RmxvdyBBbmFseXplciBj
-YW4gZG8gZm9yIHlvdT8gTW9uaXRvcnMgbmV0d29yayBiYW5kd2lkdGggYW5kIHRyYWZmaWMKcGF0
-dGVybnMgYXQgYW4gaW50ZXJmYWNlLWxldmVsLiBSZXZlYWxzIHdoaWNoIHVzZXJzLCBhcHBzLCBh
-bmQgcHJvdG9jb2xzIGFyZSAKY29uc3VtaW5nIHRoZSBtb3N0IGJhbmR3aWR0aC4gUHJvdmlkZXMg
-bXVsdGktdmVuZG9yIHN1cHBvcnQgZm9yIE5ldEZsb3csIApKLUZsb3csIHNGbG93IGFuZCBvdGhl
-ciBmbG93cy4gTWFrZSBpbmZvcm1lZCBkZWNpc2lvbnMgdXNpbmcgY2FwYWNpdHkgCnBsYW5uaW5n
-IHJlcG9ydHMuIGh0dHBzOi8vYWQuZG91YmxlY2xpY2submV0L2RkbS9jbGsvMzA1Mjk1MjIwOzEz
-MjY1OTU4MjtlCl9fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-CnRwbWRkLWRldmVsIG1haWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5u
-ZXQKaHR0cHM6Ly9saXN0cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2
-ZWwK
+On Thu, Jun 02, 2016 at 02:06:34PM +0300, andrew wrote:
+> From 401214bfbece31e3ef783f13b762da6f83d10f84 Mon Sep 17 00:00:00 2001
+> From: andrew azmansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+> Date: Thu, 2 Jun 2016 09:13:28 +0300
+> Subject: [PATCH] adding tpm2.0 support to nuvoton drivers and adding npct=
+6xx
+>  to device tree
+> =
+
+> Signed-off-by: Andrew Zamansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+> =
+
+> ---
+>  Documentation/devicetree/bindings/i2c/trivial-devices.txt | 1 +
+>  drivers/char/tpm/tpm_i2c_nuvoton.c                        | 5 +++--
+>  drivers/char/tpm/tpm_tis.c                                | 2 +-
+>  3 files changed, 5 insertions(+), 3 deletions(-)
+> =
+
+> diff --git a/Documentation/devicetree/bindings/i2c/trivial-devices.txt b/=
+Documentation/devicetree/bindings/i2c/trivial-devices.txt
+> index 5398744..0a07cbc 100644
+> --- a/Documentation/devicetree/bindings/i2c/trivial-devices.txt
+> +++ b/Documentation/devicetree/bindings/i2c/trivial-devices.txt
+> @@ -62,6 +62,7 @@ national,lm80		Serial Interface ACPI-Compatible Micropr=
+ocessor System Hardware M
+>  national,lm85		Temperature sensor with integrated fan control
+>  national,lm92		=B10.33=B0C Accurate, 12-Bit + Sign Temperature Sensor an=
+d Thermal Window Comparator with Two-Wire Interface
+>  nuvoton,npct501		i2c trusted platform module (TPM)
+> +nuvoton,npct6xx		i2c trusted platform module (TPM) 6xx series
+>  nxp,pca9556		Octal SMBus and I2C registered interface
+>  nxp,pca9557		8-bit I2C-bus and SMBus I/O port with reset
+>  nxp,pcf8563		Real-time clock/calendar
+> diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2=
+c_nuvoton.c
+> index b64effc..7fb0e6c 100644
+> --- a/drivers/char/tpm/tpm_i2c_nuvoton.c
+> +++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
+> @@ -1,5 +1,5 @@
+>  /***********************************************************************=
+*******
+> - * Nuvoton TPM I2C Device Driver Interface for WPCT301/NPCT501,
+> + * Nuvoton TPM I2C Device Driver Interface for WPCT301/NPCT501/NPCT6XX,
+>   * based on the TCG TPM Interface Spec version 1.2.
+>   * Specifications at www.trustedcomputinggroup.org
+>   *
+> @@ -456,7 +456,7 @@ static bool i2c_nuvoton_req_canceled(struct tpm_chip =
+*chip, u8 status)
+>  }
+>  =
+
+>  static const struct tpm_class_ops tpm_i2c =3D {
+> -	.flags =3D TPM_OPS_AUTO_STARTUP,
+> +	.flags =3D TPM_OPS_AUTO_STARTUP | TPM_OPS_PROBE_TPM2,
+>  	.status =3D i2c_nuvoton_read_status,
+>  	.recv =3D i2c_nuvoton_recv,
+>  	.send =3D i2c_nuvoton_send,
+> @@ -623,6 +623,7 @@ MODULE_DEVICE_TABLE(i2c, i2c_nuvoton_id);
+>  static const struct of_device_id i2c_nuvoton_of_match[] =3D {
+>  	{.compatible =3D "nuvoton,npct501"},
+>  	{.compatible =3D "winbond,wpct301"},
+> +	{.compatible =3D "nuvoton,npct6xx"},
+>  	{},
+>  };
+>  MODULE_DEVICE_TABLE(of, i2c_nuvoton_of_match);
+> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+> index 30aff5b..bc5fba3 100644
+> --- a/drivers/char/tpm/tpm_tis.c
+> +++ b/drivers/char/tpm/tpm_tis.c
+> @@ -524,7 +524,7 @@ static bool tpm_tis_req_canceled(struct tpm_chip *chi=
+p, u8 status)
+>  }
+>  =
+
+>  static const struct tpm_class_ops tpm_tis =3D {
+> -	.flags =3D TPM_OPS_AUTO_STARTUP,
+> +	.flags =3D TPM_OPS_AUTO_STARTUP  | TPM_OPS_PROBE_TPM2,
+>  	.status =3D tpm_tis_status,
+>  	.recv =3D tpm_tis_recv,
+>  	.send =3D tpm_tis_send,
+> -- =
+
+> 1.9.1
+> =
+
+> this patch requires Jason's latest patch =
+
+
+Then you should create a proper patch set with a cover letter.
+
+/Jarkko
+
+---------------------------------------------------------------------------=
+---
+What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
+patterns at an interface-level. Reveals which users, apps, and protocols ar=
+e =
+
+consuming the most bandwidth. Provides multi-vendor support for NetFlow, =
+
+J-Flow, sFlow and other flows. Make informed decisions using capacity =
+
+planning reports. https://ad.doubleclick.net/ddm/clk/305295220;132659582;e
