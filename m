@@ -1,8 +1,8 @@
 From: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH] tpm_tis: Increase ST19NP18 TPM command
+Subject: [PATCH v2] tpm_tis: Increase ST19NP18 TPM command
 	timeout to avoid chip lockup
-Date: Mon,  6 Jun 2016 14:51:41 -0700
-Message-ID: <1465249901-126639-1-git-send-email-eswierk@skyportsystems.com>
+Date: Mon,  6 Jun 2016 15:27:59 -0700
+Message-ID: <1465252079-126836-1-git-send-email-eswierk@skyportsystems.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
@@ -21,7 +21,7 @@ List-Id: tpmdd-devel@lists.sourceforge.net
 The STMicro ST19NP18-TPM sometimes takes much longer to execute
 commands than it reports in its capabilities. For example, command 186
 (TPM_FlushSpecific) has been observed to take 14560 msec to complete,
-far longer than the 3000 msec limit for "short" commands reported by
+far longer than the 750 msec limit for "short" commands reported by
 the chip. The behavior has also been seen with command 101
 (TPM_GetCapability).
 
@@ -49,6 +49,8 @@ this behavior.  So it seems safest to ignore the chip's reported
 command durations, and use a value much higher than any observed
 duration, like 2 minutes (which happens to be the value used for
 TPM_UNDEFINED commands in tpm_calc_ordinal_duration()).
+
+v2: Minor correction of patch description.
 
 Signed-off-by: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
 ---
