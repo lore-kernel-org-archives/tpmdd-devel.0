@@ -1,108 +1,191 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH v3 2/4] tpm: Add optional logging of TPM
- command durations
-Date: Tue, 7 Jun 2016 17:01:03 +0300
-Message-ID: <20160607140103.GF3855@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v3 3/4] tpm: Allow TPM chip drivers to
+ override reported command durations
+Date: Tue, 7 Jun 2016 17:15:26 +0300
+Message-ID: <20160607141526.GG3855@intel.com>
 References: <1465270649-22498-1-git-send-email-eswierk@skyportsystems.com>
- <1465270649-22498-3-git-send-email-eswierk@skyportsystems.com>
+	<1465270649-22498-4-git-send-email-eswierk@skyportsystems.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1465270649-22498-3-git-send-email-eswierk@skyportsystems.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Ed Swierk <eswierk@skyportsystems.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+In-Reply-To: <1465270649-22498-4-git-send-email-eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jun 06, 2016 at 08:37:27PM -0700, Ed Swierk wrote:
-> Some TPMs violate their own advertised command durations. This is much
-> easier to debug with data about how long each command actually takes
-> to complete. Add debug messages that can be enabled by running
+On Mon, Jun 06, 2016 at 08:37:28PM -0700, Ed Swierk wrote:
+> Some TPM chips report bogus command durations in their capabilities,
+> just as others report incorrect timeouts. Add an update_durations()
+> function and an implementation for tpm_tis, and move the existing
+> BCM0102 workaround out of the common tpm_get_timeouts() code.
 > 
->   echo -n 'module tpm +p' >/sys/kernel/debug/dynamic_debug/control
-> 
-> on a kernel configured with DYNAMIC_DEBUG=y.
-> 
-> Signed-off-by: Ed Swierk <eswierk@skyportsystems.com>
+> Signed-off-by: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
 > ---
->  drivers/char/tpm/tpm-interface.c | 17 +++++++++++++----
->  1 file changed, 13 insertions(+), 4 deletions(-)
+>  drivers/char/tpm/tpm-interface.c | 43 ++++++++++++++++++++++++----------------
+>  drivers/char/tpm/tpm_tis.c       | 40 +++++++++++++++++++++++++++++++++++++
+>  include/linux/tpm.h              |  2 ++
+>  3 files changed, 68 insertions(+), 17 deletions(-)
 > 
 > diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index c50637d..cc1e5bc 100644
+> index cc1e5bc..91332dd 100644
 > --- a/drivers/char/tpm/tpm-interface.c
 > +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -333,13 +333,14 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
->  {
+> @@ -507,7 +507,8 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+>  	struct tpm_cmd_t tpm_cmd;
+>  	unsigned long new_timeout[4];
+>  	unsigned long old_timeout[4];
+> -	struct duration_t *duration_cap;
+> +	unsigned long new_duration[3];
+> +	unsigned long old_duration[3];
 >  	ssize_t rc;
->  	u32 count, ordinal;
-> -	unsigned long stop;
-> +	unsigned long start, stop;
 >  
->  	if (bufsiz > TPM_BUFSIZE)
->  		bufsiz = TPM_BUFSIZE;
+>  	tpm_cmd.header.in = tpm_getcap_header;
+> @@ -599,26 +600,34 @@ duration:
+>  	    != sizeof(tpm_cmd.header.out) + sizeof(u32) + 3 * sizeof(u32))
+>  		return -EINVAL;
 >  
->  	count = be32_to_cpu(*((__be32 *) (buf + 2)));
->  	ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
-> +	dev_dbg(chip->pdev, "starting command %d count %d\n", ordinal, count);
->  	if (count == 0)
->  		return -ENODATA;
->  	if (count > bufsiz) {
-> @@ -360,18 +361,24 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
->  	if (chip->vendor.irq)
->  		goto out_recv;
+> -	duration_cap = &tpm_cmd.params.getcap_out.cap.duration;
+> +	old_duration[TPM_SHORT] =
+> +		be32_to_cpu(tpm_cmd.params.getcap_out.cap.duration.tpm_short);
+> +	old_duration[TPM_MEDIUM] =
+> +		be32_to_cpu(tpm_cmd.params.getcap_out.cap.duration.tpm_medium);
+> +	old_duration[TPM_LONG] =
+> +		be32_to_cpu(tpm_cmd.params.getcap_out.cap.duration.tpm_long);
+> +	memcpy(new_duration, old_duration, sizeof(new_duration));
+> +
+> +	if (chip->ops->update_durations != NULL)
+> +		chip->vendor.duration_adjusted =
+> +			chip->ops->update_durations(chip, new_duration);
+> +
+> +	/* Report adjusted durations */
+> +	if (chip->vendor.duration_adjusted) {
+> +		dev_info(chip->pdev,
+> +			 HW_ERR "Adjusting reported durations: short %lu->%luus medium %lu->%luus long %lu->%luus\n",
+> +			 old_duration[TPM_SHORT], new_duration[TPM_SHORT],
+> +			 old_duration[TPM_MEDIUM], new_duration[TPM_MEDIUM],
+> +			 old_duration[TPM_LONG], new_duration[TPM_LONG]);
+> +	}
+> +
+>  	chip->vendor.duration[TPM_SHORT] =
+> -	    usecs_to_jiffies(be32_to_cpu(duration_cap->tpm_short));
+> +		usecs_to_jiffies(new_duration[TPM_SHORT]);
+>  	chip->vendor.duration[TPM_MEDIUM] =
+> -	    usecs_to_jiffies(be32_to_cpu(duration_cap->tpm_medium));
+> +		usecs_to_jiffies(new_duration[TPM_MEDIUM]);
+>  	chip->vendor.duration[TPM_LONG] =
+> -	    usecs_to_jiffies(be32_to_cpu(duration_cap->tpm_long));
+> +		usecs_to_jiffies(new_duration[TPM_LONG]);
 >  
-> +	start = jiffies;
->  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> -		stop = jiffies + tpm2_calc_ordinal_duration(chip, ordinal);
-> +		stop = start + tpm2_calc_ordinal_duration(chip, ordinal);
->  	else
-> -		stop = jiffies + tpm_calc_ordinal_duration(chip, ordinal);
-> +		stop = start + tpm_calc_ordinal_duration(chip, ordinal);
->  	do {
->  		u8 status = chip->ops->status(chip);
->  		if ((status & chip->ops->req_complete_mask) ==
-> -		    chip->ops->req_complete_val)
-> +		    chip->ops->req_complete_val) {
-> +			dev_dbg(chip->pdev, "completed command %d in %d ms\n",
-> +				ordinal, jiffies_to_msecs(jiffies - start));
->  			goto out_recv;
-> +		}
+> -	/* The Broadcom BCM0102 chipset in a Dell Latitude D820 gets the above
+> -	 * value wrong and apparently reports msecs rather than usecs. So we
+> -	 * fix up the resulting too-small TPM_SHORT value to make things work.
+> -	 * We also scale the TPM_MEDIUM and -_LONG values by 1000.
+> -	 */
+> -	if (chip->vendor.duration[TPM_SHORT] < (HZ / 100)) {
+> -		chip->vendor.duration[TPM_SHORT] = HZ;
+> -		chip->vendor.duration[TPM_MEDIUM] *= 1000;
+> -		chip->vendor.duration[TPM_LONG] *= 1000;
+> -		chip->vendor.duration_adjusted = true;
+> -		dev_info(chip->pdev, "Adjusting TPM timeout parameters.");
+> -	}
+>  	return 0;
+>  }
+>  EXPORT_SYMBOL_GPL(tpm_get_timeouts);
+> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+> index 088fa86..3baba73 100644
+> --- a/drivers/char/tpm/tpm_tis.c
+> +++ b/drivers/char/tpm/tpm_tis.c
+> @@ -505,6 +505,45 @@ static bool tpm_tis_update_timeouts(struct tpm_chip *chip,
+>  	return false;
+>  }
 >  
->  		if (chip->ops->req_canceled(chip, status)) {
->  			dev_err(chip->pdev, "Operation Canceled\n");
-> +			dev_dbg(chip->pdev, "canceled command %d after %d ms\n",
-> +				ordinal, jiffies_to_msecs(jiffies - start));
->  			rc = -ECANCELED;
->  			goto out;
->  		}
-> @@ -382,6 +389,8 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
+> +struct tis_vendor_duration_override {
+> +	u32 did_vid;
+> +	unsigned long duration_us[3];
+> +};
+> +
+> +static const struct tis_vendor_duration_override vendor_duration_overrides[] = {
+> +};
+> +
+> +static bool tpm_tis_update_durations(struct tpm_chip *chip,
+> +				     unsigned long *duration_cap)
+> +{
+> +	int i;
+> +	u32 did_vid;
+> +
+> +	did_vid = ioread32(chip->vendor.iobase + TPM_DID_VID(0));
+> +
+> +	for (i = 0; i != ARRAY_SIZE(vendor_duration_overrides); i++) {
+> +		if (vendor_duration_overrides[i].did_vid != did_vid)
+> +			continue;
+> +		memcpy(duration_cap, vendor_duration_overrides[i].duration_us,
+> +		       sizeof(vendor_duration_overrides[i].duration_us));
+> +		return true;
+> +	}
+> +
+> +	/* The Broadcom BCM0102 chipset in a Dell Latitude D820 gets the above
+> +	 * value wrong and apparently reports msecs rather than usecs. So we
+> +	 * fix up the resulting too-small TPM_SHORT value to make things work.
+> +	 * We also scale the TPM_MEDIUM and -_LONG values by 1000.
+> +	 */
+> +	if (duration_cap[TPM_SHORT] < (HZ / 100)) {
+> +		duration_cap[TPM_SHORT] = HZ;
+> +		duration_cap[TPM_MEDIUM] *= 1000;
+> +		duration_cap[TPM_LONG] *= 1000;
+> +		return true;
+> +	}
+> +
+> +	return false;
+> +}
+> +
+>  /*
+>   * Early probing for iTPM with STS_DATA_EXPECT flaw.
+>   * Try sending command without itpm flag set and if that
+> @@ -570,6 +609,7 @@ static const struct tpm_class_ops tpm_tis = {
+>  	.send = tpm_tis_send,
+>  	.cancel = tpm_tis_ready,
+>  	.update_timeouts = tpm_tis_update_timeouts,
+> +	.update_durations = tpm_tis_update_durations,
+>  	.req_complete_mask = TPM_STS_DATA_AVAIL | TPM_STS_VALID,
+>  	.req_complete_val = TPM_STS_DATA_AVAIL | TPM_STS_VALID,
+>  	.req_canceled = tpm_tis_req_canceled,
+> diff --git a/include/linux/tpm.h b/include/linux/tpm.h
+> index 706e63e..862d0a1 100644
+> --- a/include/linux/tpm.h
+> +++ b/include/linux/tpm.h
+> @@ -43,6 +43,8 @@ struct tpm_class_ops {
+>  	u8 (*status) (struct tpm_chip *chip);
+>  	bool (*update_timeouts)(struct tpm_chip *chip,
+>  				unsigned long *timeout_cap);
+> +	bool (*update_durations)(struct tpm_chip *chip,
+> +				unsigned long *duration_cap);
+
+I don't think this callback makes sense if only TIS driver is using it.
+You are fixing a simple problem with over engineered solution.
+
 >  
->  	chip->ops->cancel(chip);
->  	dev_err(chip->pdev, "Operation Timed out\n");
-> +	dev_dbg(chip->pdev, "command %d timed out after %d ms\n", ordinal,
-> +		jiffies_to_msecs(jiffies - start));
->  	rc = -ETIME;
->  	goto out;
+>  };
 >  
 > -- 
 > 1.9.1
-> 
-> 
-> ------------------------------------------------------------------------------
-> What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
-> patterns at an interface-level. Reveals which users, apps, and protocols are 
-> consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
-> J-Flow, sFlow and other flows. Make informed decisions using capacity 
-> planning reports. https://ad.doubleclick.net/ddm/clk/305295220;132659582;e
-> _______________________________________________
-> tpmdd-devel mailing list
-> tpmdd-devel@lists.sourceforge.net
-> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
 
 /Jarkko
 
+------------------------------------------------------------------------------
+What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
+patterns at an interface-level. Reveals which users, apps, and protocols are 
+consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
+J-Flow, sFlow and other flows. Make informed decisions using capacity 
+planning reports. https://ad.doubleclick.net/ddm/clk/305295220;132659582;e
