@@ -1,14 +1,16 @@
-From: Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+From: Matthew Garrett <mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>
 Subject: Re: [Linux-ima-devel] TPM microconf at Linux Plumbers
 	Conference?
-Date: Mon, 06 Jun 2016 20:35:55 -0400
-Message-ID: <1465259755.9683.53.camel@linux.vnet.ibm.com>
+Date: Tue, 7 Jun 2016 01:38:39 +0100
+Message-ID: <20160607003839.GA20740@srcf.ucam.org>
 References: <20160606185712.GA10754@srcf.ucam.org>
+	<1465259755.9683.53.camel@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160606185712.GA10754-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <1465259755.9683.53.camel-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,33 +19,21 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Matthew Garrett <mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>
+To: Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, trousers-users-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, 2016-06-06 at 19:57 +0100, Matthew Garrett wrote:
-> Hi,
-> 
-> I'm looking into running a TPM microconference at the Linux Plubmers 
-> Conference in Santa Fe the first week of November. Right now we have a 
-> bunch of individual pieces of TPM-related technology, but little overall 
-> coherence - almost nobody ships working TPM-enabled bootloaders, we have 
-> no known-good PCR values available, distributions are unclear on what 
-> the appropriate TPM 2.0 userlands to ship are, we don't even have a spec 
-> for how PCRs should be used under Linux.
-> 
-> If this seems like it'd be useful, please add your name to 
-> http://wiki.linuxplumbersconf.org/2016:tpms along with any additional 
-> topics you'd like to discuss - and if you'd like to lead a short 
-> discussion session, drop me an email with a description.
-> 
-> Thanks!
+On Mon, Jun 06, 2016 at 08:35:55PM -0400, Mimi Zohar wrote:
 
-Did you consider submitting this as an Linux Security Summit (LSS)
-discussion topic?
+> Did you consider submitting this as an Linux Security Summit (LSS)
+> discussion topic?
 
-Mimi
+Yes, I've submitted something for that, but it would probably also be 
+helpful to have discussion in a space with more general distribution 
+developers.
 
+-- 
+Matthew Garrett | mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
