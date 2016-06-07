@@ -1,79 +1,79 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2] tpm_tis: Increase ST19NP18 TPM command
- timeout to avoid chip lockup
-Date: Tue, 7 Jun 2016 16:52:13 +0300
-Message-ID: <20160607135213.GD3855@intel.com>
-References: <1465252079-126836-1-git-send-email-eswierk@skyportsystems.com>
-	<OFFA057E80.C169C00E-ON00257FCB.000588B0-85257FCB.0006225D@notes.na.collabserv.com>
-	<CAO_EM_=ZgHV+3YRAuwiSUsqDOtreRhgEON_kPyJxb=1vQfm0eg@mail.gmail.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [PATCH v3 1/4] tpm_tis: Improve reporting of IO
+ errors
+Date: Tue, 7 Jun 2016 16:56:38 +0300
+Message-ID: <20160607135638.GE3855@intel.com>
+References: <1465270649-22498-1-git-send-email-eswierk@skyportsystems.com>
+ <1465270649-22498-2-git-send-email-eswierk@skyportsystems.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <CAO_EM_=ZgHV+3YRAuwiSUsqDOtreRhgEON_kPyJxb=1vQfm0eg-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <1465270649-22498-2-git-send-email-eswierk@skyportsystems.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Ed Swierk <eswierk@skyportsystems.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jun 06, 2016 at 06:48:10PM -0700, Ed Swierk wrote:
-> On Mon, Jun 6, 2016 at 6:07 PM, Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org> wrote:
-> > Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org> wrote on 06/06/2016 06:27:59 PM:
-> > > The occurrence of this excessive command duration depends on the
-> > > sequence of commands preceding it. One sequence is creating at least 2
-> > > new keys via TPM_CreateWrapKey, then letting the TPM idle for at least
-> >
-> > How long does it take to create those keys? Maybe it will create new keys in the 'background' after that.
+On Mon, Jun 06, 2016 at 08:37:26PM -0700, Ed Swierk wrote:
+> Mysterious TPM behavior can be difficult to track down through all the
+> layers of software. Add error messages for conditions that should
+> never happen. Also include the manufacturer ID along with other chip
+> data printed during init.
 > 
-> The first few TPM_CreateWrapKey commands take roughly 300 msec. I've
-> seen it go as high as 80 seconds after several of those in a row.
-> 
-> It makes sense that a key generation process starts up after the chip
-> thinks it's idle. Slowing down unrelated operations stretches the
-> meaning of "background", of course. And locking up the chip is
-> downright impolite.
-> 
-> > > 30 seconds, then loading a key via TPM_LoadKey2. The next
-> > > TPM_FlushSpecific occasionally takes tens of seconds to
-> > > complete. Another sequence is creating many keys in a row without
-> > > pause. The TPM_CreateWrapKey operation gets much slower after the
-> > > first few iterations, as one would expect when the pool of precomputed
-> > > keys is exhausted. Then after a 35-second pause, the same TPM_LoadKey2
-> > > followed by TPM_FlushSpecific sequence triggers the behavior.
-> > >
-> > > Our working theory is that this older TPM sometimes pauses to perform
-> > > internal garbage collection, which modern chips implement as a
-> > > background process. Without access to the chip's implementation
-> > > details it's impossible to know whether any commands are immune to
-> > > this behavior.  So it seems safest to ignore the chip's reported
-> > > command durations, and use a value much higher than any observed
-> > > duration, like 2 minutes (which happens to be the value used for
-> > > TPM_UNDEFINED commands in tpm_calc_ordinal_duration()).
-> 
-> On further testing of my patch, I realize that I have totally confused
-> timeouts and durations. I need to override the command durations
-> (short, medium, long) reported by the chip. The reported protocol
-> timeouts (a, b, c, d) are fine.
-> 
-> Please consider this patch withdrawn. I'll send an updated patch shortly.
+> Signed-off-by: Ed Swierk <eswierk@skyportsystems.com>
 
-Ack.
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
-> --Ed
+PS. Please include at minimum also linux-kernel@vger.kernel.org and
+linux-security-module@vger.kernel.org for these patches. Thanks.
 
-/Jarkko
+> ---
+>  drivers/char/tpm/tpm_tis.c | 8 +++++++-
+>  1 file changed, 7 insertions(+), 1 deletion(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+> index 65f7eec..088fa86 100644
+> --- a/drivers/char/tpm/tpm_tis.c
+> +++ b/drivers/char/tpm/tpm_tis.c
+> @@ -299,6 +299,8 @@ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+>  
+>  	expected = be32_to_cpu(*(__be32 *) (buf + 2));
+>  	if (expected > count) {
+> +		dev_err(chip->pdev, "Response too long (wanted %zd, got %d)\n",
+> +			count, expected);
+>  		size = -EIO;
+>  		goto out;
+>  	}
+> @@ -366,6 +368,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+>  				  &chip->vendor.int_queue, false);
+>  		status = tpm_tis_status(chip);
+>  		if (!itpm && (status & TPM_STS_DATA_EXPECT) == 0) {
+> +			dev_err(chip->pdev, "Chip not accepting %zd bytes\n",
+> +				len - count);
+>  			rc = -EIO;
+>  			goto out_err;
+>  		}
+> @@ -378,6 +382,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+>  			  &chip->vendor.int_queue, false);
+>  	status = tpm_tis_status(chip);
+>  	if ((status & TPM_STS_DATA_EXPECT) != 0) {
+> +		dev_err(chip->pdev, "Chip not accepting last byte\n");
+>  		rc = -EIO;
+>  		goto out_err;
+>  	}
+> @@ -689,8 +694,9 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+>  	vendor = ioread32(chip->vendor.iobase + TPM_DID_VID(0));
+>  	chip->vendor.manufacturer_id = vendor;
+>  
+> -	dev_info(dev, "%s TPM (device-id 0x%X, rev-id %d)\n",
+> +	dev_info(dev, "%s TPM (manufacturer-id 0x%X, device-id 0x%X, rev-id %d)\n",
+>  		 (chip->flags & TPM_CHIP_FLAG_TPM2) ? "2.0" : "1.2",
+> +		 chip->vendor.manufacturer_id,
+>  		 vendor >> 16, ioread8(chip->vendor.iobase + TPM_RID(0)));
+>  
+>  	if (!itpm) {
+> -- 
+> 1.9.1
 
-------------------------------------------------------------------------------
-What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
-patterns at an interface-level. Reveals which users, apps, and protocols are 
-consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
-J-Flow, sFlow and other flows. Make informed decisions using capacity 
-planning reports. https://ad.doubleclick.net/ddm/clk/305295220;132659582;e
+/Jarko
