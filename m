@@ -1,7 +1,8 @@
 From: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v4 1/4] tpm_tis: Improve reporting of IO errors
-Date: Tue,  7 Jun 2016 17:45:37 -0700
-Message-ID: <1465346740-60120-2-git-send-email-eswierk@skyportsystems.com>
+Subject: [PATCH v4 2/4] tpm: Add optional logging of TPM
+	command durations
+Date: Tue,  7 Jun 2016 17:45:38 -0700
+Message-ID: <1465346740-60120-3-git-send-email-eswierk@skyportsystems.com>
 References: <1465346740-60120-1-git-send-email-eswierk@skyportsystems.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,58 +21,77 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Mysterious TPM behavior can be difficult to track down through all the
-layers of software. Add error messages for conditions that should
-never happen. Also include the manufacturer ID along with other chip
-data printed during init.
+Some TPMs violate their own advertised command durations. This is much
+easier to debug with data about how long each command actually takes
+to complete. Add debug messages that can be enabled by running
+
+  echo -n 'module tpm +p' >/sys/kernel/debug/dynamic_debug/control
+
+on a kernel configured with DYNAMIC_DEBUG=y.
 
 Signed-off-by: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm_tis.c | 8 +++++++-
- 1 file changed, 7 insertions(+), 1 deletion(-)
+ drivers/char/tpm/tpm-interface.c | 17 +++++++++++++----
+ 1 file changed, 13 insertions(+), 4 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index 65f7eec..088fa86 100644
---- a/drivers/char/tpm/tpm_tis.c
-+++ b/drivers/char/tpm/tpm_tis.c
-@@ -299,6 +299,8 @@ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index c50637d..cc1e5bc 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -333,13 +333,14 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
+ {
+ 	ssize_t rc;
+ 	u32 count, ordinal;
+-	unsigned long stop;
++	unsigned long start, stop;
  
- 	expected = be32_to_cpu(*(__be32 *) (buf + 2));
- 	if (expected > count) {
-+		dev_err(chip->pdev, "Response too long (wanted %zd, got %d)\n",
-+			count, expected);
- 		size = -EIO;
- 		goto out;
- 	}
-@@ -366,6 +368,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 				  &chip->vendor.int_queue, false);
- 		status = tpm_tis_status(chip);
- 		if (!itpm && (status & TPM_STS_DATA_EXPECT) == 0) {
-+			dev_err(chip->pdev, "Chip not accepting %zd bytes\n",
-+				len - count);
- 			rc = -EIO;
- 			goto out_err;
+ 	if (bufsiz > TPM_BUFSIZE)
+ 		bufsiz = TPM_BUFSIZE;
+ 
+ 	count = be32_to_cpu(*((__be32 *) (buf + 2)));
+ 	ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
++	dev_dbg(chip->pdev, "starting command %d count %d\n", ordinal, count);
+ 	if (count == 0)
+ 		return -ENODATA;
+ 	if (count > bufsiz) {
+@@ -360,18 +361,24 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
+ 	if (chip->vendor.irq)
+ 		goto out_recv;
+ 
++	start = jiffies;
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+-		stop = jiffies + tpm2_calc_ordinal_duration(chip, ordinal);
++		stop = start + tpm2_calc_ordinal_duration(chip, ordinal);
+ 	else
+-		stop = jiffies + tpm_calc_ordinal_duration(chip, ordinal);
++		stop = start + tpm_calc_ordinal_duration(chip, ordinal);
+ 	do {
+ 		u8 status = chip->ops->status(chip);
+ 		if ((status & chip->ops->req_complete_mask) ==
+-		    chip->ops->req_complete_val)
++		    chip->ops->req_complete_val) {
++			dev_dbg(chip->pdev, "completed command %d in %d ms\n",
++				ordinal, jiffies_to_msecs(jiffies - start));
+ 			goto out_recv;
++		}
+ 
+ 		if (chip->ops->req_canceled(chip, status)) {
+ 			dev_err(chip->pdev, "Operation Canceled\n");
++			dev_dbg(chip->pdev, "canceled command %d after %d ms\n",
++				ordinal, jiffies_to_msecs(jiffies - start));
+ 			rc = -ECANCELED;
+ 			goto out;
  		}
-@@ -378,6 +382,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 			  &chip->vendor.int_queue, false);
- 	status = tpm_tis_status(chip);
- 	if ((status & TPM_STS_DATA_EXPECT) != 0) {
-+		dev_err(chip->pdev, "Chip not accepting last byte\n");
- 		rc = -EIO;
- 		goto out_err;
- 	}
-@@ -689,8 +694,9 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
- 	vendor = ioread32(chip->vendor.iobase + TPM_DID_VID(0));
- 	chip->vendor.manufacturer_id = vendor;
+@@ -382,6 +389,8 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
  
--	dev_info(dev, "%s TPM (device-id 0x%X, rev-id %d)\n",
-+	dev_info(dev, "%s TPM (manufacturer-id 0x%X, device-id 0x%X, rev-id %d)\n",
- 		 (chip->flags & TPM_CHIP_FLAG_TPM2) ? "2.0" : "1.2",
-+		 chip->vendor.manufacturer_id,
- 		 vendor >> 16, ioread8(chip->vendor.iobase + TPM_RID(0)));
+ 	chip->ops->cancel(chip);
+ 	dev_err(chip->pdev, "Operation Timed out\n");
++	dev_dbg(chip->pdev, "command %d timed out after %d ms\n", ordinal,
++		jiffies_to_msecs(jiffies - start));
+ 	rc = -ETIME;
+ 	goto out;
  
- 	if (!itpm) {
 -- 
 1.9.1
 
