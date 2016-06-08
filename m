@@ -1,60 +1,52 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [PATCH 1/3] tpm_crb: fix crb_req_canceled behavior
-Date: Wed,  8 Jun 2016 02:02:00 +0300
-Message-ID: <1465340522-1112-2-git-send-email-jarkko.sakkinen@linux.intel.com>
-References: <1465340522-1112-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <1465340522-1112-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Peter Huewe <peterhuewe@gmx.de>
-Cc: linux-security-module@vger.kernel.org, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, stable@vger.kernel.org, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+From: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH v4 0/4] tpm: Command duration logging and
+	chip-specific override
+Date: Tue,  7 Jun 2016 17:45:36 -0700
+Message-ID: <1465346740-60120-1-git-send-email-eswierk@skyportsystems.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The req_canceled() callback is used by tpm_transmit() periodically to
-check whether the request has been canceled while it is receiving a
-response from the TPM.
+v4: Rework tpm_get_timeouts() to allow overriding both timeouts and
+durations via a single callback.
 
-The TPM_CRB_CTRL_CANCEL register was cleared already in the crb_cancel
-callback, which has two consequences:
+This series
+- improves TPM command error reporting
+- adds optional logging of TPM command durations
+- allows chip-specific override of command durations as well as protocol
+  timeouts
+- overrides ST19NP18 TPM command duration to avoid lockups
 
-* Cancel might not happen.
-* req_canceled() always returns zero.
+Ed Swierk (4):
+  tpm_tis: Improve reporting of IO errors
+  tpm: Add optional logging of TPM command durations
+  tpm: Allow TPM chip drivers to override reported command durations
+  tpm_tis: Increase ST19NP18 TPM command duration to avoid chip lockup
 
-A better place to clear the register is when starting to send a new
-command. The behavior of TPM_CRB_CTRL_CANCEL is described in the
-section 5.5.3.6 of the PTP specification.
+ drivers/char/tpm/tpm-interface.c | 194 ++++++++++++++++++++++-----------------
+ drivers/char/tpm/tpm_tis.c       |  48 +++++-----
+ include/linux/tpm.h              |   3 +-
+ 3 files changed, 131 insertions(+), 114 deletions(-)
 
-CC: stable@vger.kernel.org
-Fixes: 30fc8d138e91 ("tpm: TPM 2.0 CRB Interface")
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
----
- drivers/char/tpm/tpm_crb.c | 7 +++++--
- 1 file changed, 5 insertions(+), 2 deletions(-)
-
-diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index 1547636..b4d46ae 100644
---- a/drivers/char/tpm/tpm_crb.c
-+++ b/drivers/char/tpm/tpm_crb.c
-@@ -142,6 +142,11 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
- 	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
- 	int rc = 0;
- 
-+	/* Zero the cancel register so that the next command will not get
-+	 * canceled.
-+	 */
-+	iowrite32(0, &priv->cca->cancel);
-+
- 	if (len > ioread32(&priv->cca->cmd_size)) {
- 		dev_err(&chip->dev,
- 			"invalid command count value %x %zx\n",
-@@ -175,8 +180,6 @@ static void crb_cancel(struct tpm_chip *chip)
- 
- 	if ((priv->flags & CRB_FL_ACPI_START) && crb_do_acpi_start(chip))
- 		dev_err(&chip->dev, "ACPI Start failed\n");
--
--	iowrite32(0, &priv->cca->cancel);
- }
- 
- static bool crb_req_canceled(struct tpm_chip *chip, u8 status)
 -- 
-2.7.4
+1.9.1
+
+
+------------------------------------------------------------------------------
+What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
+patterns at an interface-level. Reveals which users, apps, and protocols are 
+consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
+J-Flow, sFlow and other flows. Make informed decisions using capacity 
+planning reports. https://ad.doubleclick.net/ddm/clk/305295220;132659582;e
