@@ -1,8 +1,7 @@
 From: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v5 4/4] tpm_tis: Increase ST19NP18 TPM command
-	duration to avoid chip lockup
-Date: Wed,  8 Jun 2016 16:00:18 -0700
-Message-ID: <1465426818-89356-5-git-send-email-eswierk@skyportsystems.com>
+Subject: [PATCH v5 1/4] tpm_tis: Improve reporting of IO errors
+Date: Wed,  8 Jun 2016 16:00:15 -0700
+Message-ID: <1465426818-89356-2-git-send-email-eswierk@skyportsystems.com>
 References: <1465346740-60120-1-git-send-email-eswierk@skyportsystems.com>
 	<1465426818-89356-1-git-send-email-eswierk@skyportsystems.com>
 Mime-Version: 1.0
@@ -22,59 +21,58 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The STMicro ST19NP18-TPM sometimes takes much longer to execute
-commands than it reports in its capabilities. For example, command 186
-(TPM_FlushSpecific) has been observed to take 14560 msec to complete,
-far longer than the 3000 msec limit for "short" commands reported by
-the chip. The behavior has also been seen with command 101
-(TPM_GetCapability).
-
-Worse, when the tpm_tis driver attempts to cancel the current command
-(by writing commandReady = 1 to TPM_STS_x), the chip locks up
-completely, returning all-1s from all memory-mapped register
-reads. The lockup can be cleared only by resetting the system.
-
-The occurrence of this excessive command duration depends on the
-sequence of commands preceding it. One sequence is creating at least 2
-new keys via TPM_CreateWrapKey, then letting the TPM idle for at least
-30 seconds, then loading a key via TPM_LoadKey2. The next
-TPM_FlushSpecific occasionally takes tens of seconds to
-complete. Another sequence is creating many keys in a row without
-pause. The TPM_CreateWrapKey operation gets much slower after the
-first few iterations, as one would expect when the pool of precomputed
-keys is exhausted. Then after a 35-second pause, the same TPM_LoadKey2
-followed by TPM_FlushSpecific sequence triggers the behavior.
-
-Our working theory is that this older TPM sometimes pauses to
-precompute keys, which modern chips implement as a background
-process. Without access to the chip's implementation details it's
-impossible to know whether any commands are immune to being blocked by
-this process. So it seems safest to ignore the chip's reported command
-durations, and use a value much higher than any observed duration,
-like 180 sec (which is the duration this chip reports for "long"
-commands).
+Mysterious TPM behavior can be difficult to track down through all the
+layers of software. Add error messages for conditions that should
+never happen. Also include the manufacturer ID along with other chip
+data printed during init.
 
 Signed-off-by: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm_tis.c | 5 +++++
- 1 file changed, 5 insertions(+)
+ drivers/char/tpm/tpm_tis.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index caf7278..862c502 100644
+index 65f7eec..088fa86 100644
 --- a/drivers/char/tpm/tpm_tis.c
 +++ b/drivers/char/tpm/tpm_tis.c
-@@ -485,6 +485,11 @@ static void tpm_tis_update_timeouts(struct tpm_chip *chip)
- 		chip->vendor.timeout_d = msecs_to_jiffies(TIS_SHORT_TIMEOUT);
- 		chip->vendor.timeout_adjusted = true;
- 		break;
-+	case 0x0000104a: /* STMicro ST19NP18-TPM */
-+		chip->vendor.duration[TPM_SHORT] = 180 * HZ;
-+		chip->vendor.duration[TPM_MEDIUM] = 180 * HZ;
-+		chip->vendor.duration[TPM_LONG] = 180 * HZ;
-+		chip->vendor.duration_adjusted = true;
- 	}
- }
+@@ -299,6 +299,8 @@ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
  
+ 	expected = be32_to_cpu(*(__be32 *) (buf + 2));
+ 	if (expected > count) {
++		dev_err(chip->pdev, "Response too long (wanted %zd, got %d)\n",
++			count, expected);
+ 		size = -EIO;
+ 		goto out;
+ 	}
+@@ -366,6 +368,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ 				  &chip->vendor.int_queue, false);
+ 		status = tpm_tis_status(chip);
+ 		if (!itpm && (status & TPM_STS_DATA_EXPECT) == 0) {
++			dev_err(chip->pdev, "Chip not accepting %zd bytes\n",
++				len - count);
+ 			rc = -EIO;
+ 			goto out_err;
+ 		}
+@@ -378,6 +382,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ 			  &chip->vendor.int_queue, false);
+ 	status = tpm_tis_status(chip);
+ 	if ((status & TPM_STS_DATA_EXPECT) != 0) {
++		dev_err(chip->pdev, "Chip not accepting last byte\n");
+ 		rc = -EIO;
+ 		goto out_err;
+ 	}
+@@ -689,8 +694,9 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+ 	vendor = ioread32(chip->vendor.iobase + TPM_DID_VID(0));
+ 	chip->vendor.manufacturer_id = vendor;
+ 
+-	dev_info(dev, "%s TPM (device-id 0x%X, rev-id %d)\n",
++	dev_info(dev, "%s TPM (manufacturer-id 0x%X, device-id 0x%X, rev-id %d)\n",
+ 		 (chip->flags & TPM_CHIP_FLAG_TPM2) ? "2.0" : "1.2",
++		 chip->vendor.manufacturer_id,
+ 		 vendor >> 16, ioread8(chip->vendor.iobase + TPM_RID(0)));
+ 
+ 	if (!itpm) {
 -- 
 1.9.1
 
