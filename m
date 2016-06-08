@@ -1,8 +1,8 @@
 From: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v4 2/4] tpm: Add optional logging of TPM
-	command durations
-Date: Tue,  7 Jun 2016 17:45:38 -0700
-Message-ID: <1465346740-60120-3-git-send-email-eswierk@skyportsystems.com>
+Subject: [PATCH v4 4/4] tpm_tis: Increase ST19NP18 TPM command
+	duration to avoid chip lockup
+Date: Tue,  7 Jun 2016 17:45:40 -0700
+Message-ID: <1465346740-60120-5-git-send-email-eswierk@skyportsystems.com>
 References: <1465346740-60120-1-git-send-email-eswierk@skyportsystems.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,76 +21,58 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Some TPMs violate their own advertised command durations. This is much
-easier to debug with data about how long each command actually takes
-to complete. Add debug messages that can be enabled by running
+The STMicro ST19NP18-TPM sometimes takes much longer to execute
+commands than it reports in its capabilities. For example, command 186
+(TPM_FlushSpecific) has been observed to take 14560 msec to complete,
+far longer than the 3000 msec limit for "short" commands reported by
+the chip. The behavior has also been seen with command 101
+(TPM_GetCapability).
 
-  echo -n 'module tpm +p' >/sys/kernel/debug/dynamic_debug/control
+Worse, when the tpm_tis driver attempts to cancel the current command
+(by writing commandReady = 1 to TPM_STS_x), the chip locks up
+completely, returning all-1s from all memory-mapped register
+reads. The lockup can be cleared only by resetting the system.
 
-on a kernel configured with DYNAMIC_DEBUG=y.
+The occurrence of this excessive command duration depends on the
+sequence of commands preceding it. One sequence is creating at least 2
+new keys via TPM_CreateWrapKey, then letting the TPM idle for at least
+30 seconds, then loading a key via TPM_LoadKey2. The next
+TPM_FlushSpecific occasionally takes tens of seconds to
+complete. Another sequence is creating many keys in a row without
+pause. The TPM_CreateWrapKey operation gets much slower after the
+first few iterations, as one would expect when the pool of precomputed
+keys is exhausted. Then after a 35-second pause, the same TPM_LoadKey2
+followed by TPM_FlushSpecific sequence triggers the behavior.
+
+Our working theory is that this older TPM sometimes pauses to
+precompute keys, which modern chips implement as a background
+process. Without access to the chip's implementation details it's
+impossible to know whether any commands are immune to being blocked by
+this process. So it seems safest to ignore the chip's reported command
+durations, and use a value much higher than any observed duration,
+like 180 sec (which is the duration this chip reports for "long"
+commands).
 
 Signed-off-by: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm-interface.c | 17 +++++++++++++----
- 1 file changed, 13 insertions(+), 4 deletions(-)
+ drivers/char/tpm/tpm_tis.c | 5 +++++
+ 1 file changed, 5 insertions(+)
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index c50637d..cc1e5bc 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -333,13 +333,14 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
- {
- 	ssize_t rc;
- 	u32 count, ordinal;
--	unsigned long stop;
-+	unsigned long start, stop;
- 
- 	if (bufsiz > TPM_BUFSIZE)
- 		bufsiz = TPM_BUFSIZE;
- 
- 	count = be32_to_cpu(*((__be32 *) (buf + 2)));
- 	ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
-+	dev_dbg(chip->pdev, "starting command %d count %d\n", ordinal, count);
- 	if (count == 0)
- 		return -ENODATA;
- 	if (count > bufsiz) {
-@@ -360,18 +361,24 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
- 	if (chip->vendor.irq)
- 		goto out_recv;
- 
-+	start = jiffies;
- 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
--		stop = jiffies + tpm2_calc_ordinal_duration(chip, ordinal);
-+		stop = start + tpm2_calc_ordinal_duration(chip, ordinal);
- 	else
--		stop = jiffies + tpm_calc_ordinal_duration(chip, ordinal);
-+		stop = start + tpm_calc_ordinal_duration(chip, ordinal);
- 	do {
- 		u8 status = chip->ops->status(chip);
- 		if ((status & chip->ops->req_complete_mask) ==
--		    chip->ops->req_complete_val)
-+		    chip->ops->req_complete_val) {
-+			dev_dbg(chip->pdev, "completed command %d in %d ms\n",
-+				ordinal, jiffies_to_msecs(jiffies - start));
- 			goto out_recv;
-+		}
- 
- 		if (chip->ops->req_canceled(chip, status)) {
- 			dev_err(chip->pdev, "Operation Canceled\n");
-+			dev_dbg(chip->pdev, "canceled command %d after %d ms\n",
-+				ordinal, jiffies_to_msecs(jiffies - start));
- 			rc = -ECANCELED;
- 			goto out;
- 		}
-@@ -382,6 +389,8 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
- 
- 	chip->ops->cancel(chip);
- 	dev_err(chip->pdev, "Operation Timed out\n");
-+	dev_dbg(chip->pdev, "command %d timed out after %d ms\n", ordinal,
-+		jiffies_to_msecs(jiffies - start));
- 	rc = -ETIME;
- 	goto out;
+diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+index 5c74980..0041622 100644
+--- a/drivers/char/tpm/tpm_tis.c
++++ b/drivers/char/tpm/tpm_tis.c
+@@ -485,6 +485,11 @@ static void tpm_tis_update_timeouts(struct tpm_chip *chip)
+ 		chip->vendor.timeout_d = TIS_SHORT_TIMEOUT * HZ / 1000;
+ 		chip->vendor.timeout_adjusted = true;
+ 		break;
++	case 0x0000104a: /* STMicro ST19NP18-TPM */
++		chip->vendor.duration[TPM_SHORT] = 180 * HZ;
++		chip->vendor.duration[TPM_MEDIUM] = 180 * HZ;
++		chip->vendor.duration[TPM_LONG] = 180 * HZ;
++		chip->vendor.duration_adjusted = true;
+ 	}
+ }
  
 -- 
 1.9.1
