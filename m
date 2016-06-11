@@ -1,8 +1,8 @@
 From: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v6 5/5] tpm_tis: Increase ST19NP18 TPM command
-	duration to avoid chip lockup
-Date: Fri, 10 Jun 2016 18:55:07 -0700
-Message-ID: <1465610107-87762-6-git-send-email-eswierk@skyportsystems.com>
+Subject: [PATCH v6 4/5] tpm: Allow TPM chip drivers to
+	override reported command durations
+Date: Fri, 10 Jun 2016 18:55:06 -0700
+Message-ID: <1465610107-87762-5-git-send-email-eswierk@skyportsystems.com>
 References: <1465426818-89356-1-git-send-email-eswierk@skyportsystems.com>
 	<1465610107-87762-1-git-send-email-eswierk@skyportsystems.com>
 Mime-Version: 1.0
@@ -22,58 +22,243 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The STMicro ST19NP18-TPM sometimes takes much longer to execute
-commands than it reports in its capabilities. For example, command 186
-(TPM_FlushSpecific) has been observed to take 14560 msec to complete,
-far longer than the 3000 msec limit for "short" commands reported by
-the chip. The behavior has also been seen with command 101
-(TPM_GetCapability).
-
-Worse, when the tpm_tis driver attempts to cancel the current command
-(by writing commandReady = 1 to TPM_STS_x), the chip locks up
-completely, returning all-1s from all memory-mapped register
-reads. The lockup can be cleared only by resetting the system.
-
-The occurrence of this excessive command duration depends on the
-sequence of commands preceding it. One sequence is creating at least 2
-new keys via TPM_CreateWrapKey, then letting the TPM idle for at least
-30 seconds, then loading a key via TPM_LoadKey2. The next
-TPM_FlushSpecific occasionally takes tens of seconds to
-complete. Another sequence is creating many keys in a row without
-pause. The TPM_CreateWrapKey operation gets much slower after the
-first few iterations, as one would expect when the pool of precomputed
-keys is exhausted. Then after a 35-second pause, the same TPM_LoadKey2
-followed by TPM_FlushSpecific sequence triggers the behavior.
-
-Our working theory is that this older TPM sometimes pauses to
-precompute keys, which modern chips implement as a background
-process. Without access to the chip's implementation details it's
-impossible to know whether any commands are immune to being blocked by
-this process. So it seems safest to ignore the chip's reported command
-durations, and use a value much higher than any observed duration,
-like 180 sec (which is the duration this chip reports for "long"
-commands).
+Some TPM chips report bogus command durations in their capabilities,
+just as others report incorrect timeouts. Rework tpm_get_timeouts() to
+allow chip drivers to override either via a single callback. Also
+clean up handling of TPMs that report milliseconds instead of
+microseconds.
 
 Signed-off-by: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
 ---
- drivers/char/tpm/tpm_tis.c | 5 +++++
- 1 file changed, 5 insertions(+)
+ drivers/char/tpm/tpm-interface.c | 139 +++++++++++++++++++++------------------
+ drivers/char/tpm/tpm_tis.c       |  35 +++-------
+ include/linux/tpm.h              |   3 +-
+ 3 files changed, 85 insertions(+), 92 deletions(-)
 
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index 4d1f62c..a14adfd 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -550,83 +550,94 @@ static int tpm_get_cap_prop(struct tpm_chip *chip, __be32 type, int size,
+ 
+ int tpm_get_timeouts(struct tpm_chip *chip)
+ {
+-	struct tpm_cmd_t tpm_cmd;
+-	unsigned long new_timeout[4];
+-	unsigned long old_timeout[4];
+-	struct duration_t *duration_cap;
+-	ssize_t rc;
++	cap_t cap1, cap2;
++	int rc;
++	struct tpm_vendor_specific orig_vendor;
+ 
+-	rc = tpm_get_cap_prop(chip, TPM_CAP_PROP_TIS_TIMEOUT, 4,
+-			      &tpm_cmd.params.getcap_out.cap, "timeouts");
++	rc = tpm_get_cap_prop(chip, TPM_CAP_PROP_TIS_TIMEOUT, 4, &cap1,
++			      "timeouts");
+ 	if (rc)
+ 		return rc;
+ 
+-	old_timeout[0] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.a);
+-	old_timeout[1] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.b);
+-	old_timeout[2] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.c);
+-	old_timeout[3] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.d);
+-	memcpy(new_timeout, old_timeout, sizeof(new_timeout));
++	rc = tpm_get_cap_prop(chip, TPM_CAP_PROP_TIS_DURATION, 3, &cap2,
++			       "durations");
++	if (rc)
++		return rc;
+ 
+-	/*
+-	 * Provide ability for vendor overrides of timeout values in case
+-	 * of misreporting.
+-	 */
+-	if (chip->ops->update_timeouts != NULL)
+-		chip->vendor.timeout_adjusted =
+-			chip->ops->update_timeouts(chip, new_timeout);
++	be32_to_cpus(&cap1.timeout.a);
++	be32_to_cpus(&cap1.timeout.b);
++	be32_to_cpus(&cap1.timeout.c);
++	be32_to_cpus(&cap1.timeout.d);
++	chip->vendor.timeout_a = usecs_to_jiffies(cap1.timeout.a);
++	chip->vendor.timeout_b = usecs_to_jiffies(cap1.timeout.b);
++	chip->vendor.timeout_c = usecs_to_jiffies(cap1.timeout.c);
++	chip->vendor.timeout_d = usecs_to_jiffies(cap1.timeout.d);
+ 
+-	if (!chip->vendor.timeout_adjusted) {
+-		/* Don't overwrite default if value is 0 */
+-		if (new_timeout[0] != 0 && new_timeout[0] < 1000) {
+-			int i;
+-
+-			/* timeouts in msec rather usec */
+-			for (i = 0; i != ARRAY_SIZE(new_timeout); i++)
+-				new_timeout[i] *= 1000;
+-			chip->vendor.timeout_adjusted = true;
+-		}
++	/* Some TPMs report timeouts in milliseconds rather than
++	   microseconds. Use a value between 1 and 1000 as an
++	   indication that this is the case. */
++	if (cap1.timeout.a > 0 && cap1.timeout.a < 1000) {
++		chip->vendor.timeout_a = msecs_to_jiffies(cap1.timeout.a);
++		chip->vendor.timeout_b = msecs_to_jiffies(cap1.timeout.b);
++		chip->vendor.timeout_c = msecs_to_jiffies(cap1.timeout.c);
++		chip->vendor.timeout_d = msecs_to_jiffies(cap1.timeout.d);
++		chip->vendor.timeout_adjusted = true;
+ 	}
+ 
+-	/* Report adjusted timeouts */
++	be32_to_cpus(&cap2.duration.tpm_short);
++	be32_to_cpus(&cap2.duration.tpm_medium);
++	be32_to_cpus(&cap2.duration.tpm_long);
++	chip->vendor.duration[TPM_SHORT] =
++		usecs_to_jiffies(cap2.duration.tpm_short);
++	chip->vendor.duration[TPM_MEDIUM] =
++		usecs_to_jiffies(cap2.duration.tpm_medium);
++	chip->vendor.duration[TPM_LONG] =
++		usecs_to_jiffies(cap2.duration.tpm_long);
++
++	memcpy(&orig_vendor, &chip->vendor, sizeof(orig_vendor));
++
++	/* Interpret duration values between 1 and 10000 as
++	   milliseconds to deal with TPMs like the Broadcom BCM0102 in
++	   the Dell Latitude D820. */
++	if (cap2.duration.tpm_short > 0 && cap2.duration.tpm_short < 10000) {
++		chip->vendor.duration[TPM_SHORT] =
++			msecs_to_jiffies(cap2.duration.tpm_short);
++		chip->vendor.duration[TPM_MEDIUM] =
++			msecs_to_jiffies(cap2.duration.tpm_medium);
++		chip->vendor.duration[TPM_LONG] =
++			msecs_to_jiffies(cap2.duration.tpm_long);
++		chip->vendor.duration_adjusted = true;
++	}
++
++	if (chip->ops->update_timeouts != NULL)
++		chip->ops->update_timeouts(chip);
++
+ 	if (chip->vendor.timeout_adjusted) {
+ 		dev_info(chip->pdev,
+-			 HW_ERR "Adjusting reported timeouts: A %lu->%luus B %lu->%luus C %lu->%luus D %lu->%luus\n",
+-			 old_timeout[0], new_timeout[0],
+-			 old_timeout[1], new_timeout[1],
+-			 old_timeout[2], new_timeout[2],
+-			 old_timeout[3], new_timeout[3]);
++			 HW_ERR "Adjusted timeouts: A %u->%uus B %u->%uus"
++			 " C %u->%uus D %u->%uus\n",
++			 jiffies_to_usecs(orig_vendor.timeout_a),
++			 jiffies_to_usecs(chip->vendor.timeout_a),
++			 jiffies_to_usecs(orig_vendor.timeout_b),
++			 jiffies_to_usecs(chip->vendor.timeout_b),
++			 jiffies_to_usecs(orig_vendor.timeout_c),
++			 jiffies_to_usecs(chip->vendor.timeout_c),
++			 jiffies_to_usecs(orig_vendor.timeout_d),
++			 jiffies_to_usecs(chip->vendor.timeout_d));
+ 	}
+ 
+-	chip->vendor.timeout_a = usecs_to_jiffies(new_timeout[0]);
+-	chip->vendor.timeout_b = usecs_to_jiffies(new_timeout[1]);
+-	chip->vendor.timeout_c = usecs_to_jiffies(new_timeout[2]);
+-	chip->vendor.timeout_d = usecs_to_jiffies(new_timeout[3]);
+-
+-	rc = tpm_get_cap_prop(chip, TPM_CAP_PROP_TIS_DURATION, 3,
+-			      &tpm_cmd.params.getcap_out.cap, "durations");
+-	if (rc)
+-		return rc;
+-
+-	duration_cap = &tpm_cmd.params.getcap_out.cap.duration;
+-	chip->vendor.duration[TPM_SHORT] =
+-	    usecs_to_jiffies(be32_to_cpu(duration_cap->tpm_short));
+-	chip->vendor.duration[TPM_MEDIUM] =
+-	    usecs_to_jiffies(be32_to_cpu(duration_cap->tpm_medium));
+-	chip->vendor.duration[TPM_LONG] =
+-	    usecs_to_jiffies(be32_to_cpu(duration_cap->tpm_long));
+-
+-	/* The Broadcom BCM0102 chipset in a Dell Latitude D820 gets the above
+-	 * value wrong and apparently reports msecs rather than usecs. So we
+-	 * fix up the resulting too-small TPM_SHORT value to make things work.
+-	 * We also scale the TPM_MEDIUM and -_LONG values by 1000.
+-	 */
+-	if (chip->vendor.duration[TPM_SHORT] < (HZ / 100)) {
+-		chip->vendor.duration[TPM_SHORT] = HZ;
+-		chip->vendor.duration[TPM_MEDIUM] *= 1000;
+-		chip->vendor.duration[TPM_LONG] *= 1000;
+-		chip->vendor.duration_adjusted = true;
+-		dev_info(chip->pdev, "Adjusting TPM timeout parameters.");
++	if (chip->vendor.duration_adjusted) {
++		dev_info(chip->pdev,
++			 HW_ERR "Adjusted durations: short %u->%uus"
++			 " medium %u->%uus long %u->%uus\n",
++			 jiffies_to_usecs(orig_vendor.duration[TPM_SHORT]),
++			 jiffies_to_usecs(chip->vendor.duration[TPM_SHORT]),
++			 jiffies_to_usecs(orig_vendor.duration[TPM_MEDIUM]),
++			 jiffies_to_usecs(chip->vendor.duration[TPM_MEDIUM]),
++			 jiffies_to_usecs(orig_vendor.duration[TPM_LONG]),
++			 jiffies_to_usecs(chip->vendor.duration[TPM_LONG]));
+ 	}
++
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(tpm_get_timeouts);
 diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index caf7278..862c502 100644
+index 088fa86..caf7278 100644
 --- a/drivers/char/tpm/tpm_tis.c
 +++ b/drivers/char/tpm/tpm_tis.c
-@@ -485,6 +485,11 @@ static void tpm_tis_update_timeouts(struct tpm_chip *chip)
- 		chip->vendor.timeout_d = msecs_to_jiffies(TIS_SHORT_TIMEOUT);
- 		chip->vendor.timeout_adjusted = true;
- 		break;
-+	case 0x0000104a: /* STMicro ST19NP18-TPM */
-+		chip->vendor.duration[TPM_SHORT] = 180 * HZ;
-+		chip->vendor.duration[TPM_MEDIUM] = 180 * HZ;
-+		chip->vendor.duration[TPM_LONG] = 180 * HZ;
-+		chip->vendor.duration_adjusted = true;
- 	}
+@@ -475,34 +475,17 @@ static int tpm_tis_send(struct tpm_chip *chip, u8 *buf, size_t len)
+ 	return rc;
  }
+ 
+-struct tis_vendor_timeout_override {
+-	u32 did_vid;
+-	unsigned long timeout_us[4];
+-};
+-
+-static const struct tis_vendor_timeout_override vendor_timeout_overrides[] = {
+-	/* Atmel 3204 */
+-	{ 0x32041114, { (TIS_SHORT_TIMEOUT*1000), (TIS_LONG_TIMEOUT*1000),
+-			(TIS_SHORT_TIMEOUT*1000), (TIS_SHORT_TIMEOUT*1000) } },
+-};
+-
+-static bool tpm_tis_update_timeouts(struct tpm_chip *chip,
+-				    unsigned long *timeout_cap)
++static void tpm_tis_update_timeouts(struct tpm_chip *chip)
+ {
+-	int i;
+-	u32 did_vid;
+-
+-	did_vid = ioread32(chip->vendor.iobase + TPM_DID_VID(0));
+-
+-	for (i = 0; i != ARRAY_SIZE(vendor_timeout_overrides); i++) {
+-		if (vendor_timeout_overrides[i].did_vid != did_vid)
+-			continue;
+-		memcpy(timeout_cap, vendor_timeout_overrides[i].timeout_us,
+-		       sizeof(vendor_timeout_overrides[i].timeout_us));
+-		return true;
++	switch (ioread32(chip->vendor.iobase + TPM_DID_VID(0))) {
++	case 0x32041114: /* Atmel 3204 */
++		chip->vendor.timeout_a = msecs_to_jiffies(TIS_SHORT_TIMEOUT);
++		chip->vendor.timeout_b = msecs_to_jiffies(TIS_LONG_TIMEOUT);
++		chip->vendor.timeout_c = msecs_to_jiffies(TIS_SHORT_TIMEOUT);
++		chip->vendor.timeout_d = msecs_to_jiffies(TIS_SHORT_TIMEOUT);
++		chip->vendor.timeout_adjusted = true;
++		break;
+ 	}
+-
+-	return false;
+ }
+ 
+ /*
+diff --git a/include/linux/tpm.h b/include/linux/tpm.h
+index 706e63e..2380ebf 100644
+--- a/include/linux/tpm.h
++++ b/include/linux/tpm.h
+@@ -41,8 +41,7 @@ struct tpm_class_ops {
+ 	int (*send) (struct tpm_chip *chip, u8 *buf, size_t len);
+ 	void (*cancel) (struct tpm_chip *chip);
+ 	u8 (*status) (struct tpm_chip *chip);
+-	bool (*update_timeouts)(struct tpm_chip *chip,
+-				unsigned long *timeout_cap);
++	void (*update_timeouts)(struct tpm_chip *chip);
+ 
+ };
  
 -- 
 1.9.1
