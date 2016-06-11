@@ -1,14 +1,14 @@
 From: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v6 0/5] tpm: Command duration logging and
-	chip-specific override
-Date: Fri, 10 Jun 2016 18:55:02 -0700
-Message-ID: <1465610107-87762-1-git-send-email-eswierk@skyportsystems.com>
+Subject: [PATCH v6 1/5] tpm_tis: Improve reporting of IO errors
+Date: Fri, 10 Jun 2016 18:55:03 -0700
+Message-ID: <1465610107-87762-2-git-send-email-eswierk@skyportsystems.com>
 References: <1465426818-89356-1-git-send-email-eswierk@skyportsystems.com>
+	<1465610107-87762-1-git-send-email-eswierk@skyportsystems.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1465426818-89356-1-git-send-email-eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1465610107-87762-1-git-send-email-eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,33 +21,58 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-v6: Split tpm_get_cap_prop() out of tpm_get_timeouts(); always return
-error on TPM command failure.
+Mysterious TPM behavior can be difficult to track down through all the
+layers of software. Add error messages for conditions that should
+never happen. Also include the manufacturer ID along with other chip
+data printed during init.
 
-v5: Use msecs_to_jiffies() instead of * HZ / 1000.
+Signed-off-by: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+---
+ drivers/char/tpm/tpm_tis.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
 
-v4: Rework tpm_get_timeouts() to allow overriding both timeouts and
-durations via a single callback.
-
-This series
-- improves TPM command error reporting
-- adds optional logging of TPM command durations
-- allows chip-specific override of command durations as well as protocol
-  timeouts
-- overrides ST19NP18 TPM command duration to avoid lockups
-
-Ed Swierk (5):
-  tpm_tis: Improve reporting of IO errors
-  tpm: Add optional logging of TPM command durations
-  tpm: Factor out reading of timeout and duration capabilities
-  tpm: Allow TPM chip drivers to override reported command durations
-  tpm_tis: Increase ST19NP18 TPM command duration to avoid chip lockup
-
- drivers/char/tpm/tpm-interface.c | 192 ++++++++++++++++++++++-----------------
- drivers/char/tpm/tpm_tis.c       |  48 +++++-----
- include/linux/tpm.h              |   3 +-
- 3 files changed, 132 insertions(+), 111 deletions(-)
-
+diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+index 65f7eec..088fa86 100644
+--- a/drivers/char/tpm/tpm_tis.c
++++ b/drivers/char/tpm/tpm_tis.c
+@@ -299,6 +299,8 @@ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+ 
+ 	expected = be32_to_cpu(*(__be32 *) (buf + 2));
+ 	if (expected > count) {
++		dev_err(chip->pdev, "Response too long (wanted %zd, got %d)\n",
++			count, expected);
+ 		size = -EIO;
+ 		goto out;
+ 	}
+@@ -366,6 +368,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ 				  &chip->vendor.int_queue, false);
+ 		status = tpm_tis_status(chip);
+ 		if (!itpm && (status & TPM_STS_DATA_EXPECT) == 0) {
++			dev_err(chip->pdev, "Chip not accepting %zd bytes\n",
++				len - count);
+ 			rc = -EIO;
+ 			goto out_err;
+ 		}
+@@ -378,6 +382,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ 			  &chip->vendor.int_queue, false);
+ 	status = tpm_tis_status(chip);
+ 	if ((status & TPM_STS_DATA_EXPECT) != 0) {
++		dev_err(chip->pdev, "Chip not accepting last byte\n");
+ 		rc = -EIO;
+ 		goto out_err;
+ 	}
+@@ -689,8 +694,9 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+ 	vendor = ioread32(chip->vendor.iobase + TPM_DID_VID(0));
+ 	chip->vendor.manufacturer_id = vendor;
+ 
+-	dev_info(dev, "%s TPM (device-id 0x%X, rev-id %d)\n",
++	dev_info(dev, "%s TPM (manufacturer-id 0x%X, device-id 0x%X, rev-id %d)\n",
+ 		 (chip->flags & TPM_CHIP_FLAG_TPM2) ? "2.0" : "1.2",
++		 chip->vendor.manufacturer_id,
+ 		 vendor >> 16, ioread8(chip->vendor.iobase + TPM_RID(0)));
+ 
+ 	if (!itpm) {
 -- 
 1.9.1
 
