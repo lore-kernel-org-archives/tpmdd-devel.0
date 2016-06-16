@@ -1,55 +1,43 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm: use devm_add_action_or_reset
-Date: Thu, 16 Jun 2016 22:28:23 +0200
-Message-ID: <20160616202823.GE1414@intel.com>
-References: <1465740329-4699-1-git-send-email-sudipm.mukherjee@gmail.com>
+Subject: Re: [PATCH] tpm_vtpm_proxy: fix sparse warning
+Date: Thu, 16 Jun 2016 22:34:13 +0200
+Message-ID: <20160616203413.GH1414@intel.com>
+References: <1466073474-4381-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+ <5762AC1A.8050702@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1465740329-4699-1-git-send-email-sudipm.mukherjee@gmail.com>
+In-Reply-To: <5762AC1A.8050702@linux.vnet.ibm.com>
 Sender: linux-kernel-owner@vger.kernel.org
-To: Sudip Mukherjee <sudipm.mukherjee@gmail.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+To: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, linux-security-module@vger.kernel.org, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Jun 12, 2016 at 03:05:29PM +0100, Sudip Mukherjee wrote:
-> If devm_add_action() fails we are explicitly calling put_device() to
-> free the resources allocated. Lets use the helper
-> devm_add_action_or_reset() and return directly in case of error, as we
-> know that the cleanup function has been already called by the helper if
-> there was any error.
+On Thu, Jun 16, 2016 at 09:39:38AM -0400, Stefan Berger wrote:
+> On 06/16/2016 06:37 AM, Jarkko Sakkinen wrote:
+> >When running make C=2 M=drivers/char/tpm/
+> >
+> >   CC [M]  drivers/char/tpm//tpm_crb.o
+> >   CHECK   drivers/char/tpm//tpm_vtpm_proxy.c
+> >drivers/char/tpm//tpm_vtpm_proxy.c:552:32: warning: incorrect type in assignment (different address spaces)
+> >drivers/char/tpm//tpm_vtpm_proxy.c:552:32:    expected struct vtpm_proxy_new_dev *vtpm_new_dev_p
+> >drivers/char/tpm//tpm_vtpm_proxy.c:552:32:    got void [noderef] <asn:1>*argp
+> >drivers/char/tpm//tpm_vtpm_proxy.c:553:51: warning: incorrect type in argument 2 (different address spaces)
+> >drivers/char/tpm//tpm_vtpm_proxy.c:553:51:    expected void const [noderef] <asn:1>*from
+> >drivers/char/tpm//tpm_vtpm_proxy.c:553:51:    got struct vtpm_proxy_new_dev *vtpm_new_dev_p
+> >drivers/char/tpm//tpm_vtpm_proxy.c:559:34: warning: incorrect type in argument 1 (different address spaces)
+> >drivers/char/tpm//tpm_vtpm_proxy.c:559:34:    expected void [noderef] <asn:1>*to
+> >drivers/char/tpm//tpm_vtpm_proxy.c:559:34:    got struct vtpm_proxy_new_dev *vtpm_new_dev_p
+> >
+> >The __user annotation was missing from the corresponding variable.
+> >
+> >Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 > 
-> Signed-off-by: Sudip Mukherjee <sudip.mukherjee@codethink.co.uk>
+> Tested-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+> 
+> PS: I get similar warnings for line 248 in tpm_crb.c.
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Yup, I'll proceed to that next. Thank you.
 
 /Jarkko
-
-> ---
->  drivers/char/tpm/tpm-chip.c | 8 ++++----
->  1 file changed, 4 insertions(+), 4 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> index 1965dc7..5a2f043 100644
-> --- a/drivers/char/tpm/tpm-chip.c
-> +++ b/drivers/char/tpm/tpm-chip.c
-> @@ -213,11 +213,11 @@ struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
->  	if (IS_ERR(chip))
->  		return chip;
->  
-> -	rc = devm_add_action(pdev, (void (*)(void *)) put_device, &chip->dev);
-> -	if (rc) {
-> -		put_device(&chip->dev);
-> +	rc = devm_add_action_or_reset(pdev,
-> +				      (void (*)(void *)) put_device,
-> +				      &chip->dev);
-> +	if (rc)
->  		return ERR_PTR(rc);
-> -	}
->  
->  	dev_set_drvdata(pdev, chip);
->  
-> -- 
-> 1.9.1
-> 
