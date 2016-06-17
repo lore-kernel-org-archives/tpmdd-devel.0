@@ -1,7 +1,8 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH 1/5] tpm: unify tpm_gen_interrupt()
-Date: Fri, 17 Jun 2016 23:10:43 +0200
-Message-ID: <1466197847-4937-2-git-send-email-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH 4/5] tpm: rename tpm_pcr_read_dev() to
+	tpm1_pcr_read()
+Date: Fri, 17 Jun 2016 23:10:46 +0200
+Message-ID: <1466197847-4937-5-git-send-email-jarkko.sakkinen@linux.intel.com>
 References: <1466197847-4937-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,119 +21,64 @@ To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Jason Gunthorpe <jgun
 Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Migrated into single tpm_gen_interrupt() function and cleaned up the
-whole construction in general because it was starting to turn into a
-train wreck.
+Gave more consistent name tpm1_pcr_read() as the TPM2 version is called
+tpm2_pcr_read().
 
 Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm-interface.c | 23 ++++++++++++++---------
- drivers/char/tpm/tpm.h           |  3 +--
- drivers/char/tpm/tpm2-cmd.c      | 17 -----------------
- drivers/char/tpm/tpm_tis_core.c  |  5 +----
- 4 files changed, 16 insertions(+), 32 deletions(-)
+ drivers/char/tpm/tpm-interface.c | 4 ++--
+ drivers/char/tpm/tpm-sysfs.c     | 2 +-
+ drivers/char/tpm/tpm.h           | 2 +-
+ 3 files changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 5e3c1b6..e953618 100644
+index 4aeacf3..3995f5c 100644
 --- a/drivers/char/tpm/tpm-interface.c
 +++ b/drivers/char/tpm/tpm-interface.c
-@@ -459,18 +459,23 @@ ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
+@@ -670,7 +670,7 @@ static struct tpm_input_header pcrread_header = {
+ 	.ordinal = TPM_ORDINAL_PCRREAD
+ };
+ 
+-int tpm_pcr_read_dev(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
++int tpm1_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
+ {
+ 	int rc;
+ 	struct tpm_cmd_t cmd;
+@@ -732,7 +732,7 @@ int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf)
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+ 		rc = tpm2_pcr_read(chip, pcr_idx, res_buf);
+ 	else
+-		rc = tpm_pcr_read_dev(chip, pcr_idx, res_buf);
++		rc = tpm1_pcr_read(chip, pcr_idx, res_buf);
+ 	tpm_put_ops(chip);
  	return rc;
  }
+diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+index b46cf70..a89d0e2 100644
+--- a/drivers/char/tpm/tpm-sysfs.c
++++ b/drivers/char/tpm/tpm-sysfs.c
+@@ -101,7 +101,7 @@ static ssize_t pcrs_show(struct device *dev, struct device_attribute *attr,
  
-+/**
-+ * tpm_gen_interrupt -- generate an interrupt by issuing an idempotent command
-+ * @chip: TPM chip to use
-+ *
-+ * Returns 0 on success, < 0 in case of fatal error or a value > 0 representing
-+ * a TPM error code.
-+ */
- void tpm_gen_interrupt(struct tpm_chip *chip)
- {
--	struct	tpm_cmd_t tpm_cmd;
--	ssize_t rc;
-+	const char *desc = "attempting to generate an interrupt";
-+	u32 cap2;
-+	cap_t cap;
- 
--	tpm_cmd.header.in = tpm_getcap_header;
--	tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
--	tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
--	tpm_cmd.params.getcap_in.subcap = TPM_CAP_PROP_TIS_TIMEOUT;
--
--	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE,
--			      "attempting to determine the timeouts");
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+		tpm2_get_tpm_pt(chip, 0x100, &cap2, desc);
-+	else
-+		tpm_getcap(chip, TPM_CAP_PROP_TIS_TIMEOUT, &cap, desc);
- }
- EXPORT_SYMBOL_GPL(tpm_gen_interrupt);
- 
+ 	num_pcrs = be32_to_cpu(cap.num_pcrs);
+ 	for (i = 0; i < num_pcrs; i++) {
+-		rc = tpm_pcr_read_dev(chip, i, digest);
++		rc = tpm1_pcr_read(chip, i, digest);
+ 		if (rc)
+ 			break;
+ 		str += sprintf(str, "PCR-%02d: ", i);
 diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 8890df2..276a3c5 100644
+index de93535..382c7e6 100644
 --- a/drivers/char/tpm/tpm.h
 +++ b/drivers/char/tpm/tpm.h
-@@ -483,7 +483,7 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
- ssize_t tpm_transmit_cmd(struct tpm_chip *chip, void *cmd, int len,
- 			 const char *desc);
- extern int tpm_get_timeouts(struct tpm_chip *);
--extern void tpm_gen_interrupt(struct tpm_chip *);
-+void tpm_gen_interrupt(struct tpm_chip *);
- extern int tpm_do_selftest(struct tpm_chip *);
- extern unsigned long tpm_calc_ordinal_duration(struct tpm_chip *, u32);
- extern int tpm_pm_suspend(struct device *);
-@@ -530,6 +530,5 @@ extern int tpm2_startup(struct tpm_chip *chip, u16 startup_type);
- extern void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
- extern unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *, u32);
- extern int tpm2_do_selftest(struct tpm_chip *chip);
--extern int tpm2_gen_interrupt(struct tpm_chip *chip);
- extern int tpm2_probe(struct tpm_chip *chip);
- #endif
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index a1673dc..77ef027 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -897,23 +897,6 @@ int tpm2_do_selftest(struct tpm_chip *chip)
- EXPORT_SYMBOL_GPL(tpm2_do_selftest);
+@@ -504,7 +504,7 @@ extern void tpm_chip_unregister(struct tpm_chip *chip);
  
- /**
-- * tpm2_gen_interrupt() - generate an interrupt
-- * @chip: TPM chip to use
-- *
-- * 0 is returned when the operation is successful. If a negative number is
-- * returned it remarks a POSIX error code. If a positive number is returned
-- * it remarks a TPM error.
-- */
--int tpm2_gen_interrupt(struct tpm_chip *chip)
--{
--	u32 dummy;
--
--	return tpm2_get_tpm_pt(chip, 0x100, &dummy,
--			       "attempting to generate an interrupt");
--}
--EXPORT_SYMBOL_GPL(tpm2_gen_interrupt);
--
--/**
-  * tpm2_probe() - probe TPM 2.0
-  * @chip: TPM chip to use
-  *
-diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-index 03a06b3..c7dc58d 100644
---- a/drivers/char/tpm/tpm_tis_core.c
-+++ b/drivers/char/tpm/tpm_tis_core.c
-@@ -580,10 +580,7 @@ static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
- 	/* Generate an interrupt by having the core call through to
- 	 * tpm_tis_send
- 	 */
--	if (chip->flags & TPM_CHIP_FLAG_TPM2)
--		tpm2_gen_interrupt(chip);
--	else
--		tpm_gen_interrupt(chip);
-+	tpm_gen_interrupt(chip);
+ void tpm_sysfs_add_device(struct tpm_chip *chip);
  
- 	/* tpm_tis_send will either confirm the interrupt is working or it
- 	 * will call disable_irq which undoes all of the above.
+-int tpm_pcr_read_dev(struct tpm_chip *chip, int pcr_idx, u8 *res_buf);
++int tpm1_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf);
+ 
+ #ifdef CONFIG_ACPI
+ extern void tpm_add_ppi(struct tpm_chip *chip);
 -- 
 2.7.4
 
