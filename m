@@ -1,8 +1,8 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH 1/2] tpm_vtpm_proxy: fix address space of a
-	user pointer in vtpmx_fops_ioctl()
-Date: Fri, 17 Jun 2016 16:39:28 +0200
-Message-ID: <1466174369-7140-2-git-send-email-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH 2/2] tpm_crb: fix address space of the return
+	pointer in crb_map_res()
+Date: Fri, 17 Jun 2016 16:39:29 +0200
+Message-ID: <1466174369-7140-3-git-send-email-jarkko.sakkinen@linux.intel.com>
 References: <1466174369-7140-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -23,40 +23,30 @@ List-Id: tpmdd-devel@lists.sourceforge.net
 
 When running make C=2 M=drivers/char/tpm/
 
-  CC [M]  drivers/char/tpm//tpm_crb.o
-  CHECK   drivers/char/tpm//tpm_vtpm_proxy.c
-drivers/char/tpm//tpm_vtpm_proxy.c:552:32: warning: incorrect type in assignment (different address spaces)
-drivers/char/tpm//tpm_vtpm_proxy.c:552:32:    expected struct vtpm_proxy_new_dev *vtpm_new_dev_p
-drivers/char/tpm//tpm_vtpm_proxy.c:552:32:    got void [noderef] <asn:1>*argp
-drivers/char/tpm//tpm_vtpm_proxy.c:553:51: warning: incorrect type in argument 2 (different address spaces)
-drivers/char/tpm//tpm_vtpm_proxy.c:553:51:    expected void const [noderef] <asn:1>*from
-drivers/char/tpm//tpm_vtpm_proxy.c:553:51:    got struct vtpm_proxy_new_dev *vtpm_new_dev_p
-drivers/char/tpm//tpm_vtpm_proxy.c:559:34: warning: incorrect type in argument 1 (different address spaces)
-drivers/char/tpm//tpm_vtpm_proxy.c:559:34:    expected void [noderef] <asn:1>*to
-drivers/char/tpm//tpm_vtpm_proxy.c:559:34:    got struct vtpm_proxy_new_dev *vtpm_new_dev_p
+  CHECK   drivers/char/tpm//tpm_crb.c
+drivers/char/tpm//tpm_crb.c:248:31: warning: incorrect type in return expression (different address spaces)
+drivers/char/tpm//tpm_crb.c:248:31:    expected void [noderef] <asn:2>*
+drivers/char/tpm//tpm_crb.c:248:31:    got void *
 
-The __user annotation was missing from the corresponding variable.
-
-Fixes: 794c38e01358 ("tpm: Proxy driver for supporting multiple emulated TPMs")
+Fixes: 1bd047be37d9 ("tpm_crb: Use devm_ioremap_resource")
 Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Tested-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 ---
- drivers/char/tpm/tpm_vtpm_proxy.c | 2 +-
+ drivers/char/tpm/tpm_crb.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
-index 4384042..86e27e8 100644
---- a/drivers/char/tpm/tpm_vtpm_proxy.c
-+++ b/drivers/char/tpm/tpm_vtpm_proxy.c
-@@ -541,7 +541,7 @@ static long vtpmx_fops_ioctl(struct file *f, unsigned int ioctl,
- 				   unsigned long arg)
- {
- 	void __user *argp = (void __user *)arg;
--	struct vtpm_proxy_new_dev *vtpm_new_dev_p;
-+	struct vtpm_proxy_new_dev __user *vtpm_new_dev_p;
- 	struct vtpm_proxy_new_dev vtpm_new_dev;
- 	struct file *file;
+diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+index 1547636..1b8e1b5 100644
+--- a/drivers/char/tpm/tpm_crb.c
++++ b/drivers/char/tpm/tpm_crb.c
+@@ -245,7 +245,7 @@ static void __iomem *crb_map_res(struct device *dev, struct crb_priv *priv,
  
+ 	/* Detect a 64 bit address on a 32 bit system */
+ 	if (start != new_res.start)
+-		return ERR_PTR(-EINVAL);
++		return (void __iomem *) ERR_PTR(-EINVAL);
+ 
+ 	if (!resource_contains(io_res, &new_res))
+ 		return devm_ioremap_resource(dev, &new_res);
 -- 
 2.7.4
 
