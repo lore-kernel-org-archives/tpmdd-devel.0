@@ -1,7 +1,7 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH v2 1/3] tpm_crb: fix crb_req_canceled behavior
-Date: Sat, 18 Jun 2016 17:10:26 +0200
-Message-ID: <1466262628-25530-2-git-send-email-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH v2 2/3] tpm, tpm_crb: remove wmb()'s
+Date: Sat, 18 Jun 2016 17:10:27 +0200
+Message-ID: <1466262628-25530-3-git-send-email-jarkko.sakkinen@linux.intel.com>
 References: <1466262628-25530-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -17,55 +17,30 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The req_canceled() callback is used by tpm_transmit() periodically to
-check whether the request has been canceled while it is receiving a
-response from the TPM.
+wmb()'s are not needed as iowrite32() is used.
 
-The TPM_CRB_CTRL_CANCEL register was cleared already in the crb_cancel
-callback, which has two consequences:
-
-* Cancel might not happen.
-* req_canceled() always returns zero.
-
-A better place to clear the register is when starting to send a new
-command. The behavior of TPM_CRB_CTRL_CANCEL is described in the
-section 5.5.3.6 of the PTP specification.
-
-CC: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-Fixes: 30fc8d138e91 ("tpm: TPM 2.0 CRB Interface")
 Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm_crb.c | 7 +++++--
- 1 file changed, 5 insertions(+), 2 deletions(-)
+ drivers/char/tpm/tpm_crb.c | 3 ---
+ 1 file changed, 3 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index 1b8e1b5..8819ef7 100644
+index 8819ef7..0c8ed7f 100644
 --- a/drivers/char/tpm/tpm_crb.c
 +++ b/drivers/char/tpm/tpm_crb.c
-@@ -142,6 +142,11 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
- 	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
- 	int rc = 0;
+@@ -175,9 +175,6 @@ static void crb_cancel(struct tpm_chip *chip)
  
-+	/* Zero the cancel register so that the next command will not get
-+	 * canceled.
-+	 */
-+	iowrite32(0, &priv->cca->cancel);
-+
- 	if (len > ioread32(&priv->cca->cmd_size)) {
- 		dev_err(&chip->dev,
- 			"invalid command count value %x %zx\n",
-@@ -175,8 +180,6 @@ static void crb_cancel(struct tpm_chip *chip)
+ 	iowrite32(cpu_to_le32(CRB_CANCEL_INVOKE), &priv->cca->cancel);
  
+-	/* Make sure that cmd is populated before issuing cancel. */
+-	wmb();
+-
  	if ((priv->flags & CRB_FL_ACPI_START) && crb_do_acpi_start(chip))
  		dev_err(&chip->dev, "ACPI Start failed\n");
--
--	iowrite32(0, &priv->cca->cancel);
  }
- 
- static bool crb_req_canceled(struct tpm_chip *chip, u8 status)
 -- 
 2.7.4
 
