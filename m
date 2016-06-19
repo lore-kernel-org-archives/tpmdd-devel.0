@@ -1,14 +1,17 @@
-From: andrew zamansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
-Subject: [PATCH 2/2] tpm: Add TPM 2.0 support to the Nuvoton
-	i2c driver (NPCT6xx family)
-Date: Sun, 19 Jun 2016 11:20:01 +0300
-Message-ID: <1466324401-5054-3-git-send-email-andrew.zamansky@nuvoton.com>
-References: <1466324401-5054-1-git-send-email-andrew.zamansky@nuvoton.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v6 3/5] tpm: Factor out reading of timeout
+ and duration capabilities
+Date: Sun, 19 Jun 2016 14:12:14 +0200
+Message-ID: <20160619120157.GA29626@intel.com>
+References: <1465426818-89356-1-git-send-email-eswierk@skyportsystems.com>
+	<1465610107-87762-1-git-send-email-eswierk@skyportsystems.com>
+	<1465610107-87762-4-git-send-email-eswierk@skyportsystems.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1466324401-5054-1-git-send-email-andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <1465610107-87762-4-git-send-email-eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,67 +20,92 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, azamansk-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, Dan.Morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, stimpy1-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
+To: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-RnJvbTogSmFzb24gR3VudGhvcnBlIDxqZ3VudGhvcnBlQG9ic2lkaWFucmVzZWFyY2guY29tPgoK
-VGhlIGNvbW1hbmQgZmxvdyBpcyBleGFjdGx5IHRoZSBzYW1lLCB0aGUgY29yZSBzaW1wbHkgbmVl
-ZHMgdG8gcHJvYmUKZm9yIFRQTSAyLjAgY2FwYWJpbGl0eS4KClNpZ25lZC1vZmYtYnk6IEFuZHJl
-dyBBem1hbnNreSA8YW5kcmV3LnphbWFuc2t5QG51dm90b24uY29tPgpTaWduZWQtb2ZmLWJ5OiBK
-YXNvbiBHdW50aG9ycGUgPGpndW50aG9ycGVAb2JzaWRpYW5yZXNlYXJjaC5jb20+Ci0tLQogRG9j
-dW1lbnRhdGlvbi9kZXZpY2V0cmVlL2JpbmRpbmdzL2kyYy90cml2aWFsLWRldmljZXMudHh0IHwg
-MSArCiBkcml2ZXJzL2NoYXIvdHBtL3RwbV9pMmNfbnV2b3Rvbi5jICAgICAgICAgICAgICAgICAg
-ICAgICAgfCA3ICsrKystLS0KIDIgZmlsZXMgY2hhbmdlZCwgNSBpbnNlcnRpb25zKCspLCAzIGRl
-bGV0aW9ucygtKQoKZGlmZiAtLWdpdCBhL0RvY3VtZW50YXRpb24vZGV2aWNldHJlZS9iaW5kaW5n
-cy9pMmMvdHJpdmlhbC1kZXZpY2VzLnR4dCBiL0RvY3VtZW50YXRpb24vZGV2aWNldHJlZS9iaW5k
-aW5ncy9pMmMvdHJpdmlhbC1kZXZpY2VzLnR4dAppbmRleCA1Mzk4NzQ0OS4uZDRmNjU0MiAxMDA2
-NDQKLS0tIGEvRG9jdW1lbnRhdGlvbi9kZXZpY2V0cmVlL2JpbmRpbmdzL2kyYy90cml2aWFsLWRl
-dmljZXMudHh0CisrKyBiL0RvY3VtZW50YXRpb24vZGV2aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJp
-dmlhbC1kZXZpY2VzLnR4dApAQCAtNjIsNiArNjIsNyBAQCBuYXRpb25hbCxsbTgwCQlTZXJpYWwg
-SW50ZXJmYWNlIEFDUEktQ29tcGF0aWJsZSBNaWNyb3Byb2Nlc3NvciBTeXN0ZW0gSGFyZHdhcmUg
-TQogbmF0aW9uYWwsbG04NQkJVGVtcGVyYXR1cmUgc2Vuc29yIHdpdGggaW50ZWdyYXRlZCBmYW4g
-Y29udHJvbAogbmF0aW9uYWwsbG05MgkJwrEwLjMzwrBDIEFjY3VyYXRlLCAxMi1CaXQgKyBTaWdu
-IFRlbXBlcmF0dXJlIFNlbnNvciBhbmQgVGhlcm1hbCBXaW5kb3cgQ29tcGFyYXRvciB3aXRoIFR3
-by1XaXJlIEludGVyZmFjZQogbnV2b3RvbixucGN0NTAxCQlpMmMgdHJ1c3RlZCBwbGF0Zm9ybSBt
-b2R1bGUgKFRQTSkKK251dm90b24sbnBjdDYwMQkJaTJjIHRydXN0ZWQgcGxhdGZvcm0gbW9kdWxl
-IChUUE0yKQogbnhwLHBjYTk1NTYJCU9jdGFsIFNNQnVzIGFuZCBJMkMgcmVnaXN0ZXJlZCBpbnRl
-cmZhY2UKIG54cCxwY2E5NTU3CQk4LWJpdCBJMkMtYnVzIGFuZCBTTUJ1cyBJL08gcG9ydCB3aXRo
-IHJlc2V0CiBueHAscGNmODU2MwkJUmVhbC10aW1lIGNsb2NrL2NhbGVuZGFyCmRpZmYgLS1naXQg
-YS9kcml2ZXJzL2NoYXIvdHBtL3RwbV9pMmNfbnV2b3Rvbi5jIGIvZHJpdmVycy9jaGFyL3RwbS90
-cG1faTJjX251dm90b24uYwppbmRleCBiNjRlZmZjLi5kYmY2MDk1IDEwMDY0NAotLS0gYS9kcml2
-ZXJzL2NoYXIvdHBtL3RwbV9pMmNfbnV2b3Rvbi5jCisrKyBiL2RyaXZlcnMvY2hhci90cG0vdHBt
-X2kyY19udXZvdG9uLmMKQEAgLTEsNSArMSw1IEBACiAvKioqKioqKioqKioqKioqKioqKioqKioq
-KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqCi0g
-KiBOdXZvdG9uIFRQTSBJMkMgRGV2aWNlIERyaXZlciBJbnRlcmZhY2UgZm9yIFdQQ1QzMDEvTlBD
-VDUwMSwKKyAqIE51dm90b24gVFBNIEkyQyBEZXZpY2UgRHJpdmVyIEludGVyZmFjZSBmb3IgV1BD
-VDMwMS9OUENUNTAxL05QQ1Q2WFgsCiAgKiBiYXNlZCBvbiB0aGUgVENHIFRQTSBJbnRlcmZhY2Ug
-U3BlYyB2ZXJzaW9uIDEuMi4KICAqIFNwZWNpZmljYXRpb25zIGF0IHd3dy50cnVzdGVkY29tcHV0
-aW5nZ3JvdXAub3JnCiAgKgpAQCAtMTYzLDcgKzE2Myw3IEBAIHN0YXRpYyBpbnQgaTJjX251dm90
-b25fZ2V0X2J1cnN0Y291bnQoc3RydWN0IGkyY19jbGllbnQgKmNsaWVudCwKIH0KIAogLyoKLSAq
-IFdQQ1QzMDEvTlBDVDUwMSBTSU5UIyBzdXBwb3J0cyBvbmx5IGRhdGFBdmFpbAorICogV1BDVDMw
-MS9OUENUNTAxL05QQ1Q2WFggU0lOVCMgc3VwcG9ydHMgb25seSBkYXRhQXZhaWwKICAqIGFueSBj
-YWxsIHRvIHRoaXMgZnVuY3Rpb24gd2hpY2ggaXMgbm90IHdhaXRpbmcgZm9yIGRhdGFBdmFpbCB3
-aWxsCiAgKiBzZXQgcXVldWUgdG8gTlVMTCB0byBhdm9pZCB3YWl0aW5nIGZvciBpbnRlcnJ1cHQK
-ICAqLwpAQCAtNDU2LDcgKzQ1Niw3IEBAIHN0YXRpYyBib29sIGkyY19udXZvdG9uX3JlcV9jYW5j
-ZWxlZChzdHJ1Y3QgdHBtX2NoaXAgKmNoaXAsIHU4IHN0YXR1cykKIH0KIAogc3RhdGljIGNvbnN0
-IHN0cnVjdCB0cG1fY2xhc3Nfb3BzIHRwbV9pMmMgPSB7Ci0JLmZsYWdzID0gVFBNX09QU19BVVRP
-X1NUQVJUVVAsCisJLmZsYWdzID0gVFBNX09QU19BVVRPX1NUQVJUVVAgfCBUUE1fT1BTX1BST0JF
-X1RQTTIsCiAJLnN0YXR1cyA9IGkyY19udXZvdG9uX3JlYWRfc3RhdHVzLAogCS5yZWN2ID0gaTJj
-X251dm90b25fcmVjdiwKIAkuc2VuZCA9IGkyY19udXZvdG9uX3NlbmQsCkBAIC02MjMsNiArNjIz
-LDcgQEAgTU9EVUxFX0RFVklDRV9UQUJMRShpMmMsIGkyY19udXZvdG9uX2lkKTsKIHN0YXRpYyBj
-b25zdCBzdHJ1Y3Qgb2ZfZGV2aWNlX2lkIGkyY19udXZvdG9uX29mX21hdGNoW10gPSB7CiAJey5j
-b21wYXRpYmxlID0gIm51dm90b24sbnBjdDUwMSJ9LAogCXsuY29tcGF0aWJsZSA9ICJ3aW5ib25k
-LHdwY3QzMDEifSwKKwl7LmNvbXBhdGlibGUgPSAibnV2b3RvbixucGN0NjAxIn0sCiAJe30sCiB9
-OwogTU9EVUxFX0RFVklDRV9UQUJMRShvZiwgaTJjX251dm90b25fb2ZfbWF0Y2gpOwotLSAKMS45
-LjEKCgotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KV2hhdCBOZXRGbG93IEFuYWx5emVyIGNhbiBkbyBm
-b3IgeW91PyBNb25pdG9ycyBuZXR3b3JrIGJhbmR3aWR0aCBhbmQgdHJhZmZpYwpwYXR0ZXJucyBh
-dCBhbiBpbnRlcmZhY2UtbGV2ZWwuIFJldmVhbHMgd2hpY2ggdXNlcnMsIGFwcHMsIGFuZCBwcm90
-b2NvbHMgYXJlIApjb25zdW1pbmcgdGhlIG1vc3QgYmFuZHdpZHRoLiBQcm92aWRlcyBtdWx0aS12
-ZW5kb3Igc3VwcG9ydCBmb3IgTmV0RmxvdywgCkotRmxvdywgc0Zsb3cgYW5kIG90aGVyIGZsb3dz
-LiBNYWtlIGluZm9ybWVkIGRlY2lzaW9ucyB1c2luZyBjYXBhY2l0eSBwbGFubmluZwpyZXBvcnRz
-LiBodHRwOi8vc2RtLmxpbmsvem9ob21hbmFnZWVuZ2luZQpfX19fX19fX19fX19fX19fX19fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fXwp0cG1kZC1kZXZlbCBtYWlsaW5nIGxpc3QKdHBtZGQt
-ZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0
-L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
+On Fri, Jun 10, 2016 at 06:55:05PM -0700, Ed Swierk wrote:
+> Factor sending the TPM_GetCapability command and validating the result
+> from tpm_get_timeouts() into a new function. Return all errors to the
+> caller rather than swallowing them (e.g. when tpm_transmit_cmd()
+> returns nonzero).
+> 
+> Signed-off-by: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
+> ---
+>  drivers/char/tpm/tpm-interface.c | 96 ++++++++++++++++++++++------------------
+>  1 file changed, 52 insertions(+), 44 deletions(-)
+
+I'm sorry but just now that I started applying these patches this patch
+started to bother me.
+
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index cc1e5bc..4d1f62c 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -502,6 +502,52 @@ static int tpm_startup(struct tpm_chip *chip, __be16 startup_type)
+>  				"attempting to start the TPM");
+>  }
+>  
+> +static int tpm_get_cap_prop(struct tpm_chip *chip, __be32 type, int size,
+> +			    cap_t *cap, char *desc)
+> +{
+> +	struct tpm_cmd_t tpm_cmd;
+> +	ssize_t rc;
+> +
+> +	tpm_cmd.header.in = tpm_getcap_header;
+> +	tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
+> +	tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
+> +	tpm_cmd.params.getcap_in.subcap = type;
+> +	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, NULL);
+> +
+> +	if (rc == TPM_ERR_INVALID_POSTINIT) {
+> +		/* The TPM is not started, we are the first to talk to it.
+> +		   Execute a startup command. */
+> +		dev_info(chip->pdev, "Issuing TPM_STARTUP\n");
+> +		if (tpm_startup(chip, TPM_ST_CLEAR))
+> +			return rc;
+> +
+> +		tpm_cmd.header.in = tpm_getcap_header;
+> +		tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
+> +		tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
+> +		tpm_cmd.params.getcap_in.subcap = type;
+> +		rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE,
+> +				  NULL);
+> +	}
+
+I think inside tpm_get_timeouts() I'd rather something along the lines
+(with error handling and such details taken away):
+
+rc = tpm_getcap(...);
+
+if (rc == TPM_ERR_INVALID_POSTINIT) {
+	tpm_startup(...);
+	tpm_getca(...);
+}
+
+
+> +	if (rc) {
+> +		dev_err(chip->pdev,
+> +			"Error %zd reading %s\n", rc, desc);
+> +		return rc;
+> +	}
+> +
+> +	if (be32_to_cpu(tpm_cmd.header.out.return_code) != 0 ||
+> +	    be32_to_cpu(tpm_cmd.header.out.length)
+> +	    != sizeof(tpm_cmd.header.out) + sizeof(u32) + size * sizeof(u32)) {
+> +		dev_err(chip->pdev,
+> +			"Bad return code or length reading %s\n", desc);
+> +		return -EINVAL;
+> +	}
+
+This is bogus code. All this kind of checks should be contained in
+tpm_transmit_cmd(). This is easily "fixed" by moving tpm_getcap() :)
+
+/Jarkko
+
+------------------------------------------------------------------------------
+What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
+patterns at an interface-level. Reveals which users, apps, and protocols are 
+consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
+J-Flow, sFlow and other flows. Make informed decisions using capacity planning
+reports. http://sdm.link/zohomanageengine
