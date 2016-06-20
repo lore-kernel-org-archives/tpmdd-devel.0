@@ -1,14 +1,12 @@
 From: andrew zamansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
-Subject: [PATCH 4/4 v3] add tpm2 capability test flag to
-	tpm_tis driver
-Date: Mon, 20 Jun 2016 13:07:09 +0300
-Message-ID: <1466417229-16734-5-git-send-email-andrew.zamansky@nuvoton.com>
-References: <1466417229-16734-1-git-send-email-andrew.zamansky@nuvoton.com>
+Subject: [PATCH 0/4 v2] Add TPM 2.0 support to the Nuvoton i2c
+	driver
+Date: Mon, 20 Jun 2016 13:07:05 +0300
+Message-ID: <1466417229-16734-1-git-send-email-andrew.zamansky@nuvoton.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1466417229-16734-1-git-send-email-andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,24 +19,31 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, tpmdd-devel-5NWGOfr
 Cc: devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, azamansk-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, Dan.Morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, stimpy1-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Signed-off-by: Andrew Azmansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
----
- drivers/char/tpm/tpm_tis.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index 30aff5b..859fb8c 100644
---- a/drivers/char/tpm/tpm_tis.c
-+++ b/drivers/char/tpm/tpm_tis.c
-@@ -524,7 +524,7 @@ static bool tpm_tis_req_canceled(struct tpm_chip *chip, u8 status)
- }
- 
- static const struct tpm_class_ops tpm_tis = {
--	.flags = TPM_OPS_AUTO_STARTUP,
-+	.flags = TPM_OPS_AUTO_STARTUP | TPM_OPS_PROBE_TPM2,
- 	.status = tpm_tis_status,
- 	.recv = tpm_tis_recv,
- 	.send = tpm_tis_send,
+
+Jason Gunthorpe (1):
+  tpm: Factor out common startup code
+  tpm: Add TPM 2.0 support to the Nuvoton i2c driver (NPCT6xx family)
+
+andrew zamansky (3):
+  tpm: Add TPM 2.0 support to the Nuvoton i2c driver (NPCT6xx family)
+  move tpm auto startup functions
+  add tpm2 capability test flag to tpm_tis driver
+
+ .../devicetree/bindings/i2c/trivial-devices.txt    |  1 +
+ drivers/char/tpm/st33zp24/st33zp24.c               |  4 +-
+ drivers/char/tpm/tpm-chip.c                        | 83 ++++++++++++++++++++++
+ drivers/char/tpm/tpm-interface.c                   |  2 +
+ drivers/char/tpm/tpm.h                             |  2 -
+ drivers/char/tpm/tpm2-cmd.c                        |  2 +
+ drivers/char/tpm/tpm_crb.c                         | 10 +--
+ drivers/char/tpm/tpm_i2c_atmel.c                   |  6 +-
+ drivers/char/tpm/tpm_i2c_infineon.c                |  4 +-
+ drivers/char/tpm/tpm_i2c_nuvoton.c                 | 12 ++--
+ drivers/char/tpm/tpm_tis.c                         | 24 +------
+ include/linux/tpm.h                                |  6 ++
+ 12 files changed, 103 insertions(+), 53 deletions(-)
+
 -- 
 1.9.1
 
