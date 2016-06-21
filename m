@@ -1,8 +1,8 @@
 From: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v7 3/5] tpm: Clean up reading of timeout and
-	duration capabilities
-Date: Mon, 20 Jun 2016 18:54:00 -0700
-Message-ID: <1466474042-110773-4-git-send-email-eswierk@skyportsystems.com>
+Subject: [PATCH v7 5/5] tpm_tis: Increase ST19NP18 TPM command
+	duration to avoid chip lockup
+Date: Mon, 20 Jun 2016 18:54:02 -0700
+Message-ID: <1466474042-110773-6-git-send-email-eswierk@skyportsystems.com>
 References: <1465610107-87762-1-git-send-email-eswierk@skyportsystems.com>
 	<1466474042-110773-1-git-send-email-eswierk@skyportsystems.com>
 Mime-Version: 1.0
@@ -21,135 +21,60 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Call tpm_getcap() from tpm_get_timeouts() to eliminate redundant
-code. Return all errors to the caller rather than swallowing them
-(e.g. when tpm_transmit_cmd() returns nonzero).
+The STMicro ST19NP18-TPM sometimes takes much longer to execute
+commands than it reports in its capabilities. For example, command 186
+(TPM_FlushSpecific) has been observed to take 14560 msec to complete,
+far longer than the 3000 msec limit for "short" commands reported by
+the chip. The behavior has also been seen with command 101
+(TPM_GetCapability).
+
+Worse, when the tpm_tis driver attempts to cancel the current command
+(by writing commandReady = 1 to TPM_STS_x), the chip locks up
+completely, returning all-1s from all memory-mapped register
+reads. The lockup can be cleared only by resetting the system.
+
+The occurrence of this excessive command duration depends on the
+sequence of commands preceding it. One sequence is creating at least 2
+new keys via TPM_CreateWrapKey, then letting the TPM idle for at least
+30 seconds, then loading a key via TPM_LoadKey2. The next
+TPM_FlushSpecific occasionally takes tens of seconds to
+complete. Another sequence is creating many keys in a row without
+pause. The TPM_CreateWrapKey operation gets much slower after the
+first few iterations, as one would expect when the pool of precomputed
+keys is exhausted. Then after a 35-second pause, the same TPM_LoadKey2
+followed by TPM_FlushSpecific sequence triggers the behavior.
+
+Our working theory is that this older TPM sometimes pauses to
+precompute keys, which modern chips implement as a background
+process. Without access to the chip's implementation details it's
+impossible to know whether any commands are immune to being blocked by
+this process. So it seems safest to ignore the chip's reported command
+durations, and use a value much higher than any observed duration,
+like 180 sec (which is the duration this chip reports for "long"
+commands).
 
 Signed-off-by: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
 ---
- drivers/char/tpm/tpm-interface.c | 74 +++++++++++++++-------------------------
- 1 file changed, 27 insertions(+), 47 deletions(-)
+ drivers/char/tpm/tpm_tis.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index cc1e5bc..73c3ee0 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -461,9 +461,19 @@ ssize_t tpm_getcap(struct device *dev, __be32 subcap_id, cap_t *cap,
- 		tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
- 		tpm_cmd.params.getcap_in.subcap = subcap_id;
+diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+index caf7278..8355b45 100644
+--- a/drivers/char/tpm/tpm_tis.c
++++ b/drivers/char/tpm/tpm_tis.c
+@@ -485,6 +485,12 @@ static void tpm_tis_update_timeouts(struct tpm_chip *chip)
+ 		chip->vendor.timeout_d = msecs_to_jiffies(TIS_SHORT_TIMEOUT);
+ 		chip->vendor.timeout_adjusted = true;
+ 		break;
++	case 0x0000104a: /* STMicro ST19NP18-TPM */
++		chip->vendor.duration[TPM_SHORT] = 180 * HZ;
++		chip->vendor.duration[TPM_MEDIUM] = 180 * HZ;
++		chip->vendor.duration[TPM_LONG] = 180 * HZ;
++		chip->vendor.duration_adjusted = true;
++		break;
  	}
-+
- 	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, desc);
-+
-+	if (!rc &&
-+	    ((subcap_id == TPM_CAP_PROP_TIS_TIMEOUT &&
-+	      be32_to_cpu(tpm_cmd.header.out.length) != TPM_HEADER_SIZE + 5) ||
-+	     (subcap_id == TPM_CAP_PROP_TIS_DURATION &&
-+	      be32_to_cpu(tpm_cmd.header.out.length) != TPM_HEADER_SIZE + 4)))
-+		rc = -EINVAL;
-+
- 	if (!rc)
- 		*cap = tpm_cmd.params.getcap_out.cap;
-+
- 	return rc;
  }
  
-@@ -504,48 +514,30 @@ static int tpm_startup(struct tpm_chip *chip, __be16 startup_type)
- 
- int tpm_get_timeouts(struct tpm_chip *chip)
- {
--	struct tpm_cmd_t tpm_cmd;
-+	cap_t cap;
- 	unsigned long new_timeout[4];
- 	unsigned long old_timeout[4];
--	struct duration_t *duration_cap;
- 	ssize_t rc;
- 
--	tpm_cmd.header.in = tpm_getcap_header;
--	tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
--	tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
--	tpm_cmd.params.getcap_in.subcap = TPM_CAP_PROP_TIS_TIMEOUT;
--	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, NULL);
--
-+	rc = tpm_getcap(chip->pdev, TPM_CAP_PROP_TIS_TIMEOUT, &cap,
-+			"attempting to determine the timeouts");
- 	if (rc == TPM_ERR_INVALID_POSTINIT) {
- 		/* The TPM is not started, we are the first to talk to it.
- 		   Execute a startup command. */
--		dev_info(chip->pdev, "Issuing TPM_STARTUP");
-+		dev_info(chip->pdev, "Issuing TPM_STARTUP\n");
- 		if (tpm_startup(chip, TPM_ST_CLEAR))
- 			return rc;
- 
--		tpm_cmd.header.in = tpm_getcap_header;
--		tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
--		tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
--		tpm_cmd.params.getcap_in.subcap = TPM_CAP_PROP_TIS_TIMEOUT;
--		rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE,
--				  NULL);
--	}
--	if (rc) {
--		dev_err(chip->pdev,
--			"A TPM error (%zd) occurred attempting to determine the timeouts\n",
--			rc);
--		goto duration;
-+		rc = tpm_getcap(chip->pdev, TPM_CAP_PROP_TIS_TIMEOUT, &cap,
-+				"attempting to determine the timeouts");
- 	}
-+	if (rc)
-+		return rc;
- 
--	if (be32_to_cpu(tpm_cmd.header.out.return_code) != 0 ||
--	    be32_to_cpu(tpm_cmd.header.out.length)
--	    != sizeof(tpm_cmd.header.out) + sizeof(u32) + 4 * sizeof(u32))
--		return -EINVAL;
--
--	old_timeout[0] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.a);
--	old_timeout[1] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.b);
--	old_timeout[2] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.c);
--	old_timeout[3] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.d);
-+	old_timeout[0] = be32_to_cpu(cap.timeout.a);
-+	old_timeout[1] = be32_to_cpu(cap.timeout.b);
-+	old_timeout[2] = be32_to_cpu(cap.timeout.c);
-+	old_timeout[3] = be32_to_cpu(cap.timeout.d);
- 	memcpy(new_timeout, old_timeout, sizeof(new_timeout));
- 
- 	/*
-@@ -583,29 +575,17 @@ int tpm_get_timeouts(struct tpm_chip *chip)
- 	chip->vendor.timeout_c = usecs_to_jiffies(new_timeout[2]);
- 	chip->vendor.timeout_d = usecs_to_jiffies(new_timeout[3]);
- 
--duration:
--	tpm_cmd.header.in = tpm_getcap_header;
--	tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
--	tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
--	tpm_cmd.params.getcap_in.subcap = TPM_CAP_PROP_TIS_DURATION;
--
--	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE,
--			      "attempting to determine the durations");
-+	rc = tpm_getcap(chip->pdev, TPM_CAP_PROP_TIS_DURATION, &cap,
-+			"attempting to determine the durations");
- 	if (rc)
- 		return rc;
- 
--	if (be32_to_cpu(tpm_cmd.header.out.return_code) != 0 ||
--	    be32_to_cpu(tpm_cmd.header.out.length)
--	    != sizeof(tpm_cmd.header.out) + sizeof(u32) + 3 * sizeof(u32))
--		return -EINVAL;
--
--	duration_cap = &tpm_cmd.params.getcap_out.cap.duration;
- 	chip->vendor.duration[TPM_SHORT] =
--	    usecs_to_jiffies(be32_to_cpu(duration_cap->tpm_short));
-+		usecs_to_jiffies(be32_to_cpu(cap.duration.tpm_short));
- 	chip->vendor.duration[TPM_MEDIUM] =
--	    usecs_to_jiffies(be32_to_cpu(duration_cap->tpm_medium));
-+		usecs_to_jiffies(be32_to_cpu(cap.duration.tpm_medium));
- 	chip->vendor.duration[TPM_LONG] =
--	    usecs_to_jiffies(be32_to_cpu(duration_cap->tpm_long));
-+		usecs_to_jiffies(be32_to_cpu(cap.duration.tpm_long));
- 
- 	/* The Broadcom BCM0102 chipset in a Dell Latitude D820 gets the above
- 	 * value wrong and apparently reports msecs rather than usecs. So we
 -- 
 1.9.1
 
