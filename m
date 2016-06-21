@@ -1,8 +1,8 @@
 From: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v7 2/5] tpm: Add optional logging of TPM
-	command durations
-Date: Mon, 20 Jun 2016 18:53:59 -0700
-Message-ID: <1466474042-110773-3-git-send-email-eswierk@skyportsystems.com>
+Subject: [PATCH v7 3/5] tpm: Clean up reading of timeout and
+	duration capabilities
+Date: Mon, 20 Jun 2016 18:54:00 -0700
+Message-ID: <1466474042-110773-4-git-send-email-eswierk@skyportsystems.com>
 References: <1465610107-87762-1-git-send-email-eswierk@skyportsystems.com>
 	<1466474042-110773-1-git-send-email-eswierk@skyportsystems.com>
 Mime-Version: 1.0
@@ -21,77 +21,135 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Some TPMs violate their own advertised command durations. This is much
-easier to debug with data about how long each command actually takes
-to complete. Add debug messages that can be enabled by running
-
-  echo -n 'module tpm +p' >/sys/kernel/debug/dynamic_debug/control
-
-on a kernel configured with DYNAMIC_DEBUG=y.
+Call tpm_getcap() from tpm_get_timeouts() to eliminate redundant
+code. Return all errors to the caller rather than swallowing them
+(e.g. when tpm_transmit_cmd() returns nonzero).
 
 Signed-off-by: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm-interface.c | 17 +++++++++++++----
- 1 file changed, 13 insertions(+), 4 deletions(-)
+ drivers/char/tpm/tpm-interface.c | 74 +++++++++++++++-------------------------
+ 1 file changed, 27 insertions(+), 47 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index c50637d..cc1e5bc 100644
+index cc1e5bc..73c3ee0 100644
 --- a/drivers/char/tpm/tpm-interface.c
 +++ b/drivers/char/tpm/tpm-interface.c
-@@ -333,13 +333,14 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
+@@ -461,9 +461,19 @@ ssize_t tpm_getcap(struct device *dev, __be32 subcap_id, cap_t *cap,
+ 		tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
+ 		tpm_cmd.params.getcap_in.subcap = subcap_id;
+ 	}
++
+ 	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, desc);
++
++	if (!rc &&
++	    ((subcap_id == TPM_CAP_PROP_TIS_TIMEOUT &&
++	      be32_to_cpu(tpm_cmd.header.out.length) != TPM_HEADER_SIZE + 5) ||
++	     (subcap_id == TPM_CAP_PROP_TIS_DURATION &&
++	      be32_to_cpu(tpm_cmd.header.out.length) != TPM_HEADER_SIZE + 4)))
++		rc = -EINVAL;
++
+ 	if (!rc)
+ 		*cap = tpm_cmd.params.getcap_out.cap;
++
+ 	return rc;
+ }
+ 
+@@ -504,48 +514,30 @@ static int tpm_startup(struct tpm_chip *chip, __be16 startup_type)
+ 
+ int tpm_get_timeouts(struct tpm_chip *chip)
  {
+-	struct tpm_cmd_t tpm_cmd;
++	cap_t cap;
+ 	unsigned long new_timeout[4];
+ 	unsigned long old_timeout[4];
+-	struct duration_t *duration_cap;
  	ssize_t rc;
- 	u32 count, ordinal;
--	unsigned long stop;
-+	unsigned long start, stop;
  
- 	if (bufsiz > TPM_BUFSIZE)
- 		bufsiz = TPM_BUFSIZE;
+-	tpm_cmd.header.in = tpm_getcap_header;
+-	tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
+-	tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
+-	tpm_cmd.params.getcap_in.subcap = TPM_CAP_PROP_TIS_TIMEOUT;
+-	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, NULL);
+-
++	rc = tpm_getcap(chip->pdev, TPM_CAP_PROP_TIS_TIMEOUT, &cap,
++			"attempting to determine the timeouts");
+ 	if (rc == TPM_ERR_INVALID_POSTINIT) {
+ 		/* The TPM is not started, we are the first to talk to it.
+ 		   Execute a startup command. */
+-		dev_info(chip->pdev, "Issuing TPM_STARTUP");
++		dev_info(chip->pdev, "Issuing TPM_STARTUP\n");
+ 		if (tpm_startup(chip, TPM_ST_CLEAR))
+ 			return rc;
  
- 	count = be32_to_cpu(*((__be32 *) (buf + 2)));
- 	ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
-+	dev_dbg(chip->pdev, "starting command %d count %d\n", ordinal, count);
- 	if (count == 0)
- 		return -ENODATA;
- 	if (count > bufsiz) {
-@@ -360,18 +361,24 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
- 	if (chip->vendor.irq)
- 		goto out_recv;
+-		tpm_cmd.header.in = tpm_getcap_header;
+-		tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
+-		tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
+-		tpm_cmd.params.getcap_in.subcap = TPM_CAP_PROP_TIS_TIMEOUT;
+-		rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE,
+-				  NULL);
+-	}
+-	if (rc) {
+-		dev_err(chip->pdev,
+-			"A TPM error (%zd) occurred attempting to determine the timeouts\n",
+-			rc);
+-		goto duration;
++		rc = tpm_getcap(chip->pdev, TPM_CAP_PROP_TIS_TIMEOUT, &cap,
++				"attempting to determine the timeouts");
+ 	}
++	if (rc)
++		return rc;
  
-+	start = jiffies;
- 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
--		stop = jiffies + tpm2_calc_ordinal_duration(chip, ordinal);
-+		stop = start + tpm2_calc_ordinal_duration(chip, ordinal);
- 	else
--		stop = jiffies + tpm_calc_ordinal_duration(chip, ordinal);
-+		stop = start + tpm_calc_ordinal_duration(chip, ordinal);
- 	do {
- 		u8 status = chip->ops->status(chip);
- 		if ((status & chip->ops->req_complete_mask) ==
--		    chip->ops->req_complete_val)
-+		    chip->ops->req_complete_val) {
-+			dev_dbg(chip->pdev, "completed command %d in %d ms\n",
-+				ordinal, jiffies_to_msecs(jiffies - start));
- 			goto out_recv;
-+		}
+-	if (be32_to_cpu(tpm_cmd.header.out.return_code) != 0 ||
+-	    be32_to_cpu(tpm_cmd.header.out.length)
+-	    != sizeof(tpm_cmd.header.out) + sizeof(u32) + 4 * sizeof(u32))
+-		return -EINVAL;
+-
+-	old_timeout[0] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.a);
+-	old_timeout[1] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.b);
+-	old_timeout[2] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.c);
+-	old_timeout[3] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.d);
++	old_timeout[0] = be32_to_cpu(cap.timeout.a);
++	old_timeout[1] = be32_to_cpu(cap.timeout.b);
++	old_timeout[2] = be32_to_cpu(cap.timeout.c);
++	old_timeout[3] = be32_to_cpu(cap.timeout.d);
+ 	memcpy(new_timeout, old_timeout, sizeof(new_timeout));
  
- 		if (chip->ops->req_canceled(chip, status)) {
- 			dev_err(chip->pdev, "Operation Canceled\n");
-+			dev_dbg(chip->pdev, "canceled command %d after %d ms\n",
-+				ordinal, jiffies_to_msecs(jiffies - start));
- 			rc = -ECANCELED;
- 			goto out;
- 		}
-@@ -382,6 +389,8 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
+ 	/*
+@@ -583,29 +575,17 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+ 	chip->vendor.timeout_c = usecs_to_jiffies(new_timeout[2]);
+ 	chip->vendor.timeout_d = usecs_to_jiffies(new_timeout[3]);
  
- 	chip->ops->cancel(chip);
- 	dev_err(chip->pdev, "Operation Timed out\n");
-+	dev_dbg(chip->pdev, "command %d timed out after %d ms\n", ordinal,
-+		jiffies_to_msecs(jiffies - start));
- 	rc = -ETIME;
- 	goto out;
+-duration:
+-	tpm_cmd.header.in = tpm_getcap_header;
+-	tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
+-	tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
+-	tpm_cmd.params.getcap_in.subcap = TPM_CAP_PROP_TIS_DURATION;
+-
+-	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE,
+-			      "attempting to determine the durations");
++	rc = tpm_getcap(chip->pdev, TPM_CAP_PROP_TIS_DURATION, &cap,
++			"attempting to determine the durations");
+ 	if (rc)
+ 		return rc;
  
+-	if (be32_to_cpu(tpm_cmd.header.out.return_code) != 0 ||
+-	    be32_to_cpu(tpm_cmd.header.out.length)
+-	    != sizeof(tpm_cmd.header.out) + sizeof(u32) + 3 * sizeof(u32))
+-		return -EINVAL;
+-
+-	duration_cap = &tpm_cmd.params.getcap_out.cap.duration;
+ 	chip->vendor.duration[TPM_SHORT] =
+-	    usecs_to_jiffies(be32_to_cpu(duration_cap->tpm_short));
++		usecs_to_jiffies(be32_to_cpu(cap.duration.tpm_short));
+ 	chip->vendor.duration[TPM_MEDIUM] =
+-	    usecs_to_jiffies(be32_to_cpu(duration_cap->tpm_medium));
++		usecs_to_jiffies(be32_to_cpu(cap.duration.tpm_medium));
+ 	chip->vendor.duration[TPM_LONG] =
+-	    usecs_to_jiffies(be32_to_cpu(duration_cap->tpm_long));
++		usecs_to_jiffies(be32_to_cpu(cap.duration.tpm_long));
+ 
+ 	/* The Broadcom BCM0102 chipset in a Dell Latitude D820 gets the above
+ 	 * value wrong and apparently reports msecs rather than usecs. So we
 -- 
 1.9.1
 
