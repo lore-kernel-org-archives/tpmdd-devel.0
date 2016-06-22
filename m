@@ -1,16 +1,14 @@
 From: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v7 3/5] tpm: Clean up reading of timeout
-	and duration capabilities
-Date: Tue, 21 Jun 2016 17:21:27 -0700
-Message-ID: <CAO_EM_kFH+qO9P0b6dPOvYEGyPTq=3iGR8jVoDChtr6bB51Hzg@mail.gmail.com>
-References: <1465610107-87762-1-git-send-email-eswierk@skyportsystems.com>
-	<1466474042-110773-1-git-send-email-eswierk@skyportsystems.com>
-	<1466474042-110773-4-git-send-email-eswierk@skyportsystems.com>
+Subject: [PATCH v8 1/5] tpm_tis: Improve reporting of IO errors
+Date: Tue, 21 Jun 2016 18:10:27 -0700
+Message-ID: <1466557831-113440-2-git-send-email-eswierk@skyportsystems.com>
+References: <1466474042-110773-1-git-send-email-eswierk@skyportsystems.com>
+	<1466557831-113440-1-git-send-email-eswierk@skyportsystems.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1466474042-110773-4-git-send-email-eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1466557831-113440-1-git-send-email-eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,29 +20,61 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jun 20, 2016 at 6:54 PM, Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org> wrote:
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -461,9 +461,19 @@ ssize_t tpm_getcap(struct device *dev, __be32 subcap_id, cap_t *cap,
->                 tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
->                 tpm_cmd.params.getcap_in.subcap = subcap_id;
->         }
-> +
->         rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, desc);
-> +
-> +       if (!rc &&
-> +           ((subcap_id == TPM_CAP_PROP_TIS_TIMEOUT &&
-> +             be32_to_cpu(tpm_cmd.header.out.length) != TPM_HEADER_SIZE + 5) ||
-> +            (subcap_id == TPM_CAP_PROP_TIS_DURATION &&
-> +             be32_to_cpu(tpm_cmd.header.out.length) != TPM_HEADER_SIZE + 4)))
-> +               rc = -EINVAL;
-> +
+Mysterious TPM behavior can be difficult to track down through all the
+layers of software. Add error messages for conditions that should
+never happen. Also include the manufacturer ID along with other chip
+data printed during init.
 
-Woops, a totally innocuous last-minute (post-testing) cleanup broke
-this code; should be TPM_HEADER_SIZE + 20 and + 16. I'll push out v8
-as soon as I redo my tests.
+Signed-off-by: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+---
+ drivers/char/tpm/tpm_tis.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
 
---Ed
+diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+index 65f7eec..088fa86 100644
+--- a/drivers/char/tpm/tpm_tis.c
++++ b/drivers/char/tpm/tpm_tis.c
+@@ -299,6 +299,8 @@ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+ 
+ 	expected = be32_to_cpu(*(__be32 *) (buf + 2));
+ 	if (expected > count) {
++		dev_err(chip->pdev, "Response too long (wanted %zd, got %d)\n",
++			count, expected);
+ 		size = -EIO;
+ 		goto out;
+ 	}
+@@ -366,6 +368,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ 				  &chip->vendor.int_queue, false);
+ 		status = tpm_tis_status(chip);
+ 		if (!itpm && (status & TPM_STS_DATA_EXPECT) == 0) {
++			dev_err(chip->pdev, "Chip not accepting %zd bytes\n",
++				len - count);
+ 			rc = -EIO;
+ 			goto out_err;
+ 		}
+@@ -378,6 +382,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ 			  &chip->vendor.int_queue, false);
+ 	status = tpm_tis_status(chip);
+ 	if ((status & TPM_STS_DATA_EXPECT) != 0) {
++		dev_err(chip->pdev, "Chip not accepting last byte\n");
+ 		rc = -EIO;
+ 		goto out_err;
+ 	}
+@@ -689,8 +694,9 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+ 	vendor = ioread32(chip->vendor.iobase + TPM_DID_VID(0));
+ 	chip->vendor.manufacturer_id = vendor;
+ 
+-	dev_info(dev, "%s TPM (device-id 0x%X, rev-id %d)\n",
++	dev_info(dev, "%s TPM (manufacturer-id 0x%X, device-id 0x%X, rev-id %d)\n",
+ 		 (chip->flags & TPM_CHIP_FLAG_TPM2) ? "2.0" : "1.2",
++		 chip->vendor.manufacturer_id,
+ 		 vendor >> 16, ioread8(chip->vendor.iobase + TPM_RID(0)));
+ 
+ 	if (!itpm) {
+-- 
+1.9.1
+
 
 ------------------------------------------------------------------------------
 Attend Shape: An AT&T Tech Expo July 15-16. Meet us at AT&T Park in San
