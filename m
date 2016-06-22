@@ -1,18 +1,17 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v7 3/5] tpm: Clean up reading of timeout
- and duration capabilities
-Date: Wed, 22 Jun 2016 13:46:12 +0300
-Message-ID: <20160622104612.GA24754@intel.com>
-References: <1465610107-87762-1-git-send-email-eswierk@skyportsystems.com>
-	<1466474042-110773-1-git-send-email-eswierk@skyportsystems.com>
-	<1466474042-110773-4-git-send-email-eswierk@skyportsystems.com>
-	<CAO_EM_kFH+qO9P0b6dPOvYEGyPTq=3iGR8jVoDChtr6bB51Hzg@mail.gmail.com>
+Subject: Re: [PATCH 1/2] tpm: Factor out common startup code
+Date: Wed, 22 Jun 2016 15:22:28 +0300
+Message-ID: <20160622122227.GA27577@intel.com>
+References: <1466324401-5054-1-git-send-email-andrew.zamansky@nuvoton.com>
+	<1466324401-5054-2-git-send-email-andrew.zamansky@nuvoton.com>
+	<20160619123923.GA31053@intel.com>
+	<20160620210757.GB11746@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <CAO_EM_kFH+qO9P0b6dPOvYEGyPTq=3iGR8jVoDChtr6bB51Hzg-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
+In-Reply-To: <20160620210757.GB11746-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,42 +20,64 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, andrew zamansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, azamansk-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, Dan.Morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, stimpy1-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jun 21, 2016 at 05:21:27PM -0700, Ed Swierk wrote:
-> On Mon, Jun 20, 2016 at 6:54 PM, Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org> wrote:
-> > --- a/drivers/char/tpm/tpm-interface.c
-> > +++ b/drivers/char/tpm/tpm-interface.c
-> > @@ -461,9 +461,19 @@ ssize_t tpm_getcap(struct device *dev, __be32 subcap_id, cap_t *cap,
-> >                 tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
-> >                 tpm_cmd.params.getcap_in.subcap = subcap_id;
-> >         }
-> > +
-> >         rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, desc);
-> > +
-> > +       if (!rc &&
-> > +           ((subcap_id == TPM_CAP_PROP_TIS_TIMEOUT &&
-> > +             be32_to_cpu(tpm_cmd.header.out.length) != TPM_HEADER_SIZE + 5) ||
-> > +            (subcap_id == TPM_CAP_PROP_TIS_DURATION &&
-> > +             be32_to_cpu(tpm_cmd.header.out.length) != TPM_HEADER_SIZE + 4)))
-> > +               rc = -EINVAL;
-> > +
+On Mon, Jun 20, 2016 at 03:07:57PM -0600, Jason Gunthorpe wrote:
+> On Sun, Jun 19, 2016 at 02:39:24PM +0200, Jarkko Sakkinen wrote:
+> > > Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> > > Tested-by: Andrew Zamansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+> > 
+> > Couldn't tpm?_auto_startup() be static functions inside tpm-chip.c?
 > 
-> Woops, a totally innocuous last-minute (post-testing) cleanup broke
-> this code; should be TPM_HEADER_SIZE + 20 and + 16. I'll push out v8
-> as soon as I redo my tests.
+> Why? tpm-chip is for chip functions and tpm-interface is for command
+> issuing functions, the startup command sequencors seem appropriately
+> placed...
+> 
+> These are still module private functions.
 
-OK, that's cool. Haven't yet got into testing it anyway.
+Hmm.. interesting point and I actually realized that this related to
+work that I'm doing right now.
 
-1. This is too late for 4.8 release.
-2. I'm on four week leave starting from week after next week but before
-   I go to my leave I will apply these commits to my master branch so that
-   they get exposure.
-3. I try to do testing for my part before going to the leave.
+I'm working on a patches to move TPM 1.x protocol level code to
+tpm1-cmd.c. We want to do so that one can conditionally compile out TPM
+1.x when it is not needed. Another reason is that, I would not like to
+put TPM 1.x sealing code to tpm-interface.c.
 
-> --Ed
+Given that I think it is cool to keep these in tpm-interface.c in this
+in tpm-interface.c.
+
+Summary: lets keep it in a way that these functions are in
+tpm-interface.c for now.
+
+> > > +enum TPM_OPS_FLAGS {
+> > > +	TPM_OPS_PROBE_TPM2 = BIT(0),
+> > 
+> > I see two alternatives here:
+> > 
+> > 1. Make this work for tpm_tis.c if it is doable.
+> > 2. Remove this flag and call tpm2_probe() inside tpm_i2c_nuvoton.c.
+> > 
+> > If this flag works only for a single driver, it does not bring any value.
+> 
+> We already have two drivers that auto probe, you don't think there
+> will be more? The idea is to try and remove these low level entry
+> points so drivers are simpler.
+> 
+> TIS doesn't use it because it needs to get things setup in advance for
+> interrupt auto-probing, which is a very TIS unique thing.
+> 
+> Alternatively we can drop the auto-probe from nuvoton and force it to
+> rely on compatible string matching to enter TPM2 mode.
+
+The patch set used TPM2_OPS_PROBE_TPM2 only for nuvoton driver. The more
+recent one used it incorrectly with tpm_tis.
+
+> Jason
+
+PS. Would you have time to look at https://lkml.org/lkml/2016/6/17/887
+and give your feedback? :)
 
 /Jarkko
 
