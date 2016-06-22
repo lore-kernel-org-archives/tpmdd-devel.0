@@ -1,15 +1,14 @@
 From: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v8 5/5] tpm_tis: Increase ST19NP18 TPM command
-	duration to avoid chip lockup
-Date: Tue, 21 Jun 2016 18:10:31 -0700
-Message-ID: <1466557831-113440-6-git-send-email-eswierk@skyportsystems.com>
+Subject: [PATCH v8 0/5] tpm: Command duration logging and
+	chip-specific override
+Date: Tue, 21 Jun 2016 18:10:26 -0700
+Message-ID: <1466557831-113440-1-git-send-email-eswierk@skyportsystems.com>
 References: <1466474042-110773-1-git-send-email-eswierk@skyportsystems.com>
-	<1466557831-113440-1-git-send-email-eswierk@skyportsystems.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1466557831-113440-1-git-send-email-eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1466474042-110773-1-git-send-email-eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,60 +20,37 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The STMicro ST19NP18-TPM sometimes takes much longer to execute
-commands than it reports in its capabilities. For example, command 186
-(TPM_FlushSpecific) has been observed to take 14560 msec to complete,
-far longer than the 3000 msec limit for "short" commands reported by
-the chip. The behavior has also been seen with command 101
-(TPM_GetCapability).
+v8: Fix v7 goof-up in tpm_getcap().
 
-Worse, when the tpm_tis driver attempts to cancel the current command
-(by writing commandReady = 1 to TPM_STS_x), the chip locks up
-completely, returning all-1s from all memory-mapped register
-reads. The lockup can be cleared only by resetting the system.
+v7: Use tpm_getcap() instead of a redundant new function.
 
-The occurrence of this excessive command duration depends on the
-sequence of commands preceding it. One sequence is creating at least 2
-new keys via TPM_CreateWrapKey, then letting the TPM idle for at least
-30 seconds, then loading a key via TPM_LoadKey2. The next
-TPM_FlushSpecific occasionally takes tens of seconds to
-complete. Another sequence is creating many keys in a row without
-pause. The TPM_CreateWrapKey operation gets much slower after the
-first few iterations, as one would expect when the pool of precomputed
-keys is exhausted. Then after a 35-second pause, the same TPM_LoadKey2
-followed by TPM_FlushSpecific sequence triggers the behavior.
+v6: Split tpm_get_cap_prop() out of tpm_get_timeouts(); always return
+error on TPM command failure.
 
-Our working theory is that this older TPM sometimes pauses to
-precompute keys, which modern chips implement as a background
-process. Without access to the chip's implementation details it's
-impossible to know whether any commands are immune to being blocked by
-this process. So it seems safest to ignore the chip's reported command
-durations, and use a value much higher than any observed duration,
-like 180 sec (which is the duration this chip reports for "long"
-commands).
+v5: Use msecs_to_jiffies() instead of * HZ / 1000.
 
-Signed-off-by: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
----
- drivers/char/tpm/tpm_tis.c | 6 ++++++
- 1 file changed, 6 insertions(+)
+v4: Rework tpm_get_timeouts() to allow overriding both timeouts and
+durations via a single callback.
 
-diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index caf7278..8355b45 100644
---- a/drivers/char/tpm/tpm_tis.c
-+++ b/drivers/char/tpm/tpm_tis.c
-@@ -485,6 +485,12 @@ static void tpm_tis_update_timeouts(struct tpm_chip *chip)
- 		chip->vendor.timeout_d = msecs_to_jiffies(TIS_SHORT_TIMEOUT);
- 		chip->vendor.timeout_adjusted = true;
- 		break;
-+	case 0x0000104a: /* STMicro ST19NP18-TPM */
-+		chip->vendor.duration[TPM_SHORT] = 180 * HZ;
-+		chip->vendor.duration[TPM_MEDIUM] = 180 * HZ;
-+		chip->vendor.duration[TPM_LONG] = 180 * HZ;
-+		chip->vendor.duration_adjusted = true;
-+		break;
- 	}
- }
- 
+This series
+- improves TPM command error reporting
+- adds optional logging of TPM command durations
+- allows chip-specific override of command durations as well as protocol
+  timeouts
+- overrides ST19NP18 TPM command duration to avoid lockups
+
+Ed Swierk (5):
+  tpm_tis: Improve reporting of IO errors
+  tpm: Add optional logging of TPM command durations
+  tpm: Clean up reading of timeout and duration capabilities
+  tpm: Allow TPM chip drivers to override reported command durations
+  tpm_tis: Increase ST19NP18 TPM command duration to avoid chip lockup
+
+ drivers/char/tpm/tpm-interface.c | 212 ++++++++++++++++++++-------------------
+ drivers/char/tpm/tpm_tis.c       |  49 ++++-----
+ include/linux/tpm.h              |   3 +-
+ 3 files changed, 130 insertions(+), 134 deletions(-)
+
 -- 
 1.9.1
 
