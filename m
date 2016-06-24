@@ -1,52 +1,55 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v8 1/5] tpm_tis: Improve reporting of IO errors
-Date: Fri, 24 Jun 2016 23:23:03 +0300
-Message-ID: <20160624202303.GC8399@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v8 2/5] tpm: Add optional logging of TPM
+	command durations
+Date: Fri, 24 Jun 2016 23:24:03 +0300
+Message-ID: <20160624202403.GD8399@intel.com>
 References: <1466474042-110773-1-git-send-email-eswierk@skyportsystems.com>
- <1466557831-113440-1-git-send-email-eswierk@skyportsystems.com>
- <1466557831-113440-2-git-send-email-eswierk@skyportsystems.com>
- <20160624182515.GC14506@obsidianresearch.com>
- <20160624202131.GB8399@intel.com>
+	<1466557831-113440-1-git-send-email-eswierk@skyportsystems.com>
+	<1466557831-113440-3-git-send-email-eswierk@skyportsystems.com>
+	<20160624182727.GD14506@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160624202131.GB8399@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Ed Swierk <eswierk@skyportsystems.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, stefanb@us.ibm.com
+In-Reply-To: <20160624182727.GD14506-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jun 24, 2016 at 11:21:31PM +0300, Jarkko Sakkinen wrote:
-> Hi Jason,
+On Fri, Jun 24, 2016 at 12:27:27PM -0600, Jason Gunthorpe wrote:
+> On Tue, Jun 21, 2016 at 06:10:28PM -0700, Ed Swierk wrote:
 > 
-> On Fri, Jun 24, 2016 at 12:25:15PM -0600, Jason Gunthorpe wrote:
-> > >  	expected = be32_to_cpu(*(__be32 *) (buf + 2));
-> > >  	if (expected > count) {
-> > > +		dev_err(chip->pdev, "Response too long (wanted %zd, got %d)\n",
-> > > +			count, expected);
-> > 
-> > This all needs to be rebased on Jarkko's tree I guess, chip->pdev is
-> > gone now.
-> > 
-> > http://git.infradead.org/users/jjs/linux-tpmdd.git/shortlog/refs/heads/master
-> > 
-> > Jarkko, did you miss a pull request for 4.7 or something? This is
-> > 4 month old stuff???
+> >  		if (chip->ops->req_canceled(chip, status)) {
+> >  			dev_err(chip->pdev, "Operation Canceled\n");
+> > +			dev_dbg(chip->pdev, "canceled command %d after %d ms\n",
+> > +				ordinal, jiffies_to_msecs(jiffies -
+> >  			start));
 > 
-> Hmm... Do you mean by 4 month old stuff the stuff that is in mainline
-> and not in my master branch?
+> [..]
 > 
-> I'm not sure what happened with 4.7. I merged the changes for in about
-> 4.6-rc5. There was one issue that I fixed that Stephen reported.
+> >  	chip->ops->cancel(chip);
+> >  	dev_err(chip->pdev, "Operation Timed out\n");
+> > +	dev_dbg(chip->pdev, "command %d timed out after %d ms\n", ordinal,
+> > +		jiffies_to_msecs(jiffies - start));
 > 
-> At the moment linux-next seems contain the stuff that I have in my
-> next.
+> No sense in logging twice, just enhance the existingerror message.
 
-Ed:
-
-I was planning to applying these patches to my master next week and run
-tests on them. If they do not apply it would be good if you could rebase
-your series to apply to my master.
+Absolutely agree. Jason, thanks for pointing this out!
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Attend Shape: An AT&T Tech Expo July 15-16. Meet us at AT&T Park in San
+Francisco, CA to explore cutting-edge tech and listen to tech luminaries
+present their vision of the future. This family event has something for
+everyone, including kids. Get more information and register today.
+http://sdm.link/attshape
