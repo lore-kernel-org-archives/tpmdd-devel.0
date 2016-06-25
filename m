@@ -1,8 +1,7 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH v2 1/6] tpm: remove unnecessary externs from
-	tpm.h
-Date: Sun, 26 Jun 2016 00:44:46 +0300
-Message-ID: <1466891093-27766-2-git-send-email-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH v2 2/6] tpm: unify tpm_gen_interrupt()
+Date: Sun, 26 Jun 2016 00:44:47 +0300
+Message-ID: <1466891093-27766-3-git-send-email-jarkko.sakkinen@linux.intel.com>
 References: <1466891093-27766-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,74 +20,115 @@ To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Jason Gunthorpe <jgun
 Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Removed unnecessary externs from tpm.h.
+Migrated into single tpm_gen_interrupt() function and cleaned up the
+whole construction in general because it was starting to turn into a
+train wreck.
 
 Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm.h | 40 ++++++++++++++++++++--------------------
- 1 file changed, 20 insertions(+), 20 deletions(-)
+ drivers/char/tpm/tpm-interface.c | 23 ++++++++++++++---------
+ drivers/char/tpm/tpm.h           |  2 --
+ drivers/char/tpm/tpm2-cmd.c      | 17 -----------------
+ drivers/char/tpm/tpm_tis_core.c  |  5 +----
+ 4 files changed, 15 insertions(+), 32 deletions(-)
 
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index 5e3c1b6..e953618 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -459,18 +459,23 @@ ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
+ 	return rc;
+ }
+ 
++/**
++ * tpm_gen_interrupt -- generate an interrupt by issuing an idempotent command
++ * @chip: TPM chip to use
++ *
++ * Returns 0 on success, < 0 in case of fatal error or a value > 0 representing
++ * a TPM error code.
++ */
+ void tpm_gen_interrupt(struct tpm_chip *chip)
+ {
+-	struct	tpm_cmd_t tpm_cmd;
+-	ssize_t rc;
++	const char *desc = "attempting to generate an interrupt";
++	u32 cap2;
++	cap_t cap;
+ 
+-	tpm_cmd.header.in = tpm_getcap_header;
+-	tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
+-	tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
+-	tpm_cmd.params.getcap_in.subcap = TPM_CAP_PROP_TIS_TIMEOUT;
+-
+-	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE,
+-			      "attempting to determine the timeouts");
++	if (chip->flags & TPM_CHIP_FLAG_TPM2)
++		tpm2_get_tpm_pt(chip, 0x100, &cap2, desc);
++	else
++		tpm_getcap(chip, TPM_CAP_PROP_TIS_TIMEOUT, &cap, desc);
+ }
+ EXPORT_SYMBOL_GPL(tpm_gen_interrupt);
+ 
 diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 8890df2..80b5fa4 100644
+index 80b5fa4..0f16d18 100644
 --- a/drivers/char/tpm/tpm.h
 +++ b/drivers/char/tpm/tpm.h
-@@ -482,25 +482,25 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
- 		     size_t bufsiz);
- ssize_t tpm_transmit_cmd(struct tpm_chip *chip, void *cmd, int len,
- 			 const char *desc);
--extern int tpm_get_timeouts(struct tpm_chip *);
--extern void tpm_gen_interrupt(struct tpm_chip *);
--extern int tpm_do_selftest(struct tpm_chip *);
--extern unsigned long tpm_calc_ordinal_duration(struct tpm_chip *, u32);
--extern int tpm_pm_suspend(struct device *);
--extern int tpm_pm_resume(struct device *);
--extern int wait_for_tpm_stat(struct tpm_chip *, u8, unsigned long,
--			     wait_queue_head_t *, bool);
-+int tpm_get_timeouts(struct tpm_chip *chip);
-+void tpm_gen_interrupt(struct tpm_chip *chip);
-+int tpm_do_selftest(struct tpm_chip *chip);
-+unsigned long tpm_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
-+int tpm_pm_suspend(struct device *dev);
-+int tpm_pm_resume(struct device *dev);
-+int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
-+		      wait_queue_head_t *queue, bool check_cancel);
- 
- struct tpm_chip *tpm_chip_find_get(int chip_num);
- __must_check int tpm_try_get_ops(struct tpm_chip *chip);
- void tpm_put_ops(struct tpm_chip *chip);
- 
--extern struct tpm_chip *tpm_chip_alloc(struct device *dev,
--				       const struct tpm_class_ops *ops);
--extern struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
--				       const struct tpm_class_ops *ops);
--extern int tpm_chip_register(struct tpm_chip *chip);
--extern void tpm_chip_unregister(struct tpm_chip *chip);
-+struct tpm_chip *tpm_chip_alloc(struct device *dev,
-+				const struct tpm_class_ops *ops);
-+struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
-+				 const struct tpm_class_ops *ops);
-+int tpm_chip_register(struct tpm_chip *chip);
-+void tpm_chip_unregister(struct tpm_chip *chip);
- 
- void tpm_sysfs_add_device(struct tpm_chip *chip);
- 
-@@ -526,10 +526,10 @@ int tpm2_unseal_trusted(struct tpm_chip *chip,
+@@ -525,11 +525,9 @@ int tpm2_unseal_trusted(struct tpm_chip *chip,
+ 			struct trusted_key_options *options);
  ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,
  			u32 *value, const char *desc);
- 
--extern int tpm2_startup(struct tpm_chip *chip, u16 startup_type);
--extern void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
--extern unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *, u32);
--extern int tpm2_do_selftest(struct tpm_chip *chip);
--extern int tpm2_gen_interrupt(struct tpm_chip *chip);
--extern int tpm2_probe(struct tpm_chip *chip);
-+int tpm2_startup(struct tpm_chip *chip, u16 startup_type);
-+void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
-+unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
-+int tpm2_do_selftest(struct tpm_chip *chip);
-+int tpm2_gen_interrupt(struct tpm_chip *chip);
-+int tpm2_probe(struct tpm_chip *chip);
+-
+ int tpm2_startup(struct tpm_chip *chip, u16 startup_type);
+ void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
+ unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
+ int tpm2_do_selftest(struct tpm_chip *chip);
+-int tpm2_gen_interrupt(struct tpm_chip *chip);
+ int tpm2_probe(struct tpm_chip *chip);
  #endif
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index a1673dc..77ef027 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -897,23 +897,6 @@ int tpm2_do_selftest(struct tpm_chip *chip)
+ EXPORT_SYMBOL_GPL(tpm2_do_selftest);
+ 
+ /**
+- * tpm2_gen_interrupt() - generate an interrupt
+- * @chip: TPM chip to use
+- *
+- * 0 is returned when the operation is successful. If a negative number is
+- * returned it remarks a POSIX error code. If a positive number is returned
+- * it remarks a TPM error.
+- */
+-int tpm2_gen_interrupt(struct tpm_chip *chip)
+-{
+-	u32 dummy;
+-
+-	return tpm2_get_tpm_pt(chip, 0x100, &dummy,
+-			       "attempting to generate an interrupt");
+-}
+-EXPORT_SYMBOL_GPL(tpm2_gen_interrupt);
+-
+-/**
+  * tpm2_probe() - probe TPM 2.0
+  * @chip: TPM chip to use
+  *
+diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+index 03a06b3..c7dc58d 100644
+--- a/drivers/char/tpm/tpm_tis_core.c
++++ b/drivers/char/tpm/tpm_tis_core.c
+@@ -580,10 +580,7 @@ static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
+ 	/* Generate an interrupt by having the core call through to
+ 	 * tpm_tis_send
+ 	 */
+-	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+-		tpm2_gen_interrupt(chip);
+-	else
+-		tpm_gen_interrupt(chip);
++	tpm_gen_interrupt(chip);
+ 
+ 	/* tpm_tis_send will either confirm the interrupt is working or it
+ 	 * will call disable_irq which undoes all of the above.
 -- 
 2.7.4
 
