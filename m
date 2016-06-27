@@ -1,15 +1,22 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: use devm_add_action_or_reset
-Date: Mon, 27 Jun 2016 17:04:45 +0300
-Message-ID: <20160627140445.GA1233@intel.com>
-References: <1465740329-4699-1-git-send-email-sudipm.mukherjee@gmail.com>
-	<20160616202823.GE1414@intel.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH v8 1/5] tpm_tis: Improve reporting of IO
+	errors
+Date: Mon, 27 Jun 2016 11:55:35 -0600
+Message-ID: <20160627175535.GB23540@obsidianresearch.com>
+References: <1466474042-110773-1-git-send-email-eswierk@skyportsystems.com>
+	<1466557831-113440-1-git-send-email-eswierk@skyportsystems.com>
+	<1466557831-113440-2-git-send-email-eswierk@skyportsystems.com>
+	<20160624182515.GC14506@obsidianresearch.com>
+	<20160624202131.GB8399@intel.com>
+	<20160624202615.GA2968@obsidianresearch.com>
+	<20160625152430.GA14567@intel.com>
+	<20160625154745.GA24538@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160616202823.GE1414-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20160625154745.GA24538-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,25 +25,28 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Sudip Mukherjee <sudipm.mukherjee-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jun 16, 2016 at 10:28:23PM +0200, Jarkko Sakkinen wrote:
-> On Sun, Jun 12, 2016 at 03:05:29PM +0100, Sudip Mukherjee wrote:
-> > If devm_add_action() fails we are explicitly calling put_device() to
-> > free the resources allocated. Lets use the helper
-> > devm_add_action_or_reset() and return directly in case of error, as we
-> > know that the cleanup function has been already called by the helper if
-> > there was any error.
-> > 
-> > Signed-off-by: Sudip Mukherjee <sudip.mukherjee-4yDnlxn2s6sWdaTGBSpHTA@public.gmane.org>
-> 
-> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+On Sat, Jun 25, 2016 at 06:47:45PM +0300, Jarkko Sakkinen wrote:
 
-Applied to master.
+> My repositories are ready for next pull request. The master has been
+> rebased to James' tree and merged to next.
 
-/Jarkko
+This seems fine..
+
+Generally you shouldn't rebase to create pull requests, but this
+seemed needed..
+
+Organize your git tree so that it is always pullable and just use
+merges/resets/etc in the -next branch
+
+There is no reason to hold off on more stuff for 4.8, if another batch
+is ready before the merge window then send it, James already took the
+stuff you sent.
+
+Jason
 
 ------------------------------------------------------------------------------
 Attend Shape: An AT&T Tech Expo July 15-16. Meet us at AT&T Park in San
