@@ -1,11 +1,12 @@
 From: andrew zamansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
-Subject: [PATCH 1/2 v3] tpm: Factor out common startup code
-Date: Wed, 29 Jun 2016 07:28:12 +0300
-Message-ID: <1467174493-4190-2-git-send-email-andrew.zamansky@nuvoton.com>
+Subject: [PATCH 2/2 v3] tpm: Add TPM 2.0 support to the
+	Nuvoton i2c driver (NPCT6xx family)
+Date: Wed, 29 Jun 2016 07:28:13 +0300
+Message-ID: <1467174493-4190-3-git-send-email-andrew.zamansky@nuvoton.com>
 References: <1467174493-4190-1-git-send-email-andrew.zamansky@nuvoton.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 In-Reply-To: <1467174493-4190-1-git-send-email-andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
@@ -20,424 +21,92 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, tpmdd-devel-5NWGOfr
 Cc: devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, azamansk-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, Dan.Morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, stimpy1-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-
-The TCG standard startup sequence (get timeouts, tpm startup, etc) for
-TPM and TPM2 chips is being open coded in many drivers, move it into
-the core code.
-
-tpm_tis and tpm_crb are used as the basis for the core code
-implementation and the easy drivers are converted. In the process
-several small drivers bugs relating to error handling this flow
-are fixed.
-
-For now the flag TPM_OPS_AUTO_STARTUP is optional to allow a staged
-driver roll out, but ultimately all drivers should use this flow and
-the flag removed. Some drivers still do not implement the startup
-sequence at all and will need to be tested with it enabled.
-
-Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Tested-by: Andrew Zamansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
----
- drivers/char/tpm/st33zp24/st33zp24.c |  4 +---
- drivers/char/tpm/tpm-chip.c          |  9 +++++++
- drivers/char/tpm/tpm-interface.c     | 27 +++++++++++++++++++++
- drivers/char/tpm/tpm.h               |  4 ++--
- drivers/char/tpm/tpm2-cmd.c          | 46 ++++++++++++++++++++++++++++++++----
- drivers/char/tpm/tpm_crb.c           | 10 +-------
- drivers/char/tpm/tpm_i2c_atmel.c     |  6 +----
- drivers/char/tpm/tpm_i2c_infineon.c  |  4 +---
- drivers/char/tpm/tpm_i2c_nuvoton.c   |  7 +-----
- drivers/char/tpm/tpm_tis_core.c      | 24 +------------------
- drivers/char/tpm/tpm_vtpm_proxy.c    |  9 +------
- include/linux/tpm.h                  |  5 ++++
- 12 files changed, 92 insertions(+), 63 deletions(-)
-
-diff --git a/drivers/char/tpm/st33zp24/st33zp24.c b/drivers/char/tpm/st33zp24/st33zp24.c
-index a7c99a2..c2ee304 100644
---- a/drivers/char/tpm/st33zp24/st33zp24.c
-+++ b/drivers/char/tpm/st33zp24/st33zp24.c
-@@ -505,6 +505,7 @@ static bool st33zp24_req_canceled(struct tpm_chip *chip, u8 status)
- }
- 
- static const struct tpm_class_ops st33zp24_tpm = {
-+	.flags = TPM_OPS_AUTO_STARTUP,
- 	.send = st33zp24_send,
- 	.recv = st33zp24_recv,
- 	.cancel = st33zp24_cancel,
-@@ -592,9 +593,6 @@ int st33zp24_probe(void *phy_id, const struct st33zp24_phy_ops *ops,
- 		tpm_gen_interrupt(chip);
- 	}
- 
--	tpm_get_timeouts(chip);
--	tpm_do_selftest(chip);
--
- 	return tpm_chip_register(chip);
- _tpm_clean_answer:
- 	dev_info(&chip->dev, "TPM initialization fail\n");
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index 5a2f043..e595013 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -354,6 +354,15 @@ int tpm_chip_register(struct tpm_chip *chip)
- {
- 	int rc;
- 
-+	if (chip->ops->flags & TPM_OPS_AUTO_STARTUP) {
-+		if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+			rc = tpm2_auto_startup(chip);
-+		else
-+			rc = tpm1_auto_startup(chip);
-+		if (rc)
-+			return rc;
-+	}
-+
- 	rc = tpm1_chip_register(chip);
- 	if (rc)
- 		return rc;
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 5e3c1b6..1abe2d7 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -843,6 +843,33 @@ int tpm_do_selftest(struct tpm_chip *chip)
- }
- EXPORT_SYMBOL_GPL(tpm_do_selftest);
- 
-+/**
-+ * tpm1_auto_startup - Perform the standard automatic TPM initialization
-+ *                     sequence
-+ * @chip: TPM chip to use
-+ *
-+ * Returns 0 on success, < 0 in case of fatal error.
-+ */
-+int tpm1_auto_startup(struct tpm_chip *chip)
-+{
-+	int rc;
-+
-+	rc = tpm_get_timeouts(chip);
-+	if (rc)
-+		goto out;
-+	rc = tpm_do_selftest(chip);
-+	if (rc) {
-+		dev_err(&chip->dev, "TPM self test failed\n");
-+		goto out;
-+	}
-+
-+	return rc;
-+out:
-+	if (rc > 0)
-+		rc = -ENODEV;
-+	return rc;
-+}
-+
- int tpm_send(u32 chip_num, void *cmd, size_t buflen)
- {
- 	struct tpm_chip *chip;
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 8890df2..3e32d5b 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -484,6 +484,7 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, void *cmd, int len,
- 			 const char *desc);
- extern int tpm_get_timeouts(struct tpm_chip *);
- extern void tpm_gen_interrupt(struct tpm_chip *);
-+int tpm1_auto_startup(struct tpm_chip *chip);
- extern int tpm_do_selftest(struct tpm_chip *);
- extern unsigned long tpm_calc_ordinal_duration(struct tpm_chip *, u32);
- extern int tpm_pm_suspend(struct device *);
-@@ -526,10 +527,9 @@ int tpm2_unseal_trusted(struct tpm_chip *chip,
- ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,
- 			u32 *value, const char *desc);
- 
--extern int tpm2_startup(struct tpm_chip *chip, u16 startup_type);
-+int tpm2_auto_startup(struct tpm_chip *chip);
- extern void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
- extern unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *, u32);
--extern int tpm2_do_selftest(struct tpm_chip *chip);
- extern int tpm2_gen_interrupt(struct tpm_chip *chip);
- extern int tpm2_probe(struct tpm_chip *chip);
- #endif
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index a1673dc..fe6d0d7 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -728,7 +728,7 @@ static const struct tpm_input_header tpm2_startup_header = {
-  * returned it remarks a POSIX error code. If a positive number is returned
-  * it remarks a TPM error.
-  */
--int tpm2_startup(struct tpm_chip *chip, u16 startup_type)
-+static int tpm2_startup(struct tpm_chip *chip, u16 startup_type)
- {
- 	struct tpm2_cmd cmd;
- 
-@@ -738,7 +738,6 @@ int tpm2_startup(struct tpm_chip *chip, u16 startup_type)
- 	return tpm_transmit_cmd(chip, &cmd, sizeof(cmd),
- 				"attempting to start the TPM");
- }
--EXPORT_SYMBOL_GPL(tpm2_startup);
- 
- #define TPM2_SHUTDOWN_IN_SIZE \
- 	(sizeof(struct tpm_input_header) + \
-@@ -854,7 +853,7 @@ static int tpm2_start_selftest(struct tpm_chip *chip, bool full)
-  * returned it remarks a POSIX error code. If a positive number is returned
-  * it remarks a TPM error.
-  */
--int tpm2_do_selftest(struct tpm_chip *chip)
-+static int tpm2_do_selftest(struct tpm_chip *chip)
- {
- 	int rc;
- 	unsigned int loops;
-@@ -894,7 +893,6 @@ int tpm2_do_selftest(struct tpm_chip *chip)
- 
- 	return rc;
- }
--EXPORT_SYMBOL_GPL(tpm2_do_selftest);
- 
- /**
-  * tpm2_gen_interrupt() - generate an interrupt
-@@ -942,3 +940,43 @@ int tpm2_probe(struct tpm_chip *chip)
- 	return 0;
- }
- EXPORT_SYMBOL_GPL(tpm2_probe);
-+
-+/**
-+ * tpm2_auto_startup - Perform the standard automatic TPM initialization
-+ *                     sequence
-+ * @chip: TPM chip to use
-+ *
-+ * Returns 0 on success, < 0 in case of fatal error.
-+ */
-+int tpm2_auto_startup(struct tpm_chip *chip)
-+{
-+	int rc;
-+
-+	rc = tpm_get_timeouts(chip);
-+	if (rc)
-+		goto out;
-+
-+	rc = tpm2_do_selftest(chip);
-+	if (rc != TPM2_RC_INITIALIZE) {
-+		dev_err(&chip->dev, "TPM self test failed\n");
-+		goto out;
-+	}
-+
-+	if (rc == TPM2_RC_INITIALIZE) {
-+		rc = tpm2_startup(chip, TPM2_SU_CLEAR);
-+		if (rc)
-+			goto out;
-+
-+		rc = tpm2_do_selftest(chip);
-+		if (rc) {
-+			dev_err(&chip->dev, "TPM self test failed\n");
-+			goto out;
-+		}
-+	}
-+
-+	return rc;
-+out:
-+	if (rc > 0)
-+		rc = -ENODEV;
-+	return rc;
-+}
-diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index 1b8e1b5..018c3825 100644
---- a/drivers/char/tpm/tpm_crb.c
-+++ b/drivers/char/tpm/tpm_crb.c
-@@ -188,6 +188,7 @@ static bool crb_req_canceled(struct tpm_chip *chip, u8 status)
- }
- 
- static const struct tpm_class_ops tpm_crb = {
-+	.flags = TPM_OPS_AUTO_STARTUP,
- 	.status = crb_status,
- 	.recv = crb_recv,
- 	.send = crb_send,
-@@ -200,7 +201,6 @@ static const struct tpm_class_ops tpm_crb = {
- static int crb_init(struct acpi_device *device, struct crb_priv *priv)
- {
- 	struct tpm_chip *chip;
--	int rc;
- 
- 	chip = tpmm_chip_alloc(&device->dev, &tpm_crb);
- 	if (IS_ERR(chip))
-@@ -210,14 +210,6 @@ static int crb_init(struct acpi_device *device, struct crb_priv *priv)
- 	chip->acpi_dev_handle = device->handle;
- 	chip->flags = TPM_CHIP_FLAG_TPM2;
- 
--	rc = tpm_get_timeouts(chip);
--	if (rc)
--		return rc;
--
--	rc = tpm2_do_selftest(chip);
--	if (rc)
--		return rc;
--
- 	return tpm_chip_register(chip);
- }
- 
-diff --git a/drivers/char/tpm/tpm_i2c_atmel.c b/drivers/char/tpm/tpm_i2c_atmel.c
-index c37aa72..95ce2e9 100644
---- a/drivers/char/tpm/tpm_i2c_atmel.c
-+++ b/drivers/char/tpm/tpm_i2c_atmel.c
-@@ -141,6 +141,7 @@ static bool i2c_atmel_req_canceled(struct tpm_chip *chip, u8 status)
- }
- 
- static const struct tpm_class_ops i2c_atmel = {
-+	.flags = TPM_OPS_AUTO_STARTUP,
- 	.status = i2c_atmel_read_status,
- 	.recv = i2c_atmel_recv,
- 	.send = i2c_atmel_send,
-@@ -179,11 +180,6 @@ static int i2c_atmel_probe(struct i2c_client *client,
- 	/* There is no known way to probe for this device, and all version
- 	 * information seems to be read via TPM commands. Thus we rely on the
- 	 * TPM startup process in the common code to detect the device. */
--	if (tpm_get_timeouts(chip))
--		return -ENODEV;
--
--	if (tpm_do_selftest(chip))
--		return -ENODEV;
- 
- 	return tpm_chip_register(chip);
- }
-diff --git a/drivers/char/tpm/tpm_i2c_infineon.c b/drivers/char/tpm/tpm_i2c_infineon.c
-index a426b6f..62ee44e 100644
---- a/drivers/char/tpm/tpm_i2c_infineon.c
-+++ b/drivers/char/tpm/tpm_i2c_infineon.c
-@@ -567,6 +567,7 @@ static bool tpm_tis_i2c_req_canceled(struct tpm_chip *chip, u8 status)
- }
- 
- static const struct tpm_class_ops tpm_tis_i2c = {
-+	.flags = TPM_OPS_AUTO_STARTUP,
- 	.status = tpm_tis_i2c_status,
- 	.recv = tpm_tis_i2c_recv,
- 	.send = tpm_tis_i2c_send,
-@@ -619,9 +620,6 @@ static int tpm_tis_i2c_init(struct device *dev)
- 
- 	tpm_dev.chip = chip;
- 
--	tpm_get_timeouts(chip);
--	tpm_do_selftest(chip);
--
- 	return tpm_chip_register(chip);
- out_release:
- 	release_locality(chip, tpm_dev.locality, 1);
-diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
-index 4e32094..e8ff362 100644
---- a/drivers/char/tpm/tpm_i2c_nuvoton.c
-+++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
-@@ -461,6 +461,7 @@ static bool i2c_nuvoton_req_canceled(struct tpm_chip *chip, u8 status)
- }
- 
- static const struct tpm_class_ops tpm_i2c = {
-+	.flags = TPM_OPS_AUTO_STARTUP,
- 	.status = i2c_nuvoton_read_status,
- 	.recv = i2c_nuvoton_recv,
- 	.send = i2c_nuvoton_send,
-@@ -609,12 +610,6 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
- 		}
- 	}
- 
--	if (tpm_get_timeouts(chip))
--		return -ENODEV;
--
--	if (tpm_do_selftest(chip))
--		return -ENODEV;
--
- 	return tpm_chip_register(chip);
- }
- 
-diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-index 03a06b3..de6d25d 100644
---- a/drivers/char/tpm/tpm_tis_core.c
-+++ b/drivers/char/tpm/tpm_tis_core.c
-@@ -643,6 +643,7 @@ void tpm_tis_remove(struct tpm_chip *chip)
- EXPORT_SYMBOL_GPL(tpm_tis_remove);
- 
- static const struct tpm_class_ops tpm_tis = {
-+	.flags = TPM_OPS_AUTO_STARTUP,
- 	.status = tpm_tis_status,
- 	.recv = tpm_tis_recv,
- 	.send = tpm_tis_send,
-@@ -778,29 +779,6 @@ int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
- 		}
- 	}
- 
--	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
--		rc = tpm2_do_selftest(chip);
--		if (rc == TPM2_RC_INITIALIZE) {
--			dev_warn(dev, "Firmware has not started TPM\n");
--			rc  = tpm2_startup(chip, TPM2_SU_CLEAR);
--			if (!rc)
--				rc = tpm2_do_selftest(chip);
--		}
--
--		if (rc) {
--			dev_err(dev, "TPM self test failed\n");
--			if (rc > 0)
--				rc = -ENODEV;
--			goto out_err;
--		}
--	} else {
--		if (tpm_do_selftest(chip)) {
--			dev_err(dev, "TPM self test failed\n");
--			rc = -ENODEV;
--			goto out_err;
--		}
--	}
--
- 	return tpm_chip_register(chip);
- out_err:
- 	tpm_tis_remove(chip);
-diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
-index 86e27e8..9a94033 100644
---- a/drivers/char/tpm/tpm_vtpm_proxy.c
-+++ b/drivers/char/tpm/tpm_vtpm_proxy.c
-@@ -346,6 +346,7 @@ static bool vtpm_proxy_tpm_req_canceled(struct tpm_chip  *chip, u8 status)
- }
- 
- static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
-+	.flags = TPM_OPS_AUTO_STARTUP,
- 	.recv = vtpm_proxy_tpm_op_recv,
- 	.send = vtpm_proxy_tpm_op_send,
- 	.cancel = vtpm_proxy_tpm_op_cancel,
-@@ -366,14 +367,6 @@ static void vtpm_proxy_work(struct work_struct *work)
- 						   work);
- 	int rc;
- 
--	if (proxy_dev->flags & VTPM_PROXY_FLAG_TPM2)
--		rc = tpm2_startup(proxy_dev->chip, TPM2_SU_CLEAR);
--	else
--		rc = tpm_get_timeouts(proxy_dev->chip);
--
--	if (rc)
--		goto err;
--
- 	rc = tpm_chip_register(proxy_dev->chip);
- 	if (rc)
- 		goto err;
-diff --git a/include/linux/tpm.h b/include/linux/tpm.h
-index 706e63e..da158f0 100644
---- a/include/linux/tpm.h
-+++ b/include/linux/tpm.h
-@@ -33,7 +33,12 @@ struct tpm_chip;
- struct trusted_key_payload;
- struct trusted_key_options;
- 
-+enum TPM_OPS_FLAGS {
-+	TPM_OPS_AUTO_STARTUP = BIT(0),
-+};
-+
- struct tpm_class_ops {
-+	unsigned int flags;
- 	const u8 req_complete_mask;
- 	const u8 req_complete_val;
- 	bool (*req_canceled)(struct tpm_chip *chip, u8 status);
--- 
-1.9.1
-
-
-------------------------------------------------------------------------------
-Attend Shape: An AT&T Tech Expo July 15-16. Meet us at AT&T Park in San
-Francisco, CA to explore cutting-edge tech and listen to tech luminaries
-present their vision of the future. This family event has something for
-everyone, including kids. Get more information and register today.
-http://sdm.link/attshape
+RnJvbTogSmFzb24gR3VudGhvcnBlIDxqZ3VudGhvcnBlQG9ic2lkaWFucmVzZWFyY2guY29tPgoK
+VGhlIGNvbW1hbmQgZmxvdyBpcyBleGFjdGx5IHRoZSBzYW1lLCB0aGUgY29yZSBzaW1wbHkgbmVl
+ZHMgdG8gYmUKdG9sZCB0byBlbmFibGUgVFBNMiBtb2RlIHdoZW4gdGhlIGNvbXBhdGlibGUgc3Ry
+aW5nIGluZGljYXRlcyBhClRQTTIuCgpTaWduZWQtb2ZmLWJ5OiBBbmRyZXcgQXptYW5za3kgPGFu
+ZHJldy56YW1hbnNreUBudXZvdG9uLmNvbT4KU2lnbmVkLW9mZi1ieTogSmFzb24gR3VudGhvcnBl
+IDxqZ3VudGhvcnBlQG9ic2lkaWFucmVzZWFyY2guY29tPgpBY2tlZC1ieTogUm9iIEhlcnJpbmcg
+PHJvYmhAa2VybmVsLm9yZz4KLS0tCiAuLi4vZGV2aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJpdmlh
+bC1kZXZpY2VzLnR4dCAgICB8ICAxICsKIGRyaXZlcnMvY2hhci90cG0vdHBtX2kyY19udXZvdG9u
+LmMgICAgICAgICAgICAgICAgIHwgMjggKysrKysrKysrKysrKysrKystLS0tLQogMiBmaWxlcyBj
+aGFuZ2VkLCAyMyBpbnNlcnRpb25zKCspLCA2IGRlbGV0aW9ucygtKQoKZGlmZiAtLWdpdCBhL0Rv
+Y3VtZW50YXRpb24vZGV2aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJpdmlhbC1kZXZpY2VzLnR4dCBi
+L0RvY3VtZW50YXRpb24vZGV2aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJpdmlhbC1kZXZpY2VzLnR4
+dAppbmRleCA1Mzk4NzQ0OS4uNWExNGVmOCAxMDA2NDQKLS0tIGEvRG9jdW1lbnRhdGlvbi9kZXZp
+Y2V0cmVlL2JpbmRpbmdzL2kyYy90cml2aWFsLWRldmljZXMudHh0CisrKyBiL0RvY3VtZW50YXRp
+b24vZGV2aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJpdmlhbC1kZXZpY2VzLnR4dApAQCAtNjIsNiAr
+NjIsNyBAQCBuYXRpb25hbCxsbTgwCQlTZXJpYWwgSW50ZXJmYWNlIEFDUEktQ29tcGF0aWJsZSBN
+aWNyb3Byb2Nlc3NvciBTeXN0ZW0gSGFyZHdhcmUgTQogbmF0aW9uYWwsbG04NQkJVGVtcGVyYXR1
+cmUgc2Vuc29yIHdpdGggaW50ZWdyYXRlZCBmYW4gY29udHJvbAogbmF0aW9uYWwsbG05MgkJwrEw
+LjMzwrBDIEFjY3VyYXRlLCAxMi1CaXQgKyBTaWduIFRlbXBlcmF0dXJlIFNlbnNvciBhbmQgVGhl
+cm1hbCBXaW5kb3cgQ29tcGFyYXRvciB3aXRoIFR3by1XaXJlIEludGVyZmFjZQogbnV2b3Rvbixu
+cGN0NTAxCQlpMmMgdHJ1c3RlZCBwbGF0Zm9ybSBtb2R1bGUgKFRQTSkKK251dm90b24sbnBjdDZ4
+eAkJaTJjIHRydXN0ZWQgcGxhdGZvcm0gbW9kdWxlIChUUE0yKQogbnhwLHBjYTk1NTYJCU9jdGFs
+IFNNQnVzIGFuZCBJMkMgcmVnaXN0ZXJlZCBpbnRlcmZhY2UKIG54cCxwY2E5NTU3CQk4LWJpdCBJ
+MkMtYnVzIGFuZCBTTUJ1cyBJL08gcG9ydCB3aXRoIHJlc2V0CiBueHAscGNmODU2MwkJUmVhbC10
+aW1lIGNsb2NrL2NhbGVuZGFyCmRpZmYgLS1naXQgYS9kcml2ZXJzL2NoYXIvdHBtL3RwbV9pMmNf
+bnV2b3Rvbi5jIGIvZHJpdmVycy9jaGFyL3RwbS90cG1faTJjX251dm90b24uYwppbmRleCBlOGZm
+MzYyLi5mMDQ3OWI2IDEwMDY0NAotLS0gYS9kcml2ZXJzL2NoYXIvdHBtL3RwbV9pMmNfbnV2b3Rv
+bi5jCisrKyBiL2RyaXZlcnMvY2hhci90cG0vdHBtX2kyY19udXZvdG9uLmMKQEAgLTEsNSArMSw1
+IEBACiAvKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioq
+KioqKioqKioqKioqKioqKioqKioqKioqKioqCi0gKiBOdXZvdG9uIFRQTSBJMkMgRGV2aWNlIERy
+aXZlciBJbnRlcmZhY2UgZm9yIFdQQ1QzMDEvTlBDVDUwMSwKKyAqIE51dm90b24gVFBNIEkyQyBE
+ZXZpY2UgRHJpdmVyIEludGVyZmFjZSBmb3IgV1BDVDMwMS9OUENUNTAxL05QQ1Q2WFgsCiAgKiBi
+YXNlZCBvbiB0aGUgVENHIFRQTSBJbnRlcmZhY2UgU3BlYyB2ZXJzaW9uIDEuMi4KICAqIFNwZWNp
+ZmljYXRpb25zIGF0IHd3dy50cnVzdGVkY29tcHV0aW5nZ3JvdXAub3JnCiAgKgpAQCAtMzEsNiAr
+MzEsNyBAQAogI2luY2x1ZGUgPGxpbnV4L2ludGVycnVwdC5oPgogI2luY2x1ZGUgPGxpbnV4L3dh
+aXQuaD4KICNpbmNsdWRlIDxsaW51eC9pMmMuaD4KKyNpbmNsdWRlIDxsaW51eC9vZl9kZXZpY2Uu
+aD4KICNpbmNsdWRlICJ0cG0uaCIKIAogLyogSTJDIGludGVyZmFjZSBvZmZzZXRzICovCkBAIC01
+Miw3ICs1Myw4IEBACiAjZGVmaW5lIFRQTV9JMkNfUkVUUllfREVMQVlfU0hPUlQgICAgICAyICAg
+ICAgIC8qIG1zZWMgKi8KICNkZWZpbmUgVFBNX0kyQ19SRVRSWV9ERUxBWV9MT05HICAgICAgIDEw
+ICAgICAgLyogbXNlYyAqLwogCi0jZGVmaW5lIEkyQ19EUklWRVJfTkFNRSAidHBtX2kyY19udXZv
+dG9uIgorI2RlZmluZSBPRl9JU19UUE0yICgodm9pZCAqKTEpCisjZGVmaW5lIEkyQ19JU19UUE0y
+IDEKIAogc3RydWN0IHByaXZfZGF0YSB7CiAJaW50IGlycTsKQEAgLTE2NSw3ICsxNjcsNyBAQCBz
+dGF0aWMgaW50IGkyY19udXZvdG9uX2dldF9idXJzdGNvdW50KHN0cnVjdCBpMmNfY2xpZW50ICpj
+bGllbnQsCiB9CiAKIC8qCi0gKiBXUENUMzAxL05QQ1Q1MDEgU0lOVCMgc3VwcG9ydHMgb25seSBk
+YXRhQXZhaWwKKyAqIFdQQ1QzMDEvTlBDVDUwMS9OUENUNlhYIFNJTlQjIHN1cHBvcnRzIG9ubHkg
+ZGF0YUF2YWlsCiAgKiBhbnkgY2FsbCB0byB0aGlzIGZ1bmN0aW9uIHdoaWNoIGlzIG5vdCB3YWl0
+aW5nIGZvciBkYXRhQXZhaWwgd2lsbAogICogc2V0IHF1ZXVlIHRvIE5VTEwgdG8gYXZvaWQgd2Fp
+dGluZyBmb3IgaW50ZXJydXB0CiAgKi8KQEAgLTU0NSw2ICs1NDcsMTYgQEAgc3RhdGljIGludCBp
+MmNfbnV2b3Rvbl9wcm9iZShzdHJ1Y3QgaTJjX2NsaWVudCAqY2xpZW50LAogCWlmICghcHJpdikK
+IAkJcmV0dXJuIC1FTk9NRU07CiAKKwlpZiAoZGV2LT5vZl9ub2RlKSB7CisJCWNvbnN0IHN0cnVj
+dCBvZl9kZXZpY2VfaWQgKm9mX2lkOworCisJCW9mX2lkID0gb2ZfbWF0Y2hfZGV2aWNlKGRldi0+
+ZHJpdmVyLT5vZl9kZXZpY2VfaWQsIGRldik7CisJCWlmIChvZl9pZCAmJiBvZl9pZC0+ZGF0YSA9
+PSBPRl9JU19UUE0yKQorCQkJY2hpcC0+ZmxhZ3MgfD0gVFBNX0NISVBfRkxBR19UUE0yOworCX0g
+ZWxzZQorCQlpZiAoaWQtPmRyaXZlcl9kYXRhID09IEkyQ19JU19UUE0yKQorCQkJY2hpcC0+Zmxh
+Z3MgfD0gVFBNX0NISVBfRkxBR19UUE0yOworCiAJaW5pdF93YWl0cXVldWVfaGVhZCgmcHJpdi0+
+cmVhZF9xdWV1ZSk7CiAKIAkvKiBEZWZhdWx0IHRpbWVvdXRzICovCkBAIC01NjAsNyArNTcyLDkg
+QEAgc3RhdGljIGludCBpMmNfbnV2b3Rvbl9wcm9iZShzdHJ1Y3QgaTJjX2NsaWVudCAqY2xpZW50
+LAogCSAqICAgVFBNX0lOVEZfSU5UX0xFVkVMX0xPVyB8IFRQTV9JTlRGX0RBVEFfQVZBSUxfSU5U
+CiAJICogVGhlIElSUSBzaG91bGQgYmUgc2V0IGluIHRoZSBpMmNfYm9hcmRfaW5mbyAod2hpY2gg
+aXMgZG9uZQogCSAqIGF1dG9tYXRpY2FsbHkgaW4gb2ZfaTJjX3JlZ2lzdGVyX2RldmljZXMsIGZv
+ciBkZXZpY2UgdHJlZSB1c2VycyAqLwotCWNoaXAtPmZsYWdzIHw9IFRQTV9DSElQX0ZMQUdfSVJR
+OworCWlmIChjbGllbnQtPmlycSkKKwkJY2hpcC0+ZmxhZ3MgfD0gVFBNX0NISVBfRkxBR19JUlE7
+CisKIAlwcml2LT5pcnEgPSBjbGllbnQtPmlycTsKIAogCWlmIChjaGlwLT5mbGFncyAmIFRQTV9D
+SElQX0ZMQUdfSVJRKSB7CkBAIC02MjIsNyArNjM2LDggQEAgc3RhdGljIGludCBpMmNfbnV2b3Rv
+bl9yZW1vdmUoc3RydWN0IGkyY19jbGllbnQgKmNsaWVudCkKIH0KIAogc3RhdGljIGNvbnN0IHN0
+cnVjdCBpMmNfZGV2aWNlX2lkIGkyY19udXZvdG9uX2lkW10gPSB7Ci0Je0kyQ19EUklWRVJfTkFN
+RSwgMH0sCisJeyJ0cG1faTJjX251dm90b24ifSwKKwl7InRwbTJfaTJjX251dm90b24iLCAuZHJp
+dmVyX2RhdGEgPSBJMkNfSVNfVFBNMn0sCiAJe30KIH07CiBNT0RVTEVfREVWSUNFX1RBQkxFKGky
+YywgaTJjX251dm90b25faWQpOwpAQCAtNjMxLDYgKzY0Niw3IEBAIE1PRFVMRV9ERVZJQ0VfVEFC
+TEUoaTJjLCBpMmNfbnV2b3Rvbl9pZCk7CiBzdGF0aWMgY29uc3Qgc3RydWN0IG9mX2RldmljZV9p
+ZCBpMmNfbnV2b3Rvbl9vZl9tYXRjaFtdID0gewogCXsuY29tcGF0aWJsZSA9ICJudXZvdG9uLG5w
+Y3Q1MDEifSwKIAl7LmNvbXBhdGlibGUgPSAid2luYm9uZCx3cGN0MzAxIn0sCisJey5jb21wYXRp
+YmxlID0gIm51dm90b24sbnBjdDZ4eCIsIC5kYXRhID0gT0ZfSVNfVFBNMn0sCiAJe30sCiB9Owog
+TU9EVUxFX0RFVklDRV9UQUJMRShvZiwgaTJjX251dm90b25fb2ZfbWF0Y2gpOwpAQCAtNjQzLDcg
+KzY1OSw3IEBAIHN0YXRpYyBzdHJ1Y3QgaTJjX2RyaXZlciBpMmNfbnV2b3Rvbl9kcml2ZXIgPSB7
+CiAJLnByb2JlID0gaTJjX251dm90b25fcHJvYmUsCiAJLnJlbW92ZSA9IGkyY19udXZvdG9uX3Jl
+bW92ZSwKIAkuZHJpdmVyID0gewotCQkubmFtZSA9IEkyQ19EUklWRVJfTkFNRSwKKwkJLm5hbWUg
+PSAidHBtX2kyY19udXZvdG9uIiwKIAkJLnBtID0gJmkyY19udXZvdG9uX3BtX29wcywKIAkJLm9m
+X21hdGNoX3RhYmxlID0gb2ZfbWF0Y2hfcHRyKGkyY19udXZvdG9uX29mX21hdGNoKSwKIAl9LAot
+LSAKMS45LjEKCgotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KQXR0ZW5kIFNoYXBlOiBBbiBBVCZUIFRl
+Y2ggRXhwbyBKdWx5IDE1LTE2LiBNZWV0IHVzIGF0IEFUJlQgUGFyayBpbiBTYW4KRnJhbmNpc2Nv
+LCBDQSB0byBleHBsb3JlIGN1dHRpbmctZWRnZSB0ZWNoIGFuZCBsaXN0ZW4gdG8gdGVjaCBsdW1p
+bmFyaWVzCnByZXNlbnQgdGhlaXIgdmlzaW9uIG9mIHRoZSBmdXR1cmUuIFRoaXMgZmFtaWx5IGV2
+ZW50IGhhcyBzb21ldGhpbmcgZm9yCmV2ZXJ5b25lLCBpbmNsdWRpbmcga2lkcy4gR2V0IG1vcmUg
+aW5mb3JtYXRpb24gYW5kIHJlZ2lzdGVyIHRvZGF5LgpodHRwOi8vc2RtLmxpbmsvYXR0c2hhcGUK
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2
+ZWwgbWFpbGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczov
+L2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
