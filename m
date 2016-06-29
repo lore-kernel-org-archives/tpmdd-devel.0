@@ -1,14 +1,11 @@
 From: andrew zamansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
-Subject: [PATCH 2/2 v3] tpm: Add TPM 2.0 support to the
-	Nuvoton i2c driver (NPCT6xx family)
-Date: Wed, 29 Jun 2016 07:28:13 +0300
-Message-ID: <1467174493-4190-3-git-send-email-andrew.zamansky@nuvoton.com>
-References: <1467174493-4190-1-git-send-email-andrew.zamansky@nuvoton.com>
+Subject: [PATCH 0/2 v3] add TPM 2.0 support for i2c driver
+Date: Wed, 29 Jun 2016 07:28:11 +0300
+Message-ID: <1467174493-4190-1-git-send-email-andrew.zamansky@nuvoton.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1467174493-4190-1-git-send-email-andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,92 +18,35 @@ To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, tpmdd-devel-5NWGOfr
 Cc: devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, azamansk-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, Dan.Morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, stimpy1-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-RnJvbTogSmFzb24gR3VudGhvcnBlIDxqZ3VudGhvcnBlQG9ic2lkaWFucmVzZWFyY2guY29tPgoK
-VGhlIGNvbW1hbmQgZmxvdyBpcyBleGFjdGx5IHRoZSBzYW1lLCB0aGUgY29yZSBzaW1wbHkgbmVl
-ZHMgdG8gYmUKdG9sZCB0byBlbmFibGUgVFBNMiBtb2RlIHdoZW4gdGhlIGNvbXBhdGlibGUgc3Ry
-aW5nIGluZGljYXRlcyBhClRQTTIuCgpTaWduZWQtb2ZmLWJ5OiBBbmRyZXcgQXptYW5za3kgPGFu
-ZHJldy56YW1hbnNreUBudXZvdG9uLmNvbT4KU2lnbmVkLW9mZi1ieTogSmFzb24gR3VudGhvcnBl
-IDxqZ3VudGhvcnBlQG9ic2lkaWFucmVzZWFyY2guY29tPgpBY2tlZC1ieTogUm9iIEhlcnJpbmcg
-PHJvYmhAa2VybmVsLm9yZz4KLS0tCiAuLi4vZGV2aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJpdmlh
-bC1kZXZpY2VzLnR4dCAgICB8ICAxICsKIGRyaXZlcnMvY2hhci90cG0vdHBtX2kyY19udXZvdG9u
-LmMgICAgICAgICAgICAgICAgIHwgMjggKysrKysrKysrKysrKysrKystLS0tLQogMiBmaWxlcyBj
-aGFuZ2VkLCAyMyBpbnNlcnRpb25zKCspLCA2IGRlbGV0aW9ucygtKQoKZGlmZiAtLWdpdCBhL0Rv
-Y3VtZW50YXRpb24vZGV2aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJpdmlhbC1kZXZpY2VzLnR4dCBi
-L0RvY3VtZW50YXRpb24vZGV2aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJpdmlhbC1kZXZpY2VzLnR4
-dAppbmRleCA1Mzk4NzQ0OS4uNWExNGVmOCAxMDA2NDQKLS0tIGEvRG9jdW1lbnRhdGlvbi9kZXZp
-Y2V0cmVlL2JpbmRpbmdzL2kyYy90cml2aWFsLWRldmljZXMudHh0CisrKyBiL0RvY3VtZW50YXRp
-b24vZGV2aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJpdmlhbC1kZXZpY2VzLnR4dApAQCAtNjIsNiAr
-NjIsNyBAQCBuYXRpb25hbCxsbTgwCQlTZXJpYWwgSW50ZXJmYWNlIEFDUEktQ29tcGF0aWJsZSBN
-aWNyb3Byb2Nlc3NvciBTeXN0ZW0gSGFyZHdhcmUgTQogbmF0aW9uYWwsbG04NQkJVGVtcGVyYXR1
-cmUgc2Vuc29yIHdpdGggaW50ZWdyYXRlZCBmYW4gY29udHJvbAogbmF0aW9uYWwsbG05MgkJwrEw
-LjMzwrBDIEFjY3VyYXRlLCAxMi1CaXQgKyBTaWduIFRlbXBlcmF0dXJlIFNlbnNvciBhbmQgVGhl
-cm1hbCBXaW5kb3cgQ29tcGFyYXRvciB3aXRoIFR3by1XaXJlIEludGVyZmFjZQogbnV2b3Rvbixu
-cGN0NTAxCQlpMmMgdHJ1c3RlZCBwbGF0Zm9ybSBtb2R1bGUgKFRQTSkKK251dm90b24sbnBjdDZ4
-eAkJaTJjIHRydXN0ZWQgcGxhdGZvcm0gbW9kdWxlIChUUE0yKQogbnhwLHBjYTk1NTYJCU9jdGFs
-IFNNQnVzIGFuZCBJMkMgcmVnaXN0ZXJlZCBpbnRlcmZhY2UKIG54cCxwY2E5NTU3CQk4LWJpdCBJ
-MkMtYnVzIGFuZCBTTUJ1cyBJL08gcG9ydCB3aXRoIHJlc2V0CiBueHAscGNmODU2MwkJUmVhbC10
-aW1lIGNsb2NrL2NhbGVuZGFyCmRpZmYgLS1naXQgYS9kcml2ZXJzL2NoYXIvdHBtL3RwbV9pMmNf
-bnV2b3Rvbi5jIGIvZHJpdmVycy9jaGFyL3RwbS90cG1faTJjX251dm90b24uYwppbmRleCBlOGZm
-MzYyLi5mMDQ3OWI2IDEwMDY0NAotLS0gYS9kcml2ZXJzL2NoYXIvdHBtL3RwbV9pMmNfbnV2b3Rv
-bi5jCisrKyBiL2RyaXZlcnMvY2hhci90cG0vdHBtX2kyY19udXZvdG9uLmMKQEAgLTEsNSArMSw1
-IEBACiAvKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioq
-KioqKioqKioqKioqKioqKioqKioqKioqKioqCi0gKiBOdXZvdG9uIFRQTSBJMkMgRGV2aWNlIERy
-aXZlciBJbnRlcmZhY2UgZm9yIFdQQ1QzMDEvTlBDVDUwMSwKKyAqIE51dm90b24gVFBNIEkyQyBE
-ZXZpY2UgRHJpdmVyIEludGVyZmFjZSBmb3IgV1BDVDMwMS9OUENUNTAxL05QQ1Q2WFgsCiAgKiBi
-YXNlZCBvbiB0aGUgVENHIFRQTSBJbnRlcmZhY2UgU3BlYyB2ZXJzaW9uIDEuMi4KICAqIFNwZWNp
-ZmljYXRpb25zIGF0IHd3dy50cnVzdGVkY29tcHV0aW5nZ3JvdXAub3JnCiAgKgpAQCAtMzEsNiAr
-MzEsNyBAQAogI2luY2x1ZGUgPGxpbnV4L2ludGVycnVwdC5oPgogI2luY2x1ZGUgPGxpbnV4L3dh
-aXQuaD4KICNpbmNsdWRlIDxsaW51eC9pMmMuaD4KKyNpbmNsdWRlIDxsaW51eC9vZl9kZXZpY2Uu
-aD4KICNpbmNsdWRlICJ0cG0uaCIKIAogLyogSTJDIGludGVyZmFjZSBvZmZzZXRzICovCkBAIC01
-Miw3ICs1Myw4IEBACiAjZGVmaW5lIFRQTV9JMkNfUkVUUllfREVMQVlfU0hPUlQgICAgICAyICAg
-ICAgIC8qIG1zZWMgKi8KICNkZWZpbmUgVFBNX0kyQ19SRVRSWV9ERUxBWV9MT05HICAgICAgIDEw
-ICAgICAgLyogbXNlYyAqLwogCi0jZGVmaW5lIEkyQ19EUklWRVJfTkFNRSAidHBtX2kyY19udXZv
-dG9uIgorI2RlZmluZSBPRl9JU19UUE0yICgodm9pZCAqKTEpCisjZGVmaW5lIEkyQ19JU19UUE0y
-IDEKIAogc3RydWN0IHByaXZfZGF0YSB7CiAJaW50IGlycTsKQEAgLTE2NSw3ICsxNjcsNyBAQCBz
-dGF0aWMgaW50IGkyY19udXZvdG9uX2dldF9idXJzdGNvdW50KHN0cnVjdCBpMmNfY2xpZW50ICpj
-bGllbnQsCiB9CiAKIC8qCi0gKiBXUENUMzAxL05QQ1Q1MDEgU0lOVCMgc3VwcG9ydHMgb25seSBk
-YXRhQXZhaWwKKyAqIFdQQ1QzMDEvTlBDVDUwMS9OUENUNlhYIFNJTlQjIHN1cHBvcnRzIG9ubHkg
-ZGF0YUF2YWlsCiAgKiBhbnkgY2FsbCB0byB0aGlzIGZ1bmN0aW9uIHdoaWNoIGlzIG5vdCB3YWl0
-aW5nIGZvciBkYXRhQXZhaWwgd2lsbAogICogc2V0IHF1ZXVlIHRvIE5VTEwgdG8gYXZvaWQgd2Fp
-dGluZyBmb3IgaW50ZXJydXB0CiAgKi8KQEAgLTU0NSw2ICs1NDcsMTYgQEAgc3RhdGljIGludCBp
-MmNfbnV2b3Rvbl9wcm9iZShzdHJ1Y3QgaTJjX2NsaWVudCAqY2xpZW50LAogCWlmICghcHJpdikK
-IAkJcmV0dXJuIC1FTk9NRU07CiAKKwlpZiAoZGV2LT5vZl9ub2RlKSB7CisJCWNvbnN0IHN0cnVj
-dCBvZl9kZXZpY2VfaWQgKm9mX2lkOworCisJCW9mX2lkID0gb2ZfbWF0Y2hfZGV2aWNlKGRldi0+
-ZHJpdmVyLT5vZl9kZXZpY2VfaWQsIGRldik7CisJCWlmIChvZl9pZCAmJiBvZl9pZC0+ZGF0YSA9
-PSBPRl9JU19UUE0yKQorCQkJY2hpcC0+ZmxhZ3MgfD0gVFBNX0NISVBfRkxBR19UUE0yOworCX0g
-ZWxzZQorCQlpZiAoaWQtPmRyaXZlcl9kYXRhID09IEkyQ19JU19UUE0yKQorCQkJY2hpcC0+Zmxh
-Z3MgfD0gVFBNX0NISVBfRkxBR19UUE0yOworCiAJaW5pdF93YWl0cXVldWVfaGVhZCgmcHJpdi0+
-cmVhZF9xdWV1ZSk7CiAKIAkvKiBEZWZhdWx0IHRpbWVvdXRzICovCkBAIC01NjAsNyArNTcyLDkg
-QEAgc3RhdGljIGludCBpMmNfbnV2b3Rvbl9wcm9iZShzdHJ1Y3QgaTJjX2NsaWVudCAqY2xpZW50
-LAogCSAqICAgVFBNX0lOVEZfSU5UX0xFVkVMX0xPVyB8IFRQTV9JTlRGX0RBVEFfQVZBSUxfSU5U
-CiAJICogVGhlIElSUSBzaG91bGQgYmUgc2V0IGluIHRoZSBpMmNfYm9hcmRfaW5mbyAod2hpY2gg
-aXMgZG9uZQogCSAqIGF1dG9tYXRpY2FsbHkgaW4gb2ZfaTJjX3JlZ2lzdGVyX2RldmljZXMsIGZv
-ciBkZXZpY2UgdHJlZSB1c2VycyAqLwotCWNoaXAtPmZsYWdzIHw9IFRQTV9DSElQX0ZMQUdfSVJR
-OworCWlmIChjbGllbnQtPmlycSkKKwkJY2hpcC0+ZmxhZ3MgfD0gVFBNX0NISVBfRkxBR19JUlE7
-CisKIAlwcml2LT5pcnEgPSBjbGllbnQtPmlycTsKIAogCWlmIChjaGlwLT5mbGFncyAmIFRQTV9D
-SElQX0ZMQUdfSVJRKSB7CkBAIC02MjIsNyArNjM2LDggQEAgc3RhdGljIGludCBpMmNfbnV2b3Rv
-bl9yZW1vdmUoc3RydWN0IGkyY19jbGllbnQgKmNsaWVudCkKIH0KIAogc3RhdGljIGNvbnN0IHN0
-cnVjdCBpMmNfZGV2aWNlX2lkIGkyY19udXZvdG9uX2lkW10gPSB7Ci0Je0kyQ19EUklWRVJfTkFN
-RSwgMH0sCisJeyJ0cG1faTJjX251dm90b24ifSwKKwl7InRwbTJfaTJjX251dm90b24iLCAuZHJp
-dmVyX2RhdGEgPSBJMkNfSVNfVFBNMn0sCiAJe30KIH07CiBNT0RVTEVfREVWSUNFX1RBQkxFKGky
-YywgaTJjX251dm90b25faWQpOwpAQCAtNjMxLDYgKzY0Niw3IEBAIE1PRFVMRV9ERVZJQ0VfVEFC
-TEUoaTJjLCBpMmNfbnV2b3Rvbl9pZCk7CiBzdGF0aWMgY29uc3Qgc3RydWN0IG9mX2RldmljZV9p
-ZCBpMmNfbnV2b3Rvbl9vZl9tYXRjaFtdID0gewogCXsuY29tcGF0aWJsZSA9ICJudXZvdG9uLG5w
-Y3Q1MDEifSwKIAl7LmNvbXBhdGlibGUgPSAid2luYm9uZCx3cGN0MzAxIn0sCisJey5jb21wYXRp
-YmxlID0gIm51dm90b24sbnBjdDZ4eCIsIC5kYXRhID0gT0ZfSVNfVFBNMn0sCiAJe30sCiB9Owog
-TU9EVUxFX0RFVklDRV9UQUJMRShvZiwgaTJjX251dm90b25fb2ZfbWF0Y2gpOwpAQCAtNjQzLDcg
-KzY1OSw3IEBAIHN0YXRpYyBzdHJ1Y3QgaTJjX2RyaXZlciBpMmNfbnV2b3Rvbl9kcml2ZXIgPSB7
-CiAJLnByb2JlID0gaTJjX251dm90b25fcHJvYmUsCiAJLnJlbW92ZSA9IGkyY19udXZvdG9uX3Jl
-bW92ZSwKIAkuZHJpdmVyID0gewotCQkubmFtZSA9IEkyQ19EUklWRVJfTkFNRSwKKwkJLm5hbWUg
-PSAidHBtX2kyY19udXZvdG9uIiwKIAkJLnBtID0gJmkyY19udXZvdG9uX3BtX29wcywKIAkJLm9m
-X21hdGNoX3RhYmxlID0gb2ZfbWF0Y2hfcHRyKGkyY19udXZvdG9uX29mX21hdGNoKSwKIAl9LAot
-LSAKMS45LjEKCgotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KQXR0ZW5kIFNoYXBlOiBBbiBBVCZUIFRl
-Y2ggRXhwbyBKdWx5IDE1LTE2LiBNZWV0IHVzIGF0IEFUJlQgUGFyayBpbiBTYW4KRnJhbmNpc2Nv
-LCBDQSB0byBleHBsb3JlIGN1dHRpbmctZWRnZSB0ZWNoIGFuZCBsaXN0ZW4gdG8gdGVjaCBsdW1p
-bmFyaWVzCnByZXNlbnQgdGhlaXIgdmlzaW9uIG9mIHRoZSBmdXR1cmUuIFRoaXMgZmFtaWx5IGV2
-ZW50IGhhcyBzb21ldGhpbmcgZm9yCmV2ZXJ5b25lLCBpbmNsdWRpbmcga2lkcy4gR2V0IG1vcmUg
-aW5mb3JtYXRpb24gYW5kIHJlZ2lzdGVyIHRvZGF5LgpodHRwOi8vc2RtLmxpbmsvYXR0c2hhcGUK
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2
-ZWwgbWFpbGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczov
-L2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
+
+Jason Gunthorpe (2):
+  tpm: Factor out common startup code
+  tpm: Add TPM 2.0 support to the Nuvoton i2c driver (NPCT6xx family)
+Andrew Zamansky (1)
+  tpm: Add TPM 2.0 support to the Nuvoton i2c driver (NPCT6xx family)
+
+ .../devicetree/bindings/i2c/trivial-devices.txt    |  1 +
+ drivers/char/tpm/st33zp24/st33zp24.c               |  4 +-
+ drivers/char/tpm/tpm-chip.c                        |  9 +++++
+ drivers/char/tpm/tpm-interface.c                   | 27 +++++++++++++
+ drivers/char/tpm/tpm.h                             |  4 +-
+ drivers/char/tpm/tpm2-cmd.c                        | 46 ++++++++++++++++++++--
+ drivers/char/tpm/tpm_crb.c                         | 10 +----
+ drivers/char/tpm/tpm_i2c_atmel.c                   |  6 +--
+ drivers/char/tpm/tpm_i2c_infineon.c                |  4 +-
+ drivers/char/tpm/tpm_i2c_nuvoton.c                 | 35 ++++++++++------
+ drivers/char/tpm/tpm_tis_core.c                    | 24 +----------
+ drivers/char/tpm/tpm_vtpm_proxy.c                  |  9 +----
+ include/linux/tpm.h                                |  5 +++
+ 13 files changed, 115 insertions(+), 69 deletions(-)
+
+-- 
+1.9.1
+
+
+------------------------------------------------------------------------------
+Attend Shape: An AT&T Tech Expo July 15-16. Meet us at AT&T Park in San
+Francisco, CA to explore cutting-edge tech and listen to tech luminaries
+present their vision of the future. This family event has something for
+everyone, including kids. Get more information and register today.
+http://sdm.link/attshape
