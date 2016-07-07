@@ -1,35 +1,58 @@
-From: "Jan Beulich" <JBeulich@suse.com>
-Subject: [PATCH] xen-tpmfront: correct return value check on
- xenbus_scanf()
-Date: Thu, 07 Jul 2016 02:04:00 -0600
-Message-ID: <577E291002000078000FBF18@prv-mh.provo.novell.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] xen-tpmfront: correct return value check
+ on xenbus_scanf()
+Date: Thu, 7 Jul 2016 13:35:54 +0300
+Message-ID: <20160707103554.GA13244@intel.com>
+References: <577E291002000078000FBF18@prv-mh.provo.novell.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <xen-devel-bounces@lists.xen.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-List-Unsubscribe: <https://lists.xen.org/cgi-bin/mailman/options/xen-devel>,
- <mailto:xen-devel-request@lists.xen.org?subject=unsubscribe>
-List-Post: <mailto:xen-devel@lists.xen.org>
-List-Help: <mailto:xen-devel-request@lists.xen.org?subject=help>
-List-Subscribe: <https://lists.xen.org/cgi-bin/mailman/listinfo/xen-devel>,
- <mailto:xen-devel-request@lists.xen.org?subject=subscribe>
-Errors-To: xen-devel-bounces@lists.xen.org
-Sender: "Xen-devel" <xen-devel-bounces@lists.xen.org>
-To: peterhuewe@gmx.de, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, tpmdd@selhorst.net
-Cc: Juergen Gross <JGross@suse.com>, xen-devel@lists.xenproject.org, boris.ostrovsky@oracle.com, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, david.vrabel@citrix.com
+In-Reply-To: <577E291002000078000FBF18-rw/UEucdPrvD8XXLLHKrIiOjQekVJEpY@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jan Beulich <JBeulich-IBi9RG/b67k@public.gmane.org>
+Cc: Juergen Gross <JGross-IBi9RG/b67k@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, david.vrabel-Sxgqhf6Nn4DQT0dZR+AlfA@public.gmane.org, xen-devel-GuqFBffKawtpuQazS67q72D2FQJk+8+b@public.gmane.org, boris.ostrovsky-QHcLZuEGTsvQT0dZR+AlfA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T25seSBhIHBvc2l0aXZlIHJldHVybiB2YWx1ZSBpbmRpY2F0ZXMgc3VjY2Vzcy4KClNpZ25lZC1v
-ZmYtYnk6IEphbiBCZXVsaWNoIDxqYmV1bGljaEBzdXNlLmNvbT4KLS0tCiBkcml2ZXJzL2NoYXIv
-dHBtL3hlbi10cG1mcm9udC5jIHwgICAgMiArLQogMSBmaWxlIGNoYW5nZWQsIDEgaW5zZXJ0aW9u
-KCspLCAxIGRlbGV0aW9uKC0pCgotLS0gNC43LXJjNi14ZW5idXNfc2NhbmYub3JpZy9kcml2ZXJz
-L2NoYXIvdHBtL3hlbi10cG1mcm9udC5jCisrKyA0LjctcmM2LXhlbmJ1c19zY2FuZi9kcml2ZXJz
-L2NoYXIvdHBtL3hlbi10cG1mcm9udC5jCkBAIC0zNDQsNyArMzQ0LDcgQEAgc3RhdGljIHZvaWQg
-YmFja2VuZF9jaGFuZ2VkKHN0cnVjdCB4ZW5idQogCQkJYnJlYWs7CiAKIAkJaWYgKHhlbmJ1c19z
-Y2FuZihYQlRfTklMLCBkZXYtPm90aGVyZW5kLAotCQkJCSJmZWF0dXJlLXByb3RvY29sLXYyIiwg
-IiVkIiwgJnZhbCkgPCAwKQorCQkJCSJmZWF0dXJlLXByb3RvY29sLXYyIiwgIiVkIiwgJnZhbCkg
-PD0gMCkKIAkJCXZhbCA9IDA7CiAJCWlmICghdmFsKSB7CiAJCQl4ZW5idXNfZGV2X2ZhdGFsKGRl
-diwgLUVJTlZBTCwKCgoKCl9fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fClhlbi1kZXZlbCBtYWlsaW5nIGxpc3QKWGVuLWRldmVsQGxpc3RzLnhlbi5vcmcKaHR0
-cHM6Ly9saXN0cy54ZW4ub3JnL3hlbi1kZXZlbAo=
+On Thu, Jul 07, 2016 at 02:04:00AM -0600, Jan Beulich wrote:
+> Only a positive return value indicates success.
+> 
+> Signed-off-by: Jan Beulich <jbeulich-IBi9RG/b67k@public.gmane.org>
+
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+
+/Jarkko
+
+> ---
+>  drivers/char/tpm/xen-tpmfront.c |    2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
+> 
+> --- 4.7-rc6-xenbus_scanf.orig/drivers/char/tpm/xen-tpmfront.c
+> +++ 4.7-rc6-xenbus_scanf/drivers/char/tpm/xen-tpmfront.c
+> @@ -344,7 +344,7 @@ static void backend_changed(struct xenbu
+>  			break;
+>  
+>  		if (xenbus_scanf(XBT_NIL, dev->otherend,
+> -				"feature-protocol-v2", "%d", &val) < 0)
+> +				"feature-protocol-v2", "%d", &val) <= 0)
+>  			val = 0;
+>  		if (!val) {
+>  			xenbus_dev_fatal(dev, -EINVAL,
+> 
+> 
+> 
+
+------------------------------------------------------------------------------
+Attend Shape: An AT&T Tech Expo July 15-16. Meet us at AT&T Park in San
+Francisco, CA to explore cutting-edge tech and listen to tech luminaries
+present their vision of the future. This family event has something for
+everyone, including kids. Get more information and register today.
+http://sdm.link/attshape
