@@ -1,61 +1,35 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 0/6] Use tpm_transmit_cmd() consistently
-Date: Wed, 6 Jul 2016 17:21:43 +0300
-Message-ID: <20160706142143.GA4442@intel.com>
-References: <1466891093-27766-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+From: "Jan Beulich" <JBeulich@suse.com>
+Subject: [PATCH] xen-tpmfront: correct return value check on
+ xenbus_scanf()
+Date: Thu, 07 Jul 2016 02:04:00 -0600
+Message-ID: <577E291002000078000FBF18@prv-mh.provo.novell.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <xen-devel-bounces@lists.xen.org>
 Content-Disposition: inline
-In-Reply-To: <1466891093-27766-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+List-Unsubscribe: <https://lists.xen.org/cgi-bin/mailman/options/xen-devel>,
+ <mailto:xen-devel-request@lists.xen.org?subject=unsubscribe>
+List-Post: <mailto:xen-devel@lists.xen.org>
+List-Help: <mailto:xen-devel-request@lists.xen.org?subject=help>
+List-Subscribe: <https://lists.xen.org/cgi-bin/mailman/listinfo/xen-devel>,
+ <mailto:xen-devel-request@lists.xen.org?subject=subscribe>
+Errors-To: xen-devel-bounces@lists.xen.org
+Sender: "Xen-devel" <xen-devel-bounces@lists.xen.org>
+To: peterhuewe@gmx.de, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, tpmdd@selhorst.net
+Cc: Juergen Gross <JGross@suse.com>, xen-devel@lists.xenproject.org, boris.ostrovsky@oracle.com, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, david.vrabel@citrix.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Pending for reviews. These are quite trivial patches.
-
-/Jarkko
-
-On Sun, Jun 26, 2016 at 12:44:45AM +0300, Jarkko Sakkinen wrote:
-> These commits update the subsystem consistently to use
-> tpm_transmit_cmd() throughout the subsystem the exception being
-> tpm_write() where it makes sense to use the raw interface because higher
-> level command handling is delegated to user space.
-> 
-> v2: Added commit that drops externs from all function declarations in
-> tpm.h as suggested by Jason Gunthorpe.
-> 
-> Jarkko Sakkinen (6):
->   tpm: remove unnecessary externs from tpm.h
->   tpm: unify tpm_gen_interrupt()
->   tpm: return error code from tpm_gen_interrupt()
->   tpm: use tpm_transmit_cmd() in tpm2_probe()
->   tpm: rename tpm_pcr_read_dev() to tpm1_pcr_read()
->   tpm: use tpm1_pcr_read() in tpm_do_selftest()
-> 
->  drivers/char/tpm/tpm-interface.c | 36 ++++++++++++++++++----------------
->  drivers/char/tpm/tpm-sysfs.c     |  2 +-
->  drivers/char/tpm/tpm.h           | 42 +++++++++++++++++++---------------------
->  drivers/char/tpm/tpm2-cmd.c      | 21 +-------------------
->  drivers/char/tpm/tpm_tis_core.c  |  7 +++----
->  5 files changed, 44 insertions(+), 64 deletions(-)
-> 
-> -- 
-> 2.7.4
-> 
-
-------------------------------------------------------------------------------
-Attend Shape: An AT&T Tech Expo July 15-16. Meet us at AT&T Park in San
-Francisco, CA to explore cutting-edge tech and listen to tech luminaries
-present their vision of the future. This family event has something for
-everyone, including kids. Get more information and register today.
-http://sdm.link/attshape
+T25seSBhIHBvc2l0aXZlIHJldHVybiB2YWx1ZSBpbmRpY2F0ZXMgc3VjY2Vzcy4KClNpZ25lZC1v
+ZmYtYnk6IEphbiBCZXVsaWNoIDxqYmV1bGljaEBzdXNlLmNvbT4KLS0tCiBkcml2ZXJzL2NoYXIv
+dHBtL3hlbi10cG1mcm9udC5jIHwgICAgMiArLQogMSBmaWxlIGNoYW5nZWQsIDEgaW5zZXJ0aW9u
+KCspLCAxIGRlbGV0aW9uKC0pCgotLS0gNC43LXJjNi14ZW5idXNfc2NhbmYub3JpZy9kcml2ZXJz
+L2NoYXIvdHBtL3hlbi10cG1mcm9udC5jCisrKyA0LjctcmM2LXhlbmJ1c19zY2FuZi9kcml2ZXJz
+L2NoYXIvdHBtL3hlbi10cG1mcm9udC5jCkBAIC0zNDQsNyArMzQ0LDcgQEAgc3RhdGljIHZvaWQg
+YmFja2VuZF9jaGFuZ2VkKHN0cnVjdCB4ZW5idQogCQkJYnJlYWs7CiAKIAkJaWYgKHhlbmJ1c19z
+Y2FuZihYQlRfTklMLCBkZXYtPm90aGVyZW5kLAotCQkJCSJmZWF0dXJlLXByb3RvY29sLXYyIiwg
+IiVkIiwgJnZhbCkgPCAwKQorCQkJCSJmZWF0dXJlLXByb3RvY29sLXYyIiwgIiVkIiwgJnZhbCkg
+PD0gMCkKIAkJCXZhbCA9IDA7CiAJCWlmICghdmFsKSB7CiAJCQl4ZW5idXNfZGV2X2ZhdGFsKGRl
+diwgLUVJTlZBTCwKCgoKCl9fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
+X19fX19fClhlbi1kZXZlbCBtYWlsaW5nIGxpc3QKWGVuLWRldmVsQGxpc3RzLnhlbi5vcmcKaHR0
+cHM6Ly9saXN0cy54ZW4ub3JnL3hlbi1kZXZlbAo=
