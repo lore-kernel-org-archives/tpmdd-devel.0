@@ -1,17 +1,13 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH 2/2] add irq validity check in
-	tpm_i2c_nuvoton driver
-Date: Tue, 12 Jul 2016 11:33:26 -0600
-Message-ID: <20160712173326.GA9286@obsidianresearch.com>
-References: <1467194329-5543-1-git-send-email-andrew.zamansky@nuvoton.com>
-	<1467194329-5543-3-git-send-email-andrew.zamansky@nuvoton.com>
-	<20160629140339.GA4589@intel.com>
+Subject: [PATCH v4 1/2] tpm: Factor out common startup code
+Date: Tue, 12 Jul 2016 11:41:49 -0600
+Message-ID: <1468345311-8014-2-git-send-email-jgunthorpe@obsidianresearch.com>
+References: <1468345311-8014-1-git-send-email-jgunthorpe@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20160629140339.GA4589-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <1468345311-8014-1-git-send-email-jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,82 +16,422 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: andrew zamansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, azamansk-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, Dan.Morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, stimpy1-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jun 29, 2016 at 05:03:39PM +0300, Jarkko Sakkinen wrote:
-> On Wed, Jun 29, 2016 at 12:58:49PM +0300, andrew zamansky wrote:
-> > if irq==0 (actualy invalid value) then error is printed to dmesg after
-> > trying to register to 0 interrupt 
-> > 
-> >  drivers/char/tpm/tpm_i2c_nuvoton.c | 4 +++-
-> >  1 file changed, 3 insertions(+), 1 deletion(-)
-> > 
-> > diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
-> > index 75a80e466..3081529 100644
-> > +++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
-> > @@ -554,7 +554,9 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
-> >  	 *   TPM_INTF_INT_LEVEL_LOW | TPM_INTF_DATA_AVAIL_INT
-> >  	 * The IRQ should be set in the i2c_board_info (which is done
-> >  	 * automatically in of_i2c_register_devices, for device tree users */
-> > -	chip->flags |= TPM_CHIP_FLAG_IRQ;
-> > +	if(chip->flags)
-> > +		chip->flags |= TPM_CHIP_FLAG_IRQ;
-> > +
-> >  	priv->irq = client->irq;
-> >  
-> >  	if (chip->flags & TPM_CHIP_FLAG_IRQ) {
-> 
-> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> 
-> PS. There's a style error. "if()" should be "if ()". I don't mind fixing
-> that. Just remember that next time.
+The TCG standard startup sequence (get timeouts, tpm startup, etc) for
+TPM and TPM2 chips is being open coded in many drivers, move it into
+the core code.
 
-Andrew/Jarkko:
+tpm_tis and tpm_crb are used as the basis for the core code
+implementation and the easy drivers are converted. In the process
+several small drivers bugs relating to error handling this flow
+are fixed.
 
-Uhm, this looks wrong to me.. The original code was like this:
+For now the flag TPM_OPS_AUTO_STARTUP is optional to allow a staged
+driver roll out, but ultimately all drivers should use this flow and
+the flag removed. Some drivers still do not implement the startup
+sequence at all and will need to be tested with it enabled.
 
--       chip->vendor.irq = client->irq;
--       if (chip->vendor.irq) {
+Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Tested-by: Andrew Zamansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+---
+ drivers/char/tpm/st33zp24/st33zp24.c |  4 +---
+ drivers/char/tpm/tpm-chip.c          |  9 +++++++
+ drivers/char/tpm/tpm-interface.c     | 27 +++++++++++++++++++++
+ drivers/char/tpm/tpm.h               |  4 ++--
+ drivers/char/tpm/tpm2-cmd.c          | 46 ++++++++++++++++++++++++++++++++----
+ drivers/char/tpm/tpm_crb.c           | 10 +-------
+ drivers/char/tpm/tpm_i2c_atmel.c     |  6 +----
+ drivers/char/tpm/tpm_i2c_infineon.c  |  4 +---
+ drivers/char/tpm/tpm_i2c_nuvoton.c   |  7 +-----
+ drivers/char/tpm/tpm_tis_core.c      | 24 +------------------
+ drivers/char/tpm/tpm_vtpm_proxy.c    |  9 +------
+ include/linux/tpm.h                  |  5 ++++
+ 12 files changed, 92 insertions(+), 63 deletions(-)
 
-And was wrongly changed to this:
-
-+       chip->flags |= TPM_CHIP_FLAG_IRQ;
-+       priv->irq = client->irq;
-+       if (chip->flags & TPM_CHIP_FLAG_IRQ) {
-
-Jarkko, can you fold this into the patch to fix it please:
-
+diff --git a/drivers/char/tpm/st33zp24/st33zp24.c b/drivers/char/tpm/st33zp24/st33zp24.c
+index a7c99a284724..c2ee30451e41 100644
+--- a/drivers/char/tpm/st33zp24/st33zp24.c
++++ b/drivers/char/tpm/st33zp24/st33zp24.c
+@@ -505,6 +505,7 @@ static bool st33zp24_req_canceled(struct tpm_chip *chip, u8 status)
+ }
+ 
+ static const struct tpm_class_ops st33zp24_tpm = {
++	.flags = TPM_OPS_AUTO_STARTUP,
+ 	.send = st33zp24_send,
+ 	.recv = st33zp24_recv,
+ 	.cancel = st33zp24_cancel,
+@@ -592,9 +593,6 @@ int st33zp24_probe(void *phy_id, const struct st33zp24_phy_ops *ops,
+ 		tpm_gen_interrupt(chip);
+ 	}
+ 
+-	tpm_get_timeouts(chip);
+-	tpm_do_selftest(chip);
+-
+ 	return tpm_chip_register(chip);
+ _tpm_clean_answer:
+ 	dev_info(&chip->dev, "TPM initialization fail\n");
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 5a2f0439ef47..e5950131bd90 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -354,6 +354,15 @@ int tpm_chip_register(struct tpm_chip *chip)
+ {
+ 	int rc;
+ 
++	if (chip->ops->flags & TPM_OPS_AUTO_STARTUP) {
++		if (chip->flags & TPM_CHIP_FLAG_TPM2)
++			rc = tpm2_auto_startup(chip);
++		else
++			rc = tpm1_auto_startup(chip);
++		if (rc)
++			return rc;
++	}
++
+ 	rc = tpm1_chip_register(chip);
+ 	if (rc)
+ 		return rc;
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index 5e3c1b684859..1abe2d7a2610 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -843,6 +843,33 @@ int tpm_do_selftest(struct tpm_chip *chip)
+ }
+ EXPORT_SYMBOL_GPL(tpm_do_selftest);
+ 
++/**
++ * tpm1_auto_startup - Perform the standard automatic TPM initialization
++ *                     sequence
++ * @chip: TPM chip to use
++ *
++ * Returns 0 on success, < 0 in case of fatal error.
++ */
++int tpm1_auto_startup(struct tpm_chip *chip)
++{
++	int rc;
++
++	rc = tpm_get_timeouts(chip);
++	if (rc)
++		goto out;
++	rc = tpm_do_selftest(chip);
++	if (rc) {
++		dev_err(&chip->dev, "TPM self test failed\n");
++		goto out;
++	}
++
++	return rc;
++out:
++	if (rc > 0)
++		rc = -ENODEV;
++	return rc;
++}
++
+ int tpm_send(u32 chip_num, void *cmd, size_t buflen)
+ {
+ 	struct tpm_chip *chip;
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 8890df205635..3e32d5bd2dc6 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -484,6 +484,7 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, void *cmd, int len,
+ 			 const char *desc);
+ extern int tpm_get_timeouts(struct tpm_chip *);
+ extern void tpm_gen_interrupt(struct tpm_chip *);
++int tpm1_auto_startup(struct tpm_chip *chip);
+ extern int tpm_do_selftest(struct tpm_chip *);
+ extern unsigned long tpm_calc_ordinal_duration(struct tpm_chip *, u32);
+ extern int tpm_pm_suspend(struct device *);
+@@ -526,10 +527,9 @@ int tpm2_unseal_trusted(struct tpm_chip *chip,
+ ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,
+ 			u32 *value, const char *desc);
+ 
+-extern int tpm2_startup(struct tpm_chip *chip, u16 startup_type);
++int tpm2_auto_startup(struct tpm_chip *chip);
+ extern void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
+ extern unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *, u32);
+-extern int tpm2_do_selftest(struct tpm_chip *chip);
+ extern int tpm2_gen_interrupt(struct tpm_chip *chip);
+ extern int tpm2_probe(struct tpm_chip *chip);
+ #endif
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index a1673dcb4cae..fe6d0d71c35a 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -728,7 +728,7 @@ static const struct tpm_input_header tpm2_startup_header = {
+  * returned it remarks a POSIX error code. If a positive number is returned
+  * it remarks a TPM error.
+  */
+-int tpm2_startup(struct tpm_chip *chip, u16 startup_type)
++static int tpm2_startup(struct tpm_chip *chip, u16 startup_type)
+ {
+ 	struct tpm2_cmd cmd;
+ 
+@@ -738,7 +738,6 @@ int tpm2_startup(struct tpm_chip *chip, u16 startup_type)
+ 	return tpm_transmit_cmd(chip, &cmd, sizeof(cmd),
+ 				"attempting to start the TPM");
+ }
+-EXPORT_SYMBOL_GPL(tpm2_startup);
+ 
+ #define TPM2_SHUTDOWN_IN_SIZE \
+ 	(sizeof(struct tpm_input_header) + \
+@@ -854,7 +853,7 @@ static int tpm2_start_selftest(struct tpm_chip *chip, bool full)
+  * returned it remarks a POSIX error code. If a positive number is returned
+  * it remarks a TPM error.
+  */
+-int tpm2_do_selftest(struct tpm_chip *chip)
++static int tpm2_do_selftest(struct tpm_chip *chip)
+ {
+ 	int rc;
+ 	unsigned int loops;
+@@ -894,7 +893,6 @@ int tpm2_do_selftest(struct tpm_chip *chip)
+ 
+ 	return rc;
+ }
+-EXPORT_SYMBOL_GPL(tpm2_do_selftest);
+ 
+ /**
+  * tpm2_gen_interrupt() - generate an interrupt
+@@ -942,3 +940,43 @@ int tpm2_probe(struct tpm_chip *chip)
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(tpm2_probe);
++
++/**
++ * tpm2_auto_startup - Perform the standard automatic TPM initialization
++ *                     sequence
++ * @chip: TPM chip to use
++ *
++ * Returns 0 on success, < 0 in case of fatal error.
++ */
++int tpm2_auto_startup(struct tpm_chip *chip)
++{
++	int rc;
++
++	rc = tpm_get_timeouts(chip);
++	if (rc)
++		goto out;
++
++	rc = tpm2_do_selftest(chip);
++	if (rc != TPM2_RC_INITIALIZE) {
++		dev_err(&chip->dev, "TPM self test failed\n");
++		goto out;
++	}
++
++	if (rc == TPM2_RC_INITIALIZE) {
++		rc = tpm2_startup(chip, TPM2_SU_CLEAR);
++		if (rc)
++			goto out;
++
++		rc = tpm2_do_selftest(chip);
++		if (rc) {
++			dev_err(&chip->dev, "TPM self test failed\n");
++			goto out;
++		}
++	}
++
++	return rc;
++out:
++	if (rc > 0)
++		rc = -ENODEV;
++	return rc;
++}
+diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+index 1b8e1b51bfc0..018c382554ba 100644
+--- a/drivers/char/tpm/tpm_crb.c
++++ b/drivers/char/tpm/tpm_crb.c
+@@ -188,6 +188,7 @@ static bool crb_req_canceled(struct tpm_chip *chip, u8 status)
+ }
+ 
+ static const struct tpm_class_ops tpm_crb = {
++	.flags = TPM_OPS_AUTO_STARTUP,
+ 	.status = crb_status,
+ 	.recv = crb_recv,
+ 	.send = crb_send,
+@@ -200,7 +201,6 @@ static const struct tpm_class_ops tpm_crb = {
+ static int crb_init(struct acpi_device *device, struct crb_priv *priv)
+ {
+ 	struct tpm_chip *chip;
+-	int rc;
+ 
+ 	chip = tpmm_chip_alloc(&device->dev, &tpm_crb);
+ 	if (IS_ERR(chip))
+@@ -210,14 +210,6 @@ static int crb_init(struct acpi_device *device, struct crb_priv *priv)
+ 	chip->acpi_dev_handle = device->handle;
+ 	chip->flags = TPM_CHIP_FLAG_TPM2;
+ 
+-	rc = tpm_get_timeouts(chip);
+-	if (rc)
+-		return rc;
+-
+-	rc = tpm2_do_selftest(chip);
+-	if (rc)
+-		return rc;
+-
+ 	return tpm_chip_register(chip);
+ }
+ 
+diff --git a/drivers/char/tpm/tpm_i2c_atmel.c b/drivers/char/tpm/tpm_i2c_atmel.c
+index c37aa7259f76..95ce2e9ccdc6 100644
+--- a/drivers/char/tpm/tpm_i2c_atmel.c
++++ b/drivers/char/tpm/tpm_i2c_atmel.c
+@@ -141,6 +141,7 @@ static bool i2c_atmel_req_canceled(struct tpm_chip *chip, u8 status)
+ }
+ 
+ static const struct tpm_class_ops i2c_atmel = {
++	.flags = TPM_OPS_AUTO_STARTUP,
+ 	.status = i2c_atmel_read_status,
+ 	.recv = i2c_atmel_recv,
+ 	.send = i2c_atmel_send,
+@@ -179,11 +180,6 @@ static int i2c_atmel_probe(struct i2c_client *client,
+ 	/* There is no known way to probe for this device, and all version
+ 	 * information seems to be read via TPM commands. Thus we rely on the
+ 	 * TPM startup process in the common code to detect the device. */
+-	if (tpm_get_timeouts(chip))
+-		return -ENODEV;
+-
+-	if (tpm_do_selftest(chip))
+-		return -ENODEV;
+ 
+ 	return tpm_chip_register(chip);
+ }
+diff --git a/drivers/char/tpm/tpm_i2c_infineon.c b/drivers/char/tpm/tpm_i2c_infineon.c
+index a426b6f67d2e..62ee44e57ddc 100644
+--- a/drivers/char/tpm/tpm_i2c_infineon.c
++++ b/drivers/char/tpm/tpm_i2c_infineon.c
+@@ -567,6 +567,7 @@ static bool tpm_tis_i2c_req_canceled(struct tpm_chip *chip, u8 status)
+ }
+ 
+ static const struct tpm_class_ops tpm_tis_i2c = {
++	.flags = TPM_OPS_AUTO_STARTUP,
+ 	.status = tpm_tis_i2c_status,
+ 	.recv = tpm_tis_i2c_recv,
+ 	.send = tpm_tis_i2c_send,
+@@ -619,9 +620,6 @@ static int tpm_tis_i2c_init(struct device *dev)
+ 
+ 	tpm_dev.chip = chip;
+ 
+-	tpm_get_timeouts(chip);
+-	tpm_do_selftest(chip);
+-
+ 	return tpm_chip_register(chip);
+ out_release:
+ 	release_locality(chip, tpm_dev.locality, 1);
 diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
-index e63ea1652d8d..826698234336 100644
+index 826698234336..6e404e0211dd 100644
 --- a/drivers/char/tpm/tpm_i2c_nuvoton.c
 +++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
-@@ -559,12 +559,8 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
- 	 *   TPM_INTF_INT_LEVEL_LOW | TPM_INTF_DATA_AVAIL_INT
- 	 * The IRQ should be set in the i2c_board_info (which is done
- 	 * automatically in of_i2c_register_devices, for device tree users */
--	if(chip->flags)
--		chip->flags |= TPM_CHIP_FLAG_IRQ;
+@@ -461,6 +461,7 @@ static bool i2c_nuvoton_req_canceled(struct tpm_chip *chip, u8 status)
+ }
+ 
+ static const struct tpm_class_ops tpm_i2c = {
++	.flags = TPM_OPS_AUTO_STARTUP,
+ 	.status = i2c_nuvoton_read_status,
+ 	.recv = i2c_nuvoton_recv,
+ 	.send = i2c_nuvoton_send,
+@@ -607,12 +608,6 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
+ 		}
+ 	}
+ 
+-	if (tpm_get_timeouts(chip))
+-		return -ENODEV;
 -
- 	priv->irq = client->irq;
+-	if (tpm_do_selftest(chip))
+-		return -ENODEV;
 -
--	if (chip->flags & TPM_CHIP_FLAG_IRQ) {
-+	if (client->irq) {
- 		dev_dbg(dev, "%s() priv->irq\n", __func__);
- 		rc = devm_request_irq(dev, client->irq,
- 				      i2c_nuvoton_int_handler,
-@@ -574,9 +570,9 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
- 		if (rc) {
- 			dev_err(dev, "%s() Unable to request irq: %d for use\n",
- 				__func__, priv->irq);
--			chip->flags &= ~TPM_CHIP_FLAG_IRQ;
- 			priv->irq = 0;
- 		} else {
-+			chip->flags |= TPM_CHIP_FLAG_IRQ;
- 			/* Clear any pending interrupt */
- 			i2c_nuvoton_ready(chip);
- 			/* - wait for TPM_STS==0xA0 (stsValid, commandReady) */
+ 	return tpm_chip_register(chip);
+ }
+ 
+diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+index 8110b52de3a9..868cec306cb4 100644
+--- a/drivers/char/tpm/tpm_tis_core.c
++++ b/drivers/char/tpm/tpm_tis_core.c
+@@ -638,6 +638,7 @@ void tpm_tis_remove(struct tpm_chip *chip)
+ EXPORT_SYMBOL_GPL(tpm_tis_remove);
+ 
+ static const struct tpm_class_ops tpm_tis = {
++	.flags = TPM_OPS_AUTO_STARTUP,
+ 	.status = tpm_tis_status,
+ 	.recv = tpm_tis_recv,
+ 	.send = tpm_tis_send,
+@@ -773,29 +774,6 @@ int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
+ 		}
+ 	}
+ 
+-	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+-		rc = tpm2_do_selftest(chip);
+-		if (rc == TPM2_RC_INITIALIZE) {
+-			dev_warn(dev, "Firmware has not started TPM\n");
+-			rc  = tpm2_startup(chip, TPM2_SU_CLEAR);
+-			if (!rc)
+-				rc = tpm2_do_selftest(chip);
+-		}
+-
+-		if (rc) {
+-			dev_err(dev, "TPM self test failed\n");
+-			if (rc > 0)
+-				rc = -ENODEV;
+-			goto out_err;
+-		}
+-	} else {
+-		if (tpm_do_selftest(chip)) {
+-			dev_err(dev, "TPM self test failed\n");
+-			rc = -ENODEV;
+-			goto out_err;
+-		}
+-	}
+-
+ 	return tpm_chip_register(chip);
+ out_err:
+ 	tpm_tis_remove(chip);
+diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
+index 86e27e823d4d..9a940332c157 100644
+--- a/drivers/char/tpm/tpm_vtpm_proxy.c
++++ b/drivers/char/tpm/tpm_vtpm_proxy.c
+@@ -346,6 +346,7 @@ static bool vtpm_proxy_tpm_req_canceled(struct tpm_chip  *chip, u8 status)
+ }
+ 
+ static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
++	.flags = TPM_OPS_AUTO_STARTUP,
+ 	.recv = vtpm_proxy_tpm_op_recv,
+ 	.send = vtpm_proxy_tpm_op_send,
+ 	.cancel = vtpm_proxy_tpm_op_cancel,
+@@ -366,14 +367,6 @@ static void vtpm_proxy_work(struct work_struct *work)
+ 						   work);
+ 	int rc;
+ 
+-	if (proxy_dev->flags & VTPM_PROXY_FLAG_TPM2)
+-		rc = tpm2_startup(proxy_dev->chip, TPM2_SU_CLEAR);
+-	else
+-		rc = tpm_get_timeouts(proxy_dev->chip);
+-
+-	if (rc)
+-		goto err;
+-
+ 	rc = tpm_chip_register(proxy_dev->chip);
+ 	if (rc)
+ 		goto err;
+diff --git a/include/linux/tpm.h b/include/linux/tpm.h
+index 706e63eea080..da158f06e0b2 100644
+--- a/include/linux/tpm.h
++++ b/include/linux/tpm.h
+@@ -33,7 +33,12 @@ struct tpm_chip;
+ struct trusted_key_payload;
+ struct trusted_key_options;
+ 
++enum TPM_OPS_FLAGS {
++	TPM_OPS_AUTO_STARTUP = BIT(0),
++};
++
+ struct tpm_class_ops {
++	unsigned int flags;
+ 	const u8 req_complete_mask;
+ 	const u8 req_complete_val;
+ 	bool (*req_canceled)(struct tpm_chip *chip, u8 status);
+-- 
+2.1.4
+
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
