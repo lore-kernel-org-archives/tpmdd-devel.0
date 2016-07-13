@@ -1,68 +1,52 @@
 From: Ed Swierk <eswierk@skyportsystems.com>
-Subject: [PATCH v9 1/5] tpm_tis: Improve reporting of IO errors
-Date: Wed, 13 Jul 2016 09:19:32 -0700
-Message-ID: <1468426776-42762-2-git-send-email-eswierk@skyportsystems.com>
-References: <1466557831-113440-1-git-send-email-eswierk@skyportsystems.com>
- <1468426776-42762-1-git-send-email-eswierk@skyportsystems.com>
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Subject: Re: [PATCH v9 0/5] tpm: Command duration logging and chip-specific override
+Date: Wed, 13 Jul 2016 09:44:05 -0700
+Message-ID: <CAO_EM_mpkeiC1psOYWz8RWsuJFR9HAQ7u5AH5qzSzR=VQ_jTPw@mail.gmail.com>
+References: <1466557831-113440-1-git-send-email-eswierk@skyportsystems.com> <1468426776-42762-1-git-send-email-eswierk@skyportsystems.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Return-path: <linux-kernel-owner@vger.kernel.org>
 In-Reply-To: <1468426776-42762-1-git-send-email-eswierk@skyportsystems.com>
-Sender: owner-linux-security-module@vger.kernel.org
+Sender: linux-kernel-owner@vger.kernel.org
 To: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
-Cc: jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, stefanb@us.ibm.com, eswierk@skyportsystems.com
+Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Stefan Berger <stefanb@us.ibm.com>, Ed Swierk <eswierk@skyportsystems.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Mysterious TPM behavior can be difficult to track down through all the
-layers of software. Add error messages for conditions that should
-never happen. Also include the manufacturer ID along with other chip
-data printed during init.
+On Wed, Jul 13, 2016 at 9:19 AM, Ed Swierk <eswierk@skyportsystems.com> wrote:
+> v9: Include command duration in existing error messages rather than
+> logging an extra debug message. Rebase onto Jarkko's tree.
 
-Signed-off-by: Ed Swierk <eswierk@skyportsystems.com>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
----
- drivers/char/tpm/tpm_tis_core.c | 8 +++++++-
- 1 file changed, 7 insertions(+), 1 deletion(-)
+Incidentally, with Jarkko's tree the tpm_tis module refuses to
+initialize (with or without force=1):
 
-diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-index 8110b52..e62fdeb 100644
---- a/drivers/char/tpm/tpm_tis_core.c
-+++ b/drivers/char/tpm/tpm_tis_core.c
-@@ -217,6 +217,8 @@ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
- 
- 	expected = be32_to_cpu(*(__be32 *) (buf + 2));
- 	if (expected > count) {
-+		dev_err(&chip->dev, "Response too long (wanted %zd, got %d)\n",
-+			count, expected);
- 		size = -EIO;
- 		goto out;
- 	}
-@@ -283,6 +285,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 				  &priv->int_queue, false);
- 		status = tpm_tis_status(chip);
- 		if (!itpm && (status & TPM_STS_DATA_EXPECT) == 0) {
-+			dev_err(&chip->dev, "Chip not accepting %zd bytes\n",
-+				len - count);
- 			rc = -EIO;
- 			goto out_err;
- 		}
-@@ -297,6 +301,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 			  &priv->int_queue, false);
- 	status = tpm_tis_status(chip);
- 	if (!itpm && (status & TPM_STS_DATA_EXPECT) != 0) {
-+		dev_err(&chip->dev, "Chip not accepting last byte\n");
- 		rc = -EIO;
- 		goto out_err;
- 	}
-@@ -707,8 +712,9 @@ int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
- 	if (rc < 0)
- 		goto out_err;
- 
--	dev_info(dev, "%s TPM (device-id 0x%X, rev-id %d)\n",
-+	dev_info(dev, "%s TPM (manufacturer-id 0x%X, device-id 0x%X, rev-id %d)\n",
- 		 (chip->flags & TPM_CHIP_FLAG_TPM2) ? "2.0" : "1.2",
-+		 priv->manufacturer_id,
- 		 vendor >> 16, rid);
- 
- 	if (!(priv->flags & TPM_TIS_ITPM_POSSIBLE)) {
--- 
-1.9.1
+tpm_tis 00:03: can't request region for resource [mem 0xfed40000-0xfed44fff]
+tpm_tis: probe of 00:03 failed with error -16
 
+The memory region is not marked reserved by the BIOS:
+
+e820: BIOS-provided physical RAM map:
+Xen: [mem 0x0000000000000000-0x000000000005ffff] usable
+Xen: [mem 0x0000000000060000-0x0000000000067fff] reserved
+Xen: [mem 0x0000000000068000-0x000000000009afff] usable
+Xen: [mem 0x00000000000a0000-0x00000000000fffff] reserved
+Xen: [mem 0x0000000000100000-0x0000000075b01fff] usable
+Xen: [mem 0x0000000075baf000-0x000000007a1f5fff] usable
+Xen: [mem 0x000000007b7d7000-0x000000007b7fffff] usable
+Xen: [mem 0x000000007bf00000-0x000000007bffffff] usable
+Xen: [mem 0x00000000c7ffc000-0x00000000c7ffcfff] reserved
+Xen: [mem 0x00000000fbffc000-0x00000000fbffcfff] reserved
+Xen: [mem 0x00000000fec00000-0x00000000fec01fff] reserved
+Xen: [mem 0x00000000fec40000-0x00000000fec40fff] reserved
+Xen: [mem 0x00000000fed20000-0x00000000fed2ffff] usable
+Xen: [mem 0x00000000fee00000-0x00000000feefffff] reserved
+Xen: [mem 0x0000000100000000-0x0000000505deafff] usable
+
+With force=1, /proc/iomem shows:
+
+fed30000-fedfffff : RAM buffer
+  fed40000-fed44fff : tpm_tis
+
+I can work around this problem by passing memmap=0x5000$0xfed40000 on
+the kernel command line.
+
+--Ed
