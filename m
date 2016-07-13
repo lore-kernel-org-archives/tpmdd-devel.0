@@ -1,106 +1,87 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: [PATCH v4 2/2] tpm: Add TPM 2.0 support to the
-	Nuvoton i2c driver (NPCT6xx family)
-Date: Tue, 12 Jul 2016 11:41:50 -0600
-Message-ID: <1468345311-8014-3-git-send-email-jgunthorpe@obsidianresearch.com>
-References: <1468345311-8014-1-git-send-email-jgunthorpe@obsidianresearch.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1468345311-8014-1-git-send-email-jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+From: Ed Swierk <eswierk@skyportsystems.com>
+Subject: [PATCH v9 2/5] tpm: Add optional logging of TPM command durations
+Date: Wed, 13 Jul 2016 09:19:33 -0700
+Message-ID: <1468426776-42762-3-git-send-email-eswierk@skyportsystems.com>
+References: <1466557831-113440-1-git-send-email-eswierk@skyportsystems.com>
+ <1468426776-42762-1-git-send-email-eswierk@skyportsystems.com>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <1468426776-42762-1-git-send-email-eswierk@skyportsystems.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+Cc: jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, stefanb@us.ibm.com, eswierk@skyportsystems.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-VGhlIGNvbW1hbmQgZmxvdyBpcyBleGFjdGx5IHRoZSBzYW1lLCB0aGUgY29yZSBzaW1wbHkgbmVl
-ZHMgdG8gYmUKdG9sZCB0byBlbmFibGUgVFBNMiBtb2RlIHdoZW4gdGhlIGNvbXBhdGlibGUgc3Ry
-aW5nIGluZGljYXRlcyBhClRQTTIuCgpTaWduZWQtb2ZmLWJ5OiBBbmRyZXcgQXptYW5za3kgPGFu
-ZHJldy56YW1hbnNreUBudXZvdG9uLmNvbT4KVGVzdGVkLWJ5OiBBbmRyZXcgWmFtYW5za3kgPGFu
-ZHJldy56YW1hbnNreUBudXZvdG9uLmNvbT4KU2lnbmVkLW9mZi1ieTogSmFzb24gR3VudGhvcnBl
-IDxqZ3VudGhvcnBlQG9ic2lkaWFucmVzZWFyY2guY29tPgpBY2tlZC1ieTogUm9iIEhlcnJpbmcg
-PHJvYmhAa2VybmVsLm9yZz4KLS0tCiAuLi4vZGV2aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJpdmlh
-bC1kZXZpY2VzLnR4dCAgICB8ICAxICsKIGRyaXZlcnMvY2hhci90cG0vdHBtX2kyY19udXZvdG9u
-LmMgICAgICAgICAgICAgICAgIHwgMjYgKysrKysrKysrKysrKysrKystLS0tLQogMiBmaWxlcyBj
-aGFuZ2VkLCAyMSBpbnNlcnRpb25zKCspLCA2IGRlbGV0aW9ucygtKQoKZGlmZiAtLWdpdCBhL0Rv
-Y3VtZW50YXRpb24vZGV2aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJpdmlhbC1kZXZpY2VzLnR4dCBi
-L0RvY3VtZW50YXRpb24vZGV2aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJpdmlhbC1kZXZpY2VzLnR4
-dAppbmRleCA1Mzk4NzQ0OTA0OTIuLmQ0ZjY1NDI3NmNmOSAxMDA2NDQKLS0tIGEvRG9jdW1lbnRh
-dGlvbi9kZXZpY2V0cmVlL2JpbmRpbmdzL2kyYy90cml2aWFsLWRldmljZXMudHh0CisrKyBiL0Rv
-Y3VtZW50YXRpb24vZGV2aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJpdmlhbC1kZXZpY2VzLnR4dApA
-QCAtNjIsNiArNjIsNyBAQCBuYXRpb25hbCxsbTgwCQlTZXJpYWwgSW50ZXJmYWNlIEFDUEktQ29t
-cGF0aWJsZSBNaWNyb3Byb2Nlc3NvciBTeXN0ZW0gSGFyZHdhcmUgTQogbmF0aW9uYWwsbG04NQkJ
-VGVtcGVyYXR1cmUgc2Vuc29yIHdpdGggaW50ZWdyYXRlZCBmYW4gY29udHJvbAogbmF0aW9uYWws
-bG05MgkJwrEwLjMzwrBDIEFjY3VyYXRlLCAxMi1CaXQgKyBTaWduIFRlbXBlcmF0dXJlIFNlbnNv
-ciBhbmQgVGhlcm1hbCBXaW5kb3cgQ29tcGFyYXRvciB3aXRoIFR3by1XaXJlIEludGVyZmFjZQog
-bnV2b3RvbixucGN0NTAxCQlpMmMgdHJ1c3RlZCBwbGF0Zm9ybSBtb2R1bGUgKFRQTSkKK251dm90
-b24sbnBjdDYwMQkJaTJjIHRydXN0ZWQgcGxhdGZvcm0gbW9kdWxlIChUUE0yKQogbnhwLHBjYTk1
-NTYJCU9jdGFsIFNNQnVzIGFuZCBJMkMgcmVnaXN0ZXJlZCBpbnRlcmZhY2UKIG54cCxwY2E5NTU3
-CQk4LWJpdCBJMkMtYnVzIGFuZCBTTUJ1cyBJL08gcG9ydCB3aXRoIHJlc2V0CiBueHAscGNmODU2
-MwkJUmVhbC10aW1lIGNsb2NrL2NhbGVuZGFyCmRpZmYgLS1naXQgYS9kcml2ZXJzL2NoYXIvdHBt
-L3RwbV9pMmNfbnV2b3Rvbi5jIGIvZHJpdmVycy9jaGFyL3RwbS90cG1faTJjX251dm90b24uYwpp
-bmRleCA2ZTQwNGUwMjExZGQuLmUzYTkxNTVlZTY3MSAxMDA2NDQKLS0tIGEvZHJpdmVycy9jaGFy
-L3RwbS90cG1faTJjX251dm90b24uYworKysgYi9kcml2ZXJzL2NoYXIvdHBtL3RwbV9pMmNfbnV2
-b3Rvbi5jCkBAIC0xLDUgKzEsNSBAQAotLyoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioq
-KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKgotICogTnV2b3Rv
-biBUUE0gSTJDIERldmljZSBEcml2ZXIgSW50ZXJmYWNlIGZvciBXUENUMzAxL05QQ1Q1MDEsCisg
-LyoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioq
-KioqKioqKioqKioqKioqKioqKioqKgorICogTnV2b3RvbiBUUE0gSTJDIERldmljZSBEcml2ZXIg
-SW50ZXJmYWNlIGZvciBXUENUMzAxL05QQ1Q1MDEvTlBDVDZYWCwKICAqIGJhc2VkIG9uIHRoZSBU
-Q0cgVFBNIEludGVyZmFjZSBTcGVjIHZlcnNpb24gMS4yLgogICogU3BlY2lmaWNhdGlvbnMgYXQg
-d3d3LnRydXN0ZWRjb21wdXRpbmdncm91cC5vcmcKICAqCkBAIC0zMSw2ICszMSw3IEBACiAjaW5j
-bHVkZSA8bGludXgvaW50ZXJydXB0Lmg+CiAjaW5jbHVkZSA8bGludXgvd2FpdC5oPgogI2luY2x1
-ZGUgPGxpbnV4L2kyYy5oPgorI2luY2x1ZGUgPGxpbnV4L29mX2RldmljZS5oPgogI2luY2x1ZGUg
-InRwbS5oIgogCiAvKiBJMkMgaW50ZXJmYWNlIG9mZnNldHMgKi8KQEAgLTUyLDcgKzUzLDggQEAK
-ICNkZWZpbmUgVFBNX0kyQ19SRVRSWV9ERUxBWV9TSE9SVCAgICAgIDIgICAgICAgLyogbXNlYyAq
-LwogI2RlZmluZSBUUE1fSTJDX1JFVFJZX0RFTEFZX0xPTkcgICAgICAgMTAgICAgICAvKiBtc2Vj
-ICovCiAKLSNkZWZpbmUgSTJDX0RSSVZFUl9OQU1FICJ0cG1faTJjX251dm90b24iCisjZGVmaW5l
-IE9GX0lTX1RQTTIgKCh2b2lkICopMSkKKyNkZWZpbmUgSTJDX0lTX1RQTTIgMQogCiBzdHJ1Y3Qg
-cHJpdl9kYXRhIHsKIAlpbnQgaXJxOwpAQCAtMTY1LDcgKzE2Nyw3IEBAIHN0YXRpYyBpbnQgaTJj
-X251dm90b25fZ2V0X2J1cnN0Y291bnQoc3RydWN0IGkyY19jbGllbnQgKmNsaWVudCwKIH0KIAog
-LyoKLSAqIFdQQ1QzMDEvTlBDVDUwMSBTSU5UIyBzdXBwb3J0cyBvbmx5IGRhdGFBdmFpbAorICog
-V1BDVDMwMS9OUENUNTAxL05QQ1Q2WFggU0lOVCMgc3VwcG9ydHMgb25seSBkYXRhQXZhaWwKICAq
-IGFueSBjYWxsIHRvIHRoaXMgZnVuY3Rpb24gd2hpY2ggaXMgbm90IHdhaXRpbmcgZm9yIGRhdGFB
-dmFpbCB3aWxsCiAgKiBzZXQgcXVldWUgdG8gTlVMTCB0byBhdm9pZCB3YWl0aW5nIGZvciBpbnRl
-cnJ1cHQKICAqLwpAQCAtNTQ1LDYgKzU0NywxNiBAQCBzdGF0aWMgaW50IGkyY19udXZvdG9uX3By
-b2JlKHN0cnVjdCBpMmNfY2xpZW50ICpjbGllbnQsCiAJaWYgKCFwcml2KQogCQlyZXR1cm4gLUVO
-T01FTTsKIAorCWlmIChkZXYtPm9mX25vZGUpIHsKKwkJY29uc3Qgc3RydWN0IG9mX2RldmljZV9p
-ZCAqb2ZfaWQ7CisKKwkJb2ZfaWQgPSBvZl9tYXRjaF9kZXZpY2UoZGV2LT5kcml2ZXItPm9mX21h
-dGNoX3RhYmxlLCBkZXYpOworCQlpZiAob2ZfaWQgJiYgb2ZfaWQtPmRhdGEgPT0gT0ZfSVNfVFBN
-MikKKwkJCWNoaXAtPmZsYWdzIHw9IFRQTV9DSElQX0ZMQUdfVFBNMjsKKwl9IGVsc2UKKwkJaWYg
-KGlkLT5kcml2ZXJfZGF0YSA9PSBJMkNfSVNfVFBNMikKKwkJCWNoaXAtPmZsYWdzIHw9IFRQTV9D
-SElQX0ZMQUdfVFBNMjsKKwogCWluaXRfd2FpdHF1ZXVlX2hlYWQoJnByaXYtPnJlYWRfcXVldWUp
-OwogCiAJLyogRGVmYXVsdCB0aW1lb3V0cyAqLwpAQCAtNjIwLDcgKzYzMiw4IEBAIHN0YXRpYyBp
-bnQgaTJjX251dm90b25fcmVtb3ZlKHN0cnVjdCBpMmNfY2xpZW50ICpjbGllbnQpCiB9CiAKIHN0
-YXRpYyBjb25zdCBzdHJ1Y3QgaTJjX2RldmljZV9pZCBpMmNfbnV2b3Rvbl9pZFtdID0gewotCXtJ
-MkNfRFJJVkVSX05BTUUsIDB9LAorCXsidHBtX2kyY19udXZvdG9uIn0sCisJeyJ0cG0yX2kyY19u
-dXZvdG9uIiwgLmRyaXZlcl9kYXRhID0gSTJDX0lTX1RQTTJ9LAogCXt9CiB9OwogTU9EVUxFX0RF
-VklDRV9UQUJMRShpMmMsIGkyY19udXZvdG9uX2lkKTsKQEAgLTYyOSw2ICs2NDIsNyBAQCBNT0RV
-TEVfREVWSUNFX1RBQkxFKGkyYywgaTJjX251dm90b25faWQpOwogc3RhdGljIGNvbnN0IHN0cnVj
-dCBvZl9kZXZpY2VfaWQgaTJjX251dm90b25fb2ZfbWF0Y2hbXSA9IHsKIAl7LmNvbXBhdGlibGUg
-PSAibnV2b3RvbixucGN0NTAxIn0sCiAJey5jb21wYXRpYmxlID0gIndpbmJvbmQsd3BjdDMwMSJ9
-LAorCXsuY29tcGF0aWJsZSA9ICJudXZvdG9uLG5wY3Q2MDEiLCAuZGF0YSA9IE9GX0lTX1RQTTJ9
-LAogCXt9LAogfTsKIE1PRFVMRV9ERVZJQ0VfVEFCTEUob2YsIGkyY19udXZvdG9uX29mX21hdGNo
-KTsKQEAgLTY0MSw3ICs2NTUsNyBAQCBzdGF0aWMgc3RydWN0IGkyY19kcml2ZXIgaTJjX251dm90
-b25fZHJpdmVyID0gewogCS5wcm9iZSA9IGkyY19udXZvdG9uX3Byb2JlLAogCS5yZW1vdmUgPSBp
-MmNfbnV2b3Rvbl9yZW1vdmUsCiAJLmRyaXZlciA9IHsKLQkJLm5hbWUgPSBJMkNfRFJJVkVSX05B
-TUUsCisJCS5uYW1lID0gInRwbV9pMmNfbnV2b3RvbiIsCiAJCS5wbSA9ICZpMmNfbnV2b3Rvbl9w
-bV9vcHMsCiAJCS5vZl9tYXRjaF90YWJsZSA9IG9mX21hdGNoX3B0cihpMmNfbnV2b3Rvbl9vZl9t
-YXRjaCksCiAJfSwKLS0gCjIuMS40CgoKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCldoYXQgTmV0Rmxv
-dyBBbmFseXplciBjYW4gZG8gZm9yIHlvdT8gTW9uaXRvcnMgbmV0d29yayBiYW5kd2lkdGggYW5k
-IHRyYWZmaWMKcGF0dGVybnMgYXQgYW4gaW50ZXJmYWNlLWxldmVsLiBSZXZlYWxzIHdoaWNoIHVz
-ZXJzLCBhcHBzLCBhbmQgcHJvdG9jb2xzIGFyZSAKY29uc3VtaW5nIHRoZSBtb3N0IGJhbmR3aWR0
-aC4gUHJvdmlkZXMgbXVsdGktdmVuZG9yIHN1cHBvcnQgZm9yIE5ldEZsb3csIApKLUZsb3csIHNG
-bG93IGFuZCBvdGhlciBmbG93cy4gTWFrZSBpbmZvcm1lZCBkZWNpc2lvbnMgdXNpbmcgY2FwYWNp
-dHkgcGxhbm5pbmcKcmVwb3J0cy5odHRwOi8vc2RtLmxpbmsvem9ob2RldjJkZXYKX19fX19fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFpbGlu
-ZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xpc3RzLnNv
-dXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
+Some TPMs violate their own advertised command durations. This is much
+easier to debug with data about how long each command actually takes
+to complete. Add debug messages that can be enabled by running
+
+  echo -n 'module tpm +p' >/sys/kernel/debug/dynamic_debug/control
+
+on a kernel configured with DYNAMIC_DEBUG=y.
+
+Signed-off-by: Ed Swierk <eswierk@skyportsystems.com>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+---
+ drivers/char/tpm/tpm-interface.c | 19 +++++++++++++------
+ 1 file changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index 5e3c1b6..a4beb53 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -335,13 +335,14 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
+ {
+ 	ssize_t rc;
+ 	u32 count, ordinal;
+-	unsigned long stop;
++	unsigned long start, stop;
+ 
+ 	if (bufsiz > TPM_BUFSIZE)
+ 		bufsiz = TPM_BUFSIZE;
+ 
+ 	count = be32_to_cpu(*((__be32 *) (buf + 2)));
+ 	ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
++	dev_dbg(&chip->dev, "starting command %d count %d\n", ordinal, count);
+ 	if (count == 0)
+ 		return -ENODATA;
+ 	if (count > bufsiz) {
+@@ -362,18 +363,23 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
+ 	if (chip->flags & TPM_CHIP_FLAG_IRQ)
+ 		goto out_recv;
+ 
++	start = jiffies;
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+-		stop = jiffies + tpm2_calc_ordinal_duration(chip, ordinal);
++		stop = start + tpm2_calc_ordinal_duration(chip, ordinal);
+ 	else
+-		stop = jiffies + tpm_calc_ordinal_duration(chip, ordinal);
++		stop = start + tpm_calc_ordinal_duration(chip, ordinal);
+ 	do {
+ 		u8 status = chip->ops->status(chip);
+ 		if ((status & chip->ops->req_complete_mask) ==
+-		    chip->ops->req_complete_val)
++		    chip->ops->req_complete_val) {
++			dev_dbg(&chip->dev, "completed command %d in %d ms\n",
++				ordinal, jiffies_to_msecs(jiffies - start));
+ 			goto out_recv;
++		}
+ 
+ 		if (chip->ops->req_canceled(chip, status)) {
+-			dev_err(&chip->dev, "Operation Canceled\n");
++			dev_err(&chip->dev, "canceled command %d after %d ms\n",
++				ordinal, jiffies_to_msecs(jiffies - start));
+ 			rc = -ECANCELED;
+ 			goto out;
+ 		}
+@@ -383,7 +389,8 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
+ 	} while (time_before(jiffies, stop));
+ 
+ 	chip->ops->cancel(chip);
+-	dev_err(&chip->dev, "Operation Timed out\n");
++	dev_err(&chip->dev, "command %d timed out after %d ms\n", ordinal,
++		jiffies_to_msecs(jiffies - start));
+ 	rc = -ETIME;
+ 	goto out;
+ 
+-- 
+1.9.1
