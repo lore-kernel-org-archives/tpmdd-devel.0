@@ -1,52 +1,112 @@
-From: Ed Swierk <eswierk@skyportsystems.com>
-Subject: Re: [PATCH v9 0/5] tpm: Command duration logging and chip-specific override
-Date: Wed, 13 Jul 2016 09:44:05 -0700
-Message-ID: <CAO_EM_mpkeiC1psOYWz8RWsuJFR9HAQ7u5AH5qzSzR=VQ_jTPw@mail.gmail.com>
-References: <1466557831-113440-1-git-send-email-eswierk@skyportsystems.com> <1468426776-42762-1-git-send-email-eswierk@skyportsystems.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH 2/2] add irq validity check in
+	tpm_i2c_nuvoton driver
+Date: Wed, 13 Jul 2016 15:04:01 +0300
+Message-ID: <20160713120401.GA4387@intel.com>
+References: <1467194329-5543-1-git-send-email-andrew.zamansky@nuvoton.com>
+	<1467194329-5543-3-git-send-email-andrew.zamansky@nuvoton.com>
+	<20160629140339.GA4589@intel.com>
+	<20160712173326.GA9286@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <1468426776-42762-1-git-send-email-eswierk@skyportsystems.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
-Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Stefan Berger <stefanb@us.ibm.com>, Ed Swierk <eswierk@skyportsystems.com>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20160712173326.GA9286-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: andrew zamansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, azamansk-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, Dan.Morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, stimpy1-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jul 13, 2016 at 9:19 AM, Ed Swierk <eswierk@skyportsystems.com> wrote:
-> v9: Include command duration in existing error messages rather than
-> logging an extra debug message. Rebase onto Jarkko's tree.
+On Tue, Jul 12, 2016 at 11:33:26AM -0600, Jason Gunthorpe wrote:
+> On Wed, Jun 29, 2016 at 05:03:39PM +0300, Jarkko Sakkinen wrote:
+> > On Wed, Jun 29, 2016 at 12:58:49PM +0300, andrew zamansky wrote:
+> > > if irq==0 (actualy invalid value) then error is printed to dmesg after
+> > > trying to register to 0 interrupt 
+> > > 
+> > >  drivers/char/tpm/tpm_i2c_nuvoton.c | 4 +++-
+> > >  1 file changed, 3 insertions(+), 1 deletion(-)
+> > > 
+> > > diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
+> > > index 75a80e466..3081529 100644
+> > > +++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
+> > > @@ -554,7 +554,9 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
+> > >  	 *   TPM_INTF_INT_LEVEL_LOW | TPM_INTF_DATA_AVAIL_INT
+> > >  	 * The IRQ should be set in the i2c_board_info (which is done
+> > >  	 * automatically in of_i2c_register_devices, for device tree users */
+> > > -	chip->flags |= TPM_CHIP_FLAG_IRQ;
+> > > +	if(chip->flags)
+> > > +		chip->flags |= TPM_CHIP_FLAG_IRQ;
+> > > +
+> > >  	priv->irq = client->irq;
+> > >  
+> > >  	if (chip->flags & TPM_CHIP_FLAG_IRQ) {
+> > 
+> > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> > 
+> > PS. There's a style error. "if()" should be "if ()". I don't mind fixing
+> > that. Just remember that next time.
+> 
+> Andrew/Jarkko:
+> 
+> Uhm, this looks wrong to me.. The original code was like this:
+> 
+> -       chip->vendor.irq = client->irq;
+> -       if (chip->vendor.irq) {
+> 
+> And was wrongly changed to this:
+> 
+> +       chip->flags |= TPM_CHIP_FLAG_IRQ;
+> +       priv->irq = client->irq;
+> +       if (chip->flags & TPM_CHIP_FLAG_IRQ) {
+> 
+> Jarkko, can you fold this into the patch to fix it please:
 
-Incidentally, with Jarkko's tree the tpm_tis module refuses to
-initialize (with or without force=1):
+Right. Sure. It's not merged to my next nor it has been part of any pull
+request so this is still doable.
 
-tpm_tis 00:03: can't request region for resource [mem 0xfed40000-0xfed44fff]
-tpm_tis: probe of 00:03 failed with error -16
+/Jarkko
 
-The memory region is not marked reserved by the BIOS:
+> diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
+> index e63ea1652d8d..826698234336 100644
+> --- a/drivers/char/tpm/tpm_i2c_nuvoton.c
+> +++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
+> @@ -559,12 +559,8 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
+>  	 *   TPM_INTF_INT_LEVEL_LOW | TPM_INTF_DATA_AVAIL_INT
+>  	 * The IRQ should be set in the i2c_board_info (which is done
+>  	 * automatically in of_i2c_register_devices, for device tree users */
+> -	if(chip->flags)
+> -		chip->flags |= TPM_CHIP_FLAG_IRQ;
+> -
+>  	priv->irq = client->irq;
+> -
+> -	if (chip->flags & TPM_CHIP_FLAG_IRQ) {
+> +	if (client->irq) {
+>  		dev_dbg(dev, "%s() priv->irq\n", __func__);
+>  		rc = devm_request_irq(dev, client->irq,
+>  				      i2c_nuvoton_int_handler,
+> @@ -574,9 +570,9 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
+>  		if (rc) {
+>  			dev_err(dev, "%s() Unable to request irq: %d for use\n",
+>  				__func__, priv->irq);
+> -			chip->flags &= ~TPM_CHIP_FLAG_IRQ;
+>  			priv->irq = 0;
+>  		} else {
+> +			chip->flags |= TPM_CHIP_FLAG_IRQ;
+>  			/* Clear any pending interrupt */
+>  			i2c_nuvoton_ready(chip);
+>  			/* - wait for TPM_STS==0xA0 (stsValid, commandReady) */
 
-e820: BIOS-provided physical RAM map:
-Xen: [mem 0x0000000000000000-0x000000000005ffff] usable
-Xen: [mem 0x0000000000060000-0x0000000000067fff] reserved
-Xen: [mem 0x0000000000068000-0x000000000009afff] usable
-Xen: [mem 0x00000000000a0000-0x00000000000fffff] reserved
-Xen: [mem 0x0000000000100000-0x0000000075b01fff] usable
-Xen: [mem 0x0000000075baf000-0x000000007a1f5fff] usable
-Xen: [mem 0x000000007b7d7000-0x000000007b7fffff] usable
-Xen: [mem 0x000000007bf00000-0x000000007bffffff] usable
-Xen: [mem 0x00000000c7ffc000-0x00000000c7ffcfff] reserved
-Xen: [mem 0x00000000fbffc000-0x00000000fbffcfff] reserved
-Xen: [mem 0x00000000fec00000-0x00000000fec01fff] reserved
-Xen: [mem 0x00000000fec40000-0x00000000fec40fff] reserved
-Xen: [mem 0x00000000fed20000-0x00000000fed2ffff] usable
-Xen: [mem 0x00000000fee00000-0x00000000feefffff] reserved
-Xen: [mem 0x0000000100000000-0x0000000505deafff] usable
-
-With force=1, /proc/iomem shows:
-
-fed30000-fedfffff : RAM buffer
-  fed40000-fed44fff : tpm_tis
-
-I can work around this problem by passing memmap=0x5000$0xfed40000 on
-the kernel command line.
-
---Ed
+------------------------------------------------------------------------------
+What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
+patterns at an interface-level. Reveals which users, apps, and protocols are 
+consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
+J-Flow, sFlow and other flows. Make informed decisions using capacity planning
+reports.http://sdm.link/zohodev2dev
