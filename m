@@ -1,60 +1,53 @@
-From: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Subject: Re: [PATCH 2/2] tpm: add driver for cr50 on SPI
-Date: Thu, 14 Jul 2016 20:44:44 -0700
-Message-ID: <20160715034444.GA28128@apronin>
-References: <1468549218-19215-1-git-send-email-apronin@chromium.org>
-	<1468549218-19215-3-git-send-email-apronin@chromium.org>
-	<20160715033236.GH9347@obsidianresearch.com>
+From: Guenter Roeck <groeck@google.com>
+Subject: Re: [PATCH 1/2] tpm_tis_core: add optional max xfer size check
+Date: Thu, 14 Jul 2016 20:48:40 -0700
+Message-ID: <CABXOdTehAeB+9RZqwU=UK1rMHpweXKdawegKBqQ=TA0UPKLdxw@mail.gmail.com>
+References: <1468546745-14646-1-git-send-email-apronin@chromium.org>
+ <1468546745-14646-2-git-send-email-apronin@chromium.org> <20160715031351.GD9347@obsidianresearch.com>
+ <20160715032517.GB25406@apronin>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20160715033236.GH9347-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
+Content-Type: text/plain; charset=UTF-8
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20160715032517.GB25406@apronin>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Andrey Pronin <apronin@chromium.org>
+Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, tpmdd-devel@lists.sourceforge.net, linux-kernel <linux-kernel@vger.kernel.org>, Guenter Roeck <groeck@chromium.org>, smbarber@chromium.org, Douglas Anderson <dianders@chromium.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jul 14, 2016 at 09:32:36PM -0600, Jason Gunthorpe wrote:
-> On Thu, Jul 14, 2016 at 07:20:18PM -0700, Andrey Pronin wrote:
-> 
-> > +static int cr50_spi_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
-> > +{
-> > +	int rc;
-> > +
-> > +	rc = data->phy_ops->read_bytes(data, addr, sizeof(u16), (u8 *)result);
-> > +	if (!rc)
-> > +		*result = le16_to_cpu(*result);
-> > +	return rc;
-> > +}
-> 
-> I thought we had core support for this pattern?
-> 
-> Christophe ?
-> 
-> Please change this so this code isn't duplicated.
-> 
-> Jason
+On Thu, Jul 14, 2016 at 8:25 PM, Andrey Pronin <apronin@chromium.org> wrote:
+> On Thu, Jul 14, 2016 at 09:13:51PM -0600, Jason Gunthorpe wrote:
+>> On Thu, Jul 14, 2016 at 06:39:04PM -0700, Andrey Pronin wrote:
+>>
+>> > +static inline u16 tpm_tis_max_xfer_size(struct tpm_tis_data *data)
+>> > +{
+>> > +   return data->phy_ops->max_xfer_size;
+>> > +}
+>> > +
+>> > +static inline bool tpm_tis_burstcnt_is_valid(struct tpm_tis_data *data,
+>> > +                                        u16 burstcnt)
+>> > +{
+>> > +   return (tpm_tis_max_xfer_size(data) == 0)
+>> > +           || (burstcnt <= tpm_tis_max_xfer_size(data));
+>> > +}
+>>
+>> We don't need these accessors, just open code it in the one call
+>> site. That is more clear as the ==0 case is important to understand
+>> that the flow is correct.
+>>
+>> BTW, I dodn't think || as the start of a line was cannonical kernel
+>> style.. Did checkpatch accept that?
+>>
+>> Jason
 >
-Hmm, didn't see the support. Would be great if there is.
-The pattern itself is copied from tpm_tis_spi as is.
-read_bytes/write_bytes were de-dup'ed as they used a lot of common code
-(even more for this driver than for tpm_tis_spi).
-But as for _readNN/_writeNN, there're only three of these functions,
-so it din't seem too bad.
+> You mean completely open code it inside get_burstcount()? Will do.
+> checkpatch.pl had no problems with it, but I can move it to the end
+> of the line, if it feels better.
+>
 
+I would suggest to use checkpatch --strict; it will tell you. It will
+also ask you to align continuation lines with '(' on the previous
+line. On that, I would suggest to follow the style used in the file(s)
+you are working on (or follow guidance from the maintainer).
 
-------------------------------------------------------------------------------
-What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
-patterns at an interface-level. Reveals which users, apps, and protocols are 
-consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
-J-Flow, sFlow and other flows. Make informed decisions using capacity planning
-reports.http://sdm.link/zohodev2dev
+Thanks,
+Guenter
