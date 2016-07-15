@@ -1,43 +1,42 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH 1/2] tpm: define constants for tpm2
-	properties
-Date: Thu, 14 Jul 2016 21:08:10 -0600
-Message-ID: <20160715030810.GB9347@obsidianresearch.com>
+From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Subject: Re: [PATCH 2/2] tpm: fix byte-order for the value read by
+ tpm2_get_tpm_pt
+Date: Thu, 14 Jul 2016 21:10:46 -0600
+Message-ID: <20160715031046.GC9347@obsidianresearch.com>
 References: <1468544838-9990-1-git-send-email-apronin@chromium.org>
-	<1468544838-9990-2-git-send-email-apronin@chromium.org>
+ <1468544838-9990-3-git-send-email-apronin@chromium.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1468544838-9990-2-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Cc: dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
+In-Reply-To: <1468544838-9990-3-git-send-email-apronin@chromium.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Andrey Pronin <apronin@chromium.org>
+Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, groeck@chromium.org, smbarber@chromium.org, dianders@chromium.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jul 14, 2016 at 06:07:17PM -0700, Andrey Pronin wrote:
-> Change-Id: I47cb1793736781fbea93e5bf80b783e0ac9e8628
+On Thu, Jul 14, 2016 at 06:07:18PM -0700, Andrey Pronin wrote:
+> Change-Id: I7d71cd379b1a3b7659d20a1b6008216762596590
+> Signed-off-by: Andrey Pronin <apronin@chromium.org>
+>  drivers/char/tpm/tpm2-cmd.c | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
+> 
+> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+> index a1673dc..a88b31e 100644
+> +++ b/drivers/char/tpm/tpm2-cmd.c
+> @@ -703,7 +703,7 @@ ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,  u32 *value,
+>  
+>  	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), desc);
+>  	if (!rc)
+> -		*value = cmd.params.get_tpm_pt_out.value;
+> +		*value = be32_to_cpu(cmd.params.get_tpm_pt_out.value);
 
-These commit messages are no good, generally for all your
-patches. Drop the internal change-id and provide a suitable
-description.
+Huh.
 
-Do not add dead code to the kernel, so this patch should be in a
-series that actually uses the new constants.
+Jarkko: Are you running sparse on the tpm stuff? The annotations look
+right here, sparse should have complained on this? Andrey, did sparse
+complain here or is there something more serious wrong as well??
+
+Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 
 Jason
-
-------------------------------------------------------------------------------
-What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
-patterns at an interface-level. Reveals which users, apps, and protocols are 
-consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
-J-Flow, sFlow and other flows. Make informed decisions using capacity planning
-reports.http://sdm.link/zohodev2dev
