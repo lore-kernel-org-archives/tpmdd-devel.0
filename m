@@ -1,12 +1,13 @@
 From: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Subject: [PATCH 0/2] tpm: better support for 32-bit tpm2
-	properties
-Date: Thu, 14 Jul 2016 18:07:16 -0700
-Message-ID: <1468544838-9990-1-git-send-email-apronin@chromium.org>
+Subject: [PATCH 2/2] tpm_tis_spi: add max xfer size
+Date: Thu, 14 Jul 2016 18:39:05 -0700
+Message-ID: <1468546745-14646-3-git-send-email-apronin@chromium.org>
+References: <1468546745-14646-1-git-send-email-apronin@chromium.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1468546745-14646-1-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,19 +20,23 @@ To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-These patches help working with 32-bit TPM2.0-specific properties that
-can be read using TPM2_GetCapability(capability = TPM_CAP_TPM_PROPERTIES):
- - TPM_PT_PERMANENT
- - TPM_PT_STARTUP_CLEAR
+Signed-off-by: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+---
+ drivers/char/tpm/tpm_tis_spi.c | 1 +
+ 1 file changed, 1 insertion(+)
 
-Andrey Pronin (2):
-  tpm: define constants for tpm2 properties
-  tpm: fix byte-order for the value read by tpm2_get_tpm_pt
-
- drivers/char/tpm/tpm.h      | 26 ++++++++++++++++++++++++++
- drivers/char/tpm/tpm2-cmd.c |  2 +-
- 2 files changed, 27 insertions(+), 1 deletion(-)
-
+diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
+index dbaad9c..b103373 100644
+--- a/drivers/char/tpm/tpm_tis_spi.c
++++ b/drivers/char/tpm/tpm_tis_spi.c
+@@ -206,6 +206,7 @@ static const struct tpm_tis_phy_ops tpm_spi_phy_ops = {
+ 	.read16 = tpm_tis_spi_read16,
+ 	.read32 = tpm_tis_spi_read32,
+ 	.write32 = tpm_tis_spi_write32,
++	.max_xfer_size = MAX_SPI_FRAMESIZE,
+ };
+ 
+ static int tpm_tis_spi_probe(struct spi_device *dev)
 -- 
 2.6.6
 
