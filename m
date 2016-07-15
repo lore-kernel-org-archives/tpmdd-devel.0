@@ -1,57 +1,46 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH 2/2] tpm: support driver-specific sysfs
- attrs in tpm_tis_core
-Date: Thu, 14 Jul 2016 21:23:27 -0600
-Message-ID: <20160715032327.GF9347@obsidianresearch.com>
-References: <1468547496-16215-1-git-send-email-apronin@chromium.org>
-	<1468547496-16215-3-git-send-email-apronin@chromium.org>
+From: Andrey Pronin <apronin@chromium.org>
+Subject: Re: [PATCH 1/2] tpm_tis_core: add optional max xfer size check
+Date: Thu, 14 Jul 2016 20:25:17 -0700
+Message-ID: <20160715032517.GB25406@apronin>
+References: <1468546745-14646-1-git-send-email-apronin@chromium.org>
+ <1468546745-14646-2-git-send-email-apronin@chromium.org>
+ <20160715031351.GD9347@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1468547496-16215-3-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Cc: dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
+In-Reply-To: <20160715031351.GD9347@obsidianresearch.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, groeck@chromium.org, smbarber@chromium.org, dianders@chromium.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jul 14, 2016 at 06:51:36PM -0700, Andrey Pronin wrote:
-> -	WARN_ON(chip->groups_cnt != 0);
+On Thu, Jul 14, 2016 at 09:13:51PM -0600, Jason Gunthorpe wrote:
+> On Thu, Jul 14, 2016 at 06:39:04PM -0700, Andrey Pronin wrote:
+> 
+> > +static inline u16 tpm_tis_max_xfer_size(struct tpm_tis_data *data)
+> > +{
+> > +	return data->phy_ops->max_xfer_size;
+> > +}
+> > +
+> > +static inline bool tpm_tis_burstcnt_is_valid(struct tpm_tis_data *data,
+> > +					     u16 burstcnt)
+> > +{
+> > +	return (tpm_tis_max_xfer_size(data) == 0)
+> > +		|| (burstcnt <= tpm_tis_max_xfer_size(data));
+> > +}
+> 
+> We don't need these accessors, just open code it in the one call
+> site. That is more clear as the ==0 case is important to understand
+> that the flow is correct.
+> 
+> BTW, I dodn't think || as the start of a line was cannonical kernel
+> style.. Did checkpatch accept that?
+> 
+> Jason
 
-Nope.
+You mean completely open code it inside get_burstcount()? Will do.
+checkpatch.pl had no problems with it, but I can move it to the end
+of the line, if it feels better.
 
-> -	const struct attribute_group *groups[3];
-> +	/* up to 4 attribute groups:
-> +	 * - driver-specific
-> +	 * - common TPM1.2 and TPM2.0
-> +	 * - TPM1.2/2.0-specific
-> +	 * - ppi
-> +	 */
-> +	const struct attribute_group *groups[5];
-
-The prior patch needed to have groups[4], every patch much work.
-
-> +	if (priv->phy_ops->attr_group)
-> +		chip->groups[chip->groups_cnt++] = priv->phy_ops->attr_group;
-
-I am really not excited about having driver specific sysfs
-files.
-
-What is the justification for this?
-
-Jason
-
-------------------------------------------------------------------------------
-What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
-patterns at an interface-level. Reveals which users, apps, and protocols are 
-consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
-J-Flow, sFlow and other flows. Make informed decisions using capacity planning
-reports.http://sdm.link/zohodev2dev
+Andrey
