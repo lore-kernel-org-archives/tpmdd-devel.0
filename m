@@ -1,12 +1,14 @@
 From: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Subject: [PATCH] tpm_tis_core: convert max timeouts from msec
-	to jiffies
-Date: Thu, 14 Jul 2016 17:29:40 -0700
-Message-ID: <1468542580-5296-1-git-send-email-apronin@chromium.org>
+Subject: [PATCH 2/2] tpm: fix byte-order for the value read by
+	tpm2_get_tpm_pt
+Date: Thu, 14 Jul 2016 18:07:18 -0700
+Message-ID: <1468544838-9990-3-git-send-email-apronin@chromium.org>
+References: <1468544838-9990-1-git-send-email-apronin@chromium.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1468544838-9990-1-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,33 +21,25 @@ To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-tpm_tis_core was missing conversion from msec when assigning
-max timeouts from constants.
-
+Change-Id: I7d71cd379b1a3b7659d20a1b6008216762596590
 Signed-off-by: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 ---
- drivers/char/tpm/tpm_tis_core.c | 8 ++++----
- 1 file changed, 4 insertions(+), 4 deletions(-)
+ drivers/char/tpm/tpm2-cmd.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-index 8110b52..fb8c3de 100644
---- a/drivers/char/tpm/tpm_tis_core.c
-+++ b/drivers/char/tpm/tpm_tis_core.c
-@@ -666,10 +666,10 @@ int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
- #endif
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index a1673dc..a88b31e 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -703,7 +703,7 @@ ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,  u32 *value,
  
- 	/* Maximum timeouts */
--	chip->timeout_a = TIS_TIMEOUT_A_MAX;
--	chip->timeout_b = TIS_TIMEOUT_B_MAX;
--	chip->timeout_c = TIS_TIMEOUT_C_MAX;
--	chip->timeout_d = TIS_TIMEOUT_D_MAX;
-+	chip->timeout_a = msecs_to_jiffies(TIS_TIMEOUT_A_MAX);
-+	chip->timeout_b = msecs_to_jiffies(TIS_TIMEOUT_B_MAX);
-+	chip->timeout_c = msecs_to_jiffies(TIS_TIMEOUT_C_MAX);
-+	chip->timeout_d = msecs_to_jiffies(TIS_TIMEOUT_D_MAX);
- 	priv->phy_ops = phy_ops;
- 	dev_set_drvdata(&chip->dev, priv);
+ 	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), desc);
+ 	if (!rc)
+-		*value = cmd.params.get_tpm_pt_out.value;
++		*value = be32_to_cpu(cmd.params.get_tpm_pt_out.value);
  
+ 	return rc;
+ }
 -- 
 2.6.6
 
