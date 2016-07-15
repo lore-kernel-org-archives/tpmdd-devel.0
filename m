@@ -1,67 +1,67 @@
-From: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Subject: Re: [PATCH 2/2] tpm: fix byte-order for the value
- read by tpm2_get_tpm_pt
-Date: Thu, 14 Jul 2016 20:17:01 -0700
-Message-ID: <20160715031701.GA25406@apronin>
-References: <1468544838-9990-1-git-send-email-apronin@chromium.org>
-	<1468544838-9990-3-git-send-email-apronin@chromium.org>
-	<20160715031046.GC9347@obsidianresearch.com>
+From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Subject: Re: [PATCH 1/2] tpm: add sysfs attributes for tpm2
+Date: Thu, 14 Jul 2016 21:21:45 -0600
+Message-ID: <20160715032145.GE9347@obsidianresearch.com>
+References: <1468547496-16215-1-git-send-email-apronin@chromium.org>
+ <1468547496-16215-2-git-send-email-apronin@chromium.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20160715031046.GC9347-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
+In-Reply-To: <1468547496-16215-2-git-send-email-apronin@chromium.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Andrey Pronin <apronin@chromium.org>
+Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, groeck@chromium.org, smbarber@chromium.org, dianders@chromium.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jul 14, 2016 at 09:10:46PM -0600, Jason Gunthorpe wrote:
-> On Thu, Jul 14, 2016 at 06:07:18PM -0700, Andrey Pronin wrote:
-> > Change-Id: I7d71cd379b1a3b7659d20a1b6008216762596590
-> > Signed-off-by: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-> >  drivers/char/tpm/tpm2-cmd.c | 2 +-
-> >  1 file changed, 1 insertion(+), 1 deletion(-)
-> > 
-> > diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-> > index a1673dc..a88b31e 100644
-> > +++ b/drivers/char/tpm/tpm2-cmd.c
-> > @@ -703,7 +703,7 @@ ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,  u32 *value,
-> >  
-> >  	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), desc);
-> >  	if (!rc)
-> > -		*value = cmd.params.get_tpm_pt_out.value;
-> > +		*value = be32_to_cpu(cmd.params.get_tpm_pt_out.value);
-> 
-> Huh.
-> 
-> Jarkko: Are you running sparse on the tpm stuff? The annotations look
-> right here, sparse should have complained on this? Andrey, did sparse
-> complain here or is there something more serious wrong as well??
-> 
-> Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> 
-> Jason
+On Thu, Jul 14, 2016 at 06:51:35PM -0700, Andrey Pronin wrote:
+> -	sysfs_remove_link(&chip->dev.parent->kobj, "ppi");
+> -
+> -	for (i = chip->groups[0]->attrs; *i != NULL; ++i)
+> -		sysfs_remove_link(&chip->dev.parent->kobj, (*i)->name);
+> +	for (ngrp = 0; ngrp < chip->groups_cnt; ++ngrp) {
+> +		if (chip->groups[ngrp]->name) {
+> +			sysfs_remove_link(&chip->dev.parent->kobj,
+> +					  chip->groups[ngrp]->name);
+> +		} else {
+> +			for (i = chip->groups[ngrp]->attrs; *i != NULL; ++i)
+> +				sysfs_remove_link(&chip->dev.parent->kobj,
+> +						  (*i)->name);
+> +		}
+> +	}
 
-No, this is not sparse complaining. I tried using tpm2_get_tpm_pt() to
-read permanent flags and discovered that it was missing byte-ordering
-conversion. The only place tpm2_get_tpm_pt() was used before was in
-tpm2_gen_interrupt, which discarded the result. So, nobody noticed,
-I guess.
+NAK
 
-Andrey
+No new compat symlinks. Only the existing set of links are permitted.
 
-------------------------------------------------------------------------------
-What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
-patterns at an interface-level. Reveals which users, apps, and protocols are 
-consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
-J-Flow, sFlow and other flows. Make informed decisions using capacity planning
-reports.http://sdm.link/zohodev2dev
+Any new sysfs entries must use only the new location.
+
+> +static struct attribute *tpm2_dev_attrs[] = {
+>  	NULL,
+>  };
+
+> +static const struct attribute_group tpm2_dev_group = {
+> +	.attrs = tpm2_dev_attrs,
+> +};
+
+Don't add dead code, add this and related in the patch that requires it.
+
+>  void tpm_sysfs_add_device(struct tpm_chip *chip)
+>  {
+>  	/* The sysfs routines rely on an implicit tpm_try_get_ops, device_del
+> @@ -290,4 +306,8 @@ void tpm_sysfs_add_device(struct tpm_chip *chip)
+>  	 */
+>  	WARN_ON(chip->groups_cnt != 0);
+>  	chip->groups[chip->groups_cnt++] = &tpm_dev_group;
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		chip->groups[chip->groups_cnt++] = &tpm2_dev_group;
+> +	else
+> +		chip->groups[chip->groups_cnt++] = &tpm1_dev_group;
+
+.. and this can't really happen either..
+
+To make things simple you can just have tpm2 not ever create any links
+for any files by never using groups[0]. There is no need to try and
+create a shared 'tpm_dev_group'.
+
+Jason
