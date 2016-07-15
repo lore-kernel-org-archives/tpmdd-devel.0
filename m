@@ -1,17 +1,17 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH 1/2] tpm: add sysfs attributes for tpm2
-Date: Thu, 14 Jul 2016 21:34:39 -0600
-Message-ID: <20160715033439.GI9347@obsidianresearch.com>
+From: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Subject: Re: [PATCH 2/2] tpm: support driver-specific sysfs
+ attrs in tpm_tis_core
+Date: Thu, 14 Jul 2016 20:35:30 -0700
+Message-ID: <20160715033530.GB27104@apronin>
 References: <1468547496-16215-1-git-send-email-apronin@chromium.org>
-	<1468547496-16215-2-git-send-email-apronin@chromium.org>
-	<20160715032145.GE9347@obsidianresearch.com>
-	<20160715033201.GA27104@apronin>
+	<1468547496-16215-3-git-send-email-apronin@chromium.org>
+	<20160715032327.GF9347@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160715033201.GA27104@apronin>
+In-Reply-To: <20160715032327.GF9347-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,19 +20,41 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Cc: dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jul 14, 2016 at 08:32:01PM -0700, Andrey Pronin wrote:
+On Thu, Jul 14, 2016 at 09:23:27PM -0600, Jason Gunthorpe wrote:
+> On Thu, Jul 14, 2016 at 06:51:36PM -0700, Andrey Pronin wrote:
+> > -	WARN_ON(chip->groups_cnt != 0);
+> 
+> Nope.
+> 
+> > -	const struct attribute_group *groups[3];
+> > +	/* up to 4 attribute groups:
+> > +	 * - driver-specific
+> > +	 * - common TPM1.2 and TPM2.0
+> > +	 * - TPM1.2/2.0-specific
+> > +	 * - ppi
+> > +	 */
+> > +	const struct attribute_group *groups[5];
+> 
+> The prior patch needed to have groups[4], every patch much work.
+> 
+> > +	if (priv->phy_ops->attr_group)
+> > +		chip->groups[chip->groups_cnt++] = priv->phy_ops->attr_group;
+> 
+> I am really not excited about having driver specific sysfs
+> files.
+> 
+> What is the justification for this?
+> 
+> Jason
 
-> tpm2 shares some of the attributes with tpm1 (e.g. timeouts). Do I still
-> just add those separately for tpm2 to groups[1] and keep groups[0] empty?
+Justification: give access to vendor-specific properties that are
+specific to a particular chip and its registers.
 
-I think so. Since the file never exists for tpm2, nothing coded for
-tpm2 will ever look in the old location.
-
-Jason
+Andrey
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
