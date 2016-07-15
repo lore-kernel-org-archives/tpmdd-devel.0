@@ -1,19 +1,17 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH 1/2] tpm: add sysfs attributes for tpm2
-Date: Fri, 15 Jul 2016 11:09:10 -0600
-Message-ID: <20160715170910.GA14592@obsidianresearch.com>
-References: <1468547496-16215-1-git-send-email-apronin@chromium.org>
-	<1468547496-16215-2-git-send-email-apronin@chromium.org>
-	<20160715032145.GE9347@obsidianresearch.com>
-	<20160715033201.GA27104@apronin>
-	<20160715033439.GI9347@obsidianresearch.com>
-	<20160715165658.GA109276@apronin>
+From: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Subject: Re: [PATCH 0/2] tpm: add driver for cr50 on SPI
+Date: Fri, 15 Jul 2016 10:15:57 -0700
+Message-ID: <20160715171557.GC109276@apronin>
+References: <1468549218-19215-1-git-send-email-apronin@chromium.org>
+	<9A3CFCAE-F2FD-438D-A32B-AD59E0362E71@gmx.de>
+	<20160715025026.GA21375@apronin>
+	<20160715032814.GG9347@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160715165658.GA109276@apronin>
+In-Reply-To: <20160715032814.GG9347-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,43 +20,27 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Cc: dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jul 15, 2016 at 09:56:58AM -0700, Andrey Pronin wrote:
-> On Thu, Jul 14, 2016 at 09:34:39PM -0600, Jason Gunthorpe wrote:
-> > On Thu, Jul 14, 2016 at 08:32:01PM -0700, Andrey Pronin wrote:
-> > 
-> > > tpm2 shares some of the attributes with tpm1 (e.g. timeouts). Do I still
-> > > just add those separately for tpm2 to groups[1] and keep groups[0] empty?
+On Thu, Jul 14, 2016 at 09:28:14PM -0600, Jason Gunthorpe wrote:
+> On Thu, Jul 14, 2016 at 07:50:26PM -0700, Andrey Pronin wrote:
+> > Yes, it has a TCG-compliant interface, however, there are several things
+> > specific to this device:
+> >  - need to ensure a certain delay between spi transactions, or else
+> >    the chip can miss several first bytes.
+> >  - if there is no spi activity for this chip, it may go to sleep, and
+> >    needs to be waken up before sending further commands.
+> >  - it has some vendor-specific registers accessible from spi bus.
 > 
-> Just realized that if we keep tpm_add_legacy_sysfs() intact, it doesn't
-> create symlinks for tpm2 case for any of the groups, including groups[0].
-> So, in tpm_sysfs_add_device() can just do smth like:
+> This all needs to be commented clearly in the driver..
 > 
-> if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> 	chip->groups[chip->groups_cnt++] = &tpm2_dev_group;
-> else
-> 	chip->groups[chip->groups_cnt++] = &tpm_dev_group;
-> 
-> Is that acceptable? Will submit the next version along those lines.
 
-Sure, as long as there are no links for TPM2 that sounds fine.
+Will provide more details in the patch description. The driver code
+has comments about those cases in the code: see cr50_ensure_access_delay
+and cr50_needs_waking, for example.
 
-> > I think so. Since the file never exists for tpm2, nothing coded for
-> > tpm2 will ever look in the old location.
-
-> There can be a common code working with tpm1.2 that will just
-> continue working with tpm2 if the common attributes are in the same
-> place. So, some part of code can be re-used as is, but I agree that
-> there are not too many common attributes. Will drop for now. Can be
-> addressed later if the clear need arises.
-
-Well, we expect people to test & migrate the common code when testing
-new tpm2 deployments..
-
-Jason
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
