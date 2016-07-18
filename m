@@ -1,76 +1,64 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v9 0/5] tpm: Command duration logging and
- chip-specific override
-Date: Mon, 18 Jul 2016 21:07:36 +0300
-Message-ID: <20160718180736.GB31463@intel.com>
-References: <1466557831-113440-1-git-send-email-eswierk@skyportsystems.com>
-	<1468426776-42762-1-git-send-email-eswierk@skyportsystems.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [PATCH v2 0/6] Use tpm_transmit_cmd() consistently
+Date: Mon, 18 Jul 2016 21:10:51 +0300
+Message-ID: <20160718181051.GC31463@intel.com>
+References: <1466891093-27766-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+ <20160706142143.GA4442@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1468426776-42762-1-git-send-email-eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Ed Swierk <eswierk-FilZDy9cOaHkQYj/0HfcvtBPR1lH4CV8@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+In-Reply-To: <20160706142143.GA4442@intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Peter Huewe <peterhuewe@gmx.de>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: linux-security-module@vger.kernel.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jul 13, 2016 at 09:19:31AM -0700, Ed Swierk wrote:
-> v9: Include command duration in existing error messages rather than
-> logging an extra debug message. Rebase onto Jarkko's tree.
+On Wed, Jul 06, 2016 at 05:21:43PM +0300, Jarkko Sakkinen wrote:
+> Pending for reviews. These are quite trivial patches.
 > 
-> v8: Fix v7 goof-up in tpm_getcap().
+> /Jarkko
 > 
-> v7: Use tpm_getcap() instead of a redundant new function.
-> 
-> v6: Split tpm_get_cap_prop() out of tpm_get_timeouts(); always return
-> error on TPM command failure.
-> 
-> v5: Use msecs_to_jiffies() instead of * HZ / 1000.
-> 
-> v4: Rework tpm_get_timeouts() to allow overriding both timeouts and
-> durations via a single callback.
-> 
-> This series
-> - improves TPM command error reporting
-> - adds optional logging of TPM command durations
-> - allows chip-specific override of command durations as well as protocol
->   timeouts
-> - overrides ST19NP18 TPM command duration to avoid lockups
+> On Sun, Jun 26, 2016 at 12:44:45AM +0300, Jarkko Sakkinen wrote:
+> > These commits update the subsystem consistently to use
+> > tpm_transmit_cmd() throughout the subsystem the exception being
+> > tpm_write() where it makes sense to use the raw interface because higher
+> > level command handling is delegated to user space.
+> > 
+> > v2: Added commit that drops externs from all function declarations in
+> > tpm.h as suggested by Jason Gunthorpe.
 
-For the next version please write something more readable. Describe the
-motivation and solution in big picture, why and how. This list does no
-good because it just mimics the list of patches.
+Jason, do you think I could apply these to master or do you see
+anything wrong in them?
 
 /Jarkko
 
-> Ed Swierk (5):
->   tpm_tis: Improve reporting of IO errors
->   tpm: Add optional logging of TPM command durations
->   tpm: Clean up reading of timeout and duration capabilities
->   tpm: Allow TPM chip drivers to override reported command durations
->   tpm_tis: Increase ST19NP18 TPM command duration to avoid chip lockup
+> > Jarkko Sakkinen (6):
+> >   tpm: remove unnecessary externs from tpm.h
+> >   tpm: unify tpm_gen_interrupt()
+> >   tpm: return error code from tpm_gen_interrupt()
+> >   tpm: use tpm_transmit_cmd() in tpm2_probe()
+> >   tpm: rename tpm_pcr_read_dev() to tpm1_pcr_read()
+> >   tpm: use tpm1_pcr_read() in tpm_do_selftest()
+> > 
+> >  drivers/char/tpm/tpm-interface.c | 36 ++++++++++++++++++----------------
+> >  drivers/char/tpm/tpm-sysfs.c     |  2 +-
+> >  drivers/char/tpm/tpm.h           | 42 +++++++++++++++++++---------------------
+> >  drivers/char/tpm/tpm2-cmd.c      | 21 +-------------------
+> >  drivers/char/tpm/tpm_tis_core.c  |  7 +++----
+> >  5 files changed, 44 insertions(+), 64 deletions(-)
+> > 
+> > -- 
+> > 2.7.4
+> > 
 > 
->  drivers/char/tpm/tpm-interface.c | 219 ++++++++++++++++++++-------------------
->  drivers/char/tpm/tpm_tis_core.c  |  46 ++++----
->  include/linux/tpm.h              |   3 +-
->  3 files changed, 136 insertions(+), 132 deletions(-)
-> 
-> -- 
-> 1.9.1
-> 
-
-------------------------------------------------------------------------------
-What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
-patterns at an interface-level. Reveals which users, apps, and protocols are 
-consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
-J-Flow, sFlow and other flows. Make informed decisions using capacity planning
-reports.http://sdm.link/zohodev2dev
+> ------------------------------------------------------------------------------
+> Attend Shape: An AT&T Tech Expo July 15-16. Meet us at AT&T Park in San
+> Francisco, CA to explore cutting-edge tech and listen to tech luminaries
+> present their vision of the future. This family event has something for
+> everyone, including kids. Get more information and register today.
+> http://sdm.link/attshape
+> _______________________________________________
+> tpmdd-devel mailing list
+> tpmdd-devel@lists.sourceforge.net
+> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
