@@ -1,17 +1,18 @@
-From: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH 2/2] tpm: support driver-specific sysfs
  attrs in tpm_tis_core
-Date: Mon, 18 Jul 2016 12:17:31 -0700
-Message-ID: <20160718191731.GA1706@apronin>
+Date: Mon, 18 Jul 2016 22:20:35 +0300
+Message-ID: <20160718192035.GQ31463@intel.com>
 References: <1468547496-16215-1-git-send-email-apronin@chromium.org>
 	<1468547496-16215-3-git-send-email-apronin@chromium.org>
-	<20160718191141.GO31463@intel.com>
+	<20160715032327.GF9347@obsidianresearch.com>
+	<20160715033530.GB27104@apronin>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160718191141.GO31463-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20160715033530.GB27104@apronin>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,45 +21,51 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 Cc: dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jul 18, 2016 at 10:11:41PM +0300, Jarkko Sakkinen wrote:
-> On Thu, Jul 14, 2016 at 06:51:36PM -0700, Andrey Pronin wrote:
-> > Add attr_group to phy_ops that a driver relying on tpm_tis_core_init
-> > can set to have its specific attributes registered in sysfs.
+On Thu, Jul 14, 2016 at 08:35:30PM -0700, Andrey Pronin wrote:
+> On Thu, Jul 14, 2016 at 09:23:27PM -0600, Jason Gunthorpe wrote:
+> > On Thu, Jul 14, 2016 at 06:51:36PM -0700, Andrey Pronin wrote:
+> > > -	WARN_ON(chip->groups_cnt != 0);
 > > 
-> > Signed-off-by: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-> > ---
-> >  drivers/char/tpm/tpm-sysfs.c    | 1 -
-> >  drivers/char/tpm/tpm.h          | 8 +++++++-
-> >  drivers/char/tpm/tpm_tis_core.c | 3 +++
-> >  drivers/char/tpm/tpm_tis_core.h | 1 +
-> >  4 files changed, 11 insertions(+), 2 deletions(-)
+> > Nope.
 > > 
-> > diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
-> > index 95ce90d..22c9874 100644
-> > --- a/drivers/char/tpm/tpm-sysfs.c
-> > +++ b/drivers/char/tpm/tpm-sysfs.c
-> > @@ -304,7 +304,6 @@ void tpm_sysfs_add_device(struct tpm_chip *chip)
-> >  	 * is called before ops is null'd and the sysfs core synchronizes this
-> >  	 * removal so that no callbacks are running or can run again
-> >  	 */
-> > -	WARN_ON(chip->groups_cnt != 0);
+> > > -	const struct attribute_group *groups[3];
+> > > +	/* up to 4 attribute groups:
+> > > +	 * - driver-specific
+> > > +	 * - common TPM1.2 and TPM2.0
+> > > +	 * - TPM1.2/2.0-specific
+> > > +	 * - ppi
+> > > +	 */
+> > > +	const struct attribute_group *groups[5];
+> > 
+> > The prior patch needed to have groups[4], every patch much work.
+> > 
+> > > +	if (priv->phy_ops->attr_group)
+> > > +		chip->groups[chip->groups_cnt++] = priv->phy_ops->attr_group;
+> > 
+> > I am really not excited about having driver specific sysfs
+> > files.
+> > 
+> > What is the justification for this?
+> > 
+> > Jason
 > 
-> You should explain this in a commit message if you want to remove it.
-> 
-> In general, this make user space API vendor specific, which is
-> unacceptable.
-> 
-> /Jarkko
->
+> Justification: give access to vendor-specific properties that are
+> specific to a particular chip and its registers.
 
-I will drop the vendor-specific part of the patchset and just submit
-tpm2-specific sysfs attributes in the next rev. WARN_ON will not be
-removed.
+Please come with a vendor specific property or have this part of a
+series where the need becomes somehow obvious so that we can talk about
+a real problem and not in an abstract level.
 
+Making user API vendor wobbling is almost over my dead body type of
+thing but given the context there might be alternatives to consider.
+
+I honestly don't understand why this was even bundled with TPM2 patch.
+
+/Jarkko
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
