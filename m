@@ -1,21 +1,17 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH 2/2] tpm: fix byte-order for the value
  read by tpm2_get_tpm_pt
-Date: Mon, 18 Jul 2016 22:05:19 +0300
-Message-ID: <20160718190519.GM31463@intel.com>
+Date: Mon, 18 Jul 2016 22:09:15 +0300
+Message-ID: <20160718190915.GN31463@intel.com>
 References: <1468544838-9990-1-git-send-email-apronin@chromium.org>
 	<1468544838-9990-3-git-send-email-apronin@chromium.org>
-	<20160715031046.GC9347@obsidianresearch.com>
-	<20160715031701.GA25406@apronin>
-	<20160715033553.GJ9347@obsidianresearch.com>
-	<20160715193143.GA7052@apronin>
-	<20160715193928.GA20719@obsidianresearch.com>
+	<20160718190421.GL31463@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160715193928.GA20719-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <20160718190421.GL31463-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -24,24 +20,25 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 Cc: dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jul 15, 2016 at 01:39:28PM -0600, Jason Gunthorpe wrote:
-> On Fri, Jul 15, 2016 at 12:31:43PM -0700, Andrey Pronin wrote:
+On Mon, Jul 18, 2016 at 10:04:21PM +0300, Jarkko Sakkinen wrote:
+> On Thu, Jul 14, 2016 at 06:07:18PM -0700, Andrey Pronin wrote:
+> > Change-Id: I7d71cd379b1a3b7659d20a1b6008216762596590
+> > Signed-off-by: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 > 
-> > I even tried changing the code there to
-> > 	__be32 vv = cmd.params.get_tpm_pt_out.value;
-> > 	u32 ret = vv;
-> > to make it clear what's going on. Still, no complaints from sparse.
+> Please remove the internal commit ID next time. This is also lacking a
+> description but this time I can write it down.
 > 
-> Hum, I'm not an expert at sparse, but I expect a warning from it here?
+> This not needed for the stable for obvious reasons (only used for
+> probing).
 > 
-> Maybe Jarkko knows when he gets back?
+> Fixes: 7a1d7e6dd76a ("tpm: TPM 2.0 baseline support")
+> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
-I do run sparse regularly. If look at the commit log there are even
-couple of recent bug fixes related to sparse errors.
+Applied.
 
 /Jarkko
 
