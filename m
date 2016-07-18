@@ -1,17 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 2/2] tpm: fix byte-order for the value
- read by tpm2_get_tpm_pt
-Date: Mon, 18 Jul 2016 22:09:15 +0300
-Message-ID: <20160718190915.GN31463@intel.com>
-References: <1468544838-9990-1-git-send-email-apronin@chromium.org>
-	<1468544838-9990-3-git-send-email-apronin@chromium.org>
-	<20160718190421.GL31463@intel.com>
+Subject: Re: [PATCH 2/2] tpm: support driver-specific sysfs
+ attrs in tpm_tis_core
+Date: Mon, 18 Jul 2016 22:11:41 +0300
+Message-ID: <20160718191141.GO31463@intel.com>
+References: <1468547496-16215-1-git-send-email-apronin@chromium.org>
+	<1468547496-16215-3-git-send-email-apronin@chromium.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160718190421.GL31463-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <1468547496-16215-3-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -24,23 +23,86 @@ To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 Cc: dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jul 18, 2016 at 10:04:21PM +0300, Jarkko Sakkinen wrote:
-> On Thu, Jul 14, 2016 at 06:07:18PM -0700, Andrey Pronin wrote:
-> > Change-Id: I7d71cd379b1a3b7659d20a1b6008216762596590
-> > Signed-off-by: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+On Thu, Jul 14, 2016 at 06:51:36PM -0700, Andrey Pronin wrote:
+> Add attr_group to phy_ops that a driver relying on tpm_tis_core_init
+> can set to have its specific attributes registered in sysfs.
 > 
-> Please remove the internal commit ID next time. This is also lacking a
-> description but this time I can write it down.
+> Signed-off-by: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+> ---
+>  drivers/char/tpm/tpm-sysfs.c    | 1 -
+>  drivers/char/tpm/tpm.h          | 8 +++++++-
+>  drivers/char/tpm/tpm_tis_core.c | 3 +++
+>  drivers/char/tpm/tpm_tis_core.h | 1 +
+>  4 files changed, 11 insertions(+), 2 deletions(-)
 > 
-> This not needed for the stable for obvious reasons (only used for
-> probing).
-> 
-> Fixes: 7a1d7e6dd76a ("tpm: TPM 2.0 baseline support")
-> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+> index 95ce90d..22c9874 100644
+> --- a/drivers/char/tpm/tpm-sysfs.c
+> +++ b/drivers/char/tpm/tpm-sysfs.c
+> @@ -304,7 +304,6 @@ void tpm_sysfs_add_device(struct tpm_chip *chip)
+>  	 * is called before ops is null'd and the sysfs core synchronizes this
+>  	 * removal so that no callbacks are running or can run again
+>  	 */
+> -	WARN_ON(chip->groups_cnt != 0);
 
-Applied.
+You should explain this in a commit message if you want to remove it.
+
+In general, this make user space API vendor specific, which is
+unacceptable.
 
 /Jarkko
+
+>  	chip->groups[chip->groups_cnt++] = &tpm_dev_group;
+>  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+>  		chip->groups[chip->groups_cnt++] = &tpm2_dev_group;
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 8890df2..8c69649 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -173,7 +173,13 @@ struct tpm_chip {
+>  
+>  	struct dentry **bios_dir;
+>  
+> -	const struct attribute_group *groups[3];
+> +	/* up to 4 attribute groups:
+> +	 * - driver-specific
+> +	 * - common TPM1.2 and TPM2.0
+> +	 * - TPM1.2/2.0-specific
+> +	 * - ppi
+> +	 */
+> +	const struct attribute_group *groups[5];
+>  	unsigned int groups_cnt;
+>  #ifdef CONFIG_ACPI
+>  	acpi_handle acpi_dev_handle;
+> diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+> index 8110b52..6d5d8f4 100644
+> --- a/drivers/char/tpm/tpm_tis_core.c
+> +++ b/drivers/char/tpm/tpm_tis_core.c
+> @@ -796,6 +796,9 @@ int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
+>  		}
+>  	}
+>  
+> +	if (priv->phy_ops->attr_group)
+> +		chip->groups[chip->groups_cnt++] = priv->phy_ops->attr_group;
+> +
+>  	return tpm_chip_register(chip);
+>  out_err:
+>  	tpm_tis_remove(chip);
+> diff --git a/drivers/char/tpm/tpm_tis_core.h b/drivers/char/tpm/tpm_tis_core.h
+> index 9191aab..4417ed9 100644
+> --- a/drivers/char/tpm/tpm_tis_core.h
+> +++ b/drivers/char/tpm/tpm_tis_core.h
+> @@ -95,6 +95,7 @@ struct tpm_tis_data {
+>  };
+>  
+>  struct tpm_tis_phy_ops {
+> +	const struct attribute_group *attr_group;
+>  	int (*read_bytes)(struct tpm_tis_data *data, u32 addr, u16 len,
+>  			  u8 *result);
+>  	int (*write_bytes)(struct tpm_tis_data *data, u32 addr, u16 len,
+> -- 
+> 2.6.6
+> 
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
