@@ -1,16 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 1/2] tpm: define constants for tpm2
-	properties
-Date: Mon, 18 Jul 2016 21:58:53 +0300
-Message-ID: <20160718185853.GK31463@intel.com>
+Subject: Re: [PATCH 2/2] tpm: fix byte-order for the value
+ read by tpm2_get_tpm_pt
+Date: Mon, 18 Jul 2016 22:04:21 +0300
+Message-ID: <20160718190421.GL31463@intel.com>
 References: <1468544838-9990-1-git-send-email-apronin@chromium.org>
-	<1468544838-9990-2-git-send-email-apronin@chromium.org>
+	<1468544838-9990-3-git-send-email-apronin@chromium.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1468544838-9990-2-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+In-Reply-To: <1468544838-9990-3-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,56 +23,38 @@ To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 Cc: dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jul 14, 2016 at 06:07:17PM -0700, Andrey Pronin wrote:
-> Change-Id: I47cb1793736781fbea93e5bf80b783e0ac9e8628
+On Thu, Jul 14, 2016 at 06:07:18PM -0700, Andrey Pronin wrote:
+> Change-Id: I7d71cd379b1a3b7659d20a1b6008216762596590
 > Signed-off-by: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 
-I'm not going to apply this. The patch has no value. We only want to
-have a subset of constants that are *used* by the kernel.
+Please remove the internal commit ID next time. This is also lacking a
+description but this time I can write it down.
+
+This not needed for the stable for obvious reasons (only used for
+probing).
+
+Fixes: 7a1d7e6dd76a ("tpm: TPM 2.0 baseline support")
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
 /Jarkko
 
 > ---
->  drivers/char/tpm/tpm.h | 26 ++++++++++++++++++++++++++
->  1 file changed, 26 insertions(+)
+>  drivers/char/tpm/tpm2-cmd.c | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
 > 
-> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> index 8890df2..ad3b9d1 100644
-> --- a/drivers/char/tpm/tpm.h
-> +++ b/drivers/char/tpm/tpm.h
-> @@ -127,6 +127,32 @@ enum tpm2_capabilities {
->  	TPM2_CAP_TPM_PROPERTIES = 6,
->  };
+> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+> index a1673dc..a88b31e 100644
+> --- a/drivers/char/tpm/tpm2-cmd.c
+> +++ b/drivers/char/tpm/tpm2-cmd.c
+> @@ -703,7 +703,7 @@ ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,  u32 *value,
 >  
-> +enum tpm2_properties {
-> +	TPM2_PT_NONE			= 0,
-> +	TPM2_PT_GROUP			= 0x100,
-> +	TPM2_PT_FIXED			= TPM2_PT_GROUP,
-> +	TPM2_PT_VAR			= TPM2_PT_GROUP * 2,
-> +	TPM2_PT_PERMANENT		= TPM2_PT_VAR + 0,
-> +	TPM2_PT_STARTUP_CLEAR		= TPM2_PT_VAR + 1,
-> +};
-> +
-> +enum tpm2_attr_permanent {
-> +	TPM2_ATTR_OWNER_AUTH_SET	= BIT(0),
-> +	TPM2_ATTR_ENDORSEMENT_AUTH_SET	= BIT(1),
-> +	TPM2_ATTR_LOCKOUT_AUTH_SET	= BIT(2),
-> +	TPM2_ATTR_DISABLE_CLEAR		= BIT(8),
-> +	TPM2_ATTR_IN_LOCKOUT		= BIT(9),
-> +	TPM2_ATTR_TPM_GENERATED_EPS	= BIT(10),
-> +};
-> +
-> +enum tpm2_attr_startup_clear {
-> +	TPM2_ATTR_PH_ENABLE		= BIT(0),
-> +	TPM2_ATTR_SH_ENABLE		= BIT(1),
-> +	TPM2_ATTR_EH_ENABLE		= BIT(2),
-> +	TPM2_ATTR_PH_ENABLE_NV		= BIT(3),
-> +	TPM2_ATTR_ORDERLY = BIT(31),
-> +};
-> +
->  enum tpm2_startup_types {
->  	TPM2_SU_CLEAR	= 0x0000,
->  	TPM2_SU_STATE	= 0x0001,
+>  	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), desc);
+>  	if (!rc)
+> -		*value = cmd.params.get_tpm_pt_out.value;
+> +		*value = be32_to_cpu(cmd.params.get_tpm_pt_out.value);
+>  
+>  	return rc;
+>  }
 > -- 
 > 2.6.6
 > 
