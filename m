@@ -1,16 +1,19 @@
-From: Rob Herring <robh-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
-Subject: Re: [PATCH 1/2] tpm: devicetree: document properties
-	for cr50
-Date: Sun, 17 Jul 2016 08:28:01 -0500
-Message-ID: <20160717132801.GA5527@rob-hp-laptop>
-References: <1468549218-19215-1-git-send-email-apronin@chromium.org>
-	<1468549218-19215-2-git-send-email-apronin@chromium.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH 2/2] add irq validity check in
+	tpm_i2c_nuvoton driver
+Date: Mon, 18 Jul 2016 20:50:53 +0300
+Message-ID: <20160718175053.GA7213@intel.com>
+References: <1467194329-5543-1-git-send-email-andrew.zamansky@nuvoton.com>
+	<1467194329-5543-3-git-send-email-andrew.zamansky@nuvoton.com>
+	<20160629140339.GA4589@intel.com>
+	<20160712173326.GA9286@obsidianresearch.com>
+	<20160713120401.GA4387@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1468549218-19215-2-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+In-Reply-To: <20160713120401.GA4387-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,51 +22,61 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Cc: =?iso-8859-1?B?oKCgTWFyaw==?= Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, =?iso-8859-1?B?oKCgUGF3ZWw=?= Moll <pawel.moll-5wv7dgnIgG8@public.gmane.org>, =?iso-8859-1?B?oKCgSWFu?= Campbell <ijc+devicetree-KcIKpvwj1kUDXYZnReoRVg@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, =?iso-8859-1?B?oKCgS3VtYXI=?= Gala <galak-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: andrew zamansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, azamansk-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, Dan.Morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, stimpy1-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jul 14, 2016 at 07:20:17PM -0700, Andrey Pronin wrote:
-> Add TPM2.0-compatible interface to Cr50. Document its properties
-> in devicetree.
+On Wed, Jul 13, 2016 at 03:04:01PM +0300, Jarkko Sakkinen wrote:
+> On Tue, Jul 12, 2016 at 11:33:26AM -0600, Jason Gunthorpe wrote:
+> > On Wed, Jun 29, 2016 at 05:03:39PM +0300, Jarkko Sakkinen wrote:
+> > > On Wed, Jun 29, 2016 at 12:58:49PM +0300, andrew zamansky wrote:
+> > > > if irq==0 (actualy invalid value) then error is printed to dmesg after
+> > > > trying to register to 0 interrupt 
+> > > > 
+> > > >  drivers/char/tpm/tpm_i2c_nuvoton.c | 4 +++-
+> > > >  1 file changed, 3 insertions(+), 1 deletion(-)
+> > > > 
+> > > > diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
+> > > > index 75a80e466..3081529 100644
+> > > > +++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
+> > > > @@ -554,7 +554,9 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
+> > > >  	 *   TPM_INTF_INT_LEVEL_LOW | TPM_INTF_DATA_AVAIL_INT
+> > > >  	 * The IRQ should be set in the i2c_board_info (which is done
+> > > >  	 * automatically in of_i2c_register_devices, for device tree users */
+> > > > -	chip->flags |= TPM_CHIP_FLAG_IRQ;
+> > > > +	if(chip->flags)
+> > > > +		chip->flags |= TPM_CHIP_FLAG_IRQ;
+> > > > +
+> > > >  	priv->irq = client->irq;
+> > > >  
+> > > >  	if (chip->flags & TPM_CHIP_FLAG_IRQ) {
+> > > 
+> > > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> > > 
+> > > PS. There's a style error. "if()" should be "if ()". I don't mind fixing
+> > > that. Just remember that next time.
+> > 
+> > Andrew/Jarkko:
+> > 
+> > Uhm, this looks wrong to me.. The original code was like this:
+> > 
+> > -       chip->vendor.irq = client->irq;
+> > -       if (chip->vendor.irq) {
+> > 
+> > And was wrongly changed to this:
+> > 
+> > +       chip->flags |= TPM_CHIP_FLAG_IRQ;
+> > +       priv->irq = client->irq;
+> > +       if (chip->flags & TPM_CHIP_FLAG_IRQ) {
+> > 
+> > Jarkko, can you fold this into the patch to fix it please:
 > 
-> Signed-off-by: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-> ---
->  .../devicetree/bindings/security/tpm/cr50_spi.txt  | 30 ++++++++++++++++++++++
->  1 file changed, 30 insertions(+)
->  create mode 100644 Documentation/devicetree/bindings/security/tpm/cr50_spi.txt
-> 
-> diff --git a/Documentation/devicetree/bindings/security/tpm/cr50_spi.txt b/Documentation/devicetree/bindings/security/tpm/cr50_spi.txt
-> new file mode 100644
-> index 0000000..1b05e51
-> --- /dev/null
-> +++ b/Documentation/devicetree/bindings/security/tpm/cr50_spi.txt
-> @@ -0,0 +1,30 @@
-> +* Cr50 Chip on SPI.
-> +
-> +TCG PTP FIFO Compliant Interface to Cr50 on SPI bus.
-> +
-> +Required properties:
-> +- compatible: Should be "google,cr50_spi".
+> Right. Sure. It's not merged to my next nor it has been part of any pull
+> request so this is still doable.
 
-I agree with dropping '_spi'. The interface is defined by the parent 
-device.
+Done.
 
-> +- spi-max-frequency: Maximum SPI frequency.
-> +
-> +Optional properties:
-> +- access-delay-msec: Required delay between subsequent transactions on SPI.
-
-There may be a standard property for this...
-
-> +- sleep-delay-msec: Time after the last SPI activity, after which the chip
-> +  may go to sleep.
-> +- wake-start-delay-msec: Time after initiating wake up before the chip is
-> +  ready to accept commands over SPI.
-
-Use the standard unit '-ms' instead of '-msec'.
-
-Do these times really vary much and need to be in DT?
+/Jarkko
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
