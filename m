@@ -1,8 +1,8 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH v3 3/5] tpm: return error code from
-	tpm_gen_interrupt()
-Date: Tue, 19 Jul 2016 16:32:47 +0300
-Message-ID: <1468935171-7815-4-git-send-email-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH v3 4/5] tpm: use tpm_transmit_cmd() in
+	tpm2_probe()
+Date: Tue, 19 Jul 2016 16:32:48 +0300
+Message-ID: <1468935171-7815-5-git-send-email-jarkko.sakkinen@linux.intel.com>
 References: <1468935171-7815-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,69 +21,31 @@ To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Jason Gunthorpe <jgun
 Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Return error code from tpm_gen_interrupt() and fail tpm_tis family of
-drivers on a system error. It doesn't make sense to continue if we
-cannot even reach the TPM.
+It is better to tpm_transmit_cmd() in tpm2_probe() in order to get
+consistent command handling throughout the subsystem.
 
 Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm-interface.c | 6 +++---
- drivers/char/tpm/tpm.h           | 2 +-
- drivers/char/tpm/tpm_tis_core.c  | 4 +++-
- 3 files changed, 7 insertions(+), 5 deletions(-)
+ drivers/char/tpm/tpm2-cmd.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 88dafcd..35b2722 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -466,16 +466,16 @@ ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
-  * Returns 0 on success, < 0 in case of fatal error or a value > 0 representing
-  * a TPM error code.
-  */
--void tpm_gen_interrupt(struct tpm_chip *chip)
-+int tpm_gen_interrupt(struct tpm_chip *chip)
- {
- 	const char *desc = "attempting to generate an interrupt";
- 	u32 cap2;
- 	cap_t cap;
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index 1c393ba..e1db404 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -911,11 +911,9 @@ int tpm2_probe(struct tpm_chip *chip)
+ 	cmd.params.get_tpm_pt_in.property_id = cpu_to_be32(0x100);
+ 	cmd.params.get_tpm_pt_in.property_cnt = cpu_to_be32(1);
  
- 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
--		tpm2_get_tpm_pt(chip, 0x100, &cap2, desc);
-+		return tpm2_get_tpm_pt(chip, 0x100, &cap2, desc);
- 	else
--		tpm_getcap(chip, TPM_CAP_PROP_TIS_TIMEOUT, &cap, desc);
-+		return tpm_getcap(chip, TPM_CAP_PROP_TIS_TIMEOUT, &cap, desc);
- }
- EXPORT_SYMBOL_GPL(tpm_gen_interrupt);
+-	rc = tpm_transmit(chip, (const char *) &cmd, sizeof(cmd));
++	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), NULL);
+ 	if (rc <  0)
+ 		return rc;
+-	else if (rc < TPM_HEADER_SIZE)
+-		return -EFAULT;
  
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index ec1f877..0cbb598 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -483,7 +483,7 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
- ssize_t tpm_transmit_cmd(struct tpm_chip *chip, void *cmd, int len,
- 			 const char *desc);
- int tpm_get_timeouts(struct tpm_chip *chip);
--void tpm_gen_interrupt(struct tpm_chip *chip);
-+int tpm_gen_interrupt(struct tpm_chip *chip);
- int tpm1_auto_startup(struct tpm_chip *chip);
- int tpm_do_selftest(struct tpm_chip *chip);
- unsigned long tpm_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
-diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-index b67d225..45159e1 100644
---- a/drivers/char/tpm/tpm_tis_core.c
-+++ b/drivers/char/tpm/tpm_tis_core.c
-@@ -575,7 +575,9 @@ static int tpm_tis_probe_irq_single(struct tpm_chip *chip, u32 intmask,
- 	/* Generate an interrupt by having the core call through to
- 	 * tpm_tis_send
- 	 */
--	tpm_gen_interrupt(chip);
-+	rc = tpm_gen_interrupt(chip);
-+	if (rc < 0)
-+		return rc;
- 
- 	/* tpm_tis_send will either confirm the interrupt is working or it
- 	 * will call disable_irq which undoes all of the above.
+ 	if (be16_to_cpu(cmd.header.out.tag) == TPM2_ST_NO_SESSIONS)
+ 		chip->flags |= TPM_CHIP_FLAG_TPM2;
 -- 
 2.7.4
 
