@@ -1,8 +1,8 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH v4 1/5] tpm/st33zp24: Remove useless
-	tpm_gen_interrupt
-Date: Wed, 20 Jul 2016 02:44:56 +0300
-Message-ID: <1468971906-6528-2-git-send-email-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH v4 2/5] tpm: remove unnecessary externs from
+	tpm.h
+Date: Wed, 20 Jul 2016 02:44:57 +0300
+Message-ID: <1468971906-6528-3-git-send-email-jarkko.sakkinen@linux.intel.com>
 References: <1468971906-6528-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -18,37 +18,74 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Removed unnecessary externs from tpm.h.
 
-This function should only be called as part of an IRQ probing protocol
-and st33 does not have any code to detect that the IRQ it tries to
-generate was not generated and disable the IRQ.
-
-Since st33 is primarily a DT binding driver it should not be doing
-IRQ probing anyhow, so let us just delete this useless call.
-
-Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/st33zp24/st33zp24.c | 2 --
- 1 file changed, 2 deletions(-)
+ drivers/char/tpm/tpm.h | 36 ++++++++++++++++++------------------
+ 1 file changed, 18 insertions(+), 18 deletions(-)
 
-diff --git a/drivers/char/tpm/st33zp24/st33zp24.c b/drivers/char/tpm/st33zp24/st33zp24.c
-index c2ee304..6f060c7 100644
---- a/drivers/char/tpm/st33zp24/st33zp24.c
-+++ b/drivers/char/tpm/st33zp24/st33zp24.c
-@@ -589,8 +589,6 @@ int st33zp24_probe(void *phy_id, const struct st33zp24_phy_ops *ops,
- 		chip->flags |= TPM_CHIP_FLAG_IRQ;
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 3e32d5b..8b864dd 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -482,26 +482,26 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
+ 		     size_t bufsiz);
+ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, void *cmd, int len,
+ 			 const char *desc);
+-extern int tpm_get_timeouts(struct tpm_chip *);
+-extern void tpm_gen_interrupt(struct tpm_chip *);
++int tpm_get_timeouts(struct tpm_chip *chip);
++void tpm_gen_interrupt(struct tpm_chip *chip);
+ int tpm1_auto_startup(struct tpm_chip *chip);
+-extern int tpm_do_selftest(struct tpm_chip *);
+-extern unsigned long tpm_calc_ordinal_duration(struct tpm_chip *, u32);
+-extern int tpm_pm_suspend(struct device *);
+-extern int tpm_pm_resume(struct device *);
+-extern int wait_for_tpm_stat(struct tpm_chip *, u8, unsigned long,
+-			     wait_queue_head_t *, bool);
++int tpm_do_selftest(struct tpm_chip *chip);
++unsigned long tpm_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
++int tpm_pm_suspend(struct device *dev);
++int tpm_pm_resume(struct device *dev);
++int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
++		      wait_queue_head_t *queue, bool check_cancel);
  
- 		disable_irq_nosync(tpm_dev->irq);
--
--		tpm_gen_interrupt(chip);
- 	}
+ struct tpm_chip *tpm_chip_find_get(int chip_num);
+ __must_check int tpm_try_get_ops(struct tpm_chip *chip);
+ void tpm_put_ops(struct tpm_chip *chip);
  
- 	return tpm_chip_register(chip);
+-extern struct tpm_chip *tpm_chip_alloc(struct device *dev,
+-				       const struct tpm_class_ops *ops);
+-extern struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
+-				       const struct tpm_class_ops *ops);
+-extern int tpm_chip_register(struct tpm_chip *chip);
+-extern void tpm_chip_unregister(struct tpm_chip *chip);
++struct tpm_chip *tpm_chip_alloc(struct device *dev,
++				const struct tpm_class_ops *ops);
++struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
++				 const struct tpm_class_ops *ops);
++int tpm_chip_register(struct tpm_chip *chip);
++void tpm_chip_unregister(struct tpm_chip *chip);
+ 
+ void tpm_sysfs_add_device(struct tpm_chip *chip);
+ 
+@@ -528,8 +528,8 @@ ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,
+ 			u32 *value, const char *desc);
+ 
+ int tpm2_auto_startup(struct tpm_chip *chip);
+-extern void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
+-extern unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *, u32);
+-extern int tpm2_gen_interrupt(struct tpm_chip *chip);
+-extern int tpm2_probe(struct tpm_chip *chip);
++void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
++unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
++int tpm2_gen_interrupt(struct tpm_chip *chip);
++int tpm2_probe(struct tpm_chip *chip);
+ #endif
 -- 
 2.7.4
 
