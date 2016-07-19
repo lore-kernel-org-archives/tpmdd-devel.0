@@ -1,36 +1,66 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm_tis_core: convert max timeouts from msec to jiffies
-Date: Tue, 19 Jul 2016 15:53:46 +0300
-Message-ID: <20160719125346.GA5047@intel.com>
-References: <1468542580-5296-1-git-send-email-apronin@chromium.org>
- <20160718184532.GH31463@intel.com>
- <20160718184929.GA19217@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH 2/2] tpm: add driver for cr50 on SPI
+Date: Tue, 19 Jul 2016 15:55:27 +0300
+Message-ID: <20160719125527.GB5047@intel.com>
+References: <1468549218-19215-1-git-send-email-apronin@chromium.org>
+	<1468549218-19215-3-git-send-email-apronin@chromium.org>
+	<20160715033236.GH9347@obsidianresearch.com>
+	<20160715034444.GA28128@apronin>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160718184929.GA19217@obsidianresearch.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Andrey Pronin <apronin@chromium.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, groeck@chromium.org, smbarber@chromium.org, dianders@chromium.org
+In-Reply-To: <20160715034444.GA28128@apronin>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jul 18, 2016 at 12:49:29PM -0600, Jason Gunthorpe wrote:
-> On Mon, Jul 18, 2016 at 09:45:32PM +0300, Jarkko Sakkinen wrote:
-> > On Thu, Jul 14, 2016 at 05:29:40PM -0700, Andrey Pronin wrote:
-> > > tpm_tis_core was missing conversion from msec when assigning
-> > > max timeouts from constants.
-> > > 
-> > > Signed-off-by: Andrey Pronin <apronin@chromium.org>
+On Thu, Jul 14, 2016 at 08:44:44PM -0700, Andrey Pronin wrote:
+> On Thu, Jul 14, 2016 at 09:32:36PM -0600, Jason Gunthorpe wrote:
+> > On Thu, Jul 14, 2016 at 07:20:18PM -0700, Andrey Pronin wrote:
 > > 
-> > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-> > Fixes: 41a5e1cf1fe1
-> 
-> Not sure that fixes isn't right, it looks like it has been broken for
-> a really long time..
+> > > +static int cr50_spi_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
+> > > +{
+> > > +	int rc;
+> > > +
+> > > +	rc = data->phy_ops->read_bytes(data, addr, sizeof(u16), (u8 *)result);
+> > > +	if (!rc)
+> > > +		*result = le16_to_cpu(*result);
+> > > +	return rc;
+> > > +}
+> > 
+> > I thought we had core support for this pattern?
+> > 
+> > Christophe ?
+> > 
+> > Please change this so this code isn't duplicated.
+> > 
+> > Jason
+> >
+> Hmm, didn't see the support. Would be great if there is.
+> The pattern itself is copied from tpm_tis_spi as is.
+> read_bytes/write_bytes were de-dup'ed as they used a lot of common code
+> (even more for this driver than for tpm_tis_spi).
+> But as for _readNN/_writeNN, there're only three of these functions,
+> so it din't seem too bad.
 
-Thanks, I fixed the commit ID (in my GIT).
-
-> Jason
+If there isn't, please add a separate commit before this that adds an
+inline function to tpm_tis_core.h.
 
 /Jarkko
+
+------------------------------------------------------------------------------
+What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
+patterns at an interface-level. Reveals which users, apps, and protocols are 
+consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
+J-Flow, sFlow and other flows. Make informed decisions using capacity planning
+reports.http://sdm.link/zohodev2dev
