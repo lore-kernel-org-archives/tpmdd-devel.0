@@ -1,7 +1,7 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [PATCH v3 1/5] tpm: remove unnecessary externs from tpm.h
-Date: Tue, 19 Jul 2016 16:32:45 +0300
-Message-ID: <1468935171-7815-2-git-send-email-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH v3 5/5] tpm: use tpm_pcr_read_dev() in tpm_do_selftest()
+Date: Tue, 19 Jul 2016 16:32:49 +0300
+Message-ID: <1468935171-7815-6-git-send-email-jarkko.sakkinen@linux.intel.com>
 References: <1468935171-7815-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Return-path: <linux-security-module-owner@vger.kernel.org>
 In-Reply-To: <1468935171-7815-1-git-send-email-jarkko.sakkinen@linux.intel.com>
@@ -10,71 +10,46 @@ To: Peter Huewe <peterhuewe@gmx.de>, Jason Gunthorpe <jgunthorpe@obsidianresearc
 Cc: linux-security-module@vger.kernel.org, Stefan Berger <stefanb@linux.vnet.ibm.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Marcel Selhorst <tpmdd@selhorst.net>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Removed unnecessary externs from tpm.h.
+Remove ad-hoc protocol message construction and call instead
+tpm_pcr_read_dev().
 
 Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 ---
- drivers/char/tpm/tpm.h | 36 ++++++++++++++++++------------------
- 1 file changed, 18 insertions(+), 18 deletions(-)
+ drivers/char/tpm/tpm-interface.c | 7 ++-----
+ 1 file changed, 2 insertions(+), 5 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 3e32d5b..8b864dd 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -482,26 +482,26 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
- 		     size_t bufsiz);
- ssize_t tpm_transmit_cmd(struct tpm_chip *chip, void *cmd, int len,
- 			 const char *desc);
--extern int tpm_get_timeouts(struct tpm_chip *);
--extern void tpm_gen_interrupt(struct tpm_chip *);
-+int tpm_get_timeouts(struct tpm_chip *chip);
-+void tpm_gen_interrupt(struct tpm_chip *chip);
- int tpm1_auto_startup(struct tpm_chip *chip);
--extern int tpm_do_selftest(struct tpm_chip *);
--extern unsigned long tpm_calc_ordinal_duration(struct tpm_chip *, u32);
--extern int tpm_pm_suspend(struct device *);
--extern int tpm_pm_resume(struct device *);
--extern int wait_for_tpm_stat(struct tpm_chip *, u8, unsigned long,
--			     wait_queue_head_t *, bool);
-+int tpm_do_selftest(struct tpm_chip *chip);
-+unsigned long tpm_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
-+int tpm_pm_suspend(struct device *dev);
-+int tpm_pm_resume(struct device *dev);
-+int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
-+		      wait_queue_head_t *queue, bool check_cancel);
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index 35b2722..2db1610e 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -797,7 +797,7 @@ int tpm_do_selftest(struct tpm_chip *chip)
+ 	unsigned int loops;
+ 	unsigned int delay_msec = 100;
+ 	unsigned long duration;
+-	struct tpm_cmd_t cmd;
++	u8 dummy[TPM_DIGEST_SIZE];
  
- struct tpm_chip *tpm_chip_find_get(int chip_num);
- __must_check int tpm_try_get_ops(struct tpm_chip *chip);
- void tpm_put_ops(struct tpm_chip *chip);
+ 	duration = tpm_calc_ordinal_duration(chip, TPM_ORD_CONTINUE_SELFTEST);
  
--extern struct tpm_chip *tpm_chip_alloc(struct device *dev,
--				       const struct tpm_class_ops *ops);
--extern struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
--				       const struct tpm_class_ops *ops);
--extern int tpm_chip_register(struct tpm_chip *chip);
--extern void tpm_chip_unregister(struct tpm_chip *chip);
-+struct tpm_chip *tpm_chip_alloc(struct device *dev,
-+				const struct tpm_class_ops *ops);
-+struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
-+				 const struct tpm_class_ops *ops);
-+int tpm_chip_register(struct tpm_chip *chip);
-+void tpm_chip_unregister(struct tpm_chip *chip);
+@@ -812,9 +812,7 @@ int tpm_do_selftest(struct tpm_chip *chip)
  
- void tpm_sysfs_add_device(struct tpm_chip *chip);
+ 	do {
+ 		/* Attempt to read a PCR value */
+-		cmd.header.in = pcrread_header;
+-		cmd.params.pcrread_in.pcr_idx = cpu_to_be32(0);
+-		rc = tpm_transmit(chip, (u8 *) &cmd, READ_PCR_RESULT_SIZE);
++		rc = tpm_pcr_read_dev(chip, 0, dummy);
+ 		/* Some buggy TPMs will not respond to tpm_tis_ready() for
+ 		 * around 300ms while the self test is ongoing, keep trying
+ 		 * until the self test duration expires. */
+@@ -829,7 +827,6 @@ int tpm_do_selftest(struct tpm_chip *chip)
+ 		if (rc < TPM_HEADER_SIZE)
+ 			return -EFAULT;
  
-@@ -528,8 +528,8 @@ ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,
- 			u32 *value, const char *desc);
- 
- int tpm2_auto_startup(struct tpm_chip *chip);
--extern void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
--extern unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *, u32);
--extern int tpm2_gen_interrupt(struct tpm_chip *chip);
--extern int tpm2_probe(struct tpm_chip *chip);
-+void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
-+unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
-+int tpm2_gen_interrupt(struct tpm_chip *chip);
-+int tpm2_probe(struct tpm_chip *chip);
- #endif
+-		rc = be32_to_cpu(cmd.header.out.return_code);
+ 		if (rc == TPM_ERR_DISABLED || rc == TPM_ERR_DEACTIVATED) {
+ 			dev_info(&chip->dev,
+ 				 "TPM is disabled/deactivated (0x%X)\n", rc);
 -- 
 2.7.4
 
