@@ -1,16 +1,13 @@
-From: Dmitry Torokhov <dtor-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix cacheline alignment for DMA-able
-	buffers
-Date: Tue, 9 Aug 2016 08:18:00 -0700
-Message-ID: <CAE_wzQ95LAm7JkfB=V2VZVc4Vha4GcRyOBH_J8ZEh1gG+ZjEAA@mail.gmail.com>
-References: <1469761153-85576-1-git-send-email-apronin@chromium.org>
-	<20160729172702.GB7020@obsidianresearch.com>
-	<CAE_wzQ-=8Su6xzA8Cv+C6ma8iYJfnOwR=hW-KBKjBG+4eOwF4g@mail.gmail.com>
-	<20160809094610.GA13566@intel.com> <20160809150114.GA9672@intel.com>
+From: Alex Gershgorin <Alex.Gershgorin-z19BhFikLL4AvxtiuMwx3w@public.gmane.org>
+Subject: AT97SC3205 - SPI interface with tpm_tis_spi driver
+Date: Tue, 19 Jul 2016 09:44:41 +0000
+Message-ID: <1DC01DCD0F70AE4284AE3A5E8C726E2240106261@Ex2010.q-core.co.il>
+References: <1DC01DCD0F70AE4284AE3A5E8C726E2240106236@Ex2010.q-core.co.il>
 Mime-Version: 1.0
-Content-Type: multipart/mixed; boundary="===============3517980134801445065=="
+Content-Type: multipart/mixed; boundary="===============3658592150476874432=="
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160809150114.GA9672-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <1DC01DCD0F70AE4284AE3A5E8C726E2240106236-6dhP19T7b9reAA7jXO2vED4kX+cae0hd@public.gmane.org>
+Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,190 +16,174 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Dmitry Torokhov <dtor-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Cc: "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
---===============3517980134801445065==
-Content-Type: multipart/alternative; boundary=94eb2c0c7d22d59fad0539a50974
+--===============3658592150476874432==
+Content-Language: en-US
+Content-Type: multipart/alternative;
+	boundary="_000_1DC01DCD0F70AE4284AE3A5E8C726E2240106261Ex2010qcorecoil_"
 
---94eb2c0c7d22d59fad0539a50974
-Content-Type: text/plain; charset=UTF-8
-
-On Tue, Aug 9, 2016 at 8:01 AM, Jarkko Sakkinen <
-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
-
-> On Tue, Aug 09, 2016 at 12:46:10PM +0300, Jarkko Sakkinen wrote:
-> > On Fri, Jul 29, 2016 at 10:30:22AM -0700, Dmitry Torokhov wrote:
-> > >    On Fri, Jul 29, 2016 at 10:27 AM, Jason Gunthorpe
-> > >    <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote:
-> > >
-> > >      On Thu, Jul 28, 2016 at 07:59:13PM -0700, Andrey Pronin wrote:
-> > >      > Annotate buffers used in spi transactions as
-> ____cacheline_aligned
-> > >      > to use in DMA transfers.
-> > >      >
-> > >      > Signed-off-by: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-> > >      >  drivers/char/tpm/st33zp24/spi.c | 4 ++--
-> > >      >  drivers/char/tpm/tpm_tis_spi.c  | 4 ++--
-> > >      >  2 files changed, 4 insertions(+), 4 deletions(-)
-> > >      >
-> > >      > diff --git a/drivers/char/tpm/st33zp24/spi.c
-> > >      b/drivers/char/tpm/st33zp24/spi.c
-> > >      > index 9f5a011..0e9aad9 100644
-> > >      > +++ b/drivers/char/tpm/st33zp24/spi.c
-> > >      > @@ -70,8 +70,8 @@
-> > >      >  struct st33zp24_spi_phy {
-> > >      >       struct spi_device *spi_device;
-> > >      >
-> > >      > -     u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE];
-> > >      > -     u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE];
-> > >      > +     u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE]
-> ____cacheline_aligned;
-> > >      > +     u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE]
-> ____cacheline_aligned;
-> > >      >
-> > >      >       int io_lpcpd;
-> > >      >       int latency;
-> > >
-> > >      Hurm, this still looks wrong to me. Aligning the start of buffers
-> is
-> > >      not enough, the DMA'able space must also end on a cache line as
-> well.
-> > >
-> > >      So, the buffers must also always be placed at the end of the
-> struct.
-> > >
-> > >      IMHO It would be cleaner and safer to always kmalloc the DMA
-> buffer
-> > >      alone than to try and optimize like this.
-> > >
-> > >    In this case moving them to the end of the structure and commenting
-> why
-> > >    they have to be at the end might be less invasive change. More
-> > >    performance-efficient and resilient in low memory situations too.
-> >
-> > kmallocs would be done in the driver initialization:
-> >
-> > * you rarely are in low memory situation
-> > * performance gain/loss is insignificant
-> >
-> > I really don't see your point.
->
-> I'm fine having them at the end of the structure mainly for simplicity
-> reasons but those arguments just didn't hold at all.
->
-
-Well, the main reason was simplicity and invasiveness of the change.
-
-But I still maintain that doing 3 memory allocations instead of 1 is less
-performant and puts more pressure on the kernel. Yes, it is at bind time,
-but you do not have to do 3 times work when one allocation will suffice.
-Also, driver binding does not necessarily happen at boot time. I can always
-unbind and rebind the driver or reload the module.
-
-Thanks,
-Dmitry
-
---94eb2c0c7d22d59fad0539a50974
-Content-Type: text/html; charset=UTF-8
+--_000_1DC01DCD0F70AE4284AE3A5E8C726E2240106261Ex2010qcorecoil_
+Content-Type: text/plain; charset="iso-8859-1"
 Content-Transfer-Encoding: quoted-printable
 
-<div dir=3D"ltr"><div class=3D"gmail_extra"><div class=3D"gmail_quote">On T=
-ue, Aug 9, 2016 at 8:01 AM, Jarkko Sakkinen <span dir=3D"ltr">&lt;<a href=
-=3D"mailto:jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org" target=3D"_blank">jarkko.sakkin=
-en-VuQAYsv1563Yd54FQh9/CA@public.gmane.org</a>&gt;</span> wrote:<br><blockquote class=3D"gmail_quot=
-e" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex">=
-<div class=3D"HOEnZb"><div class=3D"h5">On Tue, Aug 09, 2016 at 12:46:10PM =
-+0300, Jarkko Sakkinen wrote:<br>
-&gt; On Fri, Jul 29, 2016 at 10:30:22AM -0700, Dmitry Torokhov wrote:<br>
-&gt; &gt;=C2=A0 =C2=A0 On Fri, Jul 29, 2016 at 10:27 AM, Jason Gunthorpe<br=
->
-&gt; &gt;=C2=A0 =C2=A0 &lt;<a href=3D"mailto:jgunthorpe-ePGOBjL8dl3ta4EC/59zMNAWLNoT+7d/@public.gmane.org=
-m">jgunthorpe@obsidianresearch.<wbr>com</a>&gt; wrote:<br>
-&gt; &gt;<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 On Thu, Jul 28, 2016 at 07:59:13PM -0700, And=
-rey Pronin wrote:<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt; Annotate buffers used in spi transaction=
-s as ____cacheline_aligned<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt; to use in DMA transfers.<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt;<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt; Signed-off-by: Andrey Pronin &lt;<a href=
-=3D"mailto:apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org">apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org</a>&gt;<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt;=C2=A0 drivers/char/tpm/st33zp24/spi.<wbr=
->c | 4 ++--<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt;=C2=A0 drivers/char/tpm/tpm_tis_spi.<wbr>=
-c=C2=A0 | 4 ++--<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt;=C2=A0 2 files changed, 4 insertions(+), =
-4 deletions(-)<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt;<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt; diff --git a/drivers/char/tpm/st33zp24/<=
-wbr>spi.c<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 b/drivers/char/tpm/st33zp24/<wbr>spi.c<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt; index 9f5a011..0e9aad9 100644<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt; +++ b/drivers/char/tpm/st33zp24/<wbr>spi=
-.c<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt; @@ -70,8 +70,8 @@<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt;=C2=A0 struct st33zp24_spi_phy {<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt;=C2=A0 =C2=A0 =C2=A0 =C2=A0struct spi_dev=
-ice *spi_device;<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt;<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt; -=C2=A0 =C2=A0 =C2=A0u8 tx_buf[ST33ZP24_=
-SPI_BUFFER_<wbr>SIZE];<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt; -=C2=A0 =C2=A0 =C2=A0u8 rx_buf[ST33ZP24_=
-SPI_BUFFER_<wbr>SIZE];<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt; +=C2=A0 =C2=A0 =C2=A0u8 tx_buf[ST33ZP24_=
-SPI_BUFFER_<wbr>SIZE] ____cacheline_aligned;<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt; +=C2=A0 =C2=A0 =C2=A0u8 rx_buf[ST33ZP24_=
-SPI_BUFFER_<wbr>SIZE] ____cacheline_aligned;<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt;<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt;=C2=A0 =C2=A0 =C2=A0 =C2=A0int io_lpcpd;<=
-br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 &gt;=C2=A0 =C2=A0 =C2=A0 =C2=A0int latency;<b=
-r>
-&gt; &gt;<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 Hurm, this still looks wrong to me. Aligning =
-the start of buffers is<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 not enough, the DMA&#39;able space must also =
-end on a cache line as well.<br>
-&gt; &gt;<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 So, the buffers must also always be placed at=
- the end of the struct.<br>
-&gt; &gt;<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 IMHO It would be cleaner and safer to always =
-kmalloc the DMA buffer<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0 alone than to try and optimize like this.<br>
-&gt; &gt;<br>
-&gt; &gt;=C2=A0 =C2=A0 In this case moving them to the end of the structure=
- and commenting why<br>
-&gt; &gt;=C2=A0 =C2=A0 they have to be at the end might be less invasive ch=
-ange. More<br>
-&gt; &gt;=C2=A0 =C2=A0 performance-efficient and resilient in low memory si=
-tuations too.<br>
-&gt;<br>
-&gt; kmallocs would be done in the driver initialization:<br>
-&gt;<br>
-&gt; * you rarely are in low memory situation<br>
-&gt; * performance gain/loss is insignificant<br>
-&gt;<br>
-&gt; I really don&#39;t see your point.<br>
+
+Hi everyone,
+
+Our company use Atmel TPM AT97SC3205 - SPI interface.
+Accordingly to datasheests it's compliant to Trusted Computing Group (TCG) =
+Trusted Platform Module TPM) Version 1.2 Specification. Compliant with TCG =
+PC Client-Specific TPM Interface Specification (TIS Version 1.3).
+On my target board I'm running Kernel from git://git.infradead.org/users/jj=
+s/linux-tpmdd.git   next head.
+I have made some additional changes on my Device Tree.
+
+spi1: spi@fc000000 {
+                pinctrl-names =3D "default";
+                pinctrl-0 =3D <&pinctrl_spi1_default>;
+                status =3D "okay";
+
+                tpm_tis@0 {
+                            compatible =3D "tcg,tpm_tis-spi";
+                    reg =3D <0>;
+                            spi-max-frequency =3D <10000000>;
+                    };
+            };
+
+This is part of my kernel boot messages:
+atmel_spi fc000000.spi: version: 0x311
+atmel_spi fc000000.spi: Using dma0chan2 (tx) and dma0chan3 (rx) for DMA tra=
+nsfers
+atmel_spi fc000000.spi: Using FIFO (16 data)
+atmel_spi fc000000.spi: Atmel SPI Controller at 0xfc000000 (irq 36)
+tpm tpm0: tpm_transmit: tpm_send: error -5
+tpm_tis_spi: probe of spi32765.0 failed with error -5
+
+I verified with an oscilloscope that all SPI bus signals are in order.
+
+Following the above kernel boot messages - my question is :
+    Can I use tpm_tis_spi device driver for AT97SC3205 device ?
+
+Please advise and help with any directions.
+
+Thanks in advance,
+Alex Gershgorin
+
+
+
+
+
+
+--_000_1DC01DCD0F70AE4284AE3A5E8C726E2240106261Ex2010qcorecoil_
+Content-Type: text/html; charset="iso-8859-1"
+Content-Transfer-Encoding: quoted-printable
+
+<html dir=3D"ltr">
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Diso-8859-=
+1">
+<style id=3D"owaParaStyle" type=3D"text/css">=0A=
+<!--=0A=
+p=0A=
+	{margin-top:0;=0A=
+	margin-bottom:0}=0A=
+p=0A=
+	{margin-top:0;=0A=
+	margin-bottom:0}=0A=
+-->=0A=
+P {margin-top:0;margin-bottom:0;}</style>
+</head>
+<body ocsi=3D"0" fpstyle=3D"1">
+<div style=3D"direction: ltr;font-family: Tahoma;color: #000000;font-size: =
+10pt;"><font size=3D"2"><b>&nbsp;
+</b></font><b></b>
+<div style=3D"font-family: Times New Roman; color: #000000; font-size: 16px=
+">
+<div></div>
+<div>
+<div style=3D"direction:ltr; font-family:Tahoma; color:#000000; font-size:1=
+0pt">
+<div style=3D"direction:ltr; font-family:Tahoma; color:#000000; font-size:1=
+0pt">Hi everyone,<br>
 <br>
-</div></div>I&#39;m fine having them at the end of the structure mainly for=
- simplicity<br>
-reasons but those arguments just didn&#39;t hold at all.<br></blockquote><d=
-iv><br></div><div>Well, the main reason was simplicity and invasiveness of =
-the change.</div><div><br></div><div>But I still maintain that doing 3 memo=
-ry allocations instead of 1 is less performant and puts more pressure on th=
-e kernel. Yes, it is at bind time, but you do not have to do 3 times work w=
-hen one allocation will suffice. Also, driver binding does not necessarily =
-happen at boot time. I can always unbind and rebind the driver or reload th=
-e module.</div><div><br></div><div>Thanks,</div><div>Dmitry</div></div></di=
-v></div>
+Our company use Atmel TPM AT97SC3205 - SPI interface.<br>
+Accordingly to datasheests it's compliant to Trusted Computing Group (<span=
+ class=3D"highlight selected">TCG</span>) Trusted Platform Module TPM) Vers=
+ion 1.2 Specification. Compliant with TCG PC Client-Specific TPM Interface =
+Specification (TIS Version 1.3).<br>
+On my target board I'm running Kernel from git://git.infradead.org/users/jj=
+s/linux-tpmdd.git &nbsp;
+<b>next head</b>.<br>
+I have made some additional changes on my Device Tree. <br>
+&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; <br>
+spi1: spi@fc000000 {<br>
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;=
+ pinctrl-names =3D &quot;default&quot;;<br>
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;=
+ pinctrl-0 =3D &lt;&amp;pinctrl_spi1_default&gt;;<br>
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;=
+ status =3D &quot;okay&quot;;<br>
+<br>
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;=
+ tpm_tis@0 {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb=
+sp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; co=
+mpatible =3D &quot;tcg,tpm_tis-spi&quot;;<br>
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;=
+ &nbsp;&nbsp;&nbsp; reg =3D &lt;0&gt;;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb=
+sp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; sp=
+i-max-frequency =3D &lt;10000000&gt;;<br>
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;=
+&nbsp;&nbsp;&nbsp;&nbsp; };<br>
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; };<br>
+<br>
+<b>This is part of my kernel boot messages: </b><br>
+atmel_spi fc000000.spi: version: 0x311<br>
+atmel_spi fc000000.spi: Using dma0chan2 (tx) and dma0chan3 (rx) for DMA tra=
+nsfers<br>
+atmel_spi fc000000.spi: Using FIFO (16 data)<br>
+atmel_spi fc000000.spi: Atmel SPI Controller at 0xfc000000 (irq 36)<br>
+tpm tpm0: tpm_transmit: tpm_send: error -5<br>
+tpm_tis_spi: probe of spi32765.0 failed with error -5<br>
+<br>
+I verified with an oscilloscope that all SPI bus signals are in order.<br>
+<br>
+Following the above kernel boot messages - my question is :<br>
+&nbsp;&nbsp;&nbsp; Can I use tpm_tis_spi device driver for AT97SC3205 devic=
+e ?<br>
+<br>
+Please advise and help with any directions.<br>
+<br>
+Thanks in advance,<br>
+Alex Gershgorin<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<span lang=3D"en-US"></span>
+<div>
+<div style=3D"font-family:Tahoma; font-size:13px">
+<div style=3D"font-family:Tahoma; font-size:13px">
+<div style=3D"font-family:Tahoma; font-size:13px"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>
 
---94eb2c0c7d22d59fad0539a50974--
+--_000_1DC01DCD0F70AE4284AE3A5E8C726E2240106261Ex2010qcorecoil_--
 
 
---===============3517980134801445065==
+--===============3658592150476874432==
 Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
@@ -214,7 +195,7 @@ patterns at an interface-level. Reveals which users, apps, and protocols are
 consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
 J-Flow, sFlow and other flows. Make informed decisions using capacity 
 planning reports. http://sdm.link/zohodev2dev
---===============3517980134801445065==
+--===============3658592150476874432==
 Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
@@ -225,4 +206,4 @@ tpmdd-devel mailing list
 tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
 
---===============3517980134801445065==--
+--===============3658592150476874432==--
