@@ -1,12 +1,14 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH v4 0/5] Use tpm_transmit_cmd() consistently
-	across kernel call sites
-Date: Wed, 20 Jul 2016 02:44:55 +0300
-Message-ID: <1468971906-6528-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH v4 1/5] tpm/st33zp24: Remove useless
+	tpm_gen_interrupt
+Date: Wed, 20 Jul 2016 02:44:56 +0300
+Message-ID: <1468971906-6528-2-git-send-email-jarkko.sakkinen@linux.intel.com>
+References: <1468971906-6528-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1468971906-6528-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,38 +21,34 @@ To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Jason Gunthorpe <jgun
 Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-These commits update the subsystem consistently to use
-tpm_transmit_cmd() throughout the subsystem the exception being
-tpm_write() where it makes sense to use the raw interface because higher
-level command handling is delegated to user space. The point is to make
-semantics and error handling across the kernel call sites.
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 
-v4: Make interrupt generation internal to tpm_tis as it is not really
-used for anything useful anywhere else and it does not really belong to
-the upper TPM driver.
+This function should only be called as part of an IRQ probing protocol
+and st33 does not have any code to detect that the IRQ it tries to
+generate was not generated and disable the IRQ.
 
-v3: Removed patch that renames tpm_pcr_read_dev() to tpm1_pcr_read()
-because it is not mandatory for this patch set.
+Since st33 is primarily a DT binding driver it should not be doing
+IRQ probing anyhow, so let us just delete this useless call.
 
-v2: Added commit that drops externs from all function declarations in
-tpm.h as suggested by Jason Gunthorpe.
+Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+---
+ drivers/char/tpm/st33zp24/st33zp24.c | 2 --
+ 1 file changed, 2 deletions(-)
 
-Jarkko Sakkinen (4):
-  tpm: remove unnecessary externs from tpm.h
-  tpm: replace tpm_gen_interrupt() with tpm_tis_gen_interrupt()
-  tpm: use tpm_transmit_cmd() in tpm2_probe()
-  tpm: use tpm_pcr_read_dev() in tpm_do_selftest()
-
-Jason Gunthorpe (1):
-  tpm/st33zp24: Remove useless tpm_gen_interrupt
-
- drivers/char/tpm/st33zp24/st33zp24.c |  2 --
- drivers/char/tpm/tpm-interface.c     | 22 ++--------------------
- drivers/char/tpm/tpm.h               | 34 ++++++++++++++++------------------
- drivers/char/tpm/tpm2-cmd.c          | 21 +--------------------
- drivers/char/tpm/tpm_tis_core.c      | 19 +++++++++++++++----
- 5 files changed, 34 insertions(+), 64 deletions(-)
-
+diff --git a/drivers/char/tpm/st33zp24/st33zp24.c b/drivers/char/tpm/st33zp24/st33zp24.c
+index c2ee304..6f060c7 100644
+--- a/drivers/char/tpm/st33zp24/st33zp24.c
++++ b/drivers/char/tpm/st33zp24/st33zp24.c
+@@ -589,8 +589,6 @@ int st33zp24_probe(void *phy_id, const struct st33zp24_phy_ops *ops,
+ 		chip->flags |= TPM_CHIP_FLAG_IRQ;
+ 
+ 		disable_irq_nosync(tpm_dev->irq);
+-
+-		tpm_gen_interrupt(chip);
+ 	}
+ 
+ 	return tpm_chip_register(chip);
 -- 
 2.7.4
 
