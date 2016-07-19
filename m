@@ -1,90 +1,37 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 2/2] add irq validity check in
- tpm_i2c_nuvoton driver
-Date: Tue, 19 Jul 2016 17:35:07 +0300
-Message-ID: <20160719143507.GA14878@intel.com>
-References: <1467194329-5543-1-git-send-email-andrew.zamansky@nuvoton.com>
-	<1467194329-5543-3-git-send-email-andrew.zamansky@nuvoton.com>
-	<20160629140339.GA4589@intel.com>
-	<20160712173326.GA9286@obsidianresearch.com>
-	<20160713120401.GA4387@intel.com> <20160718175053.GA7213@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [RESEND][PATCH] tpm: read burstcount from TPM_STS
+ in one 32-bit transaction
+Date: Tue, 19 Jul 2016 17:41:39 +0300
+Message-ID: <20160719144139.GB14878@intel.com>
+References: <1467307543-44566-1-git-send-email-apronin@chromium.org>
+ <20160701084323.GA15718@intel.com>
+ <20160701084545.GA16059@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20160718175053.GA7213-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: andrew zamansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, azamansk-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, Dan.Morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, stimpy1-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
+In-Reply-To: <20160701084545.GA16059@intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: apronin@chromium.org
+Cc: Christophe Ricard <christophe.ricard@gmail.com>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, leendert@watson.ibm.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jul 18, 2016 at 08:50:53PM +0300, Jarkko Sakkinen wrote:
-> On Wed, Jul 13, 2016 at 03:04:01PM +0300, Jarkko Sakkinen wrote:
-> > On Tue, Jul 12, 2016 at 11:33:26AM -0600, Jason Gunthorpe wrote:
-> > > On Wed, Jun 29, 2016 at 05:03:39PM +0300, Jarkko Sakkinen wrote:
-> > > > On Wed, Jun 29, 2016 at 12:58:49PM +0300, andrew zamansky wrote:
-> > > > > if irq==0 (actualy invalid value) then error is printed to dmesg after
-> > > > > trying to register to 0 interrupt 
-> > > > > 
-> > > > >  drivers/char/tpm/tpm_i2c_nuvoton.c | 4 +++-
-> > > > >  1 file changed, 3 insertions(+), 1 deletion(-)
-> > > > > 
-> > > > > diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
-> > > > > index 75a80e466..3081529 100644
-> > > > > +++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
-> > > > > @@ -554,7 +554,9 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
-> > > > >  	 *   TPM_INTF_INT_LEVEL_LOW | TPM_INTF_DATA_AVAIL_INT
-> > > > >  	 * The IRQ should be set in the i2c_board_info (which is done
-> > > > >  	 * automatically in of_i2c_register_devices, for device tree users */
-> > > > > -	chip->flags |= TPM_CHIP_FLAG_IRQ;
-> > > > > +	if(chip->flags)
-> > > > > +		chip->flags |= TPM_CHIP_FLAG_IRQ;
-> > > > > +
-> > > > >  	priv->irq = client->irq;
-> > > > >  
-> > > > >  	if (chip->flags & TPM_CHIP_FLAG_IRQ) {
-> > > > 
-> > > > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> > > > 
-> > > > PS. There's a style error. "if()" should be "if ()". I don't mind fixing
-> > > > that. Just remember that next time.
+On Fri, Jul 01, 2016 at 11:45:45AM +0300, Jarkko Sakkinen wrote:
+> On Fri, Jul 01, 2016 at 11:43:23AM +0300, Jarkko Sakkinen wrote:
+> > On Thu, Jun 30, 2016 at 10:25:43AM -0700, apronin@chromium.org wrote:
+> > > From: Andrey Pronin <apronin@chromium.org>
 > > > 
-> > > Andrew/Jarkko:
+> > > Some chips incorrectly support partial reads from TPM_STS register
+> > > at non-zero offsets. Read the entire 32-bits register instead of
+> > > making two 8-bit reads to support such devices and reduce the number
+> > > of bus transactions when obtaining the burstcount from TPM_STS.
 > > > 
-> > > Uhm, this looks wrong to me.. The original code was like this:
-> > > 
-> > > -       chip->vendor.irq = client->irq;
-> > > -       if (chip->vendor.irq) {
-> > > 
-> > > And was wrongly changed to this:
-> > > 
-> > > +       chip->flags |= TPM_CHIP_FLAG_IRQ;
-> > > +       priv->irq = client->irq;
-> > > +       if (chip->flags & TPM_CHIP_FLAG_IRQ) {
-> > > 
-> > > Jarkko, can you fold this into the patch to fix it please:
+> > > Signed-off-by: Andrey Pronin <apronin@chromium.org>
 > > 
-> > Right. Sure. It's not merged to my next nor it has been part of any pull
-> > request so this is still doable.
+> > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 > 
-> Done.
+> Applied to my master branch.
 
-I rewrote the whole description as this is actually a bug fix for a
-regression. I also added a fixes line.
+I added also added a fixes line.
 
 /Jarkko
-
-------------------------------------------------------------------------------
-What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
-patterns at an interface-level. Reveals which users, apps, and protocols are 
-consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
-J-Flow, sFlow and other flows. Make informed decisions using capacity planning
-reports.http://sdm.link/zohodev2dev
