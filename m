@@ -1,16 +1,15 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v3 3/5] tpm: return error code from
-	tpm_gen_interrupt()
-Date: Tue, 19 Jul 2016 14:27:41 -0600
-Message-ID: <20160719202741.GB16042@obsidianresearch.com>
+Subject: Re: [PATCH v3 0/5] Use tpm_transmit_cmd()
+ consistently across kernel call sites
+Date: Tue, 19 Jul 2016 14:28:41 -0600
+Message-ID: <20160719202841.GC16042@obsidianresearch.com>
 References: <1468935171-7815-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<1468935171-7815-4-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1468935171-7815-4-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+In-Reply-To: <1468935171-7815-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,41 +19,25 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jul 19, 2016 at 04:32:47PM +0300, Jarkko Sakkinen wrote:
-> Return error code from tpm_gen_interrupt() and fail tpm_tis family of
-> drivers on a system error. It doesn't make sense to continue if we
-> cannot even reach the TPM.
+On Tue, Jul 19, 2016 at 04:32:44PM +0300, Jarkko Sakkinen wrote:
+> These commits update the subsystem consistently to use
+> tpm_transmit_cmd() throughout the subsystem the exception being
+> tpm_write() where it makes sense to use the raw interface because higher
+> level command handling is delegated to user space. The point is to make
+> semantics and error handling across the kernel call sites.
 > 
-> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
->  drivers/char/tpm/tpm-interface.c | 6 +++---
->  drivers/char/tpm/tpm.h           | 2 +-
->  drivers/char/tpm/tpm_tis_core.c  | 4 +++-
->  3 files changed, 7 insertions(+), 5 deletions(-)
+> v3: Removed patch that renames tpm_pcr_read_dev() to tpm1_pcr_read()
+> because it is not mandatory for this patch set.
 > 
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index 88dafcd..35b2722 100644
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -466,16 +466,16 @@ ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
->   * Returns 0 on success, < 0 in case of fatal error or a value > 0 representing
->   * a TPM error code.
->   */
-> -void tpm_gen_interrupt(struct tpm_chip *chip)
-> +int tpm_gen_interrupt(struct tpm_chip *chip)
+> v2: Added commit that drops externs from all function declarations in
+> tpm.h as suggested by Jason Gunthorpe.
 
-drivers/char/tpm/st33zp24/st33zp24.c needs to be updated too.
+Other than my comment:
 
-I looked at st33zp24.c and it looks broken, I don't see any logic that
-de-asserts TPM_CHIP_FLAG_IRQ if the irq test triggered by
-tpm_gen_interrupt, so presumably it should not be calling it at all.
-
-IMHO, DT binding devices should never auto-probe IRQS anyhow, we only
-do it on PC because PC is insane...
-
-If we fix st33 then I suggest just moving tpm_gen_interrupt into
-tpm_tis - nothing else should really be using it..
+Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 
 Jason
 
