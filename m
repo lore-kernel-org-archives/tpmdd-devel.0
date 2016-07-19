@@ -1,14 +1,19 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH v3 4/5] tpm: use tpm_transmit_cmd() in
-	tpm2_probe()
-Date: Tue, 19 Jul 2016 16:32:48 +0300
-Message-ID: <1468935171-7815-5-git-send-email-jarkko.sakkinen@linux.intel.com>
-References: <1468935171-7815-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH 2/2] add irq validity check in
+ tpm_i2c_nuvoton driver
+Date: Tue, 19 Jul 2016 17:35:07 +0300
+Message-ID: <20160719143507.GA14878@intel.com>
+References: <1467194329-5543-1-git-send-email-andrew.zamansky@nuvoton.com>
+	<1467194329-5543-3-git-send-email-andrew.zamansky@nuvoton.com>
+	<20160629140339.GA4589@intel.com>
+	<20160712173326.GA9286@obsidianresearch.com>
+	<20160713120401.GA4387@intel.com> <20160718175053.GA7213@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1468935171-7815-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20160718175053.GA7213-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,38 +22,65 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: andrew zamansky <andrew.zamansky-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, azamansk-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, Dan.Morav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org, stimpy1-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-It is better to tpm_transmit_cmd() in tpm2_probe() in order to get
-consistent command handling throughout the subsystem.
+On Mon, Jul 18, 2016 at 08:50:53PM +0300, Jarkko Sakkinen wrote:
+> On Wed, Jul 13, 2016 at 03:04:01PM +0300, Jarkko Sakkinen wrote:
+> > On Tue, Jul 12, 2016 at 11:33:26AM -0600, Jason Gunthorpe wrote:
+> > > On Wed, Jun 29, 2016 at 05:03:39PM +0300, Jarkko Sakkinen wrote:
+> > > > On Wed, Jun 29, 2016 at 12:58:49PM +0300, andrew zamansky wrote:
+> > > > > if irq==0 (actualy invalid value) then error is printed to dmesg after
+> > > > > trying to register to 0 interrupt 
+> > > > > 
+> > > > >  drivers/char/tpm/tpm_i2c_nuvoton.c | 4 +++-
+> > > > >  1 file changed, 3 insertions(+), 1 deletion(-)
+> > > > > 
+> > > > > diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
+> > > > > index 75a80e466..3081529 100644
+> > > > > +++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
+> > > > > @@ -554,7 +554,9 @@ static int i2c_nuvoton_probe(struct i2c_client *client,
+> > > > >  	 *   TPM_INTF_INT_LEVEL_LOW | TPM_INTF_DATA_AVAIL_INT
+> > > > >  	 * The IRQ should be set in the i2c_board_info (which is done
+> > > > >  	 * automatically in of_i2c_register_devices, for device tree users */
+> > > > > -	chip->flags |= TPM_CHIP_FLAG_IRQ;
+> > > > > +	if(chip->flags)
+> > > > > +		chip->flags |= TPM_CHIP_FLAG_IRQ;
+> > > > > +
+> > > > >  	priv->irq = client->irq;
+> > > > >  
+> > > > >  	if (chip->flags & TPM_CHIP_FLAG_IRQ) {
+> > > > 
+> > > > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> > > > 
+> > > > PS. There's a style error. "if()" should be "if ()". I don't mind fixing
+> > > > that. Just remember that next time.
+> > > 
+> > > Andrew/Jarkko:
+> > > 
+> > > Uhm, this looks wrong to me.. The original code was like this:
+> > > 
+> > > -       chip->vendor.irq = client->irq;
+> > > -       if (chip->vendor.irq) {
+> > > 
+> > > And was wrongly changed to this:
+> > > 
+> > > +       chip->flags |= TPM_CHIP_FLAG_IRQ;
+> > > +       priv->irq = client->irq;
+> > > +       if (chip->flags & TPM_CHIP_FLAG_IRQ) {
+> > > 
+> > > Jarkko, can you fold this into the patch to fix it please:
+> > 
+> > Right. Sure. It's not merged to my next nor it has been part of any pull
+> > request so this is still doable.
+> 
+> Done.
 
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
----
- drivers/char/tpm/tpm2-cmd.c | 4 +---
- 1 file changed, 1 insertion(+), 3 deletions(-)
+I rewrote the whole description as this is actually a bug fix for a
+regression. I also added a fixes line.
 
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 1c393ba..e1db404 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -911,11 +911,9 @@ int tpm2_probe(struct tpm_chip *chip)
- 	cmd.params.get_tpm_pt_in.property_id = cpu_to_be32(0x100);
- 	cmd.params.get_tpm_pt_in.property_cnt = cpu_to_be32(1);
- 
--	rc = tpm_transmit(chip, (const char *) &cmd, sizeof(cmd));
-+	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), NULL);
- 	if (rc <  0)
- 		return rc;
--	else if (rc < TPM_HEADER_SIZE)
--		return -EFAULT;
- 
- 	if (be16_to_cpu(cmd.header.out.tag) == TPM2_ST_NO_SESSIONS)
- 		chip->flags |= TPM_CHIP_FLAG_TPM2;
--- 
-2.7.4
-
+/Jarkko
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
