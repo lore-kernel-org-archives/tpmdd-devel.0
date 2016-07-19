@@ -1,8 +1,8 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH v4 4/5] tpm: use tpm_transmit_cmd() in
-	tpm2_probe()
-Date: Wed, 20 Jul 2016 02:44:59 +0300
-Message-ID: <1468971906-6528-5-git-send-email-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH v4 5/5] tpm: use tpm_pcr_read_dev() in
+	tpm_do_selftest()
+Date: Wed, 20 Jul 2016 02:45:00 +0300
+Message-ID: <1468971906-6528-6-git-send-email-jarkko.sakkinen@linux.intel.com>
 References: <1468971906-6528-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,31 +21,46 @@ To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Jason Gunthorpe <jgun
 Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-It is better to tpm_transmit_cmd() in tpm2_probe() in order to get
-consistent command handling throughout the subsystem.
+Instead of a  ad-hoc protocol message construction it is better to
+call tpm_pcr_read_dev().
 
 Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm2-cmd.c | 4 +---
- 1 file changed, 1 insertion(+), 3 deletions(-)
+ drivers/char/tpm/tpm-interface.c | 7 ++-----
+ 1 file changed, 2 insertions(+), 5 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 1c393ba..e1db404 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -911,11 +911,9 @@ int tpm2_probe(struct tpm_chip *chip)
- 	cmd.params.get_tpm_pt_in.property_id = cpu_to_be32(0x100);
- 	cmd.params.get_tpm_pt_in.property_cnt = cpu_to_be32(1);
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index f43cc3f..ef5ad80 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -777,7 +777,7 @@ int tpm_do_selftest(struct tpm_chip *chip)
+ 	unsigned int loops;
+ 	unsigned int delay_msec = 100;
+ 	unsigned long duration;
+-	struct tpm_cmd_t cmd;
++	u8 dummy[TPM_DIGEST_SIZE];
  
--	rc = tpm_transmit(chip, (const char *) &cmd, sizeof(cmd));
-+	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), NULL);
- 	if (rc <  0)
- 		return rc;
--	else if (rc < TPM_HEADER_SIZE)
--		return -EFAULT;
+ 	duration = tpm_calc_ordinal_duration(chip, TPM_ORD_CONTINUE_SELFTEST);
  
- 	if (be16_to_cpu(cmd.header.out.tag) == TPM2_ST_NO_SESSIONS)
- 		chip->flags |= TPM_CHIP_FLAG_TPM2;
+@@ -792,9 +792,7 @@ int tpm_do_selftest(struct tpm_chip *chip)
+ 
+ 	do {
+ 		/* Attempt to read a PCR value */
+-		cmd.header.in = pcrread_header;
+-		cmd.params.pcrread_in.pcr_idx = cpu_to_be32(0);
+-		rc = tpm_transmit(chip, (u8 *) &cmd, READ_PCR_RESULT_SIZE);
++		rc = tpm_pcr_read_dev(chip, 0, dummy);
+ 		/* Some buggy TPMs will not respond to tpm_tis_ready() for
+ 		 * around 300ms while the self test is ongoing, keep trying
+ 		 * until the self test duration expires. */
+@@ -809,7 +807,6 @@ int tpm_do_selftest(struct tpm_chip *chip)
+ 		if (rc < TPM_HEADER_SIZE)
+ 			return -EFAULT;
+ 
+-		rc = be32_to_cpu(cmd.header.out.return_code);
+ 		if (rc == TPM_ERR_DISABLED || rc == TPM_ERR_DEACTIVATED) {
+ 			dev_info(&chip->dev,
+ 				 "TPM is disabled/deactivated (0x%X)\n", rc);
 -- 
 2.7.4
 
