@@ -1,19 +1,16 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v2 1/2] tpm: devicetree: document
-	properties for cr50
-Date: Wed, 20 Jul 2016 13:54:22 -0600
-Message-ID: <20160720195422.GA30947@obsidianresearch.com>
-References: <1468549218-19215-1-git-send-email-apronin@chromium.org>
-	<cover.1468985673.git.apronin@chromium.org>
-	<5274cc806888a709c639e701dad894543885b2c9.1468985673.git.apronin@chromium.org>
-	<20160720190303.GA5620@rob-hp-laptop>
-	<20160720194912.GA61154@apronin>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm: fix a race condition
+	tpm2_unseal_trusted()
+Date: Wed, 20 Jul 2016 23:53:14 +0300
+Message-ID: <20160720205314.GA6525@intel.com>
+References: <1468973792-17598-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<20160720164818.GA21460@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160720194912.GA61154@apronin>
+In-Reply-To: <20160720164818.GA21460-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,23 +19,45 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Cc: Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, Rob Herring <robh-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Pawel Moll <pawel.moll-5wv7dgnIgG8@public.gmane.org>, Ian Campbell <ijc+devicetree-KcIKpvwj1kUDXYZnReoRVg@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Kumar Gala <galak-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jul 20, 2016 at 12:49:12PM -0700, Andrey Pronin wrote:
+On Wed, Jul 20, 2016 at 10:48:18AM -0600, Jason Gunthorpe wrote:
+> On Wed, Jul 20, 2016 at 03:16:32AM +0300, Jarkko Sakkinen wrote:
+> > Unseal and load operations should be done as an atomic unit. This
+> > commit fixes the issue by moving TPM mutex handling to tpm_try_get_ops()
+> > and tpm_put_ops(), which is probably more logical place for it anyway.
+> 
+> No..
+> 
+> 'get_ops' is to be used to hold a persisent kref to a single tpm. It
+> cannot block other tpm access.
+> 
+> Eg a upper protocol might get_ops to for a long period to ensure it
+> consistently talks to the same TPM in a multi-tpm system.
+> 
+> We need something else to solve whatever you are concerned with
+> here..
 
-> Sorry, I just updated this patch description in v2 to indicate why they are not
-> hard-coded, but didn't answer explicitly. As the firmware changes, a different
-> revision of it can have a different time before it sleeps in its configuration,
-> or the time it takes it to startup may be different. Thus, there's a way to
-> set it here w/o changing the driver.
+The only use cases I see at the moment for it work this way:
 
-This sort of stuff should be read out of the firmware, not DT..
+1. Call tpm_try_get_ops.
+2. Send a TPM command.
+3. Call tpm_put_ops.
 
-Why has Google created such a non-standard TPM firmware???
+I did not find any other form of use. The only use is to make sure that
+there are no transactions running before the ops are cleared. Or did I
+overlook something perhaps?
 
-Jason
+Trusted key unseal operation with TPM2 is broken into two operations:
+
+1. Load the given key blob.
+2. Unseal the data.
+
+Without locking and unlocking mutex only once there is a race condition.
+
+/Jarkko
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
