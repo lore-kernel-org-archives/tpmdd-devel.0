@@ -1,15 +1,16 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v2] tpm: add sysfs attributes for tpm2
-Date: Wed, 20 Jul 2016 11:05:53 -0600
-Message-ID: <20160720170553.GD21460@obsidianresearch.com>
-References: <1468547496-16215-1-git-send-email-apronin@chromium.org>
-	<e084dfe4f1865aed1a38376f5ce4731fe52030d4.1468982816.git.apronin@chromium.org>
+Subject: Re: [PATCH v4 3/5] tpm: replace tpm_gen_interrupt()
+ with tpm_tis_gen_interrupt()
+Date: Wed, 20 Jul 2016 11:06:24 -0600
+Message-ID: <20160720170624.GE21460@obsidianresearch.com>
+References: <1468971906-6528-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<1468971906-6528-4-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <e084dfe4f1865aed1a38376f5ce4731fe52030d4.1468982816.git.apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+In-Reply-To: <1468971906-6528-4-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,21 +19,19 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jul 19, 2016 at 07:51:52PM -0700, Andrey Pronin wrote:
-> Add sysfs attributes in TPM2.0 case for:
->  - TPM_PT_PERMANENT flags
->  - TPM_PT_STARTUP_CLEAR flags
->  - lockout-related properties
+On Wed, Jul 20, 2016 at 02:44:58AM +0300, Jarkko Sakkinen wrote:
+> Since tpm_gen_interrupt() is only used in tpm_tis_core.c this commit
+> replaces it with an internal tpm_tis_gen_interrupt(). The semantics
+> also changed in a way that on a system error the driver initialization
+> is failed.
 
-I'm not completely sure we need to have these sysfs attributes. Do you
-have a reason to expose them? Does udev do something based on them? Is
-it just for debugging?
+All the patches look good to me now..
 
-Otherwise it looks about right to me.
+Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 
 Jason
 
