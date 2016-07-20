@@ -1,18 +1,17 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v4 3/5] tpm: replace tpm_gen_interrupt()
- with tpm_tis_gen_interrupt()
-Date: Wed, 20 Jul 2016 23:59:55 +0300
-Message-ID: <20160720205955.GA8607@intel.com>
-References: <1468971906-6528-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<1468971906-6528-4-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<20160720170624.GE21460@obsidianresearch.com>
-	<20160720205410.GB6525@intel.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH] tpm: fix a race condition
+	tpm2_unseal_trusted()
+Date: Wed, 20 Jul 2016 15:13:32 -0600
+Message-ID: <20160720211332.GA32417@obsidianresearch.com>
+References: <1468973792-17598-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<20160720164818.GA21460@obsidianresearch.com>
+	<20160720205314.GA6525@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160720205410.GB6525-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20160720205314.GA6525-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,27 +20,44 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jul 20, 2016 at 11:54:10PM +0300, Jarkko Sakkinen wrote:
-> On Wed, Jul 20, 2016 at 11:06:24AM -0600, Jason Gunthorpe wrote:
-> > On Wed, Jul 20, 2016 at 02:44:58AM +0300, Jarkko Sakkinen wrote:
-> > > Since tpm_gen_interrupt() is only used in tpm_tis_core.c this commit
-> > > replaces it with an internal tpm_tis_gen_interrupt(). The semantics
-> > > also changed in a way that on a system error the driver initialization
-> > > is failed.
-> > 
-> > All the patches look good to me now..
-> > 
-> > Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+On Wed, Jul 20, 2016 at 11:53:14PM +0300, Jarkko Sakkinen wrote:
+
+> The only use cases I see at the moment for it work this way:
 > 
-> Thanks.
+> 1. Call tpm_try_get_ops.
+> 2. Send a TPM command.
+> 3. Call tpm_put_ops.
 
-The patches are applied to the master branch now.
+Right, but that is just a reflection of what the in kernel users are
+doing today, not necessarily what they should be doing.
 
-/Jarkko
+We should not break the put/get semantics..
+
+> I did not find any other form of use. The only use is to make sure that
+> there are no transactions running before the ops are cleared. Or did I
+> overlook something perhaps?
+
+The put/get is intended to allow a kapi user to hold a ref to tpm
+without it geting destroyed. It is not intended to be an exclusive lock.
+
+> Trusted key unseal operation with TPM2 is broken into two operations:
+> 
+> 1. Load the given key blob.
+> 2. Unseal the data.
+> 
+> Without locking and unlocking mutex only once there is a race condition.
+
+Well, the race condition is fundamentally because we don't have key
+virtualization in the kernel :|
+
+Those sorts of compound ops should hold the tpm_mutex manually, not
+through the get_ops scheme.
+
+Jason
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
