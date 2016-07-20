@@ -1,32 +1,51 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v4 3/5] tpm: replace tpm_gen_interrupt() with
- tpm_tis_gen_interrupt()
-Date: Wed, 20 Jul 2016 23:54:10 +0300
-Message-ID: <20160720205410.GB6525@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v4 3/5] tpm: replace tpm_gen_interrupt()
+ with tpm_tis_gen_interrupt()
+Date: Wed, 20 Jul 2016 23:59:55 +0300
+Message-ID: <20160720205955.GA8607@intel.com>
 References: <1468971906-6528-1-git-send-email-jarkko.sakkinen@linux.intel.com>
- <1468971906-6528-4-git-send-email-jarkko.sakkinen@linux.intel.com>
- <20160720170624.GE21460@obsidianresearch.com>
+	<1468971906-6528-4-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<20160720170624.GE21460@obsidianresearch.com>
+	<20160720205410.GB6525@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160720170624.GE21460@obsidianresearch.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, linux-security-module@vger.kernel.org, Stefan Berger <stefanb@linux.vnet.ibm.com>, Marcel Selhorst <tpmdd@selhorst.net>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+In-Reply-To: <20160720205410.GB6525-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jul 20, 2016 at 11:06:24AM -0600, Jason Gunthorpe wrote:
-> On Wed, Jul 20, 2016 at 02:44:58AM +0300, Jarkko Sakkinen wrote:
-> > Since tpm_gen_interrupt() is only used in tpm_tis_core.c this commit
-> > replaces it with an internal tpm_tis_gen_interrupt(). The semantics
-> > also changed in a way that on a system error the driver initialization
-> > is failed.
+On Wed, Jul 20, 2016 at 11:54:10PM +0300, Jarkko Sakkinen wrote:
+> On Wed, Jul 20, 2016 at 11:06:24AM -0600, Jason Gunthorpe wrote:
+> > On Wed, Jul 20, 2016 at 02:44:58AM +0300, Jarkko Sakkinen wrote:
+> > > Since tpm_gen_interrupt() is only used in tpm_tis_core.c this commit
+> > > replaces it with an internal tpm_tis_gen_interrupt(). The semantics
+> > > also changed in a way that on a system error the driver initialization
+> > > is failed.
+> > 
+> > All the patches look good to me now..
+> > 
+> > Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 > 
-> All the patches look good to me now..
-> 
-> Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+> Thanks.
 
-Thanks.
+The patches are applied to the master branch now.
 
 /Jarkko
+
+------------------------------------------------------------------------------
+What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
+patterns at an interface-level. Reveals which users, apps, and protocols are 
+consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
+J-Flow, sFlow and other flows. Make informed decisions using capacity planning
+reports.http://sdm.link/zohodev2dev
