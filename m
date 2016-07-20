@@ -1,18 +1,16 @@
-From: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Subject: [PATCH v2 1/2] tpm: devicetree: document properties
-	for cr50
-Date: Tue, 19 Jul 2016 20:41:24 -0700
-Message-ID: <5274cc806888a709c639e701dad894543885b2c9.1468985673.git.apronin@chromium.org>
-References: <1468549218-19215-1-git-send-email-apronin@chromium.org>
-	<cover.1468985673.git.apronin@chromium.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v2 0/2] tpm: add optional max xfer size
+	check
+Date: Wed, 20 Jul 2016 18:10:06 +0300
+Message-ID: <20160720151006.GA7285@intel.com>
+References: <1468546745-14646-1-git-send-email-apronin@chromium.org>
+	<cover.1468981325.git.apronin@chromium.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <cover.1468985673.git.apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-In-Reply-To: <cover.1468985673.git.apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-References: <1468549218-19215-1-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-	<cover.1468985673.git.apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <cover.1468981325.git.apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,62 +19,39 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Pawel Moll <pawel.moll-5wv7dgnIgG8@public.gmane.org>, Ian Campbell <ijc+devicetree-KcIKpvwj1kUDXYZnReoRVg@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Kumar Gala <galak-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Add TPM2.0 PTP FIFO compatible SPI interface for chips with Cr50
-firmware. Several timing-related properties that may differ from
-one firmware version to another are added to devicetree.
-Document these properties.
+On Tue, Jul 19, 2016 at 07:34:18PM -0700, Andrey Pronin wrote:
+> This patchset introduces an optional maximum transfer size that can
+> be specified by a tpm driver. Setting the max_xfer_size helps to catch
+> the cases when burstcnt is incorrectly reported by the device (e.g. >64
+> for spi - happened in practice) and gracefully handle such situations.
 
-Signed-off-by: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
----
- .../devicetree/bindings/security/tpm/cr50_spi.txt  | 32 ++++++++++++++++++++++
- 1 file changed, 32 insertions(+)
- create mode 100644 Documentation/devicetree/bindings/security/tpm/cr50_spi.txt
+Acknowledged but I won't review these before the second week of August.
 
-diff --git a/Documentation/devicetree/bindings/security/tpm/cr50_spi.txt b/Documentation/devicetree/bindings/security/tpm/cr50_spi.txt
-new file mode 100644
-index 0000000..f212b6b
---- /dev/null
-+++ b/Documentation/devicetree/bindings/security/tpm/cr50_spi.txt
-@@ -0,0 +1,32 @@
-+* H1 Secure Microcontroller with Cr50 Firmware on SPI Bus.
-+
-+H1 Secure Microcontroller running Cr50 firmware provides several
-+functions, including TPM-like functionality. It communicates over
-+SPI using the FIFO protocol described in the PTP Spec, section 6.
-+
-+Required properties:
-+- compatible: Should be "google,cr50".
-+- spi-max-frequency: Maximum SPI frequency.
-+
-+Optional properties:
-+- access-delay-ms: Required delay between subsequent transactions on SPI.
-+- sleep-delay-ms: Time after the last SPI activity, after which the chip
-+  may go to sleep.
-+- wake-start-delay-ms: Time after initiating wake up before the chip is
-+  ready to accept commands over SPI.
-+
-+Example:
-+
-+&spi0 {
-+        status = "okay";
-+
-+        cr50@0 {
-+                compatible = "google,cr50";
-+                reg = <0>;
-+                spi-max-frequency = <800000>;
-+
-+                access-delay-ms = <2>;
-+                sleep-delay-ms = <1000>;
-+                wake-start-delay-ms = <60>;
-+        };
-+};
--- 
-2.6.6
+I've been active for early this week to give the feedback for the queued
+patch sets and make sure that we deliver a solid 4.8 release.
 
+Back to the vacation...
+
+/Jarkko
+
+> v2: removed unnecessary accessors in tpm_tis_core.h, fixed style
+> 
+> Andrey Pronin (2):
+>   tpm_tis_core: add optional max xfer size check
+>   tpm_tis_spi: add max xfer size
+> 
+>  drivers/char/tpm/tpm_tis_core.c | 18 ++++++++++++++++--
+>  drivers/char/tpm/tpm_tis_core.h |  1 +
+>  drivers/char/tpm/tpm_tis_spi.c  |  1 +
+>  3 files changed, 18 insertions(+), 2 deletions(-)
+> 
+> -- 
+> 2.6.6
+> 
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
