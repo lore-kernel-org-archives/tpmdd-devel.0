@@ -1,19 +1,19 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix a race condition
-	tpm2_unseal_trusted()
-Date: Thu, 21 Jul 2016 10:25:36 -0600
-Message-ID: <20160721162536.GC19849@obsidianresearch.com>
-References: <1468973792-17598-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<20160720164818.GA21460@obsidianresearch.com>
-	<20160720205314.GA6525@intel.com>
-	<20160720211332.GA32417@obsidianresearch.com>
-	<20160721090245.GA7999@intel.com>
+From: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Subject: Re: [PATCH 2/2] tpm: add driver for cr50 on SPI
+Date: Thu, 21 Jul 2016 11:10:47 -0700
+Message-ID: <20160721181047.GA115653@apronin>
+References: <1468549218-19215-1-git-send-email-apronin@chromium.org>
+	<1468549218-19215-3-git-send-email-apronin@chromium.org>
+	<20160715033236.GH9347@obsidianresearch.com>
+	<20160715034444.GA28128@apronin> <20160719125527.GB5047@intel.com>
+	<20160720002411.GA147098@apronin>
+	<20160720170336.GC21460@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160721090245.GA7999-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20160720170336.GC21460-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,64 +22,66 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jul 21, 2016 at 12:02:45PM +0300, Jarkko Sakkinen wrote:
-> On Wed, Jul 20, 2016 at 03:13:32PM -0600, Jason Gunthorpe wrote:
-> > On Wed, Jul 20, 2016 at 11:53:14PM +0300, Jarkko Sakkinen wrote:
-> > 
-> > > The only use cases I see at the moment for it work this way:
-> > > 
-> > > 1. Call tpm_try_get_ops.
-> > > 2. Send a TPM command.
-> > > 3. Call tpm_put_ops.
-> > 
-> > Right, but that is just a reflection of what the in kernel users are
-> > doing today, not necessarily what they should be doing.
-> > 
-> > We should not break the put/get semantics..
-> > 
-> > > I did not find any other form of use. The only use is to make sure that
-> > > there are no transactions running before the ops are cleared. Or did I
-> > > overlook something perhaps?
-> > 
-> > The put/get is intended to allow a kapi user to hold a ref to tpm
-> > without it geting destroyed. It is not intended to be an exclusive lock.
+On Wed, Jul 20, 2016 at 11:03:36AM -0600, Jason Gunthorpe wrote:
+> On Tue, Jul 19, 2016 at 05:24:11PM -0700, Andrey Pronin wrote:
 > 
-> These operations *are not* exposed to kapi. They are interal to the
-> driver. That's why it does not make sense speak about kapi user.
-
-Right now yes, but look at other subsystems and you will see
-operations like that, because that is typical design pattern. When I
-wrote them I made sure they could be used in that typical way.
-
-We have issues in our kapi users with regards to hot plug and multiple
-tpms. Fortunately that basically never happens, but it does indicate
-the API is not sufficient..
-
-> You are speaking how it could be used. I'm looking at how it's actually
-> used. Shouldn't implementation reflect that rather than future
-> prospects?
-
-Well, there are common patterns in the kernel for how these things
-work and the get/put stuff does not imply an exclusive lock. That is
-why it is called get/put :)
-
-> > Those sorts of compound ops should hold the tpm_mutex manually, not
-> > through the get_ops scheme.
+> > The only two things that bother me with such approach are
+> > (1) whatever names I pick for the new set of functions, they
+> >     will be similar to and thus might be confused with the
+> >     original tpm_tis_read/writeXX;
 > 
-> The next best option would be to have unlocked transmit_cmd function.
+> tpm_tis_helper_read16 ?
+> 
+> > (2) these functions are phy-specific, so possibly it's better
+> >     to create tpm_tis_spi.h and put them there with proper
+> >     name prefixes. And then use in tpm_tis_spi and cr50_spi.
+> 
+> No, they are generic to any tis phy that implements read only through
+> read_bytes.
+> 
+> (Honestly, I'm not sure we made the best choice here having phy
+>  functions for all the versions, we are not that performance
+>  sensitive, just getting rid of everything but read_bytes from the
+>  phy_ops would probably also be a reasonable thing to do.)
+> 
 
-The locking needs a good scrub, it is one of the last legacy things
-left now that doesn't make alot of sense, especially if we need to
-lock these compound operations.
+One thing we can do is re-implement functions tpm_tis_read/writeXX
+to use phy-specific implementations of read16, read32, write32 if they
+are provided. But if those function pointers are left NULL in phy_ops,
+fallback to using read/write_bytes and byte-swapping.
 
-The get/put locking cleanup was just a small step toward something
-more typical..
+I.e., instead of:
 
-Jason
+static inline int tpm_tis_read16(struct tpm_tis_data *data, u32 addr,
+				 u16 *result)
+{
+	return data->phy_ops->read16(data, addr, result);
+}
+
+do the following:
+
+static inline int tpm_tis_read16(struct tpm_tis_data *data, u32 addr,
+				 u16 *result)
+{
+        int rc;
+
+	if (data->phy_ops->read16)
+		return data->phy_ops->read16(data, addr, result);
+
+	rc = data->phy_ops->read_bytes(data, addr,
+				       sizeof(u16), (u8 *)result);
+	if (!rc)
+		*result = le16_to_cpu(*result);
+	return rc;
+}
+
+If you like the idea, I'll submit it as a separate patch.
+
+Andrey
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
