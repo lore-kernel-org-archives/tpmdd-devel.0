@@ -1,7 +1,7 @@
 From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: TPM2 Driver Support in distros (part 1)
-Date: Sat, 23 Jul 2016 22:53:54 -0400
-Message-ID: <nn1ajt$rpd$1@ger.gmane.org>
+Subject: TPM2 Driver Support in distros (part 2)
+Date: Sat, 23 Jul 2016 22:58:49 -0400
+Message-ID: <nn1at3$vbq$1@ger.gmane.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
@@ -17,14 +17,20 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Is there a web site or other document that lists which distros or 
-kernels include a TPM 2.0 driver?
+For distros or kernels that do not include a TPM 2.0 device driver:
 
-I support a TPM 2.0 user space TSS.  Not seeing /dev/tpm0 is a typical 
-error that prospective users see, and I'd like to give them some guidance.
+1 - Is it possible to build and install a driver without rebuilding the 
+kernel?
 
-If there is no such page, and people are willing to post information, 
-I'd be happy to include it on my TSS page.
+2 - If so, are there definitive instructions on how to do it?
+
+I've heard snippets that say a kernel that has a built-in TPM 1.2 driver 
+cannot delete it and install a TPM 2.0 driver, but that sounds odd.  The 
+kernel doesn't know the the platform hardware in advance, right?
+
+If not and someone is willing to post them here, I'd be happy to put 
+them on my TSS web page.  Not having a driver is a blocker for 
+application development.
 
 
 ------------------------------------------------------------------------------
