@@ -1,16 +1,14 @@
-From: <Peter.Huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Subject: Re: TPM2 Driver Support in distros (part 1)
-Date: Mon, 25 Jul 2016 19:40:24 +0000
-Message-ID: <af95149e773f4a40b20f75f4de19c06c@MUCSE612.infineon.com>
+Date: Mon, 25 Jul 2016 13:46:06 -0600
+Message-ID: <20160725194606.GA20479@obsidianresearch.com>
 References: <nn1ajt$rpd$1@ger.gmane.org>
-	<40c30de1f491455c93a79dd6f5420fc4@MUCSE612.infineon.com>
-	<nn5ova$1j3$1@ger.gmane.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <nn5ova$1j3$1@ger.gmane.org>
-Content-Language: en-US
+Content-Disposition: inline
+In-Reply-To: <nn1ajt$rpd$1@ger.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,25 +17,32 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi,
+On Sat, Jul 23, 2016 at 10:53:54PM -0400, Ken Goldman wrote:
+> Is there a web site or other document that lists which distros or 
+> kernels include a TPM 2.0 driver?
+> 
+> I support a TPM 2.0 user space TSS.  Not seeing /dev/tpm0 is a typical 
+> error that prospective users see, and I'd like to give them some guidance.
+> 
+> If there is no such page, and people are willing to post information, 
+> I'd be happy to include it on my TSS page.
 
->1 - How does a user know whether the TPM will use CRB or FIFO - whether to specify tpm_tis.force=1 or not?
-Depends on his hardware -- most "physical" TPMs are FIFO, firmware based are CRB.
+You need to work with SuSE and Red Hat to make sure they are aware of
+the need to backport this subsystem into their kernels. TPM has been
+quiet for so long, nobody is likely paying attention.
 
-However, tpm_tis != tpm_crb, these are separate drivers. (tpm_crb might even be backport-able to previous versions, as a module)
-so if no /dev/tpm0 appears, try tpm_tis.force=1
+It is technically feasible to make a stand alone back port module,
+however it will not be able to integrate into the kernel's IMA, just
+provide the /dev/tpm0. This would be alot of work for someone to do.
 
-> Or can that be specified any time, and it becomes a noop for CRB?
-Yes, if no /dev/tpm0 appears, try tpm_tis.force=1
+We have made so many huge changes since the old kernels the enterprise
+distros are shipping that a simple driver backport is not feasible.
 
->2 - module parameter?  Does that mean whatever distro dependent file is used for the boot parameters - grub.conf or some EFI file like grub.cfg.
-Yes, exactly.
-
-Thanks,
-Peter
+Jason
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
