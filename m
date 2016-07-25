@@ -1,14 +1,14 @@
-From: <Peter.Huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: Re: TPM2 Driver Support in distros (part 2)
-Date: Mon, 25 Jul 2016 16:55:23 +0000
-Message-ID: <2e37d315b5a444ec80cd1199f2fa56c8@MUCSE612.infineon.com>
-References: <nn1at3$vbq$1@ger.gmane.org>
+From: "Peter Huewe" <PeterHuewe-Mmb7MZpHnFY@public.gmane.org>
+Subject: Re: [PATCH v2 0/2] tpm: add driver for cr50 on SPI
+Date: Mon, 25 Jul 2016 19:09:21 +0200
+Message-ID: <trinity-26286f32-3045-4711-8972-ee0964b74003-1469466561717@3capp-gmx-bs15>
+References: <1468549218-19215-1-git-send-email-apronin@chromium.org>,
+	<cover.1468985673.git.apronin@chromium.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <nn1at3$vbq$1@ger.gmane.org>
-Content-Language: en-US
+In-Reply-To: <cover.1468985673.git.apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,33 +17,29 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi Ken,
+Hi Andrey,
 
-> For distros or kernels that do not include a TPM 2.0 device driver:
-> 1 - Is it possible to build and install a driver without rebuilding the kernel?
-> 2 - If so, are there definitive instructions on how to do it?
+thanks for the update.
 
-The problem is more or less, that the TPM2.0 device driver is an _enhancement_ of the tpm_tis (1.2) driver.
-In a perfect world the driver would not care at all whether it is 1.2 or 2.0, but (un)fortunately the driver has also some family specific functionality (e.g. get_timeouts, get random...)
+> This patchset adds support for H1 Secure Microcontroller running
+> Cr50 firmware. It implements several functions, including TPM-like
+> functionality, and communicates over SPI using the FIFO protocol
+> described in the PTP Spec, section 6.
+> H1 is a proprietary chip that the Chrome OS team is investigating
+> for inclusion in future Chromebooks.
 
-If your current kernel has the tpm_tis driver as a module (or not at all) you could of course backport the latest driver and load this as a module.
-However, (un)fortunately a lot of distros (e.g. Ubuntu) have IMA enabled, which requires TPM support to be built-in.
--> you cannot unload the tpm_tis driver -> so you would have to recompile the kernel.
+so is this "broken" device already in the field? (i.e. can I buy it? how many of them)
+from the description it seems not. ("future chromebooks")
+--> how likely is it that the firmware of that device will be fixed that it can work with the regular driver?
 
-> I've heard snippets that say a kernel that has a built-in TPM 1.2 driver cannot delete it and install a TPM 2.0 driver, but that sounds odd.  The kernel doesn't know the the platform hardware in advance, right?
-And that's the reason for this.
-If the distros were using tpm_tis as a module you could exchange it by rebuilding the module, but since a lot of them use it built-in, you have to recompile the kernel.
+Although I really like to see driver upstreamed, I also want to avoid maintenance hell for obscure hardware :/
 
-
-So the options are:
-- upgrade to a later kernel
-- or backport and rebuild yourself
-
-Thanks
-Peter 
+Thanks,
+Peter
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
