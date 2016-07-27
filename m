@@ -1,19 +1,20 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: Regarding recently Added TPM2.0 support to the
- Nuvoton i2c driver
-Date: Wed, 27 Jul 2016 11:42:29 -0600
-Message-ID: <20160727174229.GA28681@obsidianresearch.com>
-References: <5797A893.9020205@linux.vnet.ibm.com>
-	<20160726201711.GA17742@obsidianresearch.com>
-	<5798C571.1000309@linux.vnet.ibm.com>
-	<20160727162415.GA18843@obsidianresearch.com>
-	<5798EEFB.1000004@linux.vnet.ibm.com>
+From: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Subject: Re: [PATCH v2 1/2] tpm: devicetree: document
+	properties for cr50
+Date: Wed, 27 Jul 2016 14:00:47 -0700
+Message-ID: <20160727210047.GA119121@apronin>
+References: <1468549218-19215-1-git-send-email-apronin@chromium.org>
+	<cover.1468985673.git.apronin@chromium.org>
+	<5274cc806888a709c639e701dad894543885b2c9.1468985673.git.apronin@chromium.org>
+	<20160720190303.GA5620@rob-hp-laptop>
+	<20160720194912.GA61154@apronin>
+	<20160721210312.GA10605@rob-hp-laptop>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <5798EEFB.1000004-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <20160721210312.GA10605@rob-hp-laptop>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,77 +23,72 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Dave Heller <hellerda-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Rob Herring <robh-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
+Cc: Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Pawel Moll <pawel.moll-5wv7dgnIgG8@public.gmane.org>, Ian Campbell <ijc+devicetree-KcIKpvwj1kUDXYZnReoRVg@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Kumar Gala <galak-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jul 27, 2016 at 01:27:23PM -0400, Dave Heller wrote:
+On Thu, Jul 21, 2016 at 04:03:12PM -0500, Rob Herring wrote:
+> On Wed, Jul 20, 2016 at 12:49:12PM -0700, Andrey Pronin wrote:
+> > On Wed, Jul 20, 2016 at 02:03:03PM -0500, Rob Herring wrote:
+> > > On Tue, Jul 19, 2016 at 08:41:24PM -0700, Andrey Pronin wrote:
+> > 
+> > Hi Rob,
+> > 
+> > > As I mentioned, there may be common properties. It doesn't seem you 
+> > > looked, so I did:
+> > > 
+> > > - spi-rx-delay-us  - (optional) Microsecond delay after a read transfer.
+> > > - spi-tx-delay-us  - (optional) Microsecond delay after a write transfer.
+> > > 
+> > > Seems to me setting one or both of these should work for you.
+> > >
+> > 
+> > Yes, good catch, my fault I didn't see those.
+> > But they are not exactly what I mean and need. I don't need delay after
+> > each read or write transfer. What is needed is a guaranteed time
+> > between transfers.
+> > 
+> > So, if the next transaction doesn't come withing the next X ms (or us),
+> > we don't waste time on inserting a delays after this transaction at all.
+> > Following the description and always inserting a delay must work well
+> > for short microseconds-long delays. For longer milliseconds-long delays
+> > a different strategy of checking the time when the previous transaction
+> > was and only delaying if it was not too long ago is better.
 > 
-> On 07/27/2016 12:24 PM, Jason Gunthorpe wrote:
-> >On Wed, Jul 27, 2016 at 10:30:09AM -0400, Dave Heller wrote:
-> >>>So you might do
-> >>>
-> >>>   compatible = "nuvoton,npct650", "nuvoton,npct601"
-> >>>
-> >>>Andrew, is 601 even the right name?
-> >>
-> >>Hi Jason, I'm not sure I'm understanding your answer here.  Looks like
-> >>we will have to add a couple of lines to specifically list the npct650,
-> >>why not just using the existing syntax, one device id per line?  Or you
-> >>are saying, since the npct601 and npct650 are similar models, it's
-> >>better to list them on the same line?
-> >
-> >The above example would go in your device tree, are you using device tree?
-> >
-> >Jason
+> I'd guess that the intent is the same for all. A simple delay is 
+> just much easier to implement. I would think implementing the more 
+> sophisticated algorithm would work for all users. Perhaps with some 
+> threshold for a simple delay.
 > 
-> Thanks, I get in now: you are saying we should add that to our device tree
-> and leave the driver code alone.
+> > Thus, I won't be able to re-use these properties anyways based on their
+> > current description in bindings/spi/spi-bus.txt.
+> > 
+> > > > +- sleep-delay-ms: Time after the last SPI activity, after which the chip
+> > > > +  may go to sleep.
+> > > > +- wake-start-delay-ms: Time after initiating wake up before the chip is
+> > > > +  ready to accept commands over SPI.
+> > > 
+> > > I also asked why these 2 can't be hard-coded in the driver?
+> > >
+> > 
+> > Sorry, I just updated this patch description in v2 to indicate why they are not
+> > hard-coded, but didn't answer explicitly. As the firmware changes, a different
+> > revision of it can have a different time before it sleeps in its configuration,
+> > or the time it takes it to startup may be different. Thus, there's a way to
+> > set it here w/o changing the driver.
 > 
-> Here is were my understanding of the device tree entry is a bit lacking"
-> maybe this is the convention that is normally followed.  And yes, the device
-> tree property is named "compatible".  But this seems intuitively backward to
-> me:
+> The firmware and DT may not be updated in sync especially if you are 
+> loading the firmware from the rootfs. Are you doing DT and firmware 
+> updates without changing the kernel?
 > 
-> Should not the device tree tell you what is actually *there* and let the
-> driver code decide what is compatible?  Rather than the firmware trying to
-> make a guess as to which Nuvoton device id to try to match in the Nuvoton
-> driver code?
+> Rob
 
-Yes, that is what I suggested:
+Hi Rob,
 
-> >>>   compatible = "nuvoton,npct650", "nuvoton,npct601"
+Thanks for the feedback. I will hard-code those parameters in the
+driver instead of reading from DT.
 
-Today's kernel has no idea what 650 is, but since the DT says it is
-compatible with the 601 then today's kernel will bind to it. 601 is
-the kernel documented compatible tag for that specific I2C
-API.
-
-If tomorrow's kernel needs a work around for the 650 then it can start
-matching on 650. Generally speaking we don't add new compatible
-strings to the kernel unless they actually do something..
-
-The goal is to reduce tight coupling between the kernel and the
-DT.
-
-Perhaps we should add 6xx as the generic flavor? I'm not as clear on
-what DT maintainers think about that, but there is precedent.
-
-> Put another way, should the "smarts" as to which Nuvoton part numbers are
-> considered compatible to the driver, be done by FW?  Or left to the driver?
-
-Done in the firmware. List the most specific thing you can first, then
-the generic thing second.
-
-A clearer example would be for the tcg standard methods:
-
-compatible = "st,st33htpm-spi", "tcg,tpm_tis-spi";
-
-Indicating that the device is actually a st33, but implements the
-standard TCG interface.
-
-Future kernels might match to st33 to implement bug work arounds.
-
-Jason
+Thanks,
+Andrey
 
 ------------------------------------------------------------------------------
