@@ -1,67 +1,74 @@
-From: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Subject: [PATCH v3 1/2] tpm: devicetree: document properties
-	for cr50
-Date: Wed, 27 Jul 2016 21:25:16 -0700
-Message-ID: <1469679917-120240-2-git-send-email-apronin@chromium.org>
-References: <1468549218-19215-1-git-send-email-apronin@chromium.org>
-	<1469679917-120240-1-git-send-email-apronin@chromium.org>
+From: Dmitry Torokhov <dtor@chromium.org>
+Subject: Re: [PATCH v3 1/2] tpm_tis_core: add optional max xfer size check
+Date: Thu, 28 Jul 2016 15:52:50 -0700
+Message-ID: <20160728225250.GA28623@dtor-ws>
+References: <1468546745-14646-1-git-send-email-apronin@chromium.org>
+ <1469677797-74304-2-git-send-email-apronin@chromium.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1469679917-120240-1-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-In-Reply-To: <1468549218-19215-1-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-References: <1468549218-19215-1-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, Pawel Moll <pawel.moll-5wv7dgnIgG8@public.gmane.org>, Ian Campbell <ijc+devicetree-KcIKpvwj1kUDXYZnReoRVg@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Kumar Gala <galak-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>, dtor-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <1469677797-74304-2-git-send-email-apronin@chromium.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Andrey Pronin <apronin@chromium.org>
+Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, Christophe Ricard <christophe.ricard@gmail.com>, smbarber@chromium.org, dianders@chromium.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Add TPM2.0 PTP FIFO compatible SPI interface for chips with Cr50
-firmware.
+On Wed, Jul 27, 2016 at 08:49:56PM -0700, Andrey Pronin wrote:
+> If tpm reports a bigger burstcnt than allowed by the physical protocol,
+> set burstcnt to the max allowed value.
+> 
+> In practice, seen in case of xfer issues (e.g. in spi interface case,
+> lost header causing flow control issues and wrong values returned on read
+> from TPM_STS). Without catching, causes the physical layer to reject xfer.
+> 
+> Signed-off-by: Andrey Pronin <apronin@chromium.org>
+> ---
+>  drivers/char/tpm/tpm_tis_core.c | 9 ++++++++-
+>  drivers/char/tpm/tpm_tis_core.h | 1 +
+>  2 files changed, 9 insertions(+), 1 deletion(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+> index f22caf8..7c4fa0c 100644
+> --- a/drivers/char/tpm/tpm_tis_core.c
+> +++ b/drivers/char/tpm/tpm_tis_core.c
+> @@ -168,8 +168,15 @@ static int get_burstcount(struct tpm_chip *chip)
+>  			return rc;
+>  
+>  		burstcnt = (value >> 8) & 0xFFFF;
+> -		if (burstcnt)
+> +		if (burstcnt) {
+> +			if (priv->phy_ops->max_xfer_size &&
+> +			    (burstcnt > priv->phy_ops->max_xfer_size)) {
 
-Signed-off-by: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
----
- .../devicetree/bindings/security/tpm/cr50_spi.txt   | 21 +++++++++++++++++++++
- 1 file changed, 21 insertions(+)
- create mode 100644 Documentation/devicetree/bindings/security/tpm/cr50_spi.txt
+This does not actually need parentheses, otehrwise:
 
-diff --git a/Documentation/devicetree/bindings/security/tpm/cr50_spi.txt b/Documentation/devicetree/bindings/security/tpm/cr50_spi.txt
-new file mode 100644
-index 0000000..2fbebd3
---- /dev/null
-+++ b/Documentation/devicetree/bindings/security/tpm/cr50_spi.txt
-@@ -0,0 +1,21 @@
-+* H1 Secure Microcontroller with Cr50 Firmware on SPI Bus.
-+
-+H1 Secure Microcontroller running Cr50 firmware provides several
-+functions, including TPM-like functionality. It communicates over
-+SPI using the FIFO protocol described in the PTP Spec, section 6.
-+
-+Required properties:
-+- compatible: Should be "google,cr50".
-+- spi-max-frequency: Maximum SPI frequency.
-+
-+Example:
-+
-+&spi0 {
-+        status = "okay";
-+
-+        cr50@0 {
-+                compatible = "google,cr50";
-+                reg = <0>;
-+                spi-max-frequency = <800000>;
-+        };
-+};
+Reviewed-by: Dmitry Torokhov <dtor@chromium.org>
+
+> +				dev_warn(&chip->dev,
+> +					 "Bad burstcnt read: %d\n", burstcnt);
+> +				burstcnt = priv->phy_ops->max_xfer_size;
+> +			}
+>  			return burstcnt;
+> +		}
+>  		msleep(TPM_TIMEOUT);
+>  	} while (time_before(jiffies, stop));
+>  	return -EBUSY;
+> diff --git a/drivers/char/tpm/tpm_tis_core.h b/drivers/char/tpm/tpm_tis_core.h
+> index 9191aab..58e8b14 100644
+> --- a/drivers/char/tpm/tpm_tis_core.h
+> +++ b/drivers/char/tpm/tpm_tis_core.h
+> @@ -102,6 +102,7 @@ struct tpm_tis_phy_ops {
+>  	int (*read16)(struct tpm_tis_data *data, u32 addr, u16 *result);
+>  	int (*read32)(struct tpm_tis_data *data, u32 addr, u32 *result);
+>  	int (*write32)(struct tpm_tis_data *data, u32 addr, u32 src);
+> +	u16 max_xfer_size;
+>  };
+>  
+>  static inline int tpm_tis_read_bytes(struct tpm_tis_data *data, u32 addr,
+> -- 
+> 2.6.6
+> 
+
 -- 
-2.6.6
-
-
-------------------------------------------------------------------------------
+Dmitry
