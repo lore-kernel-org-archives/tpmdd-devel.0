@@ -1,48 +1,35 @@
-From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [PATCH] tpm: fix cacheline alignment for DMA-able buffers
-Date: Fri, 29 Jul 2016 11:27:02 -0600
-Message-ID: <20160729172702.GB7020@obsidianresearch.com>
-References: <1469761153-85576-1-git-send-email-apronin@chromium.org>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH v4 1/2] tpm: devicetree: document
+	properties for cr50
+Date: Fri, 29 Jul 2016 11:27:52 -0600
+Message-ID: <20160729172752.GA7458@obsidianresearch.com>
+References: <1468549218-19215-1-git-send-email-apronin@chromium.org>
+	<1469757314-116169-2-git-send-email-apronin@chromium.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1469761153-85576-1-git-send-email-apronin@chromium.org>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Andrey Pronin <apronin@chromium.org>
-Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Christophe Ricard <christophe.ricard@gmail.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, dtor@chromium.org
+In-Reply-To: <1469757314-116169-2-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Cc: Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, Pawel Moll <pawel.moll-5wv7dgnIgG8@public.gmane.org>, Ian Campbell <ijc+devicetree-KcIKpvwj1kUDXYZnReoRVg@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Kumar Gala <galak-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>, dtor-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jul 28, 2016 at 07:59:13PM -0700, Andrey Pronin wrote:
-> Annotate buffers used in spi transactions as ____cacheline_aligned
-> to use in DMA transfers.
-> 
-> Signed-off-by: Andrey Pronin <apronin@chromium.org>
->  drivers/char/tpm/st33zp24/spi.c | 4 ++--
->  drivers/char/tpm/tpm_tis_spi.c  | 4 ++--
->  2 files changed, 4 insertions(+), 4 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
-> index 9f5a011..0e9aad9 100644
-> +++ b/drivers/char/tpm/st33zp24/spi.c
-> @@ -70,8 +70,8 @@
->  struct st33zp24_spi_phy {
->  	struct spi_device *spi_device;
->  
-> -	u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE];
-> -	u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE];
-> +	u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE] ____cacheline_aligned;
-> +	u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE] ____cacheline_aligned;
->  
->  	int io_lpcpd;
->  	int latency;
+On Thu, Jul 28, 2016 at 06:55:13PM -0700, Andrey Pronin wrote:
+> Add TPM2.0 PTP FIFO compatible SPI interface for chips with Cr50
+> firmware.
 
-Hurm, this still looks wrong to me. Aligning the start of buffers is
-not enough, the DMA'able space must also end on a cache line as well.
-
-So, the buffers must also always be placed at the end of the struct.
-
-IMHO It would be cleaner and safer to always kmalloc the DMA buffer
-alone than to try and optimize like this.
+Since this is now a trivial device, does it still need a dedicated
+file?
 
 Jason
+
+------------------------------------------------------------------------------
