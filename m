@@ -1,15 +1,12 @@
 From: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Subject: [PATCH v4 0/2] tpm: add driver for cr50 on SPI
-Date: Thu, 28 Jul 2016 18:55:12 -0700
-Message-ID: <1469757314-116169-1-git-send-email-apronin@chromium.org>
-References: <1468549218-19215-1-git-send-email-apronin@chromium.org>
+Subject: [PATCH] tpm: fix cacheline alignment for DMA-able
+	buffers
+Date: Thu, 28 Jul 2016 19:59:13 -0700
+Message-ID: <1469761153-85576-1-git-send-email-apronin@chromium.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1468549218-19215-1-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-In-Reply-To: <1468549218-19215-1-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-References: <1468549218-19215-1-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,43 +16,48 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, dtor-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
+Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, dtor-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This patchset adds support for H1 Secure Microcontroller running
-Cr50 firmware. It implements several functions, including TPM-like
-functionality, and communicates over SPI using the FIFO protocol
-described in the PTP Spec, section 6.
-H1 is a proprietary chip that the Chrome OS team is investigating
-for inclusion in future Chromebooks.
+Annotate buffers used in spi transactions as ____cacheline_aligned
+to use in DMA transfers.
 
-Depends on the following patchset:
- - tpm_tis_core: add optional max xfer size check
+Signed-off-by: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+---
+ drivers/char/tpm/st33zp24/spi.c | 4 ++--
+ drivers/char/tpm/tpm_tis_spi.c  | 4 ++--
+ 2 files changed, 4 insertions(+), 4 deletions(-)
 
-v2: Removed driver-specific sysfs attributes.
-    Compatible id changed to cr50 from cr50_spi.
-    Updated descriptions of the supported device/interface.
-
-v3: Fixed potential race-condition with last_access_jiffies.
-    Started using tx_buf/rx_buf in cr50_spi_phy to avoid
-    potential problems with DMA.
-    Removed DT properties for fw timing parameters.
-    Fixed style.
-
-v4: Fixed cacheline alignment for xfer buffers.
-
-Andrey Pronin (2):
-  tpm: devicetree: document properties for cr50
-  tpm: add driver for cr50 on SPI
-
- .../devicetree/bindings/security/tpm/cr50_spi.txt  |  21 ++
- drivers/char/tpm/Kconfig                           |   9 +
- drivers/char/tpm/Makefile                          |   1 +
- drivers/char/tpm/cr50_spi.c                        | 350 +++++++++++++++++++++
- 4 files changed, 381 insertions(+)
- create mode 100644 Documentation/devicetree/bindings/security/tpm/cr50_spi.txt
- create mode 100644 drivers/char/tpm/cr50_spi.c
-
+diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
+index 9f5a011..0e9aad9 100644
+--- a/drivers/char/tpm/st33zp24/spi.c
++++ b/drivers/char/tpm/st33zp24/spi.c
+@@ -70,8 +70,8 @@
+ struct st33zp24_spi_phy {
+ 	struct spi_device *spi_device;
+ 
+-	u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE];
+-	u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE];
++	u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE] ____cacheline_aligned;
++	u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE] ____cacheline_aligned;
+ 
+ 	int io_lpcpd;
+ 	int latency;
+diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
+index dbaad9c..58d7758 100644
+--- a/drivers/char/tpm/tpm_tis_spi.c
++++ b/drivers/char/tpm/tpm_tis_spi.c
+@@ -48,8 +48,8 @@ struct tpm_tis_spi_phy {
+ 	struct tpm_tis_data priv;
+ 	struct spi_device *spi_device;
+ 
+-	u8 tx_buf[MAX_SPI_FRAMESIZE + 4];
+-	u8 rx_buf[MAX_SPI_FRAMESIZE + 4];
++	u8 tx_buf[MAX_SPI_FRAMESIZE + 4] ____cacheline_aligned;
++	u8 rx_buf[MAX_SPI_FRAMESIZE + 4] ____cacheline_aligned;
+ };
+ 
+ static inline struct tpm_tis_spi_phy *to_tpm_tis_spi_phy(struct tpm_tis_data *data)
 -- 
 2.6.6
 
