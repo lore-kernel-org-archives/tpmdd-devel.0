@@ -1,90 +1,64 @@
-From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH 1/2] TPM2.0: Refactor eventlog init
- functions for TPM1.2 and
-Date: Mon, 1 Aug 2016 22:17:02 +0530
-Message-ID: <579F7D06.7080507@linux.vnet.ibm.com>
-References: <1469774679-25232-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1469774679-25232-2-git-send-email-nayna@linux.vnet.ibm.com>
-	<20160729165708.GA6331@obsidianresearch.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160729165708.GA6331-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: David Heller <hellerda-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+From: Baole Ni <baolex.ni@intel.com>
+Subject: [PATCH 0112/1285] Replace numeric parameter like 0444 with macro
+Date: Tue,  2 Aug 2016 18:41:34 +0800
+Message-ID: <20160802104134.21221-1-baolex.ni@intel.com>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, hpa@zytor.com, x86@kernel.org
+Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, chuansheng.liu@intel.com, baolex.ni@intel.com, jslaby@suse.cz, peter@korsgaard.com, lee.jones@linaro.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi Jason,
+I find that the developers often just specified the numeric value
+when calling a macro which is defined with a parameter for access permission.
+As we know, these numeric value for access permission have had the corresponding macro,
+and that using macro can improve the robustness and readability of the code,
+thus, I suggest replacing the numeric parameter with the macro.
 
-Thanks for the review.
+Signed-off-by: Chuansheng Liu <chuansheng.liu@intel.com>
+Signed-off-by: Baole Ni <baolex.ni@intel.com>
+---
+ drivers/char/tpm/tpm_tis.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
 
-On 07/29/2016 10:27 PM, Jason Gunthorpe wrote:
-> On Fri, Jul 29, 2016 at 02:44:38AM -0400, Nayna Jain wrote:
->> Refactored eventlog.c file into tpm_eventlog.c and tpm_eventlog_init.c
->
-> If you are going to work on this stuff (and have the ability to test
-> it) can you fix some of the generic pre-existing problems too?
-
-Can you please help me to understand what in particular are you 
-referring to by "some of the generic pre-existing problems" ?
->
->> +static int tpm_ascii_bios_measurements_open(struct inode *inode,
->> +					    struct file *file)
->
->> +static int tpm_binary_bios_measurements_open(struct inode *inode,
->> +					     struct file *file)
->
-> We don't need two (or more!) identical versions of this function, and it
-> is easy to fix:
-
-Sure, will fix it.
->
->> +	bin_file =
->> +	    securityfs_create_file("binary_bios_measurements",
->> +				   S_IRUSR | S_IRGRP, tpm_dir, NULL,
->> +				   &tpm_binary_bios_measurements_ops);
->
-> Replace NULL with &tpm_binary_b_measurments_seqops and recover it  in
-> the generic open using the inode->i_private pointer.
-
-Sure, will fix it.
-
->
->> +	ret = kmalloc(3 * sizeof(struct dentry *), GFP_KERNEL);
->> +	if (!ret)
->> +		goto out_ascii;
->
-> I can't find a kfree for this memory, looks like it is leaking, please
-> fix it.
->
-> Do not allocate memory for this, just include the dentry array
-> directly in the tpm_chip as the sysfs does today.
-
-Do you mean here to define it as struct dentry *bios_dir[3] as member of 
-struct tpm_chip ?
-
->
-> You can change the signatures to accept tpm_chip in a cleanup patch as
-> well, moving from the tpm2 patch.
->
-
-Ok. Will address these comments in the next version of the patch I will 
-be posting.
-
-Thanks & Regards,
-    - Nayna
-
-> Jason
->
-
-
-------------------------------------------------------------------------------
+diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+index a507006..d9ab2f6 100644
+--- a/drivers/char/tpm/tpm_tis.c
++++ b/drivers/char/tpm/tpm_tis.c
+@@ -294,7 +294,7 @@ out:
+ }
+ 
+ static bool itpm;
+-module_param(itpm, bool, 0444);
++module_param(itpm, bool, S_IRUSR | S_IRGRP | S_IROTH);
+ MODULE_PARM_DESC(itpm, "Force iTPM workarounds (found on some Lenovo laptops)");
+ 
+ /*
+@@ -645,7 +645,7 @@ static void tpm_tis_probe_irq(struct tpm_chip *chip, u32 intmask)
+ }
+ 
+ static bool interrupts = true;
+-module_param(interrupts, bool, 0444);
++module_param(interrupts, bool, S_IRUSR | S_IRGRP | S_IROTH);
+ MODULE_PARM_DESC(interrupts, "Enable interrupts");
+ 
+ static void tpm_tis_remove(struct tpm_chip *chip)
+@@ -921,7 +921,7 @@ static struct pnp_driver tis_pnp_driver = {
+ 
+ #define TIS_HID_USR_IDX sizeof(tpm_pnp_tbl)/sizeof(struct pnp_device_id) -2
+ module_param_string(hid, tpm_pnp_tbl[TIS_HID_USR_IDX].id,
+-		    sizeof(tpm_pnp_tbl[TIS_HID_USR_IDX].id), 0444);
++		    sizeof(tpm_pnp_tbl[TIS_HID_USR_IDX].id), S_IRUSR | S_IRGRP | S_IROTH);
+ MODULE_PARM_DESC(hid, "Set additional specific HID for this driver to probe");
+ 
+ #ifdef CONFIG_ACPI
+@@ -1060,7 +1060,7 @@ static struct platform_driver tis_drv = {
+ 
+ static bool force;
+ #ifdef CONFIG_X86
+-module_param(force, bool, 0444);
++module_param(force, bool, S_IRUSR | S_IRGRP | S_IROTH);
+ MODULE_PARM_DESC(force, "Force device probe rather than using ACPI entry");
+ #endif
+ 
+-- 
+2.9.2
