@@ -1,68 +1,70 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3 2/2] tpm_tis_spi: add max xfer size
-Date: Tue, 9 Aug 2016 11:14:40 +0300
-Message-ID: <20160809081439.GB10537@intel.com>
-References: <1468546745-14646-1-git-send-email-apronin@chromium.org>
-	<1469677797-74304-3-git-send-email-apronin@chromium.org>
-	<20160728225316.GB28623@dtor-ws>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH] tpm: fix cacheline alignment for DMA-able buffers
+Date: Tue, 9 Aug 2016 12:46:10 +0300
+Message-ID: <20160809094610.GA13566@intel.com>
+References: <1469761153-85576-1-git-send-email-apronin@chromium.org>
+ <20160729172702.GB7020@obsidianresearch.com>
+ <CAE_wzQ-=8Su6xzA8Cv+C6ma8iYJfnOwR=hW-KBKjBG+4eOwF4g@mail.gmail.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=iso-8859-1
+Content-Transfer-Encoding: 8bit
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20160728225316.GB28623@dtor-ws>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Dmitry Torokhov <dtor-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <CAE_wzQ-=8Su6xzA8Cv+C6ma8iYJfnOwR=hW-KBKjBG+4eOwF4g@mail.gmail.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Dmitry Torokhov <dtor@chromium.org>
+Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Andrey Pronin <apronin@chromium.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Christophe Ricard <christophe.ricard@gmail.com>, tpmdd-devel@lists.sourceforge.net, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jul 28, 2016 at 03:53:16PM -0700, Dmitry Torokhov wrote:
-> On Wed, Jul 27, 2016 at 08:49:57PM -0700, Andrey Pronin wrote:
-> > Reject burstcounts larger than 64 bytes reported by tpm.
-> > SPI Hardware Protocol defined in section 6.4 of TCG PTP
-> > Spec supports up to 64 bytes of data in a transaction.
-> > 
-> > Signed-off-by: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+On Fri, Jul 29, 2016 at 10:30:22AM -0700, Dmitry Torokhov wrote:
+>    On Fri, Jul 29, 2016 at 10:27 AM, Jason Gunthorpe
+>    <jgunthorpe@obsidianresearch.com> wrote:
 > 
-> Reviewed-by: Dmitry Torokhov <dtor-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+>      On Thu, Jul 28, 2016 at 07:59:13PM -0700, Andrey Pronin wrote:
+>      > Annotate buffers used in spi transactions as ____cacheline_aligned
+>      > to use in DMA transfers.
+>      >
+>      > Signed-off-by: Andrey Pronin <apronin@chromium.org>
+>      >  drivers/char/tpm/st33zp24/spi.c | 4 ++--
+>      >  drivers/char/tpm/tpm_tis_spi.c  | 4 ++--
+>      >  2 files changed, 4 insertions(+), 4 deletions(-)
+>      >
+>      > diff --git a/drivers/char/tpm/st33zp24/spi.c
+>      b/drivers/char/tpm/st33zp24/spi.c
+>      > index 9f5a011..0e9aad9 100644
+>      > +++ b/drivers/char/tpm/st33zp24/spi.c
+>      > @@ -70,8 +70,8 @@
+>      >  struct st33zp24_spi_phy {
+>      >       struct spi_device *spi_device;
+>      >
+>      > -     u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE];
+>      > -     u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE];
+>      > +     u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE] ____cacheline_aligned;
+>      > +     u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE] ____cacheline_aligned;
+>      >
+>      >       int io_lpcpd;
+>      >       int latency;
+> 
+>      Hurm, this still looks wrong to me. Aligning the start of buffers is
+>      not enough, the DMA'able space must also end on a cache line as well.
+> 
+>      So, the buffers must also always be placed at the end of the struct.
+> 
+>      IMHO It would be cleaner and safer to always kmalloc the DMA buffer
+>      alone than to try and optimize like this.
+> 
+>    In this case moving them to the end of the structure and commenting why
+>    they have to be at the end might be less invasive change. More
+>    performance-efficient and resilient in low memory situations too.
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+kmallocs would be done in the driver initialization:
+
+* you rarely are in low memory situation
+* performance gain/loss is insignificant
+
+I really don't see your point.
+
+>    Thanks,
+>    Dmitry
 
 /Jarkko
-
-> > ---
-> >  drivers/char/tpm/tpm_tis_spi.c | 1 +
-> >  1 file changed, 1 insertion(+)
-> > 
-> > diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
-> > index dbaad9c..b103373 100644
-> > --- a/drivers/char/tpm/tpm_tis_spi.c
-> > +++ b/drivers/char/tpm/tpm_tis_spi.c
-> > @@ -206,6 +206,7 @@ static const struct tpm_tis_phy_ops tpm_spi_phy_ops = {
-> >  	.read16 = tpm_tis_spi_read16,
-> >  	.read32 = tpm_tis_spi_read32,
-> >  	.write32 = tpm_tis_spi_write32,
-> > +	.max_xfer_size = MAX_SPI_FRAMESIZE,
-> >  };
-> >  
-> >  static int tpm_tis_spi_probe(struct spi_device *dev)
-> > -- 
-> > 2.6.6
-> > 
-> 
-> -- 
-> Dmitry
-
-------------------------------------------------------------------------------
-What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
-patterns at an interface-level. Reveals which users, apps, and protocols are 
-consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
-J-Flow, sFlow and other flows. Make informed decisions using capacity 
-planning reports. http://sdm.link/zohodev2dev
