@@ -1,63 +1,73 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm: fix a race condition tpm2_unseal_trusted()
-Date: Tue, 9 Aug 2016 13:36:29 +0300
-Message-ID: <20160809103629.GA17800@intel.com>
-References: <1468973792-17598-1-git-send-email-jarkko.sakkinen@linux.intel.com>
- <20160720164818.GA21460@obsidianresearch.com>
- <20160720205314.GA6525@intel.com>
- <20160720211332.GA32417@obsidianresearch.com>
- <20160721090245.GA7999@intel.com>
- <20160721162536.GC19849@obsidianresearch.com>
+Subject: Re: [tpmdd-devel] [PATCH] tpm: fix cacheline alignment for DMA-able
+ buffers
+Date: Tue, 9 Aug 2016 18:01:14 +0300
+Message-ID: <20160809150114.GA9672@intel.com>
+References: <1469761153-85576-1-git-send-email-apronin@chromium.org>
+ <20160729172702.GB7020@obsidianresearch.com>
+ <CAE_wzQ-=8Su6xzA8Cv+C6ma8iYJfnOwR=hW-KBKjBG+4eOwF4g@mail.gmail.com>
+ <20160809094610.GA13566@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset=iso-8859-1
+Content-Transfer-Encoding: 8bit
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20160721162536.GC19849@obsidianresearch.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, linux-security-module@vger.kernel.org, Marcel Selhorst <tpmdd@selhorst.net>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+In-Reply-To: <20160809094610.GA13566@intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Dmitry Torokhov <dtor@chromium.org>
+Cc: Christophe Ricard <christophe.ricard@gmail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jul 21, 2016 at 10:25:36AM -0600, Jason Gunthorpe wrote:
-> On Thu, Jul 21, 2016 at 12:02:45PM +0300, Jarkko Sakkinen wrote:
-> > On Wed, Jul 20, 2016 at 03:13:32PM -0600, Jason Gunthorpe wrote:
-> > > On Wed, Jul 20, 2016 at 11:53:14PM +0300, Jarkko Sakkinen wrote:
-> > > 
-> > > > The only use cases I see at the moment for it work this way:
-> > > > 
-> > > > 1. Call tpm_try_get_ops.
-> > > > 2. Send a TPM command.
-> > > > 3. Call tpm_put_ops.
-> > > 
-> > > Right, but that is just a reflection of what the in kernel users are
-> > > doing today, not necessarily what they should be doing.
-> > > 
-> > > We should not break the put/get semantics..
-> > > 
-> > > > I did not find any other form of use. The only use is to make sure that
-> > > > there are no transactions running before the ops are cleared. Or did I
-> > > > overlook something perhaps?
-> > > 
-> > > The put/get is intended to allow a kapi user to hold a ref to tpm
-> > > without it geting destroyed. It is not intended to be an exclusive lock.
+On Tue, Aug 09, 2016 at 12:46:10PM +0300, Jarkko Sakkinen wrote:
+> On Fri, Jul 29, 2016 at 10:30:22AM -0700, Dmitry Torokhov wrote:
+> >    On Fri, Jul 29, 2016 at 10:27 AM, Jason Gunthorpe
+> >    <jgunthorpe@obsidianresearch.com> wrote:
 > > 
-> > These operations *are not* exposed to kapi. They are interal to the
-> > driver. That's why it does not make sense speak about kapi user.
+> >      On Thu, Jul 28, 2016 at 07:59:13PM -0700, Andrey Pronin wrote:
+> >      > Annotate buffers used in spi transactions as ____cacheline_aligned
+> >      > to use in DMA transfers.
+> >      >
+> >      > Signed-off-by: Andrey Pronin <apronin@chromium.org>
+> >      >  drivers/char/tpm/st33zp24/spi.c | 4 ++--
+> >      >  drivers/char/tpm/tpm_tis_spi.c  | 4 ++--
+> >      >  2 files changed, 4 insertions(+), 4 deletions(-)
+> >      >
+> >      > diff --git a/drivers/char/tpm/st33zp24/spi.c
+> >      b/drivers/char/tpm/st33zp24/spi.c
+> >      > index 9f5a011..0e9aad9 100644
+> >      > +++ b/drivers/char/tpm/st33zp24/spi.c
+> >      > @@ -70,8 +70,8 @@
+> >      >  struct st33zp24_spi_phy {
+> >      >       struct spi_device *spi_device;
+> >      >
+> >      > -     u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE];
+> >      > -     u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE];
+> >      > +     u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE] ____cacheline_aligned;
+> >      > +     u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE] ____cacheline_aligned;
+> >      >
+> >      >       int io_lpcpd;
+> >      >       int latency;
+> > 
+> >      Hurm, this still looks wrong to me. Aligning the start of buffers is
+> >      not enough, the DMA'able space must also end on a cache line as well.
+> > 
+> >      So, the buffers must also always be placed at the end of the struct.
+> > 
+> >      IMHO It would be cleaner and safer to always kmalloc the DMA buffer
+> >      alone than to try and optimize like this.
+> > 
+> >    In this case moving them to the end of the structure and commenting why
+> >    they have to be at the end might be less invasive change. More
+> >    performance-efficient and resilient in low memory situations too.
 > 
-> Right now yes, but look at other subsystems and you will see
-> operations like that, because that is typical design pattern. When I
-> wrote them I made sure they could be used in that typical way.
+> kmallocs would be done in the driver initialization:
 > 
-> We have issues in our kapi users with regards to hot plug and multiple
-> tpms. Fortunately that basically never happens, but it does indicate
-> the API is not sufficient..
+> * you rarely are in low memory situation
+> * performance gain/loss is insignificant
+> 
+> I really don't see your point.
 
-Functionally my patch should not break anything. I understand the need
-for clean up of locking but why doing this now to make the driver
-non-racy would make clean up later on any harder?
-
-I would rather think of clean up after the code is non-racy than doing a
-huge clean up for racy code. Correct functionality is more important
-than clean code because it has direct effect to users.
+I'm fine having them at the end of the structure mainly for simplicity
+reasons but those arguments just didn't hold at all.
 
 /Jarkko
