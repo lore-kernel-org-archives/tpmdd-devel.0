@@ -1,70 +1,65 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm: fix cacheline alignment for DMA-able buffers
-Date: Tue, 9 Aug 2016 12:46:10 +0300
-Message-ID: <20160809094610.GA13566@intel.com>
-References: <1469761153-85576-1-git-send-email-apronin@chromium.org>
- <20160729172702.GB7020@obsidianresearch.com>
- <CAE_wzQ-=8Su6xzA8Cv+C6ma8iYJfnOwR=hW-KBKjBG+4eOwF4g@mail.gmail.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v4 1/2] tpm: devicetree: document properties for cr50
+Date: Tue, 9 Aug 2016 13:08:24 +0300
+Message-ID: <20160809100824.GB13566@intel.com>
+References: <1468549218-19215-1-git-send-email-apronin@chromium.org>
+ <1469757314-116169-2-git-send-email-apronin@chromium.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Transfer-Encoding: 8bit
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <CAE_wzQ-=8Su6xzA8Cv+C6ma8iYJfnOwR=hW-KBKjBG+4eOwF4g@mail.gmail.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Dmitry Torokhov <dtor@chromium.org>
-Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Andrey Pronin <apronin@chromium.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Christophe Ricard <christophe.ricard@gmail.com>, tpmdd-devel@lists.sourceforge.net, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+In-Reply-To: <1469757314-116169-2-git-send-email-apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Sender: devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Cc: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, dtor-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, smbarber-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, dianders-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org, Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Pawel Moll <pawel.moll-5wv7dgnIgG8@public.gmane.org>, Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, Ian Campbell <ijc+devicetree-KcIKpvwj1kUDXYZnReoRVg@public.gmane.org>, Kumar Gala <galak-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jul 29, 2016 at 10:30:22AM -0700, Dmitry Torokhov wrote:
->    On Fri, Jul 29, 2016 at 10:27 AM, Jason Gunthorpe
->    <jgunthorpe@obsidianresearch.com> wrote:
+On Thu, Jul 28, 2016 at 06:55:13PM -0700, Andrey Pronin wrote:
+> Add TPM2.0 PTP FIFO compatible SPI interface for chips with Cr50
+> firmware.
 > 
->      On Thu, Jul 28, 2016 at 07:59:13PM -0700, Andrey Pronin wrote:
->      > Annotate buffers used in spi transactions as ____cacheline_aligned
->      > to use in DMA transfers.
->      >
->      > Signed-off-by: Andrey Pronin <apronin@chromium.org>
->      >  drivers/char/tpm/st33zp24/spi.c | 4 ++--
->      >  drivers/char/tpm/tpm_tis_spi.c  | 4 ++--
->      >  2 files changed, 4 insertions(+), 4 deletions(-)
->      >
->      > diff --git a/drivers/char/tpm/st33zp24/spi.c
->      b/drivers/char/tpm/st33zp24/spi.c
->      > index 9f5a011..0e9aad9 100644
->      > +++ b/drivers/char/tpm/st33zp24/spi.c
->      > @@ -70,8 +70,8 @@
->      >  struct st33zp24_spi_phy {
->      >       struct spi_device *spi_device;
->      >
->      > -     u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE];
->      > -     u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE];
->      > +     u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE] ____cacheline_aligned;
->      > +     u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE] ____cacheline_aligned;
->      >
->      >       int io_lpcpd;
->      >       int latency;
-> 
->      Hurm, this still looks wrong to me. Aligning the start of buffers is
->      not enough, the DMA'able space must also end on a cache line as well.
-> 
->      So, the buffers must also always be placed at the end of the struct.
-> 
->      IMHO It would be cleaner and safer to always kmalloc the DMA buffer
->      alone than to try and optimize like this.
-> 
->    In this case moving them to the end of the structure and commenting why
->    they have to be at the end might be less invasive change. More
->    performance-efficient and resilient in low memory situations too.
+> Signed-off-by: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 
-kmallocs would be done in the driver initialization:
-
-* you rarely are in low memory situation
-* performance gain/loss is insignificant
-
-I really don't see your point.
-
->    Thanks,
->    Dmitry
+Acked-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
 /Jarkko
+
+> ---
+>  .../devicetree/bindings/security/tpm/cr50_spi.txt   | 21 +++++++++++++++++++++
+>  1 file changed, 21 insertions(+)
+>  create mode 100644 Documentation/devicetree/bindings/security/tpm/cr50_spi.txt
+> 
+> diff --git a/Documentation/devicetree/bindings/security/tpm/cr50_spi.txt b/Documentation/devicetree/bindings/security/tpm/cr50_spi.txt
+> new file mode 100644
+> index 0000000..2fbebd3
+> --- /dev/null
+> +++ b/Documentation/devicetree/bindings/security/tpm/cr50_spi.txt
+> @@ -0,0 +1,21 @@
+> +* H1 Secure Microcontroller with Cr50 Firmware on SPI Bus.
+> +
+> +H1 Secure Microcontroller running Cr50 firmware provides several
+> +functions, including TPM-like functionality. It communicates over
+> +SPI using the FIFO protocol described in the PTP Spec, section 6.
+> +
+> +Required properties:
+> +- compatible: Should be "google,cr50".
+> +- spi-max-frequency: Maximum SPI frequency.
+> +
+> +Example:
+> +
+> +&spi0 {
+> +        status = "okay";
+> +
+> +        cr50@0 {
+> +                compatible = "google,cr50";
+> +                reg = <0>;
+> +                spi-max-frequency = <800000>;
+> +        };
+> +};
+> -- 
+> 2.6.6
+> 
+--
+To unsubscribe from this list: send the line "unsubscribe devicetree" in
+the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+More majordomo info at  http://vger.kernel.org/majordomo-info.html
