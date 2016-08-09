@@ -1,73 +1,47 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH] tpm: fix cacheline alignment for DMA-able
- buffers
-Date: Tue, 9 Aug 2016 18:01:14 +0300
-Message-ID: <20160809150114.GA9672@intel.com>
-References: <1469761153-85576-1-git-send-email-apronin@chromium.org>
- <20160729172702.GB7020@obsidianresearch.com>
- <CAE_wzQ-=8Su6xzA8Cv+C6ma8iYJfnOwR=hW-KBKjBG+4eOwF4g@mail.gmail.com>
- <20160809094610.GA13566@intel.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH] tpm: fix a race condition
+	tpm2_unseal_trusted()
+Date: Tue, 9 Aug 2016 09:49:03 -0600
+Message-ID: <20160809154903.GA7346@obsidianresearch.com>
+References: <1468973792-17598-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<20160720164818.GA21460@obsidianresearch.com>
+	<20160720205314.GA6525@intel.com>
+	<20160720211332.GA32417@obsidianresearch.com>
+	<20160721090245.GA7999@intel.com>
+	<20160721162536.GC19849@obsidianresearch.com>
+	<20160809103629.GA17800@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Transfer-Encoding: 8bit
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160809094610.GA13566@intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Dmitry Torokhov <dtor@chromium.org>
-Cc: Christophe Ricard <christophe.ricard@gmail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, tpmdd-devel@lists.sourceforge.net
+In-Reply-To: <20160809103629.GA17800-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Aug 09, 2016 at 12:46:10PM +0300, Jarkko Sakkinen wrote:
-> On Fri, Jul 29, 2016 at 10:30:22AM -0700, Dmitry Torokhov wrote:
-> >    On Fri, Jul 29, 2016 at 10:27 AM, Jason Gunthorpe
-> >    <jgunthorpe@obsidianresearch.com> wrote:
-> > 
-> >      On Thu, Jul 28, 2016 at 07:59:13PM -0700, Andrey Pronin wrote:
-> >      > Annotate buffers used in spi transactions as ____cacheline_aligned
-> >      > to use in DMA transfers.
-> >      >
-> >      > Signed-off-by: Andrey Pronin <apronin@chromium.org>
-> >      >  drivers/char/tpm/st33zp24/spi.c | 4 ++--
-> >      >  drivers/char/tpm/tpm_tis_spi.c  | 4 ++--
-> >      >  2 files changed, 4 insertions(+), 4 deletions(-)
-> >      >
-> >      > diff --git a/drivers/char/tpm/st33zp24/spi.c
-> >      b/drivers/char/tpm/st33zp24/spi.c
-> >      > index 9f5a011..0e9aad9 100644
-> >      > +++ b/drivers/char/tpm/st33zp24/spi.c
-> >      > @@ -70,8 +70,8 @@
-> >      >  struct st33zp24_spi_phy {
-> >      >       struct spi_device *spi_device;
-> >      >
-> >      > -     u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE];
-> >      > -     u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE];
-> >      > +     u8 tx_buf[ST33ZP24_SPI_BUFFER_SIZE] ____cacheline_aligned;
-> >      > +     u8 rx_buf[ST33ZP24_SPI_BUFFER_SIZE] ____cacheline_aligned;
-> >      >
-> >      >       int io_lpcpd;
-> >      >       int latency;
-> > 
-> >      Hurm, this still looks wrong to me. Aligning the start of buffers is
-> >      not enough, the DMA'able space must also end on a cache line as well.
-> > 
-> >      So, the buffers must also always be placed at the end of the struct.
-> > 
-> >      IMHO It would be cleaner and safer to always kmalloc the DMA buffer
-> >      alone than to try and optimize like this.
-> > 
-> >    In this case moving them to the end of the structure and commenting why
-> >    they have to be at the end might be less invasive change. More
-> >    performance-efficient and resilient in low memory situations too.
-> 
-> kmallocs would be done in the driver initialization:
-> 
-> * you rarely are in low memory situation
-> * performance gain/loss is insignificant
-> 
-> I really don't see your point.
+On Tue, Aug 09, 2016 at 01:36:29PM +0300, Jarkko Sakkinen wrote:
 
-I'm fine having them at the end of the structure mainly for simplicity
-reasons but those arguments just didn't hold at all.
+> Functionally my patch should not break anything. I understand the need
+> for clean up of locking but why doing this now to make the driver
+> non-racy would make clean up later on any harder?
 
-/Jarkko
+Then rename the functions so they don't confusingly look like the
+standard kernel pattern that doesn't lock.
+
+Jason
+
+------------------------------------------------------------------------------
+What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
+patterns at an interface-level. Reveals which users, apps, and protocols are 
+consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
+J-Flow, sFlow and other flows. Make informed decisions using capacity 
+planning reports. http://sdm.link/zohodev2dev
