@@ -1,16 +1,16 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v2 3/3] TPM2.0:Adds securityfs support for
- TPM2.0 eventlog
-Date: Tue, 9 Aug 2016 16:19:39 -0600
-Message-ID: <20160809221939.GC5535@obsidianresearch.com>
+Subject: Re: [PATCH v2 1/3] TPM2.0: Refactored eventlog init
+ functions.
+Date: Tue, 9 Aug 2016 16:27:40 -0600
+Message-ID: <20160809222740.GD5535@obsidianresearch.com>
 References: <1470771295-15680-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1470771295-15680-4-git-send-email-nayna@linux.vnet.ibm.com>
+	<1470771295-15680-2-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1470771295-15680-4-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1470771295-15680-2-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,61 +23,140 @@ To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Aug 09, 2016 at 03:34:55PM -0400, Nayna Jain wrote:
-> Adds securityfs support for TPM2.0.
-> This patch currently supports only binary_bios_measurements.
+On Tue, Aug 09, 2016 at 03:34:53PM -0400, Nayna Jain wrote:
+> Refactored eventlog.c file into tpm_eventlog.c and tpm_eventlog_init.c
+> 
+> Breakdown is:
+> 
+> * tpm_eventlog_init.c : Moved eventlog initialization methods like
+> to setup securityfs, to open and release seqfile from tpm_eventlog.c
+> to this file. This is to keep the logic of initialization for TPM1.2
+> and TPM2.0 in common file.
+> 
+> * tpm_eventlog.c : This file now has only methods specific to parsing
+> and iterate TPM1.2 entry log formats. It can understand only TPM1.2
+> and is called by methods in tpm_eventlog_init if identified TPM device
+> is TPM1.2.
 > 
 > Changelog v2:
->         * Single tpm_of.c for reading both tpm and vtpm device tree values.
->         * Some of the issues are fixed in Patch 1 itself.
->         * Comments in tpm2.h give reference to the standard from where structs
-> 	are taken.
-> 	* Now, tpm_of.c has same code applied for both tpm and vtpm, so I think
-> 	that now it is needed to have generic types rather than endian specific type.
 > 
-> There are few preexisting issues as being mentioned in feedback and are not 
-> addressed in this patch. Reason being, I don't have much expertise of ACPI side as of now, 
-> and these changes will affect acpi,tpm,vtpm, all paths, so I would like to go slow
-> and fix them as different patch later after better understanding.
-> Hope this sounds ok to have them as different patch.
+>         * Using of_node property of device rather than direct reading
+>         the device node.
+>         * Cleaned up the code to have generic open() for ascii and bios
+>         measurements
+>         * Removed dyncamic allocation for bios_dir and having dentry array
+> 	directly into tpm-chip.
+>         * Using dev_dbg instead of pr_err in tpm_of.c
+>         * readlog(...) now accepts struct tpm_chip * as parameter.
 
-Yes, but do the patches first please, this stuff is obviously broken,
-do not make the mess larger.
+This patch needs to be split.
 
-You are the only person ever to come up who can test the _of side of
-this, so the rest of us have the opposite problem to you.
+One patch per idea please.
 
-If you have doubts about the acpi stuff then ask.
+>  ifdef CONFIG_ACPI
+> -	tpm-y += tpm_eventlog.o tpm_acpi.o
+> +	tpm-y += tpm_eventlog_init.o tpm_eventlog.o tpm_acpi.o
+>  else
+>  ifdef CONFIG_TCG_IBMVTPM
+> -	tpm-y += tpm_eventlog.o tpm_of.o
+> +	tpm-y += tpm_eventlog_init.o tpm_eventlog.o tpm_of.o
+>  endif
 
-> +	/*
-> +	 * NOTE: Currently, support is added only for binary_bios_measurements
-> +	 * for TPM2.0. And so it is required to check that if device is TPM2,
-> +	 * only 2 entries are allocated i.e. tpm0 dir and
-> +	 * binary_bios_measurements file.
-> +	 */
+Still need to fix this, more like
+
+tpm_of should be included if CONFIG_OF is set,
+and tpm_acpi if CONFIG_ACPI is set, do not do this based on random
+other configus..
+
+
+>  endif
+>  obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index e595013..7f6cdab 100644
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -171,6 +171,8 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
+>  	chip->dev.release = tpm_dev_release;
+>  	chip->dev.parent = dev;
+>  	chip->dev.groups = chip->groups;
+> +	if (dev->of_node)
+> +		chip->dev.of_node = dev->of_node;
+
+No. chip->dev.parent->of_node.
+
+> -extern struct dentry **tpm_bios_log_setup(const char *);
+> -extern void tpm_bios_log_teardown(struct dentry **);
+> +extern void tpm_bios_log_setup(struct tpm_chip *chip);
+> +extern void tpm_bios_log_teardown(struct tpm_chip *chip);
+
+We are trying to get rid of these extra externs..
+
 > +
-> +	num_files = chip->flags & TPM_CHIP_FLAG_TPM2 ? 2 : 3;
+> +	bin_file =
+> +	    securityfs_create_file("binary_bios_measurements",
 
-?? just ++ as you go like sysfs does
+No, do
 
->  	const u32 *sizep;
->  	const u64 *basep;
-> +	u32 log_size;
+chip->bios_dir_count = 0;
+chip->bios_dir[chip->bios_dir_count] = [..]
+if (is_bad(chip->bios_dir[chip->bios_dir_count])
+  goto err
+chip->bios_dir_count++
+
+err:
+for (I = 0; I != chip->bios_dir_count; ++I)
+   securityfs_remove(chip->bios_dir[I]);
+
+> +	for (i = 0; i < 3; i++) {
+> +		if (chip->bios_dir[i])
+> +			securityfs_remove(chip->bios_dir[i]);
+
+Same logic as err: example above
 >  
->  	if (log->bios_event_log != NULL) {
->  		pr_err("%s: ERROR - Eventlog already initialized\n", __func__);
-> @@ -52,6 +53,11 @@ int read_log(struct tpm_bios_log *log, struct tpm_chip *chip)
+> -	np = of_find_node_by_name(NULL, "vtpm");
+> +	if (chip->dev.of_node)
+> +		np = chip->dev.of_node;
+>  	if (!np) {
+> -		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
+> +		dev_dbg(&chip->dev, "%s: ERROR - IBMVTPM not supported\n",
+> +		__func__);
+>  		return -ENODEV;
+>  	}
+
+Where you able to test this on IBM's 'vtpm' stuff as well?
+
+>  
+>  	sizep = of_get_property(np, "linux,sml-size", NULL);
+>  	if (sizep == NULL) {
+> -		pr_err("%s: ERROR - SML size not found\n", __func__);
+> +		dev_dbg(&chip->dev, "%s: ERROR - SML size not found\n",
+> +		__func__);
+>  		goto cleanup_eio;
+>  	}
+>  	if (*sizep == 0) {
+> -		pr_err("%s: ERROR - event log area empty\n", __func__);
+> +		dev_dbg(&chip->dev, "%s: ERROR - event log area empty\n",
+> +		__func__);
 >  		goto cleanup_eio;
 >  	}
 >  
-> +	if (!strncmp(np->name, "tpm", 3))
-> +		log_size = be32_to_cpup(sizep);
-> +	else
-> +		log_size = *sizep;
+>  	basep = of_get_property(np, "linux,sml-base", NULL);
+>  	if (basep == NULL) {
+> -		pr_err("%s: ERROR - SML not found\n", __func__);
+> +		dev_dbg(&chip->dev, "%s: ERROR - SML not found\n",
+> +		__func__);
+>  		goto cleanup_eio;
+>  	}
+>  
+>  	log->bios_event_log = kmalloc(*sizep, GFP_KERNEL);
+>  	if (!log->bios_event_log) {
+> -		pr_err("%s: ERROR - Not enough memory for BIOS measurements\n",
+> -		       __func__);
+>  		of_node_put(np);
 
-?? That deserves a comment, one of your systems has swapped
-endianness?? 'np->name' is not an appropriate way to detect
-that. compatible string would be better, or something else..
+Why is there an of_node_put here but not in other error paths? Where is
+the get this is putting?
+
+Jason
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
