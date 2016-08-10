@@ -1,20 +1,17 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix cacheline alignment for DMA-able
- buffers
-Date: Wed, 10 Aug 2016 13:36:45 +0300
-Message-ID: <20160810103645.GA12832@intel.com>
-References: <1469761153-85576-1-git-send-email-apronin@chromium.org>
-	<20160729172702.GB7020@obsidianresearch.com>
-	<CAE_wzQ-=8Su6xzA8Cv+C6ma8iYJfnOwR=hW-KBKjBG+4eOwF4g@mail.gmail.com>
-	<20160809094610.GA13566@intel.com>
-	<20160809150114.GA9672@intel.com>
-	<CAE_wzQ95LAm7JkfB=V2VZVc4Vha4GcRyOBH_J8ZEh1gG+ZjEAA@mail.gmail.com>
+Subject: Re: [PATCH v2 1/3] TPM2.0: Refactored eventlog init
+ functions.
+Date: Wed, 10 Aug 2016 13:51:24 +0300
+Message-ID: <20160810105123.GA13929@intel.com>
+References: <1470771295-15680-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1470771295-15680-2-git-send-email-nayna@linux.vnet.ibm.com>
+	<20160809222740.GD5535@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="iso-8859-1"
-Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <CAE_wzQ95LAm7JkfB=V2VZVc4Vha4GcRyOBH_J8ZEh1gG+ZjEAA-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
+In-Reply-To: <20160809222740.GD5535-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,124 +20,164 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Dmitry Torokhov <dtor-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Aug 09, 2016 at 08:18:00AM -0700, Dmitry Torokhov wrote:
->    On Tue, Aug 9, 2016 at 8:01 AM, Jarkko Sakkinen
->    <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
-> =
+On Tue, Aug 09, 2016 at 04:27:40PM -0600, Jason Gunthorpe wrote:
+> On Tue, Aug 09, 2016 at 03:34:53PM -0400, Nayna Jain wrote:
+> > Refactored eventlog.c file into tpm_eventlog.c and tpm_eventlog_init.c
+> > 
+> > Breakdown is:
+> > 
+> > * tpm_eventlog_init.c : Moved eventlog initialization methods like
+> > to setup securityfs, to open and release seqfile from tpm_eventlog.c
+> > to this file. This is to keep the logic of initialization for TPM1.2
+> > and TPM2.0 in common file.
+> > 
+> > * tpm_eventlog.c : This file now has only methods specific to parsing
+> > and iterate TPM1.2 entry log formats. It can understand only TPM1.2
+> > and is called by methods in tpm_eventlog_init if identified TPM device
+> > is TPM1.2.
+> > 
+> > Changelog v2:
+> > 
+> >         * Using of_node property of device rather than direct reading
+> >         the device node.
+> >         * Cleaned up the code to have generic open() for ascii and bios
+> >         measurements
+> >         * Removed dyncamic allocation for bios_dir and having dentry array
+> > 	directly into tpm-chip.
+> >         * Using dev_dbg instead of pr_err in tpm_of.c
+> >         * readlog(...) now accepts struct tpm_chip * as parameter.
+> 
+> This patch needs to be split.
+> 
+> One patch per idea please.
 
->      On Tue, Aug 09, 2016 at 12:46:10PM +0300, Jarkko Sakkinen wrote:
->      > On Fri, Jul 29, 2016 at 10:30:22AM -0700, Dmitry Torokhov wrote:
->      > >=C2=A0 =C2=A0 On Fri, Jul 29, 2016 at 10:27 AM, Jason Gunthorpe
->      > >=C2=A0 =C2=A0 <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote:
->      > >
->      > >=C2=A0 =C2=A0 =C2=A0 On Thu, Jul 28, 2016 at 07:59:13PM -0700, An=
-drey Pronin
->      wrote:
->      > >=C2=A0 =C2=A0 =C2=A0 > Annotate buffers used in spi transactions =
-as
->      ____cacheline_aligned
->      > >=C2=A0 =C2=A0 =C2=A0 > to use in DMA transfers.
->      > >=C2=A0 =C2=A0 =C2=A0 >
->      > >=C2=A0 =C2=A0 =C2=A0 > Signed-off-by: Andrey Pronin <apronin@chro=
-mium.org>
->      > >=C2=A0 =C2=A0 =C2=A0 >=C2=A0 drivers/char/tpm/st33zp24/spi.c | 4 =
-++--
->      > >=C2=A0 =C2=A0 =C2=A0 >=C2=A0 drivers/char/tpm/tpm_tis_spi.c=C2=A0=
- | 4 ++--
->      > >=C2=A0 =C2=A0 =C2=A0 >=C2=A0 2 files changed, 4 insertions(+), 4 =
-deletions(-)
->      > >=C2=A0 =C2=A0 =C2=A0 >
->      > >=C2=A0 =C2=A0 =C2=A0 > diff --git a/drivers/char/tpm/st33zp24/spi=
-.c
->      > >=C2=A0 =C2=A0 =C2=A0 b/drivers/char/tpm/st33zp24/spi.c
->      > >=C2=A0 =C2=A0 =C2=A0 > index 9f5a011..0e9aad9 100644
->      > >=C2=A0 =C2=A0 =C2=A0 > +++ b/drivers/char/tpm/st33zp24/spi.c
->      > >=C2=A0 =C2=A0 =C2=A0 > @@ -70,8 +70,8 @@
->      > >=C2=A0 =C2=A0 =C2=A0 >=C2=A0 struct st33zp24_spi_phy {
->      > >=C2=A0 =C2=A0 =C2=A0 >=C2=A0 =C2=A0 =C2=A0 =C2=A0struct spi_devic=
-e *spi_device;
->      > >=C2=A0 =C2=A0 =C2=A0 >
->      > >=C2=A0 =C2=A0 =C2=A0 > -=C2=A0 =C2=A0 =C2=A0u8 tx_buf[ST33ZP24_SP=
-I_BUFFER_SIZE];
->      > >=C2=A0 =C2=A0 =C2=A0 > -=C2=A0 =C2=A0 =C2=A0u8 rx_buf[ST33ZP24_SP=
-I_BUFFER_SIZE];
->      > >=C2=A0 =C2=A0 =C2=A0 > +=C2=A0 =C2=A0 =C2=A0u8 tx_buf[ST33ZP24_SP=
-I_BUFFER_SIZE]
->      ____cacheline_aligned;
->      > >=C2=A0 =C2=A0 =C2=A0 > +=C2=A0 =C2=A0 =C2=A0u8 rx_buf[ST33ZP24_SP=
-I_BUFFER_SIZE]
->      ____cacheline_aligned;
->      > >=C2=A0 =C2=A0 =C2=A0 >
->      > >=C2=A0 =C2=A0 =C2=A0 >=C2=A0 =C2=A0 =C2=A0 =C2=A0int io_lpcpd;
->      > >=C2=A0 =C2=A0 =C2=A0 >=C2=A0 =C2=A0 =C2=A0 =C2=A0int latency;
->      > >
->      > >=C2=A0 =C2=A0 =C2=A0 Hurm, this still looks wrong to me. Aligning=
- the start of
->      buffers is
->      > >=C2=A0 =C2=A0 =C2=A0 not enough, the DMA'able space must also end=
- on a cache line
->      as well.
->      > >
->      > >=C2=A0 =C2=A0 =C2=A0 So, the buffers must also always be placed a=
-t the end of the
->      struct.
->      > >
->      > >=C2=A0 =C2=A0 =C2=A0 IMHO It would be cleaner and safer to always=
- kmalloc the DMA
->      buffer
->      > >=C2=A0 =C2=A0 =C2=A0 alone than to try and optimize like this.
->      > >
->      > >=C2=A0 =C2=A0 In this case moving them to the end of the structur=
-e and
->      commenting why
->      > >=C2=A0 =C2=A0 they have to be at the end might be less invasive c=
-hange. More
->      > >=C2=A0 =C2=A0 performance-efficient and resilient in low memory s=
-ituations
->      too.
->      >
->      > kmallocs would be done in the driver initialization:
->      >
->      > * you rarely are in low memory situation
->      > * performance gain/loss is insignificant
->      >
->      > I really don't see your point.
-> =
-
->      I'm fine having them at the end of the structure mainly for simplici=
-ty
->      reasons but those arguments just didn't hold at all.
-> =
-
->    Well, the main reason was simplicity and invasiveness of the change.
->    But I still maintain that doing 3 memory allocations instead of 1 is l=
-ess
->    performant and puts more pressure on the kernel. Yes, it is at bind ti=
-me,
->    but you do not have to do 3 times work when one allocation will suffic=
-e.
->    Also, driver binding does not necessarily happen at boot time. I can
->    always unbind and rebind the driver or reload the module.
-
-I'm fine with either approach.
-
->    Thanks,
->    Dmitry
+And changelog per patch *set*.
 
 /Jarkko
 
----------------------------------------------------------------------------=
----
+> >  ifdef CONFIG_ACPI
+> > -	tpm-y += tpm_eventlog.o tpm_acpi.o
+> > +	tpm-y += tpm_eventlog_init.o tpm_eventlog.o tpm_acpi.o
+> >  else
+> >  ifdef CONFIG_TCG_IBMVTPM
+> > -	tpm-y += tpm_eventlog.o tpm_of.o
+> > +	tpm-y += tpm_eventlog_init.o tpm_eventlog.o tpm_of.o
+> >  endif
+> 
+> Still need to fix this, more like
+> 
+> tpm_of should be included if CONFIG_OF is set,
+> and tpm_acpi if CONFIG_ACPI is set, do not do this based on random
+> other configus..
+> 
+> 
+> >  endif
+> >  obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
+> > diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> > index e595013..7f6cdab 100644
+> > +++ b/drivers/char/tpm/tpm-chip.c
+> > @@ -171,6 +171,8 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
+> >  	chip->dev.release = tpm_dev_release;
+> >  	chip->dev.parent = dev;
+> >  	chip->dev.groups = chip->groups;
+> > +	if (dev->of_node)
+> > +		chip->dev.of_node = dev->of_node;
+> 
+> No. chip->dev.parent->of_node.
+> 
+> > -extern struct dentry **tpm_bios_log_setup(const char *);
+> > -extern void tpm_bios_log_teardown(struct dentry **);
+> > +extern void tpm_bios_log_setup(struct tpm_chip *chip);
+> > +extern void tpm_bios_log_teardown(struct tpm_chip *chip);
+> 
+> We are trying to get rid of these extra externs..
+> 
+> > +
+> > +	bin_file =
+> > +	    securityfs_create_file("binary_bios_measurements",
+> 
+> No, do
+> 
+> chip->bios_dir_count = 0;
+> chip->bios_dir[chip->bios_dir_count] = [..]
+> if (is_bad(chip->bios_dir[chip->bios_dir_count])
+>   goto err
+> chip->bios_dir_count++
+> 
+> err:
+> for (I = 0; I != chip->bios_dir_count; ++I)
+>    securityfs_remove(chip->bios_dir[I]);
+> 
+> > +	for (i = 0; i < 3; i++) {
+> > +		if (chip->bios_dir[i])
+> > +			securityfs_remove(chip->bios_dir[i]);
+> 
+> Same logic as err: example above
+> >  
+> > -	np = of_find_node_by_name(NULL, "vtpm");
+> > +	if (chip->dev.of_node)
+> > +		np = chip->dev.of_node;
+> >  	if (!np) {
+> > -		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
+> > +		dev_dbg(&chip->dev, "%s: ERROR - IBMVTPM not supported\n",
+> > +		__func__);
+> >  		return -ENODEV;
+> >  	}
+> 
+> Where you able to test this on IBM's 'vtpm' stuff as well?
+> 
+> >  
+> >  	sizep = of_get_property(np, "linux,sml-size", NULL);
+> >  	if (sizep == NULL) {
+> > -		pr_err("%s: ERROR - SML size not found\n", __func__);
+> > +		dev_dbg(&chip->dev, "%s: ERROR - SML size not found\n",
+> > +		__func__);
+> >  		goto cleanup_eio;
+> >  	}
+> >  	if (*sizep == 0) {
+> > -		pr_err("%s: ERROR - event log area empty\n", __func__);
+> > +		dev_dbg(&chip->dev, "%s: ERROR - event log area empty\n",
+> > +		__func__);
+> >  		goto cleanup_eio;
+> >  	}
+> >  
+> >  	basep = of_get_property(np, "linux,sml-base", NULL);
+> >  	if (basep == NULL) {
+> > -		pr_err("%s: ERROR - SML not found\n", __func__);
+> > +		dev_dbg(&chip->dev, "%s: ERROR - SML not found\n",
+> > +		__func__);
+> >  		goto cleanup_eio;
+> >  	}
+> >  
+> >  	log->bios_event_log = kmalloc(*sizep, GFP_KERNEL);
+> >  	if (!log->bios_event_log) {
+> > -		pr_err("%s: ERROR - Not enough memory for BIOS measurements\n",
+> > -		       __func__);
+> >  		of_node_put(np);
+> 
+> Why is there an of_node_put here but not in other error paths? Where is
+> the get this is putting?
+> 
+> Jason
+> 
+> ------------------------------------------------------------------------------
+> What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
+> patterns at an interface-level. Reveals which users, apps, and protocols are 
+> consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
+> J-Flow, sFlow and other flows. Make informed decisions using capacity 
+> planning reports. http://sdm.link/zohodev2dev
+> _______________________________________________
+> tpmdd-devel mailing list
+> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+
+------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
-patterns at an interface-level. Reveals which users, apps, and protocols ar=
-e =
-
-consuming the most bandwidth. Provides multi-vendor support for NetFlow, =
-
-J-Flow, sFlow and other flows. Make informed decisions using capacity =
-
+patterns at an interface-level. Reveals which users, apps, and protocols are 
+consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
+J-Flow, sFlow and other flows. Make informed decisions using capacity 
 planning reports. http://sdm.link/zohodev2dev
