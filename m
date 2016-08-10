@@ -1,16 +1,16 @@
-From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH v2 1/3] TPM2.0: Refactored eventlog init
  functions.
-Date: Wed, 10 Aug 2016 16:42:20 +0530
-Message-ID: <57AB0C14.8080305@linux.vnet.ibm.com>
+Date: Wed, 10 Aug 2016 14:12:55 +0300
+Message-ID: <20160810111255.GB13929@intel.com>
 References: <1470771295-15680-1-git-send-email-nayna@linux.vnet.ibm.com>
 	<1470771295-15680-2-git-send-email-nayna@linux.vnet.ibm.com>
-	<20160809222740.GD5535@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160809222740.GD5535-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <1470771295-15680-2-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,175 +19,612 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Thanks for reviewing.
+On Tue, Aug 09, 2016 at 03:34:53PM -0400, Nayna Jain wrote:
+> Refactored eventlog.c file into tpm_eventlog.c and tpm_eventlog_init.c
+> 
+> Breakdown is:
+> 
+> * tpm_eventlog_init.c : Moved eventlog initialization methods like
+> to setup securityfs, to open and release seqfile from tpm_eventlog.c
+> to this file. This is to keep the logic of initialization for TPM1.2
+> and TPM2.0 in common file.
+> 
+> * tpm_eventlog.c : This file now has only methods specific to parsing
+> and iterate TPM1.2 entry log formats. It can understand only TPM1.2
+> and is called by methods in tpm_eventlog_init if identified TPM device
+> is TPM1.2.
 
-Sure, I will post next version with split as two patches and other fixes 
-as suggested. Below is the breakdown of two patches, let me know if this 
-doesn't sound ok.
+I'm not going to review this in the current form. I would rather see a
+clean one paragraph "why" and "how" description and the commit do only
+one thing.
 
-1. First patch to clean up the code related to tpm_eventlog_init.c - 
-generic open() and bios_dir as dentry array.
+That said I NAK the split. It adds more complexity than brings value in
+this case.
 
-2. Second patch to have changes related to using of_node property and 
-struct tpm_chip in tpm_of.c. Includes adding CONFIG_OF.
+/Jarkko
 
-And one feedback which I didn't understand and so need your help with 
-that is
-
- >> -extern struct dentry **tpm_bios_log_setup(const char *);
- >> -extern void tpm_bios_log_teardown(struct dentry **);
- >> +extern void tpm_bios_log_setup(struct tpm_chip *chip);
- >> +extern void tpm_bios_log_teardown(struct tpm_chip *chip);
- >
- > We are trying to get rid of these extra externs..
-
-This is currently called by tpm_chip_register to setup the bios log.
-So, what did it meant by getting rid of these ?
-
-Thanks & Regards,
-    - Nayna
-
-On 08/10/2016 03:57 AM, Jason Gunthorpe wrote:
-> On Tue, Aug 09, 2016 at 03:34:53PM -0400, Nayna Jain wrote:
->> Refactored eventlog.c file into tpm_eventlog.c and tpm_eventlog_init.c
->>
->> Breakdown is:
->>
->> * tpm_eventlog_init.c : Moved eventlog initialization methods like
->> to setup securityfs, to open and release seqfile from tpm_eventlog.c
->> to this file. This is to keep the logic of initialization for TPM1.2
->> and TPM2.0 in common file.
->>
->> * tpm_eventlog.c : This file now has only methods specific to parsing
->> and iterate TPM1.2 entry log formats. It can understand only TPM1.2
->> and is called by methods in tpm_eventlog_init if identified TPM device
->> is TPM1.2.
->>
->> Changelog v2:
->>
->>          * Using of_node property of device rather than direct reading
->>          the device node.
->>          * Cleaned up the code to have generic open() for ascii and bios
->>          measurements
->>          * Removed dyncamic allocation for bios_dir and having dentry array
->> 	directly into tpm-chip.
->>          * Using dev_dbg instead of pr_err in tpm_of.c
->>          * readlog(...) now accepts struct tpm_chip * as parameter.
->
-> This patch needs to be split.
->
-> One patch per idea please.
->
->>   ifdef CONFIG_ACPI
->> -	tpm-y += tpm_eventlog.o tpm_acpi.o
->> +	tpm-y += tpm_eventlog_init.o tpm_eventlog.o tpm_acpi.o
->>   else
->>   ifdef CONFIG_TCG_IBMVTPM
->> -	tpm-y += tpm_eventlog.o tpm_of.o
->> +	tpm-y += tpm_eventlog_init.o tpm_eventlog.o tpm_of.o
->>   endif
->
-> Still need to fix this, more like
->
-> tpm_of should be included if CONFIG_OF is set,
-> and tpm_acpi if CONFIG_ACPI is set, do not do this based on random
-> other configus..
->
->
->>   endif
->>   obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
->> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
->> index e595013..7f6cdab 100644
->> +++ b/drivers/char/tpm/tpm-chip.c
->> @@ -171,6 +171,8 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
->>   	chip->dev.release = tpm_dev_release;
->>   	chip->dev.parent = dev;
->>   	chip->dev.groups = chip->groups;
->> +	if (dev->of_node)
->> +		chip->dev.of_node = dev->of_node;
->
-> No. chip->dev.parent->of_node.
->
->> -extern struct dentry **tpm_bios_log_setup(const char *);
->> -extern void tpm_bios_log_teardown(struct dentry **);
->> +extern void tpm_bios_log_setup(struct tpm_chip *chip);
->> +extern void tpm_bios_log_teardown(struct tpm_chip *chip);
->
-> We are trying to get rid of these extra externs..
->
->> +
->> +	bin_file =
->> +	    securityfs_create_file("binary_bios_measurements",
->
-> No, do
->
-> chip->bios_dir_count = 0;
-> chip->bios_dir[chip->bios_dir_count] = [..]
-> if (is_bad(chip->bios_dir[chip->bios_dir_count])
->    goto err
-> chip->bios_dir_count++
->
-> err:
-> for (I = 0; I != chip->bios_dir_count; ++I)
->     securityfs_remove(chip->bios_dir[I]);
->
->> +	for (i = 0; i < 3; i++) {
->> +		if (chip->bios_dir[i])
->> +			securityfs_remove(chip->bios_dir[i]);
->
-> Same logic as err: example above
->>
->> -	np = of_find_node_by_name(NULL, "vtpm");
->> +	if (chip->dev.of_node)
->> +		np = chip->dev.of_node;
->>   	if (!np) {
->> -		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
->> +		dev_dbg(&chip->dev, "%s: ERROR - IBMVTPM not supported\n",
->> +		__func__);
->>   		return -ENODEV;
->>   	}
->
-> Where you able to test this on IBM's 'vtpm' stuff as well?
->
->>
->>   	sizep = of_get_property(np, "linux,sml-size", NULL);
->>   	if (sizep == NULL) {
->> -		pr_err("%s: ERROR - SML size not found\n", __func__);
->> +		dev_dbg(&chip->dev, "%s: ERROR - SML size not found\n",
->> +		__func__);
->>   		goto cleanup_eio;
->>   	}
->>   	if (*sizep == 0) {
->> -		pr_err("%s: ERROR - event log area empty\n", __func__);
->> +		dev_dbg(&chip->dev, "%s: ERROR - event log area empty\n",
->> +		__func__);
->>   		goto cleanup_eio;
->>   	}
->>
->>   	basep = of_get_property(np, "linux,sml-base", NULL);
->>   	if (basep == NULL) {
->> -		pr_err("%s: ERROR - SML not found\n", __func__);
->> +		dev_dbg(&chip->dev, "%s: ERROR - SML not found\n",
->> +		__func__);
->>   		goto cleanup_eio;
->>   	}
->>
->>   	log->bios_event_log = kmalloc(*sizep, GFP_KERNEL);
->>   	if (!log->bios_event_log) {
->> -		pr_err("%s: ERROR - Not enough memory for BIOS measurements\n",
->> -		       __func__);
->>   		of_node_put(np);
->
-> Why is there an of_node_put here but not in other error paths? Where is
-> the get this is putting?
->
-> Jason
->
-
+> Changelog v2:
+> 
+>         * Using of_node property of device rather than direct reading
+>         the device node.
+>         * Cleaned up the code to have generic open() for ascii and bios
+>         measurements
+>         * Removed dyncamic allocation for bios_dir and having dentry array
+> 	directly into tpm-chip.
+>         * Using dev_dbg instead of pr_err in tpm_of.c
+>         * readlog(...) now accepts struct tpm_chip * as parameter.
+> 
+> 
+> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> ---
+>  drivers/char/tpm/Makefile            |   4 +-
+>  drivers/char/tpm/tpm-chip.c          |   6 +-
+>  drivers/char/tpm/tpm.h               |   2 +-
+>  drivers/char/tpm/tpm_acpi.c          |   2 +-
+>  drivers/char/tpm/tpm_eventlog.c      | 156 +----------------------------------
+>  drivers/char/tpm/tpm_eventlog.h      |  16 ++--
+>  drivers/char/tpm/tpm_eventlog_init.c | 155 ++++++++++++++++++++++++++++++++++
+>  drivers/char/tpm/tpm_of.c            |  22 +++--
+>  8 files changed, 189 insertions(+), 174 deletions(-)
+>  create mode 100644 drivers/char/tpm/tpm_eventlog_init.c
+> 
+> diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
+> index a385fb8..9136762 100644
+> --- a/drivers/char/tpm/Makefile
+> +++ b/drivers/char/tpm/Makefile
+> @@ -6,10 +6,10 @@ tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o
+>  tpm-$(CONFIG_ACPI) += tpm_ppi.o
+>  
+>  ifdef CONFIG_ACPI
+> -	tpm-y += tpm_eventlog.o tpm_acpi.o
+> +	tpm-y += tpm_eventlog_init.o tpm_eventlog.o tpm_acpi.o
+>  else
+>  ifdef CONFIG_TCG_IBMVTPM
+> -	tpm-y += tpm_eventlog.o tpm_of.o
+> +	tpm-y += tpm_eventlog_init.o tpm_eventlog.o tpm_of.o
+>  endif
+>  endif
+>  obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index e595013..7f6cdab 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -171,6 +171,8 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
+>  	chip->dev.release = tpm_dev_release;
+>  	chip->dev.parent = dev;
+>  	chip->dev.groups = chip->groups;
+> +	if (dev->of_node)
+> +		chip->dev.of_node = dev->of_node;
+>  
+>  	if (chip->dev_num == 0)
+>  		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
+> @@ -283,7 +285,7 @@ static int tpm1_chip_register(struct tpm_chip *chip)
+>  
+>  	tpm_sysfs_add_device(chip);
+>  
+> -	chip->bios_dir = tpm_bios_log_setup(dev_name(&chip->dev));
+> +	tpm_bios_log_setup(chip);
+>  
+>  	return 0;
+>  }
+> @@ -294,7 +296,7 @@ static void tpm1_chip_unregister(struct tpm_chip *chip)
+>  		return;
+>  
+>  	if (chip->bios_dir)
+> -		tpm_bios_log_teardown(chip->bios_dir);
+> +		tpm_bios_log_teardown(chip);
+>  }
+>  
+>  static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 6e002c4..cfa408f 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -171,7 +171,7 @@ struct tpm_chip {
+>  	unsigned long duration[3]; /* jiffies */
+>  	bool duration_adjusted;
+>  
+> -	struct dentry **bios_dir;
+> +	struct dentry *bios_dir[3];
+>  
+>  	const struct attribute_group *groups[3];
+>  	unsigned int groups_cnt;
+> diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
+> index 565a947..c2a122a 100644
+> --- a/drivers/char/tpm/tpm_acpi.c
+> +++ b/drivers/char/tpm/tpm_acpi.c
+> @@ -45,7 +45,7 @@ struct acpi_tcpa {
+>  };
+>  
+>  /* read binary bios log */
+> -int read_log(struct tpm_bios_log *log)
+> +int read_log(struct tpm_bios_log *log, struct tpm_chip *chip)
+>  {
+>  	struct acpi_tcpa *buff;
+>  	acpi_status status;
+> diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+> index e722886..b8f22ec 100644
+> --- a/drivers/char/tpm/tpm_eventlog.c
+> +++ b/drivers/char/tpm/tpm_eventlog.c
+> @@ -1,5 +1,5 @@
+>  /*
+> - * Copyright (C) 2005, 2012 IBM Corporation
+> + * Copyright (C) 2005, 2012, 2016 IBM Corporation
+>   *
+>   * Authors:
+>   *	Kent Yoder <key-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> @@ -11,6 +11,7 @@
+>   * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+>   *
+>   * Access to the eventlog created by a system's firmware / BIOS
+> + * specific to TPM 1.2.
+>   *
+>   * This program is free software; you can redistribute it and/or
+>   * modify it under the terms of the GNU General Public License
+> @@ -257,20 +258,6 @@ static int tpm_binary_bios_measurements_show(struct seq_file *m, void *v)
+>  
+>  }
+>  
+> -static int tpm_bios_measurements_release(struct inode *inode,
+> -					 struct file *file)
+> -{
+> -	struct seq_file *seq = file->private_data;
+> -	struct tpm_bios_log *log = seq->private;
+> -
+> -	if (log) {
+> -		kfree(log->bios_event_log);
+> -		kfree(log);
+> -	}
+> -
+> -	return seq_release(inode, file);
+> -}
+> -
+>  static int tpm_ascii_bios_measurements_show(struct seq_file *m, void *v)
+>  {
+>  	int len = 0;
+> @@ -304,151 +291,16 @@ static int tpm_ascii_bios_measurements_show(struct seq_file *m, void *v)
+>  	return 0;
+>  }
+>  
+> -static const struct seq_operations tpm_ascii_b_measurments_seqops = {
+> +const struct seq_operations tpm_ascii_b_measurments_seqops = {
+>  	.start = tpm_bios_measurements_start,
+>  	.next = tpm_bios_measurements_next,
+>  	.stop = tpm_bios_measurements_stop,
+>  	.show = tpm_ascii_bios_measurements_show,
+>  };
+>  
+> -static const struct seq_operations tpm_binary_b_measurments_seqops = {
+> +const struct seq_operations tpm_binary_b_measurments_seqops = {
+>  	.start = tpm_bios_measurements_start,
+>  	.next = tpm_bios_measurements_next,
+>  	.stop = tpm_bios_measurements_stop,
+>  	.show = tpm_binary_bios_measurements_show,
+>  };
+> -
+> -static int tpm_ascii_bios_measurements_open(struct inode *inode,
+> -					    struct file *file)
+> -{
+> -	int err;
+> -	struct tpm_bios_log *log;
+> -	struct seq_file *seq;
+> -
+> -	log = kzalloc(sizeof(struct tpm_bios_log), GFP_KERNEL);
+> -	if (!log)
+> -		return -ENOMEM;
+> -
+> -	if ((err = read_log(log)))
+> -		goto out_free;
+> -
+> -	/* now register seq file */
+> -	err = seq_open(file, &tpm_ascii_b_measurments_seqops);
+> -	if (!err) {
+> -		seq = file->private_data;
+> -		seq->private = log;
+> -	} else {
+> -		goto out_free;
+> -	}
+> -
+> -out:
+> -	return err;
+> -out_free:
+> -	kfree(log->bios_event_log);
+> -	kfree(log);
+> -	goto out;
+> -}
+> -
+> -static const struct file_operations tpm_ascii_bios_measurements_ops = {
+> -	.open = tpm_ascii_bios_measurements_open,
+> -	.read = seq_read,
+> -	.llseek = seq_lseek,
+> -	.release = tpm_bios_measurements_release,
+> -};
+> -
+> -static int tpm_binary_bios_measurements_open(struct inode *inode,
+> -					     struct file *file)
+> -{
+> -	int err;
+> -	struct tpm_bios_log *log;
+> -	struct seq_file *seq;
+> -
+> -	log = kzalloc(sizeof(struct tpm_bios_log), GFP_KERNEL);
+> -	if (!log)
+> -		return -ENOMEM;
+> -
+> -	if ((err = read_log(log)))
+> -		goto out_free;
+> -
+> -	/* now register seq file */
+> -	err = seq_open(file, &tpm_binary_b_measurments_seqops);
+> -	if (!err) {
+> -		seq = file->private_data;
+> -		seq->private = log;
+> -	} else {
+> -		goto out_free;
+> -	}
+> -
+> -out:
+> -	return err;
+> -out_free:
+> -	kfree(log->bios_event_log);
+> -	kfree(log);
+> -	goto out;
+> -}
+> -
+> -static const struct file_operations tpm_binary_bios_measurements_ops = {
+> -	.open = tpm_binary_bios_measurements_open,
+> -	.read = seq_read,
+> -	.llseek = seq_lseek,
+> -	.release = tpm_bios_measurements_release,
+> -};
+> -
+> -static int is_bad(void *p)
+> -{
+> -	if (!p)
+> -		return 1;
+> -	if (IS_ERR(p) && (PTR_ERR(p) != -ENODEV))
+> -		return 1;
+> -	return 0;
+> -}
+> -
+> -struct dentry **tpm_bios_log_setup(const char *name)
+> -{
+> -	struct dentry **ret = NULL, *tpm_dir, *bin_file, *ascii_file;
+> -
+> -	tpm_dir = securityfs_create_dir(name, NULL);
+> -	if (is_bad(tpm_dir))
+> -		goto out;
+> -
+> -	bin_file =
+> -	    securityfs_create_file("binary_bios_measurements",
+> -				   S_IRUSR | S_IRGRP, tpm_dir, NULL,
+> -				   &tpm_binary_bios_measurements_ops);
+> -	if (is_bad(bin_file))
+> -		goto out_tpm;
+> -
+> -	ascii_file =
+> -	    securityfs_create_file("ascii_bios_measurements",
+> -				   S_IRUSR | S_IRGRP, tpm_dir, NULL,
+> -				   &tpm_ascii_bios_measurements_ops);
+> -	if (is_bad(ascii_file))
+> -		goto out_bin;
+> -
+> -	ret = kmalloc(3 * sizeof(struct dentry *), GFP_KERNEL);
+> -	if (!ret)
+> -		goto out_ascii;
+> -
+> -	ret[0] = ascii_file;
+> -	ret[1] = bin_file;
+> -	ret[2] = tpm_dir;
+> -
+> -	return ret;
+> -
+> -out_ascii:
+> -	securityfs_remove(ascii_file);
+> -out_bin:
+> -	securityfs_remove(bin_file);
+> -out_tpm:
+> -	securityfs_remove(tpm_dir);
+> -out:
+> -	return NULL;
+> -}
+> -
+> -void tpm_bios_log_teardown(struct dentry **lst)
+> -{
+> -	int i;
+> -
+> -	for (i = 0; i < 3; i++)
+> -		securityfs_remove(lst[i]);
+> -}
+> diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
+> index 8de62b0..b888c77 100644
+> --- a/drivers/char/tpm/tpm_eventlog.h
+> +++ b/drivers/char/tpm/tpm_eventlog.h
+> @@ -1,4 +1,3 @@
+> -
+>  #ifndef __TPM_EVENTLOG_H__
+>  #define __TPM_EVENTLOG_H__
+>  
+> @@ -12,6 +11,9 @@
+>  #define do_endian_conversion(x) x
+>  #endif
+>  
+> +extern const struct seq_operations tpm_ascii_b_measurments_seqops;
+> +extern const struct seq_operations tpm_binary_b_measurments_seqops;
+> +
+>  enum bios_platform_class {
+>  	BIOS_CLIENT = 0x00,
+>  	BIOS_SERVER = 0x01,
+> @@ -73,18 +75,18 @@ enum tcpa_pc_event_ids {
+>  	HOST_TABLE_OF_DEVICES,
+>  };
+>  
+> -int read_log(struct tpm_bios_log *log);
+> +int read_log(struct tpm_bios_log *log, struct tpm_chip *chip);
+>  
+>  #if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
+>  	defined(CONFIG_ACPI)
+> -extern struct dentry **tpm_bios_log_setup(const char *);
+> -extern void tpm_bios_log_teardown(struct dentry **);
+> +extern void tpm_bios_log_setup(struct tpm_chip *chip);
+> +extern void tpm_bios_log_teardown(struct tpm_chip *chip);
+>  #else
+> -static inline struct dentry **tpm_bios_log_setup(const char *name)
+> +static inline void tpm_bios_log_setup(struct tpm_chip *chip)
+>  {
+> -	return NULL;
+> +	return;
+>  }
+> -static inline void tpm_bios_log_teardown(struct dentry **dir)
+> +static inline void tpm_bios_log_teardown(struct tpm_chip *chip)
+>  {
+>  }
+>  #endif
+> diff --git a/drivers/char/tpm/tpm_eventlog_init.c b/drivers/char/tpm/tpm_eventlog_init.c
+> new file mode 100644
+> index 0000000..dd5dbc4
+> --- /dev/null
+> +++ b/drivers/char/tpm/tpm_eventlog_init.c
+> @@ -0,0 +1,155 @@
+> +/*
+> + * Copyright (C) 2005, 2012, 2016 IBM Corporation
+> + *
+> + * Authors:
+> + *	Kent Yoder <key-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> + *	Seiji Munetoh <munetoh-JE5g2YyFxFHQT0dZR+AlfA@public.gmane.org>
+> + *	Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+> + *	Reiner Sailer <sailer-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
+> + *	Kylene Hall <kjhall-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+> + *	Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> + *
+> + * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+> + *
+> + * TPM 1.2 and TPM 2.0 common initialization methods to
+> + * access the eventlog created by a system's firmware / BIOS.
+> + *
+> + * This program is free software; you can redistribute it and/or
+> + * modify it under the terms of the GNU General Public License
+> + * as published by the Free Software Foundation; either version
+> + * 2 of the License, or (at your option) any later version.
+> + *
+> + */
+> +
+> +#include <linux/seq_file.h>
+> +#include <linux/fs.h>
+> +#include <linux/security.h>
+> +#include <linux/module.h>
+> +#include <linux/slab.h>
+> +
+> +#include "tpm.h"
+> +#include "tpm_eventlog.h"
+> +
+> +
+> +static int tpm_bios_measurements_release(struct inode *inode,
+> +					 struct file *file)
+> +{
+> +	struct seq_file *seq = file->private_data;
+> +	struct tpm_bios_log *log = seq->private;
+> +
+> +	if (log) {
+> +		kfree(log->bios_event_log);
+> +		kfree(log);
+> +	}
+> +
+> +	return seq_release(inode, file);
+> +}
+> +
+> +static int tpm_bios_measurements_open(struct inode *inode,
+> +					    struct file *file)
+> +{
+> +	int err;
+> +	struct tpm_bios_log *log;
+> +	struct seq_file *seq;
+> +	struct tpm_chip *chip;
+> +	const struct seq_operations *seqops = (struct seq_operations
+> +	*)inode->i_private;
+> +
+> +	log = kzalloc(sizeof(struct tpm_bios_log), GFP_KERNEL);
+> +	if (!log)
+> +		return -ENOMEM;
+> +
+> +	chip = (struct tpm_chip
+> +	*)file->f_path.dentry->d_parent->d_inode->i_private;
+> +
+> +	err = read_log(log, chip);
+> +	if (err)
+> +		goto out_free;
+> +
+> +	/* now register seq file */
+> +	err = seq_open(file, seqops);
+> +	if (!err) {
+> +		seq = file->private_data;
+> +		seq->private = log;
+> +	} else {
+> +		goto out_free;
+> +	}
+> +
+> +out:
+> +	return err;
+> +out_free:
+> +	kfree(log->bios_event_log);
+> +	kfree(log);
+> +	goto out;
+> +}
+> +
+> +static const struct file_operations tpm_bios_measurements_ops = {
+> +	.open = tpm_bios_measurements_open,
+> +	.read = seq_read,
+> +	.llseek = seq_lseek,
+> +	.release = tpm_bios_measurements_release,
+> +};
+> +
+> +static int is_bad(void *p)
+> +{
+> +	if (!p)
+> +		return 1;
+> +	if (IS_ERR(p) && (PTR_ERR(p) != -ENODEV))
+> +		return 1;
+> +	return 0;
+> +}
+> +
+> +void tpm_bios_log_setup(struct tpm_chip *chip)
+> +{
+> +	struct dentry *tpm_dir, *bin_file, *ascii_file;
+> +	const char *name = dev_name(&chip->dev);
+> +	int i;
+> +
+> +	for (i = 0; i < 3; i++)
+> +		chip->bios_dir[i] = NULL;
+> +
+> +	tpm_dir = securityfs_create_dir(name, NULL);
+> +	if (is_bad(tpm_dir))
+> +		goto out;
+> +
+> +	tpm_dir->d_inode->i_private = chip;
+> +
+> +	bin_file =
+> +	    securityfs_create_file("binary_bios_measurements",
+> +				   S_IRUSR | S_IRGRP, tpm_dir,
+> +				   (void *)&tpm_binary_b_measurments_seqops,
+> +				   &tpm_bios_measurements_ops);
+> +	if (is_bad(bin_file))
+> +		goto out_tpm;
+> +
+> +	ascii_file =
+> +	    securityfs_create_file("ascii_bios_measurements",
+> +				   S_IRUSR | S_IRGRP, tpm_dir,
+> +				   (void *)&tpm_ascii_b_measurments_seqops,
+> +				   &tpm_bios_measurements_ops);
+> +	if (is_bad(ascii_file))
+> +		goto out_bin;
+> +
+> +	chip->bios_dir[0] = ascii_file;
+> +	chip->bios_dir[1] = bin_file;
+> +	chip->bios_dir[2] = tpm_dir;
+> +
+> +	return;
+> +
+> +out_bin:
+> +	securityfs_remove(bin_file);
+> +out_tpm:
+> +	securityfs_remove(tpm_dir);
+> +out:
+> +	return;
+> +}
+> +
+> +void tpm_bios_log_teardown(struct tpm_chip *chip)
+> +{
+> +	int i;
+> +
+> +	for (i = 0; i < 3; i++) {
+> +		if (chip->bios_dir[i])
+> +			securityfs_remove(chip->bios_dir[i]);
+> +	}
+> +}
+> diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
+> index 570f30c..30a9905 100644
+> --- a/drivers/char/tpm/tpm_of.c
+> +++ b/drivers/char/tpm/tpm_of.c
+> @@ -1,7 +1,8 @@
+>  /*
+> - * Copyright 2012 IBM Corporation
+> + * Copyright 2012, 2016 IBM Corporation
+>   *
+>   * Author: Ashley Lai <ashleydlai-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+> + *         Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+>   *
+>   * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+>   *
+> @@ -20,7 +21,7 @@
+>  #include "tpm.h"
+>  #include "tpm_eventlog.h"
+>  
+> -int read_log(struct tpm_bios_log *log)
+> +int read_log(struct tpm_bios_log *log, struct tpm_chip *chip)
+>  {
+>  	struct device_node *np;
+>  	const u32 *sizep;
+> @@ -31,32 +32,35 @@ int read_log(struct tpm_bios_log *log)
+>  		return -EFAULT;
+>  	}
+>  
+> -	np = of_find_node_by_name(NULL, "vtpm");
+> +	if (chip->dev.of_node)
+> +		np = chip->dev.of_node;
+>  	if (!np) {
+> -		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
+> +		dev_dbg(&chip->dev, "%s: ERROR - IBMVTPM not supported\n",
+> +		__func__);
+>  		return -ENODEV;
+>  	}
+>  
+>  	sizep = of_get_property(np, "linux,sml-size", NULL);
+>  	if (sizep == NULL) {
+> -		pr_err("%s: ERROR - SML size not found\n", __func__);
+> +		dev_dbg(&chip->dev, "%s: ERROR - SML size not found\n",
+> +		__func__);
+>  		goto cleanup_eio;
+>  	}
+>  	if (*sizep == 0) {
+> -		pr_err("%s: ERROR - event log area empty\n", __func__);
+> +		dev_dbg(&chip->dev, "%s: ERROR - event log area empty\n",
+> +		__func__);
+>  		goto cleanup_eio;
+>  	}
+>  
+>  	basep = of_get_property(np, "linux,sml-base", NULL);
+>  	if (basep == NULL) {
+> -		pr_err("%s: ERROR - SML not found\n", __func__);
+> +		dev_dbg(&chip->dev, "%s: ERROR - SML not found\n",
+> +		__func__);
+>  		goto cleanup_eio;
+>  	}
+>  
+>  	log->bios_event_log = kmalloc(*sizep, GFP_KERNEL);
+>  	if (!log->bios_event_log) {
+> -		pr_err("%s: ERROR - Not enough memory for BIOS measurements\n",
+> -		       __func__);
+>  		of_node_put(np);
+>  		return -ENOMEM;
+>  	}
+> -- 
+> 2.5.0
+> 
+> 
+> ------------------------------------------------------------------------------
+> What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
+> patterns at an interface-level. Reveals which users, apps, and protocols are 
+> consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
+> J-Flow, sFlow and other flows. Make informed decisions using capacity 
+> planning reports. http://sdm.link/zohodev2dev
+> _______________________________________________
+> tpmdd-devel mailing list
+> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
