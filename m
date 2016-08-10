@@ -1,16 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 2/3] TPM2.0: TPM Device Tree
- Documentation
-Date: Wed, 10 Aug 2016 14:28:40 +0300
-Message-ID: <20160810112816.GE13929@intel.com>
+Subject: Re: [PATCH v2 0/3] TPM2.0: Added eventlog support for
+ TPM2.0
+Date: Wed, 10 Aug 2016 14:32:43 +0300
+Message-ID: <20160810113243.GF13929@intel.com>
 References: <1470771295-15680-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1470771295-15680-3-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1470771295-15680-3-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1470771295-15680-1-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,59 +22,78 @@ To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Aug 09, 2016 at 03:34:54PM -0400, Nayna Jain wrote:
-> Added device tree binding documentation for I2C base TPM.
+On Tue, Aug 09, 2016 at 03:34:52PM -0400, Nayna Jain wrote:
+> Overview:
+> =========
+> 
+> This patch adds support for enabling securityfs for TPM2.0, currently
+> driver has eventlog support only for TPM1.2.
+> The patch currently adds support for only binary_bios_measurements.
+> 
+> The structure for TPM2.0 is compliant with TCG Spec for 2.0 family.
+> Also , the reading of data has the assumption that writer would have
+> followed TCG Spec and so everything is in little-endian.
+> 
+> The tpm device driver code has been refactored to:
+> * Identify the TPM version - 1.2 or 2.0
+> * Calls corresponding compatible seq_ops for iterating over eventlog.
+> 
+> Files Description:
+> ===================
+> 
+> * tpm-chip.c : Adds call to setup bios log for TPM2.0.
+> 
+> * tpm2_of.c : Reads the device tree entries to find the location
+> and size of event.
+> 
+> * tpm_eventlog_init.c : Provides common initialization functions
+>  between TPM2.0 and TPM1.2 to setup securityfs entries and seq_ops
+>   iterator.  The functions has been moved from tpm_eventlog.c into this file.
+> 
+>   * tpm_eventlog.c : Provides functions only specific to TPM1.2
+>   version. Common initialization functions are moved to tpm_eventlog_init.c
+> 
+>   * tpm2_eventlog.c : Provides functions specific only for TPM2.0
+>   eventlog format.
+> 
+>   * tpm2.h : Header file for TPM2.0 structures and functions.
 
-Where is this binding defined originally? Is it standardized?
+diffstat shows changed files. Your commit messages will give detailed
+descriptions. Please remove this. Cover letter would be the right place
+to tell about missing ACPI support.
+
+BTW, how this can be tested?
 
 /Jarkko
 
 > Changelog v2:
->         * Added documentation in v2.
+> =============
 > 
-> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> ---
->  Documentation/devicetree/bindings/i2c/i2c-tpm.txt | 31 +++++++++++++++++++++++
->  1 file changed, 31 insertions(+)
+> 	* Fixes issues as given in feedback by Jason.
+> 	* Adds documentation for device tree.
+> 
+> Nayna Jain (3):
+>   TPM2.0: Refactored eventlog init functions.
+>   TPM2.0: TPM Device Tree Documentation
+>   TPM2.0:Adds securityfs support for TPM2.0 eventlog
+> 
+>  Documentation/devicetree/bindings/i2c/i2c-tpm.txt |  31 +++
+>  drivers/char/tpm/Makefile                         |   8 +-
+>  drivers/char/tpm/tpm-chip.c                       |  22 +--
+>  drivers/char/tpm/tpm.h                            |   2 +-
+>  drivers/char/tpm/tpm2.h                           |  85 ++++++++
+>  drivers/char/tpm/tpm2_eventlog.c                  | 224 ++++++++++++++++++++++
+>  drivers/char/tpm/tpm_acpi.c                       |   2 +-
+>  drivers/char/tpm/tpm_eventlog.c                   | 156 +--------------
+>  drivers/char/tpm/tpm_eventlog.h                   |  18 +-
+>  drivers/char/tpm/tpm_eventlog_init.c              | 174 +++++++++++++++++
+>  drivers/char/tpm/tpm_of.c                         |  39 ++--
+>  11 files changed, 570 insertions(+), 191 deletions(-)
 >  create mode 100644 Documentation/devicetree/bindings/i2c/i2c-tpm.txt
+>  create mode 100644 drivers/char/tpm/tpm2.h
+>  create mode 100644 drivers/char/tpm/tpm2_eventlog.c
+>  create mode 100644 drivers/char/tpm/tpm_eventlog_init.c
 > 
-> diff --git a/Documentation/devicetree/bindings/i2c/i2c-tpm.txt b/Documentation/devicetree/bindings/i2c/i2c-tpm.txt
-> new file mode 100644
-> index 0000000..1df05cf
-> --- /dev/null
-> +++ b/Documentation/devicetree/bindings/i2c/i2c-tpm.txt
-> @@ -0,0 +1,31 @@
-> +Device Tree Bindings for I2C based Trusted Platform Module(TPM)
-> +---------------------------------------------------------------
-> +
-> +This node describes a TPM device connected to Processor on i2c bus.
-> +
-> +Required properties:
-> +
-> +- compatible : 'manufacturer,model'
-> +- label : "tpm" indicates master TPM; "tpm-backup" indicates backup TPM.
-> +- linux,sml-base : base address of the Event Log. It is a physical address.
-> +		   sml stands for shared memory log.
-> +- linux,sml-size : size of the memory allocated for the Event Log.
-> +
-> +Optional properties:
-> +
-> +- status: indicates whether the device is enabled or disabled. "okay" for
-> +          enabled and "disabled" for disabled.
-> +
-> +Example
-> +-------
-> +
-> +tpm@57 {
-> +	reg = <0x57>;
-> +	label = "tpm";
-> +	compatible = "nuvoton,npct650", "nuvoton,npct601";
-> +	linux,sml-base = <0x7f 0xfd450000>;
-> +	linux,sml-size = <0x10000>;
-> +	status = "okay";
-> +	phandle = <0x10000017>;
-> +	linux,phandle = <0x10000017>;
-> +};
 > -- 
 > 2.5.0
 > 
