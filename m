@@ -1,16 +1,13 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 0/3] TPM2.0: Added eventlog support for
- TPM2.0
-Date: Wed, 10 Aug 2016 20:19:00 +0300
-Message-ID: <20160810171900.GA11543@intel.com>
-References: <1470771295-15680-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<20160810113243.GF13929@intel.com>
+From: "Peter Huewe" <PeterHuewe-Mmb7MZpHnFY@public.gmane.org>
+Subject: Re: TPM2 Driver Support in distros (part 1)
+Date: Thu, 11 Aug 2016 07:35:31 +0200
+Message-ID: <trinity-282fc7ab-b87b-4c45-8f1d-7ce1535c1a86-1470893731471@3capp-gmx-bs55>
+References: <nn1ajt$rpd$1@ger.gmane.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20160810113243.GF13929-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <nn1ajt$rpd$1@ger.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,79 +16,24 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+To: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Aug 10, 2016 at 02:32:43PM +0300, Jarkko Sakkinen wrote:
-> On Tue, Aug 09, 2016 at 03:34:52PM -0400, Nayna Jain wrote:
-> > Overview:
-> > =========
-> > 
-> > This patch adds support for enabling securityfs for TPM2.0, currently
-> > driver has eventlog support only for TPM1.2.
-> > The patch currently adds support for only binary_bios_measurements.
-> > 
-> > The structure for TPM2.0 is compliant with TCG Spec for 2.0 family.
-> > Also , the reading of data has the assumption that writer would have
-> > followed TCG Spec and so everything is in little-endian.
-> > 
-> > The tpm device driver code has been refactored to:
-> > * Identify the TPM version - 1.2 or 2.0
-> > * Calls corresponding compatible seq_ops for iterating over eventlog.
-> > 
-> > Files Description:
-> > ===================
-> > 
-> > * tpm-chip.c : Adds call to setup bios log for TPM2.0.
-> > 
-> > * tpm2_of.c : Reads the device tree entries to find the location
-> > and size of event.
-> > 
-> > * tpm_eventlog_init.c : Provides common initialization functions
-> >  between TPM2.0 and TPM1.2 to setup securityfs entries and seq_ops
-> >   iterator.  The functions has been moved from tpm_eventlog.c into this file.
-> > 
-> >   * tpm_eventlog.c : Provides functions only specific to TPM1.2
-> >   version. Common initialization functions are moved to tpm_eventlog_init.c
-> > 
-> >   * tpm2_eventlog.c : Provides functions specific only for TPM2.0
-> >   eventlog format.
-> > 
-> >   * tpm2.h : Header file for TPM2.0 structures and functions.
-> 
-> diffstat shows changed files. Your commit messages will give detailed
-> descriptions. Please remove this. Cover letter would be the right place
-> to tell about missing ACPI support.
-> 
-> BTW, how this can be tested?
-
-As for ACPI you stated that
-
-"Reason being, I don't have much expertise of ACPI side as of now, and
-these changes will affect acpi,tpm,vtpm, all paths, so I would like to
-go slow and fix them as different patch later after better
-understanding."
-
-Don't get me wrong but that really is an unacceptable statement. It
-gives very strong evidence that you don't know what you are doing and
-the patches are not ready for public consumption.
-
-You have two better alternatives:
-
-1. Do a little bit of research. You would have found that there's no
-   ACPI support for the event log defined by TCG at the moment.
-2. Ask first. This is the right mailing list to do that.
-
-You do not have to implement ACPI support as part of the patch set but
-at least it would be good to research the constraints so that we can
-check that the implementation will be best for ACPI too.
-
-/Jarkko
-
-------------------------------------------------------------------------------
-What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
-patterns at an interface-level. Reveals which users, apps, and protocols are 
-consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
-J-Flow, sFlow and other flows. Make informed decisions using capacity 
-planning reports. http://sdm.link/zohodev2dev
+CkhpIEtlbiwKCkkganVzdCBjaGVja2VkIGFuZCBpdCBzZWVtcyB0aGF0IFJIRUw3LjIgaGFzIGJh
+Y2twb3J0ZWQgc29tZSBwYXJ0cyBvZiB0aGUgVFBNMi4wIHN1cHBvcnQgdG8gdGhlaXIgMy4xMCBr
+ZXJuZWwuwqAKRm9yIHRoZSB0cG1fdGlzIHBhcnQgaXQgaXMgc3RpbGwgbGFja2luZyB0aGUgYWNw
+aSBkZXRlY3Rpb24sCiBidXQgbG9hZGluZyB0aGUgdHBtX3RpcyBkcml2ZXIgd2l0aCBmb3JjZT0x
+IHNob3VsZCByZXN1bHQgaW4gYSB3b3JraW5nIGRyaXZlci4KKGVpdGhlciBtb2Rwcm9iZSB0cG1f
+dGlzIGZvcmNlPTEgIG9yIGF0IHRoZSBib290IGNvbW1hbmRsaW5lIHRwbV90aXMuZm9yY2U9MQoK
+VGhhbmtzLAoKUGV0ZXIKCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpXaGF0IE5ldEZsb3cgQW5hbHl6
+ZXIgY2FuIGRvIGZvciB5b3U/IE1vbml0b3JzIG5ldHdvcmsgYmFuZHdpZHRoIGFuZCB0cmFmZmlj
+CnBhdHRlcm5zIGF0IGFuIGludGVyZmFjZS1sZXZlbC4gUmV2ZWFscyB3aGljaCB1c2VycywgYXBw
+cywgYW5kIHByb3RvY29scyBhcmUgCmNvbnN1bWluZyB0aGUgbW9zdCBiYW5kd2lkdGguIFByb3Zp
+ZGVzIG11bHRpLXZlbmRvciBzdXBwb3J0IGZvciBOZXRGbG93LCAKSi1GbG93LCBzRmxvdyBhbmQg
+b3RoZXIgZmxvd3MuIE1ha2UgaW5mb3JtZWQgZGVjaXNpb25zIHVzaW5nIGNhcGFjaXR5IApwbGFu
+bmluZyByZXBvcnRzLiBodHRwOi8vc2RtLmxpbmsvem9ob2RldjJkZXYKX19fX19fX19fX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0
+CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xpc3RzLnNvdXJjZWZv
+cmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
