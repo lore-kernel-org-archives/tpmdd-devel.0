@@ -1,16 +1,16 @@
 From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v2 0/3] TPM2.0: Added eventlog support for
- TPM2.0
-Date: Fri, 12 Aug 2016 18:02:00 +0530
-Message-ID: <57ADC1C0.4030406@linux.vnet.ibm.com>
+Subject: Re: [PATCH v2 2/3] TPM2.0: TPM Device Tree
+ Documentation
+Date: Fri, 12 Aug 2016 18:06:05 +0530
+Message-ID: <57ADC2B5.3040903@linux.vnet.ibm.com>
 References: <1470771295-15680-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<20160810113243.GF13929@intel.com> <20160810171900.GA11543@intel.com>
-	<57AC5802.1090109@linux.vnet.ibm.com> <20160811125818.GA9303@intel.com>
+	<1470771295-15680-3-git-send-email-nayna@linux.vnet.ibm.com>
+	<20160809221239.GB5535@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160811125818.GA9303-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20160809221239.GB5535-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,49 +19,80 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi Jarkko,
+Hi Jason,
 
-My responses inline.
+Thanks for review, My responses inline.
 
-On 08/11/2016 06:28 PM, Jarkko Sakkinen wrote:
-> On Thu, Aug 11, 2016 at 04:18:34PM +0530, Nayna wrote:
+On 08/10/2016 03:42 AM, Jason Gunthorpe wrote:
+> On Tue, Aug 09, 2016 at 03:34:54PM -0400, Nayna Jain wrote:
+>> Added device tree binding documentation for I2C base TPM.
 >
-> [SNIP too much text out of context]
+> You need to review
 >
->> Jarrko, You also asked "
->>>> BTW, how this can be tested?"
->>
->> <nayna> So, it can be tested with system having TPM2.0 version of tpm/vtpm
->> and its firmware writing eventlog following TCG Spec for TPM2.0.
->>
->> Jarkko, Please let me know if it doesn't answer your question. </nayna>
+>   Documentation/devicetree/bindings/submitting-patches.txt
 >
-> 1. EFI does not pass the log by any means AFAIK before a boot loader
->     calls ExitBootServices().
+> And be sure to follow all the requirements, including CC'ing the
+> right maintainers
+Sure, will do. Can you tell me who all should I copy ?
 
-So, is current TCPA support only for TPM1.2 ?
-
-#2, TCG Spec 
-http://www.trustedcomputinggroup.org/wp-content/uploads/EFI-Protocol-Specification-rev13-160330final.pdf 
-talks about
-EFI_TCG2_PROTOCOL.GetEventLog (Section 6.5), what is that supposed to do ?
-
-> 2. I do not have any system with TPM2 that uses DT. And as I stated
->     before you didn't have any reference where you derived the DT
->     node fields.
-
-As per Device Tree, so this is the new node introduced in the device 
-tree to support TPM. And the fields are defined maintaining the 
-requirements from ePAPR specification.
 >
->> Thanks & Regards,
->>     - Nayna
+> Also explain that this is a documenting a historical practice that IBM
+> has used in systems  X Y Z.
+
+Ok.
+
 >
-> /Jarkko
+>> Changelog v2:
+>>          * Added documentation in v2.
+>
+> Do not include these lines in commit messages, put them after the
+> diff stat.
+
+Actually I have not added Changelog during commit, I have put them in 
+patch before posting. However, will add them after diff next time.
+>
+>> +This node describes a TPM device connected to Processor on i2c bus.
+>> +
+>> +Required properties:
+>> +
+>> +- compatible : 'manufacturer,model'
+>> +- label : "tpm" indicates master TPM; "tpm-backup" indicates backup TPM.
+>> +- linux,sml-base : base address of the Event Log. It is a physical address.
+>> +		   sml stands for shared memory log.
+>> +- linux,sml-size : size of the memory allocated for the Event Log.
+>> +
+>> +Optional properties:
+>> +
+>> +- status: indicates whether the device is enabled or disabled. "okay" for
+>> +          enabled and "disabled" for disabled.
+>> +
+>> +Example
+>> +-------
+>> +
+>> +tpm@57 {
+>> +	reg = <0x57>;
+>> +	label = "tpm";
+>> +	compatible = "nuvoton,npct650", "nuvoton,npct601";
+>> +	linux,sml-base = <0x7f 0xfd450000>;
+>> +	linux,sml-size = <0x10000>;
+>> +	status = "okay";
+>
+>> +	phandle = <0x10000017>;
+>> +	linux,phandle = <0x10000017>;
+>
+>   What are these?
+
+Sorry I didn't get your question here. I have written in the format as 
+suggested for device-tree documentation and looking at other 
+device-nodes documentation. And so this is an example entry as I saw in 
+other docs.
+
+>
+> Jason
 >
 
 
