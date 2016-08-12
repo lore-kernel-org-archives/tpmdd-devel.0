@@ -1,16 +1,15 @@
-From: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-Subject: Re: TPM2 Driver Support in distros (part 1)
-Date: Thu, 11 Aug 2016 11:13:13 -0700
-Message-ID: <20160811181313.ytcseswfrf7syzko@rhwork>
-References: <nn1ajt$rpd$1@ger.gmane.org>
-	<trinity-282fc7ab-b87b-4c45-8f1d-7ce1535c1a86-1470893731471@3capp-gmx-bs55>
-Reply-To: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: TPM microconf at Linux Plumbers Conference?
+Date: Fri, 12 Aug 2016 12:14:34 +0300
+Message-ID: <20160812091434.GA23740@intel.com>
+References: <20160606185712.GA10754@srcf.ucam.org>
+	<20160607131954.GB3855@intel.com> <20160809071030.GA5955@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="iso-8859-1"
-Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <trinity-282fc7ab-b87b-4c45-8f1d-7ce1535c1a86-1470893731471@3capp-gmx-bs55>
+In-Reply-To: <20160809071030.GA5955-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,55 +18,43 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <PeterHuewe-Mmb7MZpHnFY@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+To: Matthew Garrett <mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>
+Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, trousers-users-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu Aug 11 16, Peter Huewe wrote:
->
->Hi Ken,
->
->I just checked and it seems that RHEL7.2 has backported some parts of the =
-TPM2.0 support to their 3.10 kernel.=A0
->For the tpm_tis part it is still lacking the acpi detection,
-> but loading the tpm_tis driver with force=3D1 should result in a working =
-driver.
->(either modprobe tpm_tis force=3D1  or at the boot commandline tpm_tis.for=
-ce=3D1
->
->Thanks,
->
->Peter
->
->--------------------------------------------------------------------------=
-----
->What NetFlow Analyzer can do for you? Monitors network bandwidth and traff=
-ic
->patterns at an interface-level. Reveals which users, apps, and protocols a=
-re
->consuming the most bandwidth. Provides multi-vendor support for NetFlow,
->J-Flow, sFlow and other flows. Make informed decisions using capacity
->planning reports. http://sdm.link/zohodev2dev
->_______________________________________________
->tpmdd-devel mailing list
->tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
->https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+On Tue, Aug 09, 2016 at 10:10:30AM +0300, Jarkko Sakkinen wrote:
+> On Tue, Jun 07, 2016 at 04:19:54PM +0300, Jarkko Sakkinen wrote:
+> > On Mon, Jun 06, 2016 at 07:57:13PM +0100, Matthew Garrett wrote:
+> > > Hi,
+> > > 
+> > > I'm looking into running a TPM microconference at the Linux Plubmers 
+> > > Conference in Santa Fe the first week of November. Right now we have a 
+> > > bunch of individual pieces of TPM-related technology, but little overall 
+> > > coherence - almost nobody ships working TPM-enabled bootloaders, we have 
+> > > no known-good PCR values available, distributions are unclear on what 
+> > > the appropriate TPM 2.0 userlands to ship are, we don't even have a spec 
+> > > for how PCRs should be used under Linux.
+> > > 
+> > > If this seems like it'd be useful, please add your name to 
+> > > http://wiki.linuxplumbersconf.org/2016:tpms along with any additional 
+> > > topics you'd like to discuss - and if you'd like to lead a short 
+> > > discussion session, drop me an email with a description.
+> > 
+> > I'd be interested to join. If I get budget for this from my employer,
+> > I'll be definitely here.
+> 
+> I can now confirm to be present here.
 
-The acpi detection fix is in our RHEL7 kernel currently being worked
-on. The RHEL6.8 kernel also has some TPM2.0 support, including the
-acpi detection fix, but doesn't have most of the commits that have hit
-upstream since late last year. While there is kernel support for
-TPM2.0 drivers in RHEL7 and RHEL6, there currently aren't any packages
-providing userspace support like tpm-tools and trousers do for TPM1.2.
+PS. One related topic worth of discussing would be event log handover
+from boot loader to the OS. We need to find some defacto approach for
+it shared by different boot loaders as TCG hasn't standardized anything
+similar to TCPA for TPM2.
 
----------------------------------------------------------------------------=
----
+/Jarkko
+
+------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
-patterns at an interface-level. Reveals which users, apps, and protocols ar=
-e =
-
-consuming the most bandwidth. Provides multi-vendor support for NetFlow, =
-
-J-Flow, sFlow and other flows. Make informed decisions using capacity =
-
+patterns at an interface-level. Reveals which users, apps, and protocols are 
+consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
+J-Flow, sFlow and other flows. Make informed decisions using capacity 
 planning reports. http://sdm.link/zohodev2dev
