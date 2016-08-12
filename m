@@ -1,16 +1,16 @@
-From: Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [Linux-ima-devel] TPM microconf at Linux Plumbers
- Conference?
-Date: Fri, 12 Aug 2016 08:25:21 -0400
-Message-ID: <1471004721.4156.32.camel@linux.vnet.ibm.com>
-References: <20160606185712.GA10754@srcf.ucam.org>
-	<20160607131954.GB3855@intel.com> <20160809071030.GA5955@intel.com>
-	<20160812091434.GA23740@intel.com>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH v2 0/3] TPM2.0: Added eventlog support for
+ TPM2.0
+Date: Fri, 12 Aug 2016 18:02:00 +0530
+Message-ID: <57ADC1C0.4030406@linux.vnet.ibm.com>
+References: <1470771295-15680-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<20160810113243.GF13929@intel.com> <20160810171900.GA11543@intel.com>
+	<57AC5802.1090109@linux.vnet.ibm.com> <20160811125818.GA9303@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160812091434.GA23740-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20160811125818.GA9303-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,24 +20,49 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, trousers-users-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
 Hi Jarkko,
 
-On Fri, 2016-08-12 at 12:14 +0300, Jarkko Sakkinen wrote:
-> On Tue, Aug 09, 2016 at 10:10:30AM +0300, Jarkko Sakkinen wrote:
+My responses inline.
 
-> PS. One related topic worth of discussing would be event log handover
-> from boot loader to the OS. We need to find some defacto approach for
-> it shared by different boot loaders as TCG hasn't standardized anything
-> similar to TCPA for TPM2.
+On 08/11/2016 06:28 PM, Jarkko Sakkinen wrote:
+> On Thu, Aug 11, 2016 at 04:18:34PM +0530, Nayna wrote:
+>
+> [SNIP too much text out of context]
+>
+>> Jarrko, You also asked "
+>>>> BTW, how this can be tested?"
+>>
+>> <nayna> So, it can be tested with system having TPM2.0 version of tpm/vtpm
+>> and its firmware writing eventlog following TCG Spec for TPM2.0.
+>>
+>> Jarkko, Please let me know if it doesn't answer your question. </nayna>
+>
+> 1. EFI does not pass the log by any means AFAIK before a boot loader
+>     calls ExitBootServices().
 
-Is there a reference for "TCPA"?
+So, is current TCPA support only for TPM1.2 ?
 
-Thanks!
+#2, TCG Spec 
+http://www.trustedcomputinggroup.org/wp-content/uploads/EFI-Protocol-Specification-rev13-160330final.pdf 
+talks about
+EFI_TCG2_PROTOCOL.GetEventLog (Section 6.5), what is that supposed to do ?
 
-Mimi
+> 2. I do not have any system with TPM2 that uses DT. And as I stated
+>     before you didn't have any reference where you derived the DT
+>     node fields.
+
+As per Device Tree, so this is the new node introduced in the device 
+tree to support TPM. And the fields are defined maintaining the 
+requirements from ePAPR specification.
+>
+>> Thanks & Regards,
+>>     - Nayna
+>
+> /Jarkko
+>
 
 
 ------------------------------------------------------------------------------
