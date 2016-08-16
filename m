@@ -1,18 +1,18 @@
 From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v2 2/3] TPM2.0: TPM Device Tree
- Documentation
-Date: Tue, 16 Aug 2016 23:30:40 +0530
-Message-ID: <57B354C8.5040906@linux.vnet.ibm.com>
+Subject: Re: [PATCH v2 0/3] TPM2.0: Added eventlog support for
+ TPM2.0
+Date: Wed, 17 Aug 2016 00:46:40 +0530
+Message-ID: <57B36698.7040904@linux.vnet.ibm.com>
 References: <1470771295-15680-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1470771295-15680-3-git-send-email-nayna@linux.vnet.ibm.com>
-	<20160809221239.GB5535@obsidianresearch.com>
-	<57ADC2B5.3040903@linux.vnet.ibm.com>
-	<20160813024230.GA26929@obsidianresearch.com>
+	<20160810113243.GF13929@intel.com> <20160810171900.GA11543@intel.com>
+	<57AC5802.1090109@linux.vnet.ibm.com> <20160811125818.GA9303@intel.com>
+	<57ADC1C0.4030406@linux.vnet.ibm.com>
+	<20160815212612.GC25212@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160813024230.GA26929-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <20160815212612.GC25212-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,72 +21,58 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: David Heller <hellerda-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, George Wilson <gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi Jason,
+Hi Jarkko,
 
-Thanks for the review. Please find my responses inline.
 
-On 08/13/2016 08:12 AM, Jason Gunthorpe wrote:
-> On Fri, Aug 12, 2016 at 06:06:05PM +0530, Nayna wrote:
->>>   Documentation/devicetree/bindings/submitting-patches.txt
+
+On 08/16/2016 02:56 AM, Jarkko Sakkinen wrote:
+> On Fri, Aug 12, 2016 at 06:02:00PM +0530, Nayna wrote:
+>>>> Jarkko, Please let me know if it doesn't answer your question. </nayna>
 >>>
->>> And be sure to follow all the requirements, including CC'ing the
->>> right maintainers
->
->> Sure, will do. Can you tell me who all should I copy ?
->
-> That information is in the file
-
-Sure..
-
->
->>>> Changelog v2:
->>>>          * Added documentation in v2.
->>>
->>> Do not include these lines in commit messages, put them after the
->>> diff stat.
-Ok
-
+>>> 1. EFI does not pass the log by any means AFAIK before a boot loader
+>>>     calls ExitBootServices().
 >>
->> Actually I have not added Changelog during commit, I have put them in patch
->> before posting. However, will add them after diff next time.
+>> So, is current TCPA support only for TPM1.2 ?
 >
-> No diff, after the diffstat, before the deiff.
+> TCPA ACPI table is only available for TPM 1.2.
+>
+> TPM2 ACPI table does not provide a memory ref for the event log.
+>
+>> #2, TCG Spec http://www.trustedcomputinggroup.org/wp-content/uploads/EFI-Protocol-Specification-rev13-160330final.pdf
+>> talks about
+>> EFI_TCG2_PROTOCOL.GetEventLog (Section 6.5), what is that supposed to do ?
+>
+> Direct quote from your reference:
+>
+> "Boot Service Drivers are terminated when ExitBootServices() is called
+> and all memory resources consumed by the Boot Services Drivers are
+> released for use in the operating system environment."
 
-Ok.
+Thanks Jarkko, I understand now what you meant.
 >
->>>> +	phandle = <0x10000017>;
->>>> +	linux,phandle = <0x10000017>;
->>>
->>>   What are these?
+>>> 2. I do not have any system with TPM2 that uses DT. And as I stated
+>>>     before you didn't have any reference where you derived the DT
+>>>     node fields.
 >>
->> Sorry I didn't get your question here. I have written in the format as
->> suggested for device-tree documentation and looking at other device-nodes
->> documentation. And so this is an example entry as I saw in other docs.
+>> As per Device Tree, so this is the new node introduced in the device tree to
+>> support TPM. And the fields are defined maintaining the requirements from
+>> ePAPR specification.
 >
-> I mean the two phandle things
+> What is ePAPR specification? Can you provide a reference?
 
-Here is the description:
+PowerPC systems are based on device tree and derive that from ePAPR 
+specification, link below for ePAPR specification..
 
-phandle property:
+https://www.power.org/documentation/power-org-standard-for-embedded-power-architecture-platform-requirements-epapr-v1-1-2/
 
-The phandle property specifies a numerical identifier for a node that is 
-unique within the device tree. The phandle property value is used by 
-other nodes that need to refer to the node associated with the property.
-
-linux,phandle property:
-
-Older versions of device trees may be encountered that contain a 
-deprecated form of this property called linux,phandle. For 
-compatibility, a client program might want to support linux,phandle if a 
-phandle property is not present. The meaning and use of the two 
-properties is identical.
+I have also shared TPM2.0 device tree kernel documentation as Patch v2 2/3.
 
 >
-> Jason
+> /Jarkko
 >
 
 
