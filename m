@@ -1,20 +1,24 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Subject: Re: [PATCH v2 0/3] TPM2.0: Added eventlog support for
  TPM2.0
-Date: Thu, 18 Aug 2016 13:55:21 -0600
-Message-ID: <20160818195521.GC3676@obsidianresearch.com>
-References: <1470771295-15680-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<20160810113243.GF13929@intel.com>
-	<20160810171900.GA11543@intel.com>
+Date: Thu, 18 Aug 2016 13:59:00 -0600
+Message-ID: <20160818195900.GD3676@obsidianresearch.com>
+References: <20160810171900.GA11543@intel.com>
 	<57AC5802.1090109@linux.vnet.ibm.com>
-	<20160813025915.GC26929@obsidianresearch.com>
-	<57B2D429.8050508@linux.vnet.ibm.com>
+	<20160811125818.GA9303@intel.com>
+	<57ADC1C0.4030406@linux.vnet.ibm.com>
+	<20160815212612.GC25212@intel.com>
+	<57B36698.7040904@linux.vnet.ibm.com>
+	<20160816194853.GA26364@intel.com>
+	<20160817041502.GA8656@intel.com>
+	<57B3FD1B.9040606@linux.vnet.ibm.com>
+	<20160817080914.GA8384@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <57B2D429.8050508-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <20160817080914.GA8384-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,44 +27,29 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, George Wilson <gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, David Heller <hellerda-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Aug 16, 2016 at 02:21:53PM +0530, Nayna wrote:
+On Wed, Aug 17, 2016 at 11:09:14AM +0300, Jarkko Sakkinen wrote:
 
-> I tried the suggested approach and since ACPI specific functions won't be
-> available for arch using CONFIG_OF, so the compilation fails and vice versa
-> for CONFIG_ACPI..
-
-Right, you need to stub out the read_X function with an empty inline
-when not available.
-
-> Jason, for understanding.. can you explain the issue with existing design
-> for read_log, where arch specific read_log is compiled based on CONFIG
-> option.. And then, we can just change in Makefile.. where currently it is
-> like
+> 1. Does TCG have a standard for this I2C binding in a DT like they have
+>    for ACPI?
+> 2. Can I expect that the binding has the same fields with the same names
+>    in some other platform that POWER? For example, what if there was an
+>    ARM based platform. Would the same binding work there?
 > 
-> ifdef CONFIG_ACPI
->        tpm-y += tpm_acpi.o
-> else
-> ifdef CONFIG_OF
->        tpm-y += tpm_of.o
-> endif
-> endif
+> I'm looking for document or something where you got your information.
+> Right now your code is based on nothing from my point of view.
 
-The 'else' is the main issue
+There is no real standards body for device tree right now.
 
- 
-> this can be changed to
-> tpm-$(CONFIG_ACPI) += tpm_acpi.o
-> tpm-$(CONFIG_OF) += tpm_of.o
+Submitting a Docuemtation patch to the device tree maintainers is the
+best we have today, and we as the TPM community should review it to
+ensure it makes sense from our perspective.
 
-This is fine by me, *however* only if the .o files do not define
-overlapping symbols as they do today (eg tpm_acpi contains read_log_acpi)
-
-Use some small #ifdef logic in the header file to create the inline
-stub.
+Other DT platforms like ARM will use the bindings defined in
+Documentation/DeviceTree.
 
 Jason
 
