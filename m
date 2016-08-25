@@ -1,15 +1,22 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix a race condition
-	tpm2_unseal_trusted()
-Date: Thu, 25 Aug 2016 12:30:59 -0600
-Message-ID: <20160825183059.GB1142@obsidianresearch.com>
-References: <1472000243-7088-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH v2 0/3] TPM2.0: Added eventlog support for
+ TPM2.0
+Date: Fri, 26 Aug 2016 01:19:27 +0530
+Message-ID: <57BF4BC7.4020309@linux.vnet.ibm.com>
+References: <20160810171900.GA11543@intel.com>
+	<57AC5802.1090109@linux.vnet.ibm.com> <20160811125818.GA9303@intel.com>
+	<57ADC1C0.4030406@linux.vnet.ibm.com>
+	<20160815212612.GC25212@intel.com>
+	<57B36698.7040904@linux.vnet.ibm.com>
+	<20160816194853.GA26364@intel.com>
+	<20160817041502.GA8656@intel.com> <57B3FD1B.9040606@linux.vnet.ibm.com>
+	<20160817080914.GA8384@intel.com>
+	<20160818195900.GD3676@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1472000243-7088-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+In-Reply-To: <20160818195900.GD3676-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,40 +25,43 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: David Heller <hellerda-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, George Wilson <gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Aug 23, 2016 at 08:57:22PM -0400, Jarkko Sakkinen wrote:
 
-> +     if (flags & TPM_TRANSMIT_LOCK)
-> +             mutex_lock(&chip->tpm_mutex);
 
-I think I would invert this. UNLOCKED is the exceptional case, so I'd
-make the 0 flags lock. If we see UNLOCKED in the caller then we know
-to audit for locking, 0 is much less obvious.
+On 08/19/2016 01:29 AM, Jason Gunthorpe wrote:
+> On Wed, Aug 17, 2016 at 11:09:14AM +0300, Jarkko Sakkinen wrote:
+>
+>> 1. Does TCG have a standard for this I2C binding in a DT like they have
+>>     for ACPI?
+>> 2. Can I expect that the binding has the same fields with the same names
+>>     in some other platform that POWER? For example, what if there was an
+>>     ARM based platform. Would the same binding work there?
+>>
+>> I'm looking for document or something where you got your information.
+>> Right now your code is based on nothing from my point of view.
+>
+> There is no real standards body for device tree right now.
+>
+> Submitting a Docuemtation patch to the device tree maintainers is the
+> best we have today, and we as the TPM community should review it to
+> ensure it makes sense from our perspective.
+>
+> Other DT platforms like ARM will use the bindings defined in
+> Documentation/DeviceTree.
+>
+> Jason
 
-> @@ -576,7 +576,7 @@ static int tpm2_load(struct tpm_chip *chip,
->  		goto out;
->  	}
->  
-> -	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, "loading blob");
-> +	rc = __tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, "loading blob", 0);
+Thanks, Jarkko, for stating exactly what is required to review the 
+patch.  I will be providing the TPM Device Tree Documentation in my 
+patchset as per Jason's suggestion.  We'll also be updating the PAPR to 
+document the new node.
 
-All these points should accept a flags too and the caller should pass
-in the TPM_TRASNMIT_UNLOCKED if it needs it..
+Thanks & Regards,
+    - Nayna
+>
 
-> +	mutex_lock(&chip->tpm_mutex);
->  	rc = tpm2_load(chip, payload, options, &blob_handle);
->  	if (rc)
-
-So when we read here we see the pattern:
-
-> +	mutex_lock(&chip->tpm_mutex);
->  	rc = tpm2_load(chip, payload, options, &blob_handle, TPM_TRASNMIT_UNLOCKED);
-
-Which is much easier to audit..
-
-Jason
 
 ------------------------------------------------------------------------------
