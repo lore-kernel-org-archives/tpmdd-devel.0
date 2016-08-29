@@ -1,8 +1,8 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH v6] tpm: fix a race condition in
-	tpm2_unseal_trusted()
-Date: Tue, 30 Aug 2016 01:51:06 +0300
-Message-ID: <1472511066-20339-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH] tpm: fix sparse errors caused by tpm enum
+	tpm_capabilities
+Date: Tue, 30 Aug 2016 02:50:49 +0300
+Message-ID: <1472514650-28053-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
@@ -16,519 +16,307 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Unseal and load operations should be done as an atomic operation. This
-commit introduces unlocked tpm_transmit() so that tpm2_unseal_trusted()
-can do the locking by itself.
+The enum tpm_capabilites is not a legit constant expression but calls
+cpu_to_be32. This commit makes cap_id a separate parameter in order to
+provide less confusing API and declares the type as u32. The byter order
+conversion is handled internally by tpm1_getcap_cmd.
 
-v2: Introduced an unlocked unseal operation instead of changing locking
-    strategy in order to make less intrusive bug fix and thus more
-    backportable.
+$ make C=2  M=drivers/char/tpm
+  CHECK   drivers/char/tpm/tpm-interface.c
+drivers/char/tpm/tpm.h:285:24: error: bad constant expression
+drivers/char/tpm/tpm.h:286:24: error: bad constant expression
+drivers/char/tpm/tpm.h:287:27: error: bad constant expression
+drivers/char/tpm/tpm.h:288:27: error: bad constant expression
+drivers/char/tpm/tpm.h:292:28: error: bad constant expression
+drivers/char/tpm/tpm.h:293:37: error: bad constant expression
+drivers/char/tpm/tpm.h:294:29: error: bad constant expression
+drivers/char/tpm/tpm.h:295:28: error: bad constant expression
+drivers/char/tpm/tpm.h:296:30: error: bad constant expression
+drivers/char/tpm/tpm.h:297:36: error: bad constant expression
+drivers/char/tpm/tpm.h:298:37: error: bad constant expression
+drivers/char/tpm/tpm-interface.c:444:23: error: incompatible types for operation (==)
+drivers/char/tpm/tpm-interface.c:444:23:    left side has type unsigned int [unsigned] [usertype] subcap_id
+drivers/char/tpm/tpm-interface.c:444:23:    right side has type bad type
+drivers/char/tpm/tpm-interface.c:444:55: error: incompatible types for operation (==)
+drivers/char/tpm/tpm-interface.c:444:55:    left side has type unsigned int [unsigned] [usertype] subcap_id
+drivers/char/tpm/tpm-interface.c:444:55:    right side has type bad type
+drivers/char/tpm/tpm-interface.c:450:31: error: incompatible types for operation (==)
+drivers/char/tpm/tpm-interface.c:450:31:    left side has type unsigned int [unsigned] [usertype] subcap_id
+drivers/char/tpm/tpm-interface.c:450:31:    right side has type bad type
+drivers/char/tpm/tpm-interface.c:451:31: error: incompatible types for operation (==)
+drivers/char/tpm/tpm-interface.c:451:31:    left side has type unsigned int [unsigned] [usertype] subcap_id
+drivers/char/tpm/tpm-interface.c:451:31:    right side has type bad type
 
-v3: Have also separate __tpm_transmit() that takes 'flags' in order to
-    better localize the bug fix and make it easier to backport.
+After applying this fix:
 
-v4: Cleaned up the control flow in tpm2_unseal_trusted. Added the
-    missing 'Fixes' line.
+$ make C=2  M=drivers/char/tpm
+  CHECK   drivers/char/tpm/tpm-interface.c
+  drivers/char/tpm/tpm.h:292:28: error: bad constant expression
+  drivers/char/tpm/tpm.h:293:37: error: bad constant expression
+  drivers/char/tpm/tpm.h:294:29: error: bad constant expression
+  drivers/char/tpm/tpm.h:295:28: error: bad constant expression
+  drivers/char/tpm/tpm.h:296:30: error: bad constant expression
+  drivers/char/tpm/tpm.h:297:36: error: bad constant expression
+  drivers/char/tpm/tpm.h:298:37: error: bad constant expression
 
-v5: Previous versions did not set the enum to any value, so it was set
-    to zero. Changed enum to TPM_TRANSMIT_UNLOCKED because it is
-    guaranteed to catch such situation. With change the common case
-    adds so little clutter that the wrappers do not make sense anymore.
+The remaining errors are caused by tpm_sub_capabilities.
 
-v6: Added flags parameter to internal TPM command wrappers to have
-    an expected default behavior and documented them.
-
-Fixes: 0fe5480303a1 ("keys, trusted: seal/unseal with TPM 2.0 chips")
-CC: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm-dev.c       |   2 +-
- drivers/char/tpm/tpm-interface.c |  51 +++++++++++---------
- drivers/char/tpm/tpm-sysfs.c     |   2 +-
- drivers/char/tpm/tpm.h           |  12 +++--
- drivers/char/tpm/tpm2-cmd.c      | 101 +++++++++++++++++++++++++--------------
- 5 files changed, 103 insertions(+), 65 deletions(-)
+ drivers/char/tpm/tpm-interface.c | 56 +++++++++++++++++-----------------------
+ drivers/char/tpm/tpm-sysfs.c     | 36 ++++++++++++++------------
+ drivers/char/tpm/tpm.h           | 14 +++++-----
+ drivers/char/tpm/tpm_tis_core.c  |  3 ++-
+ 4 files changed, 53 insertions(+), 56 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm-dev.c b/drivers/char/tpm/tpm-dev.c
-index f5d4521..912ad30 100644
---- a/drivers/char/tpm/tpm-dev.c
-+++ b/drivers/char/tpm/tpm-dev.c
-@@ -145,7 +145,7 @@ static ssize_t tpm_write(struct file *file, const char __user *buf,
- 		return -EPIPE;
- 	}
- 	out_size = tpm_transmit(priv->chip, priv->data_buffer,
--				sizeof(priv->data_buffer));
-+				sizeof(priv->data_buffer), 0);
- 
- 	tpm_put_ops(priv->chip);
- 	if (out_size < 0) {
 diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 1abe2d7..aef20ee 100644
+index 3edf2e8..332c3b0 100644
 --- a/drivers/char/tpm/tpm-interface.c
 +++ b/drivers/char/tpm/tpm-interface.c
-@@ -330,8 +330,8 @@ EXPORT_SYMBOL_GPL(tpm_calc_ordinal_duration);
- /*
-  * Internal kernel interface to transmit TPM commands
-  */
--ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
--		     size_t bufsiz)
-+ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
-+		     unsigned int flags)
+@@ -434,34 +434,40 @@ static const struct tpm_input_header tpm_getcap_header = {
+ 	.ordinal = TPM_ORD_GET_CAP
+ };
+ 
+-ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
+-		   const char *desc)
++/**
++ * tpm1_getcap_cmd() - execute a TPM 1.x TPM_GetCapability command
++ * @chip: TPM chip to use
++ * @cap_id: capability
++ * @subcap_id: subcapability
++ * @desc: same as with tpm_transmit_cmd
++ *
++ * Return: same as with tpm_transmit_cmd
++ */
++ssize_t tpm1_getcap_cmd(struct tpm_chip *chip, u32 cap_id, u32 subcap_id,
++			cap_t *cap, const char *desc)
  {
- 	ssize_t rc;
- 	u32 count, ordinal;
-@@ -350,7 +350,8 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
- 		return -E2BIG;
- 	}
+ 	struct tpm_cmd_t tpm_cmd;
+ 	int rc;
  
--	mutex_lock(&chip->tpm_mutex);
-+	if (!(flags & TPM_TRANSMIT_UNLOCKED))
-+		mutex_lock(&chip->tpm_mutex);
- 
- 	rc = chip->ops->send(chip, (u8 *) buf, count);
- 	if (rc < 0) {
-@@ -393,20 +394,21 @@ out_recv:
- 		dev_err(&chip->dev,
- 			"tpm_transmit: tpm_recv: error %zd\n", rc);
- out:
--	mutex_unlock(&chip->tpm_mutex);
-+	if (!(flags & TPM_TRANSMIT_UNLOCKED))
-+		mutex_unlock(&chip->tpm_mutex);
- 	return rc;
- }
- 
- #define TPM_DIGEST_SIZE 20
- #define TPM_RET_CODE_IDX 6
- 
--ssize_t tpm_transmit_cmd(struct tpm_chip *chip, void *cmd,
--			 int len, const char *desc)
-+ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd,
-+			 int len, unsigned int flags, const char *desc)
- {
--	struct tpm_output_header *header;
-+	const struct tpm_output_header *header;
- 	int err;
- 
--	len = tpm_transmit(chip, (u8 *) cmd, len);
-+	len = tpm_transmit(chip, (const u8 *)cmd, len, flags);
- 	if (len <  0)
- 		return len;
- 	else if (len < TPM_HEADER_SIZE)
-@@ -453,7 +455,8 @@ ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
+ 	tpm_cmd.header.in = tpm_getcap_header;
+-	if (subcap_id == CAP_VERSION_1_1 || subcap_id == CAP_VERSION_1_2) {
+-		tpm_cmd.params.getcap_in.cap = subcap_id;
+-		/*subcap field not necessary */
++	if (cap_id == TPM1_CAP_VERSION_1_1 ||
++	    cap_id == TPM1_CAP_VERSION_1_2) {
++		tpm_cmd.params.getcap_in.cap = cpu_to_be32(cap_id);
++		/* subcap field not necessary */
+ 		tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(0);
+ 		tpm_cmd.header.in.length -= cpu_to_be32(sizeof(__be32));
+ 	} else {
+-		if (subcap_id == TPM_CAP_FLAG_PERM ||
+-		    subcap_id == TPM_CAP_FLAG_VOL)
+-			tpm_cmd.params.getcap_in.cap = TPM_CAP_FLAG;
+-		else
+-			tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
++		tpm_cmd.params.getcap_in.cap = cpu_to_be32(cap_id);
  		tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
  		tpm_cmd.params.getcap_in.subcap = subcap_id;
  	}
--	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, desc);
-+	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, 0,
-+			      desc);
- 	if (!rc)
+ 	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, 0,
+ 			      desc);
+-	if (!rc)
++	if (!rc && cap)
  		*cap = tpm_cmd.params.getcap_out.cap;
  	return rc;
-@@ -469,7 +472,7 @@ void tpm_gen_interrupt(struct tpm_chip *chip)
- 	tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
- 	tpm_cmd.params.getcap_in.subcap = TPM_CAP_PROP_TIS_TIMEOUT;
- 
--	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE,
-+	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, 0,
- 			      "attempting to determine the timeouts");
  }
- EXPORT_SYMBOL_GPL(tpm_gen_interrupt);
-@@ -490,7 +493,7 @@ static int tpm_startup(struct tpm_chip *chip, __be16 startup_type)
- 	start_cmd.header.in = tpm_startup_header;
+-EXPORT_SYMBOL_GPL(tpm_getcap);
++EXPORT_SYMBOL_GPL(tpm1_getcap_cmd);
  
- 	start_cmd.params.startup_in.startup_type = startup_type;
--	return tpm_transmit_cmd(chip, &start_cmd, TPM_INTERNAL_RESULT_SIZE,
-+	return tpm_transmit_cmd(chip, &start_cmd, TPM_INTERNAL_RESULT_SIZE, 0,
- 				"attempting to start the TPM");
- }
+ #define TPM_ORD_STARTUP cpu_to_be32(153)
+ #define TPM_ST_CLEAR cpu_to_be16(1)
+@@ -506,13 +512,8 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+ 		return 0;
+ 	}
  
-@@ -521,7 +524,8 @@ int tpm_get_timeouts(struct tpm_chip *chip)
- 	tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
- 	tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
- 	tpm_cmd.params.getcap_in.subcap = TPM_CAP_PROP_TIS_TIMEOUT;
--	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, NULL);
-+	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, 0,
-+			      NULL);
- 
+-	tpm_cmd.header.in = tpm_getcap_header;
+-	tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
+-	tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
+-	tpm_cmd.params.getcap_in.subcap = TPM_CAP_PROP_TIS_TIMEOUT;
+-	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, 0,
+-			      NULL);
+-
++	rc = tpm1_getcap_cmd(chip, TPM1_CAP_PROP, TPM_CAP_PROP_TIS_TIMEOUT,
++			     NULL, NULL);
  	if (rc == TPM_ERR_INVALID_POSTINIT) {
  		/* The TPM is not started, we are the first to talk to it.
-@@ -535,7 +539,7 @@ int tpm_get_timeouts(struct tpm_chip *chip)
- 		tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
- 		tpm_cmd.params.getcap_in.subcap = TPM_CAP_PROP_TIS_TIMEOUT;
- 		rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE,
--				  NULL);
-+				      0, NULL);
+ 		   Execute a startup command. */
+@@ -520,12 +521,8 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+ 		if (tpm_startup(chip, TPM_ST_CLEAR))
+ 			return rc;
+ 
+-		tpm_cmd.header.in = tpm_getcap_header;
+-		tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
+-		tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
+-		tpm_cmd.params.getcap_in.subcap = TPM_CAP_PROP_TIS_TIMEOUT;
+-		rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE,
+-				      0, NULL);
++		rc = tpm1_getcap_cmd(chip, TPM1_CAP_PROP,
++				     TPM_CAP_PROP_TIS_TIMEOUT, NULL, NULL);
  	}
  	if (rc) {
  		dev_err(&chip->dev,
-@@ -596,7 +600,7 @@ duration:
- 	tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
- 	tpm_cmd.params.getcap_in.subcap = TPM_CAP_PROP_TIS_DURATION;
+@@ -581,13 +578,8 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+ 	chip->timeout_d = usecs_to_jiffies(new_timeout[3]);
  
--	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE,
-+	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, 0,
- 			      "attempting to determine the durations");
+ duration:
+-	tpm_cmd.header.in = tpm_getcap_header;
+-	tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
+-	tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
+-	tpm_cmd.params.getcap_in.subcap = TPM_CAP_PROP_TIS_DURATION;
+-
+-	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, 0,
+-			      "attempting to determine the durations");
++	rc = tpm1_getcap_cmd(chip, TPM1_CAP_PROP, TPM_CAP_PROP_TIS_TIMEOUT,
++			     NULL, "attempting to determine the durations");
  	if (rc)
  		return rc;
-@@ -652,7 +656,7 @@ static int tpm_continue_selftest(struct tpm_chip *chip)
- 	struct tpm_cmd_t cmd;
- 
- 	cmd.header.in = continue_selftest_header;
--	rc = tpm_transmit_cmd(chip, &cmd, CONTINUE_SELFTEST_RESULT_SIZE,
-+	rc = tpm_transmit_cmd(chip, &cmd, CONTINUE_SELFTEST_RESULT_SIZE, 0,
- 			      "continue selftest");
- 	return rc;
- }
-@@ -672,7 +676,7 @@ int tpm_pcr_read_dev(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
- 
- 	cmd.header.in = pcrread_header;
- 	cmd.params.pcrread_in.pcr_idx = cpu_to_be32(pcr_idx);
--	rc = tpm_transmit_cmd(chip, &cmd, READ_PCR_RESULT_SIZE,
-+	rc = tpm_transmit_cmd(chip, &cmd, READ_PCR_RESULT_SIZE, 0,
- 			      "attempting to read a pcr value");
- 
- 	if (rc == 0)
-@@ -770,7 +774,7 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
- 	cmd.header.in = pcrextend_header;
- 	cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(pcr_idx);
- 	memcpy(cmd.params.pcrextend_in.hash, hash, TPM_DIGEST_SIZE);
--	rc = tpm_transmit_cmd(chip, &cmd, EXTEND_PCR_RESULT_SIZE,
-+	rc = tpm_transmit_cmd(chip, &cmd, EXTEND_PCR_RESULT_SIZE, 0,
- 			      "attempting extend a PCR value");
- 
- 	tpm_put_ops(chip);
-@@ -809,7 +813,7 @@ int tpm_do_selftest(struct tpm_chip *chip)
- 		/* Attempt to read a PCR value */
- 		cmd.header.in = pcrread_header;
- 		cmd.params.pcrread_in.pcr_idx = cpu_to_be32(0);
--		rc = tpm_transmit(chip, (u8 *) &cmd, READ_PCR_RESULT_SIZE);
-+		rc = tpm_transmit(chip, (u8 *) &cmd, READ_PCR_RESULT_SIZE, 0);
- 		/* Some buggy TPMs will not respond to tpm_tis_ready() for
- 		 * around 300ms while the self test is ongoing, keep trying
- 		 * until the self test duration expires. */
-@@ -879,7 +883,7 @@ int tpm_send(u32 chip_num, void *cmd, size_t buflen)
- 	if (chip == NULL)
- 		return -ENODEV;
- 
--	rc = tpm_transmit_cmd(chip, cmd, buflen, "attempting tpm_cmd");
-+	rc = tpm_transmit_cmd(chip, cmd, buflen, 0, "attempting tpm_cmd");
- 
- 	tpm_put_ops(chip);
- 	return rc;
-@@ -981,14 +985,15 @@ int tpm_pm_suspend(struct device *dev)
- 		cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(tpm_suspend_pcr);
- 		memcpy(cmd.params.pcrextend_in.hash, dummy_hash,
- 		       TPM_DIGEST_SIZE);
--		rc = tpm_transmit_cmd(chip, &cmd, EXTEND_PCR_RESULT_SIZE,
-+		rc = tpm_transmit_cmd(chip, &cmd, EXTEND_PCR_RESULT_SIZE, 0,
- 				      "extending dummy pcr before suspend");
- 	}
- 
- 	/* now do the actual savestate */
- 	for (try = 0; try < TPM_RETRY; try++) {
- 		cmd.header.in = savestate_header;
--		rc = tpm_transmit_cmd(chip, &cmd, SAVESTATE_RESULT_SIZE, NULL);
-+		rc = tpm_transmit_cmd(chip, &cmd, SAVESTATE_RESULT_SIZE, 0,
-+				      NULL);
- 
- 		/*
- 		 * If the TPM indicates that it is too busy to respond to
-@@ -1072,8 +1077,8 @@ int tpm_get_random(u32 chip_num, u8 *out, size_t max)
- 		tpm_cmd.params.getrandom_in.num_bytes = cpu_to_be32(num_bytes);
- 
- 		err = tpm_transmit_cmd(chip, &tpm_cmd,
--				   TPM_GETRANDOM_RESULT_SIZE + num_bytes,
--				   "attempting get random");
-+				       TPM_GETRANDOM_RESULT_SIZE + num_bytes,
-+				       0, "attempting get random");
- 		if (err)
- 			break;
  
 diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
-index b46cf70..e1f7236 100644
+index e1f7236..19b1e05 100644
 --- a/drivers/char/tpm/tpm-sysfs.c
 +++ b/drivers/char/tpm/tpm-sysfs.c
-@@ -39,7 +39,7 @@ static ssize_t pubek_show(struct device *dev, struct device_attribute *attr,
+@@ -94,8 +94,8 @@ static ssize_t pcrs_show(struct device *dev, struct device_attribute *attr,
+ 	char *str = buf;
  	struct tpm_chip *chip = to_tpm_chip(dev);
  
- 	tpm_cmd.header.in = tpm_readpubek_header;
--	err = tpm_transmit_cmd(chip, &tpm_cmd, READ_PUBEK_RESULT_SIZE,
-+	err = tpm_transmit_cmd(chip, &tpm_cmd, READ_PUBEK_RESULT_SIZE, 0,
- 			       "attempting to read the PUBEK");
- 	if (err)
- 		goto out;
+-	rc = tpm_getcap(chip, TPM_CAP_PROP_PCR, &cap,
+-			"attempting to determine the number of PCRS");
++	rc = tpm1_getcap_cmd(chip, TPM1_CAP_PROP, TPM_CAP_PROP_PCR, &cap,
++			     "attempting to determine the number of PCRS");
+ 	if (rc)
+ 		return 0;
+ 
+@@ -119,8 +119,9 @@ static ssize_t enabled_show(struct device *dev, struct device_attribute *attr,
+ 	cap_t cap;
+ 	ssize_t rc;
+ 
+-	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_FLAG_PERM, &cap,
+-			"attempting to determine the permanent enabled state");
++	rc = tpm1_getcap_cmd(to_tpm_chip(dev), TPM1_CAP_FLAG, TPM_CAP_FLAG_PERM,
++			     &cap,
++			     "attempting to determine the permanent enabled state");
+ 	if (rc)
+ 		return 0;
+ 
+@@ -135,8 +136,9 @@ static ssize_t active_show(struct device *dev, struct device_attribute *attr,
+ 	cap_t cap;
+ 	ssize_t rc;
+ 
+-	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_FLAG_PERM, &cap,
+-			"attempting to determine the permanent active state");
++	rc = tpm1_getcap_cmd(to_tpm_chip(dev), TPM1_CAP_FLAG, TPM_CAP_FLAG_PERM,
++			     &cap,
++			     "attempting to determine the permanent active state");
+ 	if (rc)
+ 		return 0;
+ 
+@@ -151,8 +153,9 @@ static ssize_t owned_show(struct device *dev, struct device_attribute *attr,
+ 	cap_t cap;
+ 	ssize_t rc;
+ 
+-	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_PROP_OWNER, &cap,
+-			"attempting to determine the owner state");
++	rc = tpm1_getcap_cmd(to_tpm_chip(dev), TPM1_CAP_PROP,
++			     TPM_CAP_PROP_OWNER, &cap,
++			     "attempting to determine the owner state");
+ 	if (rc)
+ 		return 0;
+ 
+@@ -167,8 +170,9 @@ static ssize_t temp_deactivated_show(struct device *dev,
+ 	cap_t cap;
+ 	ssize_t rc;
+ 
+-	rc = tpm_getcap(to_tpm_chip(dev), TPM_CAP_FLAG_VOL, &cap,
+-			"attempting to determine the temporary state");
++	rc = tpm1_getcap_cmd(to_tpm_chip(dev), TPM1_CAP_FLAG, TPM_CAP_FLAG_VOL,
++			     &cap,
++			     "attempting to determine the temporary state");
+ 	if (rc)
+ 		return 0;
+ 
+@@ -185,16 +189,16 @@ static ssize_t caps_show(struct device *dev, struct device_attribute *attr,
+ 	ssize_t rc;
+ 	char *str = buf;
+ 
+-	rc = tpm_getcap(chip, TPM_CAP_PROP_MANUFACTURER, &cap,
+-			"attempting to determine the manufacturer");
++	rc = tpm1_getcap_cmd(chip, TPM1_CAP_PROP, TPM_CAP_PROP_MANUFACTURER,
++			     &cap, "attempting to determine the manufacturer");
+ 	if (rc)
+ 		return 0;
+ 	str += sprintf(str, "Manufacturer: 0x%x\n",
+ 		       be32_to_cpu(cap.manufacturer_id));
+ 
+ 	/* Try to get a TPM version 1.2 TPM_CAP_VERSION_INFO */
+-	rc = tpm_getcap(chip, CAP_VERSION_1_2, &cap,
+-			"attempting to determine the 1.2 version");
++	rc = tpm1_getcap_cmd(chip, TPM1_CAP_VERSION_1_2, 0, &cap,
++			     "attempting to determine the 1.2 version");
+ 	if (!rc) {
+ 		str += sprintf(str,
+ 			       "TCG version: %d.%d\nFirmware version: %d.%d\n",
+@@ -204,8 +208,8 @@ static ssize_t caps_show(struct device *dev, struct device_attribute *attr,
+ 			       cap.tpm_version_1_2.revMinor);
+ 	} else {
+ 		/* Otherwise just use TPM_STRUCT_VER */
+-		rc = tpm_getcap(chip, CAP_VERSION_1_1, &cap,
+-				"attempting to determine the 1.1 version");
++		rc = tpm1_getcap_cmd(chip, TPM1_CAP_VERSION_1_1, 0, &cap,
++				     "attempting to determine the 1.1 version");
+ 		if (rc)
+ 			return 0;
+ 		str += sprintf(str,
 diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 3e32d5b..b0585e9 100644
+index 1d1361a..6a6241a 100644
 --- a/drivers/char/tpm/tpm.h
 +++ b/drivers/char/tpm/tpm.h
-@@ -476,12 +476,16 @@ extern dev_t tpm_devt;
- extern const struct file_operations tpm_fops;
- extern struct idr dev_nums_idr;
+@@ -281,11 +281,11 @@ typedef union {
+ 	struct duration_t duration;
+ } cap_t;
  
-+enum tpm_transmit_flags {
-+	TPM_TRANSMIT_UNLOCKED	= BIT(0),
-+};
-+
-+ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
-+		     unsigned int flags);
-+ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd, int len,
-+			 unsigned int flags, const char *desc);
- ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
- 		   const char *desc);
--ssize_t tpm_transmit(struct tpm_chip *chip, const char *buf,
--		     size_t bufsiz);
--ssize_t tpm_transmit_cmd(struct tpm_chip *chip, void *cmd, int len,
--			 const char *desc);
- extern int tpm_get_timeouts(struct tpm_chip *);
- extern void tpm_gen_interrupt(struct tpm_chip *);
+-enum tpm_capabilities {
+-	TPM_CAP_FLAG = cpu_to_be32(4),
+-	TPM_CAP_PROP = cpu_to_be32(5),
+-	CAP_VERSION_1_1 = cpu_to_be32(0x06),
+-	CAP_VERSION_1_2 = cpu_to_be32(0x1A)
++enum tpm1_capabilities {
++	TPM1_CAP_FLAG		= 0x04,
++	TPM1_CAP_PROP		= 0x05,
++	TPM1_CAP_VERSION_1_1	= 0x06,
++	TPM1_CAP_VERSION_1_2	= 0x1A,
+ };
+ 
+ enum tpm_sub_capabilities {
+@@ -484,8 +484,8 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
+ 		     unsigned int flags);
+ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd, int len,
+ 			 unsigned int flags, const char *desc);
+-ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
+-		   const char *desc);
++ssize_t tpm1_getcap_cmd(struct tpm_chip *chip, u32 cap_id, __be32 subcap_id,
++			cap_t *cap, const char *desc);
+ int tpm_get_timeouts(struct tpm_chip *chip);
  int tpm1_auto_startup(struct tpm_chip *chip);
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 08c7e23..6b58759 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -282,7 +282,7 @@ int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
- 	       sizeof(cmd.params.pcrread_in.pcr_select));
- 	cmd.params.pcrread_in.pcr_select[pcr_idx >> 3] = 1 << (pcr_idx & 0x7);
- 
--	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd),
-+	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0,
- 			      "attempting to read a pcr value");
- 	if (rc == 0) {
- 		buf = cmd.params.pcrread_out.digest;
-@@ -330,7 +330,7 @@ int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash)
- 	cmd.params.pcrextend_in.hash_alg = cpu_to_be16(TPM2_ALG_SHA1);
- 	memcpy(cmd.params.pcrextend_in.digest, hash, TPM_DIGEST_SIZE);
- 
--	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd),
-+	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0,
- 			      "attempting extend a PCR value");
- 
- 	return rc;
-@@ -376,7 +376,7 @@ int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max)
- 		cmd.header.in = tpm2_getrandom_header;
- 		cmd.params.getrandom_in.size = cpu_to_be16(num_bytes);
- 
--		err = tpm_transmit_cmd(chip, &cmd, sizeof(cmd),
-+		err = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0,
- 				       "attempting get random");
- 		if (err)
- 			break;
-@@ -434,12 +434,12 @@ static void tpm2_buf_append_auth(struct tpm_buf *buf, u32 session_handle,
+ int tpm_do_selftest(struct tpm_chip *chip);
+diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+index f22caf8..a110ad3 100644
+--- a/drivers/char/tpm/tpm_tis_core.c
++++ b/drivers/char/tpm/tpm_tis_core.c
+@@ -535,7 +535,8 @@ static int tpm_tis_gen_interrupt(struct tpm_chip *chip)
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+ 		return tpm2_get_tpm_pt(chip, 0x100, &cap2, desc);
+ 	else
+-		return tpm_getcap(chip, TPM_CAP_PROP_TIS_TIMEOUT, &cap, desc);
++		return tpm1_getcap_cmd(chip, TPM1_CAP_PROP,
++				       TPM_CAP_PROP_TIS_TIMEOUT, &cap, desc);
  }
  
- /**
-- * tpm2_seal_trusted() - seal a trusted key
-- * @chip_num: A specific chip number for the request or TPM_ANY_NUM
-- * @options: authentication values and other options
-+ * tpm2_seal_trusted() - seal the payload of a trusted key
-+ * @chip_num: chip number or TPM_ANY_NUM
-  * @payload: the key data in clear and encrypted form
-+ * @options: authentication values and other options
-  *
-- * Returns < 0 on error and 0 on success.
-+ * Return: < 0 on error and 0 on success.
-  */
- int tpm2_seal_trusted(struct tpm_chip *chip,
- 		      struct trusted_key_payload *payload,
-@@ -512,7 +512,7 @@ int tpm2_seal_trusted(struct tpm_chip *chip,
- 		goto out;
- 	}
- 
--	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, "sealing data");
-+	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 0, "sealing data");
- 	if (rc)
- 		goto out;
- 
-@@ -538,10 +538,18 @@ out:
- 	return rc;
- }
- 
--static int tpm2_load(struct tpm_chip *chip,
--		     struct trusted_key_payload *payload,
--		     struct trusted_key_options *options,
--		     u32 *blob_handle)
-+/**
-+ * tpm2_load_cmd() - execute a TPM2_Load command
-+ * @chip_num: chip number or TPM_ANY_NUM
-+ * @payload: the key data in clear and encrypted form
-+ * @options: authentication values and other options
-+ *
-+ * Return: same as with tpm_transmit_cmd
-+ */
-+static int tpm2_load_cmd(struct tpm_chip *chip,
-+			 struct trusted_key_payload *payload,
-+			 struct trusted_key_options *options,
-+			 u32 *blob_handle, unsigned int flags)
- {
- 	struct tpm_buf buf;
- 	unsigned int private_len;
-@@ -576,7 +584,7 @@ static int tpm2_load(struct tpm_chip *chip,
- 		goto out;
- 	}
- 
--	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, "loading blob");
-+	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, flags, "loading blob");
- 	if (!rc)
- 		*blob_handle = be32_to_cpup(
- 			(__be32 *) &buf.data[TPM_HEADER_SIZE]);
-@@ -590,7 +598,16 @@ out:
- 	return rc;
- }
- 
--static void tpm2_flush_context(struct tpm_chip *chip, u32 handle)
-+/**
-+ * tpm2_flush_context_cmd() - execute a TPM2_FlushContext command
-+ * @chip_num: chip number or TPM_ANY_NUM
-+ * @payload: the key data in clear and encrypted form
-+ * @options: authentication values and other options
-+ *
-+ * Return: same as with tpm_transmit_cmd
-+ */
-+static void tpm2_flush_context_cmd(struct tpm_chip *chip, u32 handle,
-+				   unsigned int flags)
- {
- 	struct tpm_buf buf;
- 	int rc;
-@@ -604,7 +621,8 @@ static void tpm2_flush_context(struct tpm_chip *chip, u32 handle)
- 
- 	tpm_buf_append_u32(&buf, handle);
- 
--	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, "flushing context");
-+	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, flags,
-+			      "flushing context");
- 	if (rc)
- 		dev_warn(&chip->dev, "0x%08x was not flushed, rc=%d\n", handle,
- 			 rc);
-@@ -612,10 +630,18 @@ static void tpm2_flush_context(struct tpm_chip *chip, u32 handle)
- 	tpm_buf_destroy(&buf);
- }
- 
--static int tpm2_unseal(struct tpm_chip *chip,
--		       struct trusted_key_payload *payload,
--		       struct trusted_key_options *options,
--		       u32 blob_handle)
-+/**
-+ * tpm2_unseal_cmd() - execute a TPM2_Unload command
-+ * @chip_num: chip number or TPM_ANY_NUM
-+ * @payload: the key data in clear and encrypted form
-+ * @options: authentication values and other options
-+ *
-+ * Return: same as with tpm_transmit_cmd
-+ */
-+static int tpm2_unseal_cmd(struct tpm_chip *chip,
-+			   struct trusted_key_payload *payload,
-+			   struct trusted_key_options *options,
-+			   u32 blob_handle, unsigned int flags)
- {
- 	struct tpm_buf buf;
- 	u16 data_len;
-@@ -635,7 +661,7 @@ static int tpm2_unseal(struct tpm_chip *chip,
- 			     options->blobauth /* hmac */,
- 			     TPM_DIGEST_SIZE);
- 
--	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, "unsealing");
-+	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, flags, "unsealing");
- 	if (rc > 0)
- 		rc = -EPERM;
- 
-@@ -654,12 +680,12 @@ static int tpm2_unseal(struct tpm_chip *chip,
- }
- 
- /**
-- * tpm_unseal_trusted() - unseal a trusted key
-- * @chip_num: A specific chip number for the request or TPM_ANY_NUM
-- * @options: authentication values and other options
-+ * tpm_unseal_trusted() - unseal the payload of a trusted key
-+ * @chip_num: chip number or TPM_ANY_NUM
-  * @payload: the key data in clear and encrypted form
-+ * @options: authentication values and other options
-  *
-- * Returns < 0 on error and 0 on success.
-+ * Return: < 0 on error and 0 on success.
-  */
- int tpm2_unseal_trusted(struct tpm_chip *chip,
- 			struct trusted_key_payload *payload,
-@@ -668,14 +694,17 @@ int tpm2_unseal_trusted(struct tpm_chip *chip,
- 	u32 blob_handle;
- 	int rc;
- 
--	rc = tpm2_load(chip, payload, options, &blob_handle);
-+	mutex_lock(&chip->tpm_mutex);
-+	rc = tpm2_load_cmd(chip, payload, options, &blob_handle,
-+			   TPM_TRANSMIT_UNLOCKED);
- 	if (rc)
--		return rc;
--
--	rc = tpm2_unseal(chip, payload, options, blob_handle);
--
--	tpm2_flush_context(chip, blob_handle);
-+		goto out;
- 
-+	rc = tpm2_unseal_cmd(chip, payload, options, blob_handle,
-+			     TPM_TRANSMIT_UNLOCKED);
-+	tpm2_flush_context_cmd(chip, blob_handle, TPM_TRANSMIT_UNLOCKED);
-+out:
-+	mutex_unlock(&chip->tpm_mutex);
- 	return rc;
- }
- 
-@@ -701,7 +730,7 @@ ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,  u32 *value,
- 	cmd.params.get_tpm_pt_in.property_id = cpu_to_be32(property_id);
- 	cmd.params.get_tpm_pt_in.property_cnt = cpu_to_be32(1);
- 
--	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), desc);
-+	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0, desc);
- 	if (!rc)
- 		*value = be32_to_cpu(cmd.params.get_tpm_pt_out.value);
- 
-@@ -735,7 +764,7 @@ static int tpm2_startup(struct tpm_chip *chip, u16 startup_type)
- 	cmd.header.in = tpm2_startup_header;
- 
- 	cmd.params.startup_in.startup_type = cpu_to_be16(startup_type);
--	return tpm_transmit_cmd(chip, &cmd, sizeof(cmd),
-+	return tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0,
- 				"attempting to start the TPM");
- }
- 
-@@ -763,7 +792,7 @@ void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type)
- 	cmd.header.in = tpm2_shutdown_header;
- 	cmd.params.startup_in.startup_type = cpu_to_be16(shutdown_type);
- 
--	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), "stopping the TPM");
-+	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0, "stopping the TPM");
- 
- 	/* In places where shutdown command is sent there's no much we can do
- 	 * except print the error code on a system failure.
-@@ -828,7 +857,7 @@ static int tpm2_start_selftest(struct tpm_chip *chip, bool full)
- 	cmd.header.in = tpm2_selftest_header;
- 	cmd.params.selftest_in.full_test = full;
- 
--	rc = tpm_transmit_cmd(chip, &cmd, TPM2_SELF_TEST_IN_SIZE,
-+	rc = tpm_transmit_cmd(chip, &cmd, TPM2_SELF_TEST_IN_SIZE, 0,
- 			      "continue selftest");
- 
- 	/* At least some prototype chips seem to give RC_TESTING error
-@@ -880,7 +909,7 @@ static int tpm2_do_selftest(struct tpm_chip *chip)
- 		cmd.params.pcrread_in.pcr_select[1] = 0x00;
- 		cmd.params.pcrread_in.pcr_select[2] = 0x00;
- 
--		rc = tpm_transmit_cmd(chip, (u8 *) &cmd, sizeof(cmd), NULL);
-+		rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0, NULL);
- 		if (rc < 0)
- 			break;
- 
-@@ -928,7 +957,7 @@ int tpm2_probe(struct tpm_chip *chip)
- 	cmd.params.get_tpm_pt_in.property_id = cpu_to_be32(0x100);
- 	cmd.params.get_tpm_pt_in.property_cnt = cpu_to_be32(1);
- 
--	rc = tpm_transmit(chip, (const char *) &cmd, sizeof(cmd));
-+	rc = tpm_transmit(chip, (const u8 *)&cmd, sizeof(cmd), 0);
- 	if (rc <  0)
- 		return rc;
- 	else if (rc < TPM_HEADER_SIZE)
+ /* Register the IRQ and issue a command that will cause an interrupt. If an
 -- 
 2.7.4
 
