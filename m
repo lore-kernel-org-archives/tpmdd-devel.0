@@ -1,46 +1,59 @@
-From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH 2/2] TPM2.0:Adds securityfs support for
-	TPM2.0 eventlog
-Date: Mon, 29 Aug 2016 08:52:59 -0400
-Message-ID: <nq1b79$kkn$1@blaine.gmane.org>
-References: <1469774679-25232-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1469774679-25232-3-git-send-email-nayna@linux.vnet.ibm.com>
-	<20160729171428.GB6331@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH] tpm: fix a race condition in tpm2_unseal_trusted()
+Date: Mon, 29 Aug 2016 18:25:21 +0300
+Message-ID: <20160829152520.GA9063@intel.com>
+References: <1472366212-8571-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+ <20160828185149.GF12783@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160729171428.GB6331-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <stable-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20160828185149.GF12783@obsidianresearch.com>
+Sender: stable-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, linux-security-module@vger.kernel.org, stable@vger.kernel.org, Marcel Selhorst <tpmdd@selhorst.net>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 7/29/2016 1:14 PM, Jason Gunthorpe wrote:
->
-> The bios log is defined to be host endian?
->
-> Please reference the standard in a comment that these structs are
-> coming from.
+On Sun, Aug 28, 2016 at 12:51:49PM -0600, Jason Gunthorpe wrote:
+> On Sun, Aug 28, 2016 at 08:36:52AM +0200, Jarkko Sakkinen wrote:
+> >  
+> > @@ -576,7 +576,8 @@ static int tpm2_load(struct tpm_chip *chip,
+> >  		goto out;
+> >  	}
+> >  
+> > -	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, "loading blob");
+> > +	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, TPM_TRANSMIT_UNLOCKED,
+> > +			      "loading blob");
+> 
+> I still don't like this, required mutex's should not be split outside the
+> function that needs them without more a more obvious indication:
+> 
+> > +	mutex_lock(&chip->tpm_mutex);
+> >  	rc = tpm2_load(chip, payload, options, &blob_handle);
+> >  	if (rc)
+> > -		return rc;
+> 
+> I recommend you stick with the idiom and do this:
+> 
+>         mutex_lock(&chip->tpm_mutex);
+>   	rc = tpm2_load(chip, payload, options, &blob_handle, TPM_TRANSMIT_UNLOCKED);
+> 
+> Which makes it easy to see we are doing it right everywhere.
 
-The BIOS log is little endian.  That is, all multi-byte values are 
-little endian.  Examples are the pcrIndex, eventType, and eventSize,
-as well as the digest count and hashAlg.
+Why consume stack for unnecessary stuff? This is a static function. For
+me this sounds like cutting hairs really.
 
- From the "TCG PC Client Platform Firmware Profile Specification"
+One thing that would improve readability would be to rename internal
+functions tpm2_load and tpm2_unseal to tpm2_load_cmd and tpm2_unseal_cmd
+in order to underline that they are command wrappers and not to mix with
+tpm2_unseal_trusted().
 
-1.7	Specification Conventions
+I've been thinking to move that kind of convetion at least with TPM2
+specific stuff when a function is clearly a wrapper. It kind of
+documents the call path. I.e. if function satifies a constraint that
+it prepares a command blob, calls tpm_transmit_cmd once and then
+returns results to the caller this would be the naming convention.
 
-1.	All constants and data SHALL be represented as Little Endian format 
-unless otherwise explicitly stated.
+> Jason
 
-
-
-
-------------------------------------------------------------------------------
+/Jarkko
