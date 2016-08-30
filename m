@@ -1,80 +1,58 @@
-From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v2 0/3] TPM2.0: Added eventlog support for
- TPM2.0
-Date: Tue, 30 Aug 2016 10:31:57 +0530
-Message-ID: <57C51345.5080103@linux.vnet.ibm.com>
-References: <1470771295-15680-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<20160810113243.GF13929@intel.com> <20160810171900.GA11543@intel.com>
-	<57AC5802.1090109@linux.vnet.ibm.com>
-	<20160813025915.GC26929@obsidianresearch.com>
-	<57B2D429.8050508@linux.vnet.ibm.com>
-	<20160818195521.GC3676@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH] tpm: fix invalid constant expressions in tpm.h
+Date: Tue, 30 Aug 2016 09:31:03 +0300
+Message-ID: <20160830063103.GA4352@intel.com>
+References: <1472520498-24173-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+ <20160830034536.GA29261@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160818195521.GC3676-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20160830034536.GA29261@obsidianresearch.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Mon, Aug 29, 2016 at 09:45:36PM -0600, Jason Gunthorpe wrote:
+> On Tue, Aug 30, 2016 at 04:28:17AM +0300, Jarkko Sakkinen wrote:
+> > The enums tpm_capabilities and tpm_sub_capabilities do not contain legit
+> > constant expressions. This commit makes cap_id a separate parameter
+> > in
+> 
+> I wonder if this is a bug in sparse? the macro uses gcc magic to
+> expand to a constexpr.
+> 
+> You could also use __constant_cpu_to_be32 and similar instead.
+> 
+> But I admit I never liked the use of no-host endian in the constants..
+
+It's too much magic for me, be it way or another :)
 
 
-On 08/19/2016 01:25 AM, Jason Gunthorpe wrote:
-> On Tue, Aug 16, 2016 at 02:21:53PM +0530, Nayna wrote:
->
->> I tried the suggested approach and since ACPI specific functions won't be
->> available for arch using CONFIG_OF, so the compilation fails and vice versa
->> for CONFIG_ACPI..
->
-> Right, you need to stub out the read_X function with an empty inline
-> when not available.
-Ok
+> >  #define TPM_ORD_STARTUP cpu_to_be32(153)
+> >  #define TPM_ST_CLEAR cpu_to_be16(1)
+> 
+> Would be nice to see these fixed into an enum someday too
 
->
->> Jason, for understanding.. can you explain the issue with existing design
->> for read_log, where arch specific read_log is compiled based on CONFIG
->> option.. And then, we can just change in Makefile.. where currently it is
->> like
->>
->> ifdef CONFIG_ACPI
->>         tpm-y += tpm_acpi.o
->> else
->> ifdef CONFIG_OF
->>         tpm-y += tpm_of.o
->> endif
->> endif
->
-> The 'else' is the main issue
-Ok
->
->
->> this can be changed to
->> tpm-$(CONFIG_ACPI) += tpm_acpi.o
->> tpm-$(CONFIG_OF) += tpm_of.o
->
-> This is fine by me, *however* only if the .o files do not define
-> overlapping symbols as they do today (eg tpm_acpi contains read_log_acpi)
->
-> Use some small #ifdef logic in the header file to create the inline
-> stub.
+(putting note into my backlog text file)
 
-Sure, my latest posted PATCH v3 4/7 does the fix as suggested here.
+> > +enum tpm1_capabilities {
+> > +	TPM1_CAP_FLAG		= 0x04,
+> > +	TPM1_CAP_PROP		= 0x05,
+> > +	TPM1_CAP_VERSION_1_1	= 0x06,
+> > +	TPM1_CAP_VERSION_1_2	= 0x1A,
+> 
+> I usually discourage the extra horizontal whitespace, just causes patch churn to
+> keep it up (and clang-format won't do it automatically). Not sure if
+> there is a consensus on that though.
+> 
+> But looks fine to me.
+> 
+> Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 
-Thanks & Regards,
-   - Nayna
+Thanks!
 
->
 > Jason
->
 
-
-------------------------------------------------------------------------------
+/Jarkko
