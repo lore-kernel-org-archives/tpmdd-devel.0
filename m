@@ -1,16 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3 1/7] tpm: Define a generic open()
- method for ascii & bios measurements.
-Date: Tue, 30 Aug 2016 10:49:19 +0300
-Message-ID: <20160830074858.GA5490@intel.com>
+Subject: Re: [PATCH v3 2/7] tpm: Replace the dynamically
+ allocated bios_dir as struct dentry array.
+Date: Tue, 30 Aug 2016 11:05:07 +0300
+Message-ID: <20160830080507.GB5490@intel.com>
 References: <1472532619-22170-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1472532619-22170-2-git-send-email-nayna@linux.vnet.ibm.com>
+	<1472532619-22170-3-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1472532619-22170-2-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1472532619-22170-3-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,133 +23,187 @@ To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Aug 30, 2016 at 12:50:13AM -0400, Nayna Jain wrote:
-> Open methods for eventlog ascii and binary bios measurements file
-> operations are very similar. This patch refactors the code into
-> single open() call by passing seq_operations as i_node->private data.
+On Tue, Aug 30, 2016 at 12:50:14AM -0400, Nayna Jain wrote:
+> bios_dir is defined as struct dentry **bios_dir, which results in
+> dynamic allocation and possible memory leak. This patch replaces
+> it with struct dentry array i.e. struct dentry *bios_dir[3]
+> similar to what is done for sysfs groups.
 > 
 > Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 > Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 > ---
->  drivers/char/tpm/tpm_eventlog.c | 59 +++++++++--------------------------------
->  1 file changed, 13 insertions(+), 46 deletions(-)
+>  drivers/char/tpm/tpm-chip.c     |  5 ++--
+>  drivers/char/tpm/tpm.h          |  3 ++-
+>  drivers/char/tpm/tpm_eventlog.c | 60 ++++++++++++++++++-----------------------
+>  drivers/char/tpm/tpm_eventlog.h | 10 +++----
+>  4 files changed, 35 insertions(+), 43 deletions(-)
 > 
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index e595013..1cd1238 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -283,7 +283,7 @@ static int tpm1_chip_register(struct tpm_chip *chip)
+>  
+>  	tpm_sysfs_add_device(chip);
+>  
+> -	chip->bios_dir = tpm_bios_log_setup(dev_name(&chip->dev));
+> +	tpm_bios_log_setup(chip);
+>  
+>  	return 0;
+>  }
+> @@ -293,8 +293,7 @@ static void tpm1_chip_unregister(struct tpm_chip *chip)
+>  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+>  		return;
+>  
+> -	if (chip->bios_dir)
+> -		tpm_bios_log_teardown(chip->bios_dir);
+> +	tpm_bios_log_teardown(chip);
+>  }
+>  
+>  static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 6e002c4..603a661 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -171,7 +171,8 @@ struct tpm_chip {
+>  	unsigned long duration[3]; /* jiffies */
+>  	bool duration_adjusted;
+>  
+> -	struct dentry **bios_dir;
+> +	struct dentry *bios_dir[3];
+> +	unsigned int bios_dir_count;
+
+
+Do this without bios_dir_count with a four element array. Last idex is
+the NULL terminator.
+
+>  	const struct attribute_group *groups[3];
+>  	unsigned int groups_cnt;
 > diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-> index e722886..b0a4d02 100644
+> index b0a4d02..9dd69a7 100644
 > --- a/drivers/char/tpm/tpm_eventlog.c
 > +++ b/drivers/char/tpm/tpm_eventlog.c
-> @@ -7,6 +7,7 @@
->   *	Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
->   *	Reiner Sailer <sailer-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
->   *	Kylene Hall <kjhall-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-> + *	Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
->   *
->   * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
->   *
-> @@ -318,12 +319,14 @@ static const struct seq_operations tpm_binary_b_measurments_seqops = {
->  	.show = tpm_binary_bios_measurements_show,
->  };
->  
-> -static int tpm_ascii_bios_measurements_open(struct inode *inode,
-> +static int tpm_bios_measurements_open(struct inode *inode,
->  					    struct file *file)
->  {
->  	int err;
->  	struct tpm_bios_log *log;
->  	struct seq_file *seq;
-> +	const struct seq_operations *seqops =
-> +	(const struct seq_operations *)inode->i_private;
-
-Indentation missing.
-
->  
->  	log = kzalloc(sizeof(struct tpm_bios_log), GFP_KERNEL);
+> @@ -332,7 +332,8 @@ static int tpm_bios_measurements_open(struct inode *inode,
 >  	if (!log)
-> @@ -333,7 +336,7 @@ static int tpm_ascii_bios_measurements_open(struct inode *inode,
+>  		return -ENOMEM;
+>  
+> -	if ((err = read_log(log)))
+> +	err = read_log(log);
+> +	if (err)
 >  		goto out_free;
 >  
 >  	/* now register seq file */
-> -	err = seq_open(file, &tpm_ascii_b_measurments_seqops);
-> +	err = seq_open(file, seqops);
->  	if (!err) {
->  		seq = file->private_data;
->  		seq->private = log;
-> @@ -349,46 +352,8 @@ out_free:
->  	goto out;
+> @@ -368,54 +369,45 @@ static int is_bad(void *p)
+>  	return 0;
 >  }
 >  
-> -static const struct file_operations tpm_ascii_bios_measurements_ops = {
-> -	.open = tpm_ascii_bios_measurements_open,
-> -	.read = seq_read,
-> -	.llseek = seq_lseek,
-> -	.release = tpm_bios_measurements_release,
-> -};
-> -
-> -static int tpm_binary_bios_measurements_open(struct inode *inode,
-> -					     struct file *file)
-> -{
-> -	int err;
-> -	struct tpm_bios_log *log;
-> -	struct seq_file *seq;
-> -
-> -	log = kzalloc(sizeof(struct tpm_bios_log), GFP_KERNEL);
-> -	if (!log)
-> -		return -ENOMEM;
-> -
-> -	if ((err = read_log(log)))
-> -		goto out_free;
-> -
-> -	/* now register seq file */
-> -	err = seq_open(file, &tpm_binary_b_measurments_seqops);
-> -	if (!err) {
-> -		seq = file->private_data;
-> -		seq->private = log;
-> -	} else {
-> -		goto out_free;
-> -	}
-> -
-> -out:
-> -	return err;
-> -out_free:
-> -	kfree(log->bios_event_log);
-> -	kfree(log);
-> -	goto out;
-> -}
-> -
-> -static const struct file_operations tpm_binary_bios_measurements_ops = {
-> -	.open = tpm_binary_bios_measurements_open,
-> +static const struct file_operations tpm_bios_measurements_ops = {
-> +	.open = tpm_bios_measurements_open,
->  	.read = seq_read,
->  	.llseek = seq_lseek,
->  	.release = tpm_bios_measurements_release,
-> @@ -413,15 +378,17 @@ struct dentry **tpm_bios_log_setup(const char *name)
+> -struct dentry **tpm_bios_log_setup(const char *name)
+> +void tpm_bios_log_setup(struct tpm_chip *chip)
+>  {
+> -	struct dentry **ret = NULL, *tpm_dir, *bin_file, *ascii_file;
+> +	const char *name = dev_name(&chip->dev);
 >  
->  	bin_file =
+> -	tpm_dir = securityfs_create_dir(name, NULL);
+> -	if (is_bad(tpm_dir))
+> -		goto out;
+> +	chip->bios_dir_count = 0;
+> +	chip->bios_dir[chip->bios_dir_count] = securityfs_create_dir(name,
+> +	NULL);
+> +	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
+> +		goto err;
+> +	chip->bios_dir_count++;
+>  
+> -	bin_file =
+> +	chip->bios_dir[chip->bios_dir_count] =
 >  	    securityfs_create_file("binary_bios_measurements",
-> -				   S_IRUSR | S_IRGRP, tpm_dir, NULL,
-> -				   &tpm_binary_bios_measurements_ops);
-> +				   S_IRUSR | S_IRGRP, tpm_dir,
-> +				   (void *)&tpm_binary_b_measurments_seqops,
-> +				   &tpm_bios_measurements_ops);
->  	if (is_bad(bin_file))
->  		goto out_tpm;
+> -				   S_IRUSR | S_IRGRP, tpm_dir,
+> +				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
+>  				   (void *)&tpm_binary_b_measurments_seqops,
+>  				   &tpm_bios_measurements_ops);
+> -	if (is_bad(bin_file))
+> -		goto out_tpm;
+> +	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
+> +		goto err;
+> +	chip->bios_dir_count++;
 >  
->  	ascii_file =
+> -	ascii_file =
+> +	chip->bios_dir[chip->bios_dir_count] =
 >  	    securityfs_create_file("ascii_bios_measurements",
-> -				   S_IRUSR | S_IRGRP, tpm_dir, NULL,
-> -				   &tpm_ascii_bios_measurements_ops);
-> +				   S_IRUSR | S_IRGRP, tpm_dir,
-> +				   (void *)&tpm_ascii_b_measurments_seqops,
-> +				   &tpm_bios_measurements_ops);
->  	if (is_bad(ascii_file))
->  		goto out_bin;
-
-Otherwise fine.
-
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-
+> -				   S_IRUSR | S_IRGRP, tpm_dir,
+> +				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
+>  				   (void *)&tpm_ascii_b_measurments_seqops,
+>  				   &tpm_bios_measurements_ops);
+> -	if (is_bad(ascii_file))
+> -		goto out_bin;
+> +	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
+> +		goto err;
+> +	chip->bios_dir_count++;
 >  
+> -	ret = kmalloc(3 * sizeof(struct dentry *), GFP_KERNEL);
+> -	if (!ret)
+> -		goto out_ascii;
+> +	return;
+>  
+> -	ret[0] = ascii_file;
+> -	ret[1] = bin_file;
+> -	ret[2] = tpm_dir;
+> -
+> -	return ret;
+> -
+> -out_ascii:
+> -	securityfs_remove(ascii_file);
+> -out_bin:
+> -	securityfs_remove(bin_file);
+> -out_tpm:
+> -	securityfs_remove(tpm_dir);
+> -out:
+> -	return NULL;
+> +err:
+> +	tpm_bios_log_teardown(chip);
+>  }
+>  
+> -void tpm_bios_log_teardown(struct dentry **lst)
+> +void tpm_bios_log_teardown(struct tpm_chip *chip)
+>  {
+>  	int i;
+>  
+> -	for (i = 0; i < 3; i++)
+> -		securityfs_remove(lst[i]);
+> +	for (i = chip->bios_dir_count; i > 0; --i)
+> +		securityfs_remove(chip->bios_dir[i-1]);
+
+Are you doing this to somehow "optimize"? If the answer is yes, please
+don't do it. Just loop from zero.
+
+Anyway with NULL terminated array:
+
+for (i = 0; chip->bios_dir[i] != NULL; i++)
+
+>  }
+> diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
+> index 8de62b0..67621c9 100644
+> --- a/drivers/char/tpm/tpm_eventlog.h
+> +++ b/drivers/char/tpm/tpm_eventlog.h
+> @@ -77,14 +77,14 @@ int read_log(struct tpm_bios_log *log);
+>  
+>  #if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
+>  	defined(CONFIG_ACPI)
+> -extern struct dentry **tpm_bios_log_setup(const char *);
+> -extern void tpm_bios_log_teardown(struct dentry **);
+> +extern void tpm_bios_log_setup(struct tpm_chip *chip);
+> +extern void tpm_bios_log_teardown(struct tpm_chip *chip);
+>  #else
+> -static inline struct dentry **tpm_bios_log_setup(const char *name)
+> +static inline void tpm_bios_log_setup(struct tpm_chip *chip)
+>  {
+> -	return NULL;
+> +	chip->bios_dir_count = 0;
+>  }
+> -static inline void tpm_bios_log_teardown(struct dentry **dir)
+> +static inline void tpm_bios_log_teardown(struct tpm_chip *chip)
+>  {
+>  }
+>  #endif
 > -- 
 > 2.5.0
 > 
