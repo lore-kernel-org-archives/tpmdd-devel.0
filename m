@@ -1,58 +1,62 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix invalid constant expressions in
-	tpm.h
-Date: Mon, 29 Aug 2016 21:45:36 -0600
-Message-ID: <20160830034536.GA29261@obsidianresearch.com>
-References: <1472520498-24173-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1472520498-24173-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH] Documentation: tpm: Adds the TPM device tree node documentation
+Date: Tue, 30 Aug 2016 00:44:37 -0400
+Message-ID: <1472532277-21933-1-git-send-email-nayna@linux.vnet.ibm.com>
+Return-path: <devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Sender: devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org, robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org, pawel.moll-5wv7dgnIgG8@public.gmane.org, mark.rutland-5wv7dgnIgG8@public.gmane.org, ijc+devicetree-KcIKpvwj1kUDXYZnReoRVg@public.gmane.org, galak-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org, linux-i2c-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, hellerda-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org, ltcgcw-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Aug 30, 2016 at 04:28:17AM +0300, Jarkko Sakkinen wrote:
-> The enums tpm_capabilities and tpm_sub_capabilities do not contain legit
-> constant expressions. This commit makes cap_id a separate parameter
-> in
+This is documenting device tree binding for
+I2C based TPM, similar concept which being used
+for virtual TPM on POWER7 and POWER8 systems running PowerVM.
 
-I wonder if this is a bug in sparse? the macro uses gcc magic to
-expand to a constexpr.
+Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+---
+ Documentation/devicetree/bindings/i2c/i2c-tpm.txt | 29 +++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
+ create mode 100644 Documentation/devicetree/bindings/i2c/i2c-tpm.txt
 
-You could also use __constant_cpu_to_be32 and similar instead.
+diff --git a/Documentation/devicetree/bindings/i2c/i2c-tpm.txt b/Documentation/devicetree/bindings/i2c/i2c-tpm.txt
+new file mode 100644
+index 0000000..8fdee14
+--- /dev/null
++++ b/Documentation/devicetree/bindings/i2c/i2c-tpm.txt
+@@ -0,0 +1,29 @@
++Device Tree Bindings for I2C based Trusted Platform Module(TPM)
++---------------------------------------------------------------
++
++This node describes a TPM device connected to Processor on i2c bus.
++
++Required properties:
++
++- compatible : 'manufacturer,model'
++- label : represents device type
++- linux,sml-base : base address of the Event Log. It is a physical address.
++		   sml stands for shared memory log.
++- linux,sml-size : size of the memory allocated for the Event Log.
++
++Optional properties:
++
++- status: indicates whether the device is enabled or disabled. "okay" for
++          enabled and "disabled" for disabled.
++
++Example
++-------
++
++tpm@57 {
++	reg = <0x57>;
++	label = "tpm";
++	compatible = "nuvoton,npct650", "nuvoton,npct601";
++	linux,sml-base = <0x7f 0xfd450000>;
++	linux,sml-size = <0x10000>;
++	status = "okay";
++};
+-- 
+2.5.0
 
-But I admit I never liked the use of no-host endian in the constants..
-
->  #define TPM_ORD_STARTUP cpu_to_be32(153)
->  #define TPM_ST_CLEAR cpu_to_be16(1)
-
-Would be nice to see these fixed into an enum someday too
-
-> +enum tpm1_capabilities {
-> +	TPM1_CAP_FLAG		= 0x04,
-> +	TPM1_CAP_PROP		= 0x05,
-> +	TPM1_CAP_VERSION_1_1	= 0x06,
-> +	TPM1_CAP_VERSION_1_2	= 0x1A,
-
-I usually discourage the extra horizontal whitespace, just causes patch churn to
-keep it up (and clang-format won't do it automatically). Not sure if
-there is a consensus on that though.
-
-But looks fine to me.
-
-Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-
-Jason
-
-------------------------------------------------------------------------------
+--
+To unsubscribe from this list: send the line "unsubscribe devicetree" in
+the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+More majordomo info at  http://vger.kernel.org/majordomo-info.html
