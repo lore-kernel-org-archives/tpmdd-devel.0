@@ -1,59 +1,46 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v3 7/7] tpm: Adds securityfs support for
- TPM2.0 eventlog
-Date: Tue, 30 Aug 2016 11:59:32 -0600
-Message-ID: <20160830175932.GF6373@obsidianresearch.com>
-References: <1472532619-22170-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1472532619-22170-8-git-send-email-nayna@linux.vnet.ibm.com>
+From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Subject: Re: [PATCH v6] tpm: fix a race condition in tpm2_unseal_trusted()
+Date: Tue, 30 Aug 2016 12:07:01 -0600
+Message-ID: <20160830180701.GA7586@obsidianresearch.com>
+References: <1472511066-20339-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <stable-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1472532619-22170-8-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <1472511066-20339-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+Sender: stable-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, stable@vger.kernel.org, Marcel Selhorst <tpmdd@selhorst.net>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Aug 30, 2016 at 12:50:19AM -0400, Nayna Jain wrote:
->  	if (chip->dev.of_node)
->  		np = chip->dev.of_node;
->  	if (!np) {
-> -		dev_dbg(&chip->dev, "%s: ERROR - IBMVTPM not supported\n",
-> +		dev_dbg(&chip->dev, "%s: ERROR - TPM not supported\n",
->  			__func__);
+On Tue, Aug 30, 2016 at 01:51:06AM +0300, Jarkko Sakkinen wrote:
+> Unseal and load operations should be done as an atomic operation. This
+> commit introduces unlocked tpm_transmit() so that tpm2_unseal_trusted()
+> can do the locking by itself.
+> 
+> v2: Introduced an unlocked unseal operation instead of changing locking
+>     strategy in order to make less intrusive bug fix and thus more
+>     backportable.
+> 
+> v3: Have also separate __tpm_transmit() that takes 'flags' in order to
+>     better localize the bug fix and make it easier to backport.
+> 
+> v4: Cleaned up the control flow in tpm2_unseal_trusted. Added the
+>     missing 'Fixes' line.
+> 
+> v5: Previous versions did not set the enum to any value, so it was set
+>     to zero. Changed enum to TPM_TRANSMIT_UNLOCKED because it is
+>     guaranteed to catch such situation. With change the common case
+>     adds so little clutter that the wrappers do not make sense anymore.
+> 
+> v6: Added flags parameter to internal TPM command wrappers to have
+>     an expected default behavior and documented them.
 
-ERm, this is a mistake in the earlier patch that adds OF and ACPI
-together.
+Yeah, this is nice.
 
-Do not print anything if OF is present but no event log is
-defined. Ditto for ACPI.
+BTW, do not put the vX: stuff into the commit message, and it would be
+best to include it after the diffstat the patch email
 
-Do not print anything if there is no OF node either.
-
-> +	if (!strcasecmp(compat, "IBM,vtpm"))
-
-No, this is the wrong way to work with compatible lists. I'm pretty
-sure there is an OF helper to do this.
-
-> +		log_size = *sizep;
-
-???
-
-All DT values should be big endian. Please include a comment
-explaining why this is would not be the case.
-
-Are you certain this isn't just a pre-existing bug - the code assumed
-host endian because it was always running on big endian PPC?
+Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 
 Jason
-
-------------------------------------------------------------------------------
