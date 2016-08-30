@@ -1,62 +1,75 @@
 From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH] Documentation: tpm: Adds the TPM device tree node documentation
-Date: Tue, 30 Aug 2016 00:44:37 -0400
-Message-ID: <1472532277-21933-1-git-send-email-nayna@linux.vnet.ibm.com>
-Return-path: <devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
-Sender: devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-Cc: wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org, robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org, pawel.moll-5wv7dgnIgG8@public.gmane.org, mark.rutland-5wv7dgnIgG8@public.gmane.org, ijc+devicetree-KcIKpvwj1kUDXYZnReoRVg@public.gmane.org, galak-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org, linux-i2c-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, hellerda-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org, ltcgcw-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH v3 0/7] tpm: TPM2.0 eventlog securityfs support
+Date: Tue, 30 Aug 2016 00:50:12 -0400
+Message-ID: <1472532619-22170-1-git-send-email-nayna@linux.vnet.ibm.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This is documenting device tree binding for
-I2C based TPM, similar concept which being used
-for virtual TPM on POWER7 and POWER8 systems running PowerVM.
+Existing TPM2.0 support lacks the support for eventlog securityfs file.
+This patch adds the binary_bios_measurements to TPM2.0 eventlog
+securityfs file.
 
-Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
----
- Documentation/devicetree/bindings/i2c/i2c-tpm.txt | 29 +++++++++++++++++++++++
- 1 file changed, 29 insertions(+)
- create mode 100644 Documentation/devicetree/bindings/i2c/i2c-tpm.txt
+Additionally, it also includes the review feedbacks as suggested by
+Jason.
 
-diff --git a/Documentation/devicetree/bindings/i2c/i2c-tpm.txt b/Documentation/devicetree/bindings/i2c/i2c-tpm.txt
-new file mode 100644
-index 0000000..8fdee14
---- /dev/null
-+++ b/Documentation/devicetree/bindings/i2c/i2c-tpm.txt
-@@ -0,0 +1,29 @@
-+Device Tree Bindings for I2C based Trusted Platform Module(TPM)
-+---------------------------------------------------------------
-+
-+This node describes a TPM device connected to Processor on i2c bus.
-+
-+Required properties:
-+
-+- compatible : 'manufacturer,model'
-+- label : represents device type
-+- linux,sml-base : base address of the Event Log. It is a physical address.
-+		   sml stands for shared memory log.
-+- linux,sml-size : size of the memory allocated for the Event Log.
-+
-+Optional properties:
-+
-+- status: indicates whether the device is enabled or disabled. "okay" for
-+          enabled and "disabled" for disabled.
-+
-+Example
-+-------
-+
-+tpm@57 {
-+	reg = <0x57>;
-+	label = "tpm";
-+	compatible = "nuvoton,npct650", "nuvoton,npct601";
-+	linux,sml-base = <0x7f 0xfd450000>;
-+	linux,sml-size = <0x10000>;
-+	status = "okay";
-+};
+Further, commit msg subject line is prefixed with tpm as was suggested
+by Jarkko.
+
+Changelog v3:
+
+* Includes the review feedbacks as suggested by Jason
+        * Split of patches into one patch per idea
+        * Generic open() method for ascii/bios measurements
+        * Replacement of of **bios_dir with *bios_dir[3]
+        * Verifying readlog() is successful before creating
+        securityfs entries
+        * Generic readlog() to check for ACPI/OF in sequence
+	* read_log_of() method now uses of_node propertry rather than
+        calling find_device_by_name
+	* read_log differentiates vtpm/tpm using its compatible property
+	* Cleans pr_err with dev_dbg
+	* Commit msgs subject line prefixed with tpm
+
+Nayna Jain (7):
+  tpm: Define a generic open() method for ascii & bios measurements.
+  tpm: Replace the dynamically allocated bios_dir as struct dentry
+    array.
+  tpm: Validate the eventlog access before tpm_bios_log_setup
+  tpm: Redefine the read_log method to check for ACPI/OF properties
+    sequentially
+  tpm: Replace the of_find_node_by_name() with dev of_node property
+  tpm: Moves the eventlog init functions to tpm_eventlog_init.c
+  tpm: Adds securityfs support for TPM2.0 eventlog
+
+ drivers/char/tpm/Makefile            |  13 +-
+ drivers/char/tpm/tpm-chip.c          |  21 +---
+ drivers/char/tpm/tpm.h               |   7 +-
+ drivers/char/tpm/tpm2.h              |  85 +++++++++++++
+ drivers/char/tpm/tpm2_eventlog.c     | 224 +++++++++++++++++++++++++++++++++++
+ drivers/char/tpm/tpm_acpi.c          |  19 +--
+ drivers/char/tpm/tpm_eventlog.c      | 154 +-----------------------
+ drivers/char/tpm/tpm_eventlog.h      |  26 ++--
+ drivers/char/tpm/tpm_eventlog_init.c | 153 ++++++++++++++++++++++++
+ drivers/char/tpm/tpm_of.c            |  65 ++++++----
+ 10 files changed, 543 insertions(+), 224 deletions(-)
+ create mode 100644 drivers/char/tpm/tpm2.h
+ create mode 100644 drivers/char/tpm/tpm2_eventlog.c
+ create mode 100644 drivers/char/tpm/tpm_eventlog_init.c
+
 -- 
 2.5.0
 
---
-To unsubscribe from this list: send the line "unsubscribe devicetree" in
-the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-More majordomo info at  http://vger.kernel.org/majordomo-info.html
+
+------------------------------------------------------------------------------
