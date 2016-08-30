@@ -1,16 +1,16 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v3 2/7] tpm: Replace the dynamically
- allocated bios_dir as struct dentry array.
-Date: Tue, 30 Aug 2016 11:11:32 -0600
-Message-ID: <20160830171132.GB6373@obsidianresearch.com>
+Subject: Re: [PATCH v3 3/7] tpm: Validate the eventlog access
+ before tpm_bios_log_setup
+Date: Tue, 30 Aug 2016 11:52:13 -0600
+Message-ID: <20160830175213.GC6373@obsidianresearch.com>
 References: <1472532619-22170-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1472532619-22170-3-git-send-email-nayna@linux.vnet.ibm.com>
+	<1472532619-22170-4-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1472532619-22170-3-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1472532619-22170-4-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,76 +23,123 @@ To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Aug 30, 2016 at 12:50:14AM -0400, Nayna Jain wrote:
-> bios_dir is defined as struct dentry **bios_dir, which results in
-> dynamic allocation and possible memory leak. This patch replaces
-> it with struct dentry array i.e. struct dentry *bios_dir[3]
-> similar to what is done for sysfs groups.
-> 
-> Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-
-Yep, looks sane too.
-
-Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-
-I wonder if it needs a Fixes line?
-
-> -	struct dentry **bios_dir;
-> +	struct dentry *bios_dir[3];
-> +	unsigned int bios_dir_count;
-
-Regarding Jarkko's comment - I don't care either way. If you want to
-use null or the count. We use a count for the sysfs scheme, but it is
-also more dynamic.
-
-> +	chip->bios_dir_count = 0;
-> +	chip->bios_dir[chip->bios_dir_count] = securityfs_create_dir(name,
-> +	NULL);
-
-Indenting again.
-
-Are you running your patches through scripts/checkpatch.pl ?
-
-> -	bin_file =
-> +	chip->bios_dir[chip->bios_dir_count] =
->  	    securityfs_create_file("binary_bios_measurements",
-> -				   S_IRUSR | S_IRGRP, tpm_dir,
-> +				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
->  				   (void *)&tpm_binary_b_measurments_seqops,
->  				   &tpm_bios_measurements_ops);
-> -	if (is_bad(bin_file))
-> -		goto out_tpm;
-> +	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
-> +		goto err;
-> +	chip->bios_dir_count++;
-
-This idiom is why the count works better, since we are storing
-non-null in the array before doing the error check.
-
-> -void tpm_bios_log_teardown(struct dentry **lst)
-> +void tpm_bios_log_teardown(struct tpm_chip *chip)
->  {
->  	int i;
+On Tue, Aug 30, 2016 at 12:50:15AM -0400, Nayna Jain wrote:
+> @@ -382,6 +370,8 @@ int tpm_chip_register(struct tpm_chip *chip)
+>  		return rc;
+>  	}
 >  
-> -	for (i = 0; i < 3; i++)
-> -		securityfs_remove(lst[i]);
-> +	for (i = chip->bios_dir_count; i > 0; --i)
-> +		securityfs_remove(chip->bios_dir[i-1]);
+> +	tpm_bios_log_setup(chip);
 
-Regarding Jarkko's comment..
+Surely this can fail, right? At least if the security fs setup fails
+this should propogate that error.
 
-I think you need to keep it like this. There is clearly an ordering
-requirement with security_remove, so reverse iterating is the right
-thing to do.
+That is a mistake in an earlier patch now that I think about it..
+>  
+>  	/* malloc EventLog space */
+> -	log->bios_event_log = kmalloc(len, GFP_KERNEL);
+> -	if (!log->bios_event_log) {
+> +	chip->log.bios_event_log = kmalloc(len, GFP_KERNEL);
+> +	if (!chip->log.bios_event_log) {
+>  		printk("%s: ERROR - Not enough  Memory for BIOS measurements\n",
+>  			__func__);
 
-> +static inline void tpm_bios_log_setup(struct tpm_chip *chip)
+Please delete all prints on kmalloc failure, maybe as another patch.
+
+>  		return -ENOMEM;
+>  	}
+>  
+> -	log->bios_event_log_end = log->bios_event_log + len;
+> +	chip->log.bios_event_log_end = chip->log.bios_event_log + len;
+>  
+>  	virt = acpi_os_map_iomem(start, len);
+>  	if (!virt) {
+> -		kfree(log->bios_event_log);
+> +		kfree(chip->log.bios_event_log);
+
+It would also be nice to see this written in the standard
+goto-unwind idiom.
+
+>  static const struct file_operations tpm_bios_measurements_ops = {
+> @@ -372,12 +352,18 @@ static int is_bad(void *p)
+>  void tpm_bios_log_setup(struct tpm_chip *chip)
 >  {
-> -	return NULL;
-> +	chip->bios_dir_count = 0;
+>  	const char *name = dev_name(&chip->dev);
+> +	int rc = 0;
+> +
+> +	rc = read_log(chip);
+> +	if (rc < 0)
+> +		return;
+>  
+>  	chip->bios_dir_count = 0;
+>  	chip->bios_dir[chip->bios_dir_count] = securityfs_create_dir(name,
+>  	NULL);
+>  	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
+>  		goto err;
+> +	chip->bios_dir[chip->bios_dir_count]->d_inode->i_private =
+>  	chip;
 
-This assignment is probably not necessary since the teardown is
-stubbed too.
+Hum.
+
+So I don't know if this is right. You should get someone more familiar
+with securityfs to double check it. I see apparmorfs.c doing a similar
+approach, so that would be a good starting place to copy. Notice how
+it uses aa_get_(x)
+
+Still, I wonder if that is even right, is securityfs_remove() really a
+strong fence against open? I guess the inode locking is doing that?
+
+This also means that the file can remain held open in userspace
+*after* securityfs_remove returns, so the filp must hold a kref on the
+chip as well.
+
+At a minimum you need to do something like this:
+
+Create:
+
+chip->sfs_data_bin.chip = chip;
+chip->sfs_data_bin.ops = &tpm_binary_b_measurments_seqops;
+securityfs_create_file(...,&chip->sfs_data_bin)
+
+It must be done like that to be atomic with open, create two new
+members of chip to hold a struct to pass through as the private
+data. Do not use the dentry private.
+
+Open:
+chip = (struct tpm_chip *)inode->i_private;
+dev_get(&chip->dev);
+seq_open(..)
+seq->private = chip;
+
+Release:
+dev_put(&((struct tpm_chip *)seq->private)->dev);
+
+Teardown
+ the kfree needs to move to the chip release function.
+
+>  ifdef CONFIG_ACPI
+> -     tpm-y += tpm_eventlog.o tpm_acpi.o
+> +     tpm-y += tpm_acpi.o
+>  else
+> -ifdef CONFIG_TCG_IBMVTPM
+> -     tpm-y += tpm_eventlog.o tpm_of.o
+> +ifdef CONFIG_OF
+> +     tpm-y += tpm_of.o
+>  endif
+
+This is too early in the patch series. This change needs to go into
+'Redefine the read_log method to check for ACPI/OF properties
+sequentially'
+
+> -#if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
+> -     defined(CONFIG_ACPI)
+
+Ditto
+
+Regarding Jarkko's comment,
+
+Yes, move the check for TPM2 into both of the read_log() - do not
+allow TPM2 to read the log until you patch the OF stuff to support the
+TPM2 log format.
 
 Jason
 
