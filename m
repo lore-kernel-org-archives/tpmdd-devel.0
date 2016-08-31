@@ -1,80 +1,54 @@
-From: James Bottomley <jejb@linux.vnet.ibm.com>
-Subject: Re: [tpmdd-devel] TPM microconf at Linux Plumbers
-	Conference?
-Date: Wed, 31 Aug 2016 11:05:10 -0700
-Message-ID: <1472666710.2316.38.camel@linux.vnet.ibm.com>
-References: <20160606185712.GA10754@srcf.ucam.org>
-	<57C716A3.9050006@linux.vnet.ibm.com>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH v3 1/7] tpm: Define a generic open()
+ method for ascii & bios measurements.
+Date: Thu, 1 Sep 2016 00:39:22 +0530
+Message-ID: <57C72B62.3060308@linux.vnet.ibm.com>
+References: <1472532619-22170-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1472532619-22170-2-git-send-email-nayna@linux.vnet.ibm.com>
+	<20160830170345.GA6373@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <trousers-users-bounces@lists.sourceforge.net>
-In-Reply-To: <57C716A3.9050006@linux.vnet.ibm.com>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/trousers-users>,
-	<mailto:trousers-users-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=trousers-users>
-List-Post: <mailto:trousers-users@lists.sourceforge.net>
-List-Help: <mailto:trousers-users-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/trousers-users>,
-	<mailto:trousers-users-request@lists.sourceforge.net?subject=subscribe>
-Errors-To: trousers-users-bounces@lists.sourceforge.net
-To: Nayna <nayna@linux.vnet.ibm.com>, Matthew Garrett <mjg59@srcf.ucam.org>, linux-ima-devel@lists.sourceforge.net, trousers-users@lists.sourceforge.net, tpmdd-devel@lists.sourceforge.net
-Cc: David Heller <hellerda@us.ibm.com>, George Wilson <gcwilson@us.ibm.com>
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20160830170345.GA6373-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, 2016-08-31 at 23:10 +0530, Nayna wrote:
-> On 06/07/2016 12:27 AM, Matthew Garrett wrote:
-> > Hi,
-> > 
-> > I'm looking into running a TPM microconference at the Linux
-> > Plubmers
-> > Conference in Santa Fe the first week of November. Right now we
-> > have a
-> > bunch of individual pieces of TPM-related technology, but little
-> > overall
-> > coherence - almost nobody ships working TPM-enabled bootloaders, we
-> > have
-> > no known-good PCR values available, distributions are unclear on
-> > what
-> > the appropriate TPM 2.0 userlands to ship are, we don't even have a
-> > spec
-> > for how PCRs should be used under Linux.
-> > 
-> > If this seems like it'd be useful, please add your name to
-> > http://wiki.linuxplumbersconf.org/2016:tpms along with any
-> > additional
-> > topics you'd like to discuss - and if you'd like to lead a short
-> > discussion session, drop me an email with a description.
-> 
-> One topic I would like to suggest for the discussion is 
-> "Standardization of Device Tree Bindings for TPM".
+Thanks Jason for review. I will address your comments in my next version 
+of patches.
 
-This has been accepted by Plumbers now, so the way you submit topics
-for discussion is via the website:
+I also have some thoughts on one of your comment.. Responding inline in 
+respective patch.
 
-https://www.linuxplumbersconf.org/2016/ocw/events/LPC2016/proposals
+Thanks & Regards,
+   - Nayna
 
-James
-
-
-> Currently, TCG Specs also do not have information on Device Tree
-> based mechanisms either for TPM 1.2 or TPM 2.0.
-> 
-> > 
-> > Thanks!
-> > 
-> 
-> Thanks & Regards,
->    - Nayna
-> 
-> 
-> ---------------------------------------------------------------------
-> ---------
-> _______________________________________________
-> tpmdd-devel mailing list
-> tpmdd-devel@lists.sourceforge.net
-> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-> 
+On 08/30/2016 10:33 PM, Jason Gunthorpe wrote:
+> On Tue, Aug 30, 2016 at 12:50:13AM -0400, Nayna Jain wrote:
+>> Open methods for eventlog ascii and binary bios measurements file
+>> operations are very similar. This patch refactors the code into
+>> single open() call by passing seq_operations as i_node->private data.
+>>
+>> Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+>> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+>
+> Looks basically fine, with Jarkko's comment addressed. I recommend
+> using clang-format when working with the kernel, it makes everything
+> easy.
+>
+> Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+>
+> Jason
+>
 
 
 ------------------------------------------------------------------------------
