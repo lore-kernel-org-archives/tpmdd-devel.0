@@ -1,76 +1,53 @@
-From: Wolfram Sang <wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org>
-Subject: Re: Documentation: tpm: Adds the TPM device tree node documentation
-Date: Tue, 30 Aug 2016 22:51:56 +0200
-Message-ID: <20160830205156.GA31948@katana>
-References: <1472532277-21933-1-git-send-email-nayna@linux.vnet.ibm.com>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: TPM microconf at Linux Plumbers Conference?
+Date: Wed, 31 Aug 2016 23:10:51 +0530
+Message-ID: <57C716A3.9050006@linux.vnet.ibm.com>
+References: <20160606185712.GA10754@srcf.ucam.org>
 Mime-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-        protocol="application/pgp-signature"; boundary="IS0zKkzwUGydFO0o"
-Return-path: <devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1472532277-21933-1-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Sender: devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org, pawel.moll-5wv7dgnIgG8@public.gmane.org, mark.rutland-5wv7dgnIgG8@public.gmane.org, ijc+devicetree-KcIKpvwj1kUDXYZnReoRVg@public.gmane.org, galak-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org, linux-i2c-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, hellerda-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org, ltcgcw-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20160606185712.GA10754-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Matthew Garrett <mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>, linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, trousers-users-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: David Heller <hellerda-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, George Wilson <gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On 06/07/2016 12:27 AM, Matthew Garrett wrote:
+> Hi,
+>
+> I'm looking into running a TPM microconference at the Linux Plubmers
+> Conference in Santa Fe the first week of November. Right now we have a
+> bunch of individual pieces of TPM-related technology, but little overall
+> coherence - almost nobody ships working TPM-enabled bootloaders, we have
+> no known-good PCR values available, distributions are unclear on what
+> the appropriate TPM 2.0 userlands to ship are, we don't even have a spec
+> for how PCRs should be used under Linux.
+>
+> If this seems like it'd be useful, please add your name to
+> http://wiki.linuxplumbersconf.org/2016:tpms along with any additional
+> topics you'd like to discuss - and if you'd like to lead a short
+> discussion session, drop me an email with a description.
 
---IS0zKkzwUGydFO0o
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+One topic I would like to suggest for the discussion is "Standardization 
+of Device Tree Bindings for TPM".
 
-On Tue, Aug 30, 2016 at 12:44:37AM -0400, Nayna Jain wrote:
-> This is documenting device tree binding for
-> I2C based TPM, similar concept which being used
-> for virtual TPM on POWER7 and POWER8 systems running PowerVM.
->=20
-> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> ---
->  Documentation/devicetree/bindings/i2c/i2c-tpm.txt | 29 +++++++++++++++++=
-++++++
+Currently, TCG Specs also do not have information on Device Tree based 
+mechanisms either for TPM 1.2 or TPM 2.0.
 
-Is the driver in 'drivers/i2c/*'? No, so the binding shouldn't be in i2c
-as well.
+>
+> Thanks!
+>
 
-> +- compatible : 'manufacturer,model'
-
-You need to specify them here!
-
-> +Optional properties:
-> +
-> +- status: indicates whether the device is enabled or disabled. "okay" for
-> +          enabled and "disabled" for disabled.
-
-Optional? Rather "implicit" I'd say.
-
-This is far from ready. You should really wait for Rob's review. Or
-better: Have a look at other bindings.
+Thanks & Regards,
+   - Nayna
 
 
---IS0zKkzwUGydFO0o
-Content-Type: application/pgp-signature; name="signature.asc"
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-
-iQIcBAEBAgAGBQJXxfHsAAoJEBQN5MwUoCm216AP/2ykfd1BzMMquv9yH07veqHb
-ow8zAhzV5v7mRUXC4ezVt9WU2KYpv4U6OXj4J45ONJASne3XJnTeSjqz6jGXZJZy
-E3ET1+xHEEhvTGlWKcRkLFfDsD7VSKeQ7VfkznCQYwIOFBQFCjzhXJkhZ5CxSYAY
-J7uu6CUjG05I7JLYgJ1cQ9xeVb8W+EO9204CmLFj4MMuHp+tbBBsB/cc/cLGNepa
-38ItuZuYPM4/VD/qWqjYk++29B0fLQ3OwAtgaq5p4D+1KZgUINLYFpJxSg0zGMg7
-b2tgw5GVgHuU+/+gwm/aPjQVrad4oVCItqi0/9VpH43WZ9lU4WHKfnhu/awYBC1b
-yF6gkE+CLKfvoqMuuEsaYWYhGV1w0H4c0/KLJ62s+Qu7Oh0LsC3aiJltnpl0Cac5
-seNnq1Nc86iI0lKK85CuFzvtvRZ0D3GXe/20LTnPbjzf9lKmTU+kCPAHA0gnJDOe
-jXkwYhhv4Q9hw+w5Dg8WvtXfCLUSrdqcpkLeWxLqav5h2Yj5uhOShBg4YcbrgrXO
-hyMS6apnpy2suVzmSvFq1GB5ulafJcdlJaV5hIq89M6V2lBQMBDA38LXzjzpHzTb
-drguaYnaNxXQBjllxUbQvecgnpuIoTr9Dp44TYvZF+knsbrM+g+8hTJ28/xKllU5
-iYNRLMN1syKKOV1nm0Em
-=iTjI
------END PGP SIGNATURE-----
-
---IS0zKkzwUGydFO0o--
---
-To unsubscribe from this list: send the line "unsubscribe devicetree" in
-the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-More majordomo info at  http://vger.kernel.org/majordomo-info.html
+------------------------------------------------------------------------------
