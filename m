@@ -1,39 +1,65 @@
-From: James Morris <jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
-Subject: Re: [PATCH] tpm: invalid self test error message
-Date: Fri, 2 Sep 2016 16:50:35 +1000 (AEST)
-Message-ID: <alpine.LRH.2.20.1609021650260.11695@namei.org>
-References: <1472795790-15131-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+From: Rob Herring <robh@kernel.org>
+Subject: Re: [PATCH] Documentation: tpm: Adds the TPM device tree node
+ documentation
+Date: Fri, 2 Sep 2016 09:51:21 -0500
+Message-ID: <20160902145121.GA9636@rob-hp-laptop>
+References: <1472532277-21933-1-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1472795790-15131-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-i2c-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <1472532277-21933-1-git-send-email-nayna@linux.vnet.ibm.com>
+Sender: linux-i2c-owner@vger.kernel.org
+To: Nayna Jain <nayna@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, devicetree@vger.kernel.org, wsa@the-dreams.de, pawel.moll@arm.com, mark.rutland@arm.com, ijc+devicetree@hellion.org.uk, galak@codeaurora.org, linux-i2c@vger.kernel.org, hellerda@linux.vnet.ibm.com, ltcgcw@us.ibm.com, gcwilson@us.ibm.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, 2 Sep 2016, Jarkko Sakkinen wrote:
-
-> The driver emits invalid self test error message even though the init
-> succeeds.
+On Tue, Aug 30, 2016 at 12:44:37AM -0400, Nayna Jain wrote:
+> This is documenting device tree binding for
+> I2C based TPM, similar concept which being used
+> for virtual TPM on POWER7 and POWER8 systems running PowerVM.
 > 
-> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
+> ---
+>  Documentation/devicetree/bindings/i2c/i2c-tpm.txt | 29 +++++++++++++++++++++++
+>  1 file changed, 29 insertions(+)
+>  create mode 100644 Documentation/devicetree/bindings/i2c/i2c-tpm.txt
+> 
+> diff --git a/Documentation/devicetree/bindings/i2c/i2c-tpm.txt b/Documentation/devicetree/bindings/i2c/i2c-tpm.txt
+> new file mode 100644
+> index 0000000..8fdee14
+> --- /dev/null
+> +++ b/Documentation/devicetree/bindings/i2c/i2c-tpm.txt
+> @@ -0,0 +1,29 @@
+> +Device Tree Bindings for I2C based Trusted Platform Module(TPM)
+> +---------------------------------------------------------------
+> +
+> +This node describes a TPM device connected to Processor on i2c bus.
+> +
+> +Required properties:
+> +
+> +- compatible : 'manufacturer,model'
 
+Needs specific compatible strings like your example has.
 
-Reviewed-by: James Morris <james.l.morris-QHcLZuEGTsvQT0dZR+AlfA@public.gmane.org>
+> +- label : represents device type
 
+Why do you need this? label is human readable things like connectors on 
+boards.
 
--- 
-James Morris
-<jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
+> +- linux,sml-base : base address of the Event Log. It is a physical address.
+> +		   sml stands for shared memory log.
 
+How is it a physical address on an i2c device? Why 2 cells (which needs 
+to be documented also)?
 
-------------------------------------------------------------------------------
+Just 'log' would be more descriptive than sml.
+
+> +- linux,sml-size : size of the memory allocated for the Event Log.
+> +
+> +Optional properties:
+> +
+> +- status: indicates whether the device is enabled or disabled. "okay" for
+> +          enabled and "disabled" for disabled.
+
+status is always valid, so you don't need to document it.
