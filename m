@@ -1,47 +1,58 @@
-From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [PATCH] tpm: move struct tpm_class_ops to drivers/char/tpm/tpm.h
-Date: Mon, 5 Sep 2016 11:44:48 -0600
-Message-ID: <20160905174448.GB14403@obsidianresearch.com>
-References: <1472852886-7640-1-git-send-email-jarkko.sakkinen@linux.intel.com>
- <20160902221122.GA1897@obsidianresearch.com>
- <20160902223522.GA27454@intel.com>
- <20160902224531.GC1897@obsidianresearch.com>
- <20160903062221.GA2061@intel.com>
- <20160903062605.GB2061@intel.com>
- <20160904201406.GA9854@obsidianresearch.com>
- <20160905054434.GB5712@intel.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH v3 4/7] tpm: Redefine the read_log method
+ to check for ACPI/OF properties sequentially
+Date: Tue, 6 Sep 2016 13:47:37 -0600
+Message-ID: <20160906194737.GD28416@obsidianresearch.com>
+References: <1472532619-22170-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1472532619-22170-5-git-send-email-nayna@linux.vnet.ibm.com>
+	<20160830175409.GD6373@obsidianresearch.com>
+	<57C72B7A.8040108@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160905054434.GB5712@intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+In-Reply-To: <57C72B7A.8040108-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Sep 05, 2016 at 08:44:34AM +0300, Jarkko Sakkinen wrote:
-> On Sun, Sep 04, 2016 at 02:14:06PM -0600, Jason Gunthorpe wrote:
-> > On Sat, Sep 03, 2016 at 09:26:05AM +0300, Jarkko Sakkinen wrote:
-> > > > 
-> > > > OK, how would one get the chip instance?
-> > 
-> > Most subsystems have a get function that returns a kref'd pointer. For
-> > TPM all we really need today is a 'get_default_tpm_for_ns' kind of
-> > function.
+On Thu, Sep 01, 2016 at 12:39:46AM +0530, Nayna wrote:
+> >>+int read_log_of(struct tpm_chip *chip);
+> >>+#else
+> >>+static inline int read_log_of(struct tpm_chip *chip)
+> >>+{
+> >>+	return -1;
+> >>+}
+> >>+#endif
+> >
+> >Though shouldn't these two be ERRNOs of some kind? -ENODEV?
 > 
-> Sorry, but I have no idea what you are talking about.
+> Sure..
+> Was just trying to see possible errno. And here are some thoughts.
+> 
+> 
+> #define EPERM            1      /* Operation not permitted */
+> #define ENODEV          19      /* No such device */
 
-Go look at how rtc or net work.
+> Was thinking that since tpm device will still be present and its either ACPI
+> or OF way of accessing its properties, and one of them will return this
+> errno. So, assuming it is ACPI, that means no OF functions permitted. So,
+> how about using EPERM ?
 
-> This does not imply that these structure definitions need to be in
-> include/linux/tpm.h since you are talking something that does not exist.
+I'd choose ENODEV over EPERM, that is the usual way in the kernel to
+signal 'probe failed'
 
-Well, I've been slowly pushing tpm to be more like a standard subystem
-for a long time - not all the parts are there yet. A standard
-subsystem will have a get/put scheme for tpm_chip.
-
-So, yes, it does not exist, but you should be planning for it to exist
-someday..
+Remember, which ever it is, it should not cause any messages to be printed.
 
 Jason
+
+------------------------------------------------------------------------------
