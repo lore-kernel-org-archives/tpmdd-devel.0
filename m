@@ -1,11 +1,21 @@
-From: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH] tpm/tpm_tis: remove unsingd itpm varaible
-Date: Thu,  8 Sep 2016 01:19:46 +0300
-Message-ID: <1473286786-7698-1-git-send-email-tomas.winkler@intel.com>
+From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Subject: Re: [PATCH 1/3] tpm/tpm_crb: implement tpm crb idle
+ state
+Date: Wed, 7 Sep 2016 22:28:45 +0000
+Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B542CBB6A@hasmsx108.ger.corp.intel.com>
+References: <1473247953-24617-1-git-send-email-tomas.winkler@intel.com>
+	<1473247953-24617-2-git-send-email-tomas.winkler@intel.com>
+	<20160907161548.GA4791@obsidianresearch.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B542CBABC@hasmsx108.ger.corp.intel.com>
+	<20160907215502.GB29666@obsidianresearch.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B542CBB41@hasmsx108.ger.corp.intel.com>
+	<20160907221908.GA30192@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20160907221908.GA30192-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -14,32 +24,23 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, =Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Rml4ZXMgdGhlIHdhcm5pbmc6CmRyaXZlcnMvY2hhci90cG0vdHBtX3Rpc19jb3JlLmM6NDQzOjc6
-IHdhcm5pbmc6IHZhcmlhYmxlIOKAmGl0cG3igJkgc2V0IGJ1dApub3QgdXNlZCBbLVd1bnVzZWQt
-YnV0LXNldC12YXJpYWJsZV0KICBib29sIGl0cG07CiAgICAgICBefn5+CgpTaWduZWQtb2ZmLWJ5
-OiBUb21hcyBXaW5rbGVyIDx0b21hcy53aW5rbGVyQGludGVsLmNvbT4KLS0tCiBkcml2ZXJzL2No
-YXIvdHBtL3RwbV90aXNfY29yZS5jIHwgNSAtLS0tLQogMSBmaWxlIGNoYW5nZWQsIDUgZGVsZXRp
-b25zKC0pCgpkaWZmIC0tZ2l0IGEvZHJpdmVycy9jaGFyL3RwbS90cG1fdGlzX2NvcmUuYyBiL2Ry
-aXZlcnMvY2hhci90cG0vdHBtX3Rpc19jb3JlLmMKaW5kZXggMjM2MDE1MTAzMTY0Li5jZjZmZDEz
-Y2QxZDEgMTAwNjQ0Ci0tLSBhL2RyaXZlcnMvY2hhci90cG0vdHBtX3Rpc19jb3JlLmMKKysrIGIv
-ZHJpdmVycy9jaGFyL3RwbS90cG1fdGlzX2NvcmUuYwpAQCAtNDQwLDcgKzQ0MCw2IEBAIHN0YXRp
-YyBpbnQgcHJvYmVfaXRwbShzdHJ1Y3QgdHBtX2NoaXAgKmNoaXApCiAJCTB4MDAsIDB4MDAsIDB4
-MDAsIDB4ZjEKIAl9OwogCXNpemVfdCBsZW4gPSBzaXplb2YoY21kX2dldHRpY2tzKTsKLQlib29s
-IGl0cG07CiAJdTE2IHZlbmRvcjsKIAogCXJjID0gdHBtX3Rpc19yZWFkMTYocHJpdiwgVFBNX0RJ
-RF9WSUQoMCksICZ2ZW5kb3IpOwpAQCAtNDUxLDggKzQ1MCw2IEBAIHN0YXRpYyBpbnQgcHJvYmVf
-aXRwbShzdHJ1Y3QgdHBtX2NoaXAgKmNoaXApCiAJaWYgKHZlbmRvciAhPSBUUE1fVklEX0lOVEVM
-KQogCQlyZXR1cm4gMDsKIAotCWl0cG0gPSBmYWxzZTsKLQogCXJjID0gdHBtX3Rpc19zZW5kX2Rh
-dGEoY2hpcCwgY21kX2dldHRpY2tzLCBsZW4pOwogCWlmIChyYyA9PSAwKQogCQlnb3RvIG91dDsK
-QEAgLTQ2MCw4ICs0NTcsNiBAQCBzdGF0aWMgaW50IHByb2JlX2l0cG0oc3RydWN0IHRwbV9jaGlw
-ICpjaGlwKQogCXRwbV90aXNfcmVhZHkoY2hpcCk7CiAJcmVsZWFzZV9sb2NhbGl0eShjaGlwLCBw
-cml2LT5sb2NhbGl0eSwgMCk7CiAKLQlpdHBtID0gdHJ1ZTsKLQogCXJjID0gdHBtX3Rpc19zZW5k
-X2RhdGEoY2hpcCwgY21kX2dldHRpY2tzLCBsZW4pOwogCWlmIChyYyA9PSAwKSB7CiAJCWRldl9p
-bmZvKCZjaGlwLT5kZXYsICJEZXRlY3RlZCBhbiBpVFBNLlxuIik7Ci0tIAoyLjcuNAoKCi0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLQpfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fXwp0cG1kZC1kZXZlbCBtYWlsaW5nIGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNl
-Zm9yZ2UubmV0Cmh0dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3Rw
-bWRkLWRldmVsCg==
+> 
+> On Wed, Sep 07, 2016 at 10:17:22PM +0000, Winkler, Tomas wrote:
+> 
+> > I think there is a memory leak in tpm_tis on the error path; maybe a
+> > missing call to dev_put, not sure I had just quick look.
+> 
+> tpmm_alloc uses devm, so the put happens in a devm cleanup.
+> 
+> Assuming everything still works the way it was intended :/
+
+How this is triggered on the error path, if this didn't call yet to the device_add()
+Tomas
+
+
+
+------------------------------------------------------------------------------
