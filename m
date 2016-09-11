@@ -1,58 +1,35 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v3 3/7] tpm: Validate the eventlog access
- before tpm_bios_log_setup
-Date: Fri, 9 Sep 2016 11:28:58 -0600
-Message-ID: <20160909172858.GB31769@obsidianresearch.com>
-References: <1472532619-22170-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1472532619-22170-4-git-send-email-nayna@linux.vnet.ibm.com>
-	<20160830175213.GC6373@obsidianresearch.com>
-	<57D2F049.4040707@linux.vnet.ibm.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <57D2F049.4040707-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH] tpm: fix buffer overflow in /dev/tpm0
+Date: Sun, 11 Sep 2016 15:19:00 +0300
+Message-ID: <1473596340-11376-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Peter Huewe <peterhuewe@gmx.de>
+Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Sep 09, 2016 at 10:54:25PM +0530, Nayna wrote:
-> 
-> 
-> On 08/30/2016 11:22 PM, Jason Gunthorpe wrote:
-> >On Tue, Aug 30, 2016 at 12:50:15AM -0400, Nayna Jain wrote:
-> >>@@ -382,6 +370,8 @@ int tpm_chip_register(struct tpm_chip *chip)
-> >>  		return rc;
-> >>  	}
-> >>
-> >>+	tpm_bios_log_setup(chip);
-> >
-> >Surely this can fail, right? At least if the security fs setup fails
-> >this should propogate that error.
-> 
-> What action we want to take if it fails to do bios_log_setup ?
-> I have done all other fixes, just am not sure that if we propogate this
-> error, then will it mean that tpm_chip_register (where this function is
-> called) should fail ? or it is just an error logging on failure of
-> bios_log_setup.
+tpm_write() does not check whether the buffer has at least enough space
+for the header before passing it to tpm_transmit() so an overflow can
+happen.
 
-Typically we'd want to fail probe, so keep flowing it up.
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+---
+ drivers/char/tpm/tpm-interface.c | 3 +++
+ 1 file changed, 3 insertions(+)
 
-I'm expecting this should only happen in fatal cases like security_fs
-functions failing.
-
-Failures like no optional ACPI/DT description should not log or return
-an error up to probe..
-
-Jason
-
-------------------------------------------------------------------------------
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index fd863ff..6a67f7f 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -337,6 +337,9 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
+ 	u32 count, ordinal;
+ 	unsigned long stop;
+ 
++	if (bufsiz < TPM_HEADER_SIZE)
++		return -EINVAL;
++
+ 	if (bufsiz > TPM_BUFSIZE)
+ 		bufsiz = TPM_BUFSIZE;
+ 
+-- 
+2.7.4
