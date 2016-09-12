@@ -1,146 +1,86 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 1/1] tpm/tpm-dev: fix broken style
-	in	copy_from_user
-Date: Mon, 12 Sep 2016 21:42:14 +0300
-Message-ID: <20160912184214.GA14727@intel.com>
-References: <1473621730-23125-1-git-send-email-tomas.winkler@intel.com>
-	<20160911203849.GA26511@intel.com>
-	<E2960FB9-598A-4289-9486-9B8AFD054E95@gmx.de>
-	<20160912075637.GB5094@intel.com>
-	<3113B445-E63D-45C3-8B6A-DFDB1B5DDC7D@gmx.de>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH 00/26] constify local structures
+Date: Mon, 12 Sep 2016 21:50:23 +0300
+Message-ID: <20160912185023.GB14727@intel.com>
+References: <1473599168-30561-1-git-send-email-Julia.Lawall@lip6.fr>
+ <20160911172105.GB5493@intel.com>
+ <alpine.DEB.2.10.1609121051050.3049@hadrien>
+ <20160912131625.GD957@intel.com>
+ <877fah5j35.fsf@linux.intel.com>
+ <alpine.DEB.2.10.1609121548200.29099@hadrien>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-can-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <3113B445-E63D-45C3-8B6A-DFDB1B5DDC7D-Mmb7MZpHnFY@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <alpine.DEB.2.10.1609121548200.29099@hadrien>
+Sender: linux-can-owner@vger.kernel.org
+To: Julia Lawall <julia.lawall@lip6.fr>
+Cc: Felipe Balbi <felipe.balbi@linux.intel.com>, linux-renesas-soc@vger.kernel.org, joe@perches.com, kernel-janitors@vger.kernel.org, Sergei Shtylyov <sergei.shtylyov@cogentembedded.com>, linux-pm@vger.kernel.org, platform-driver-x86@vger.kernel.org, linux-media@vger.kernel.org, linux-can@vger.kernel.org, Tatyana Nikolova <tatyana.e.nikolova@intel.com>, Shiraz Saleem <shiraz.saleem@intel.com>, Mustafa Ismail <mustafa.ismail@intel.com>, Chien Tin Tung <chien.tin.tung@intel.com>, linux-rdma@vger.kernel.org, netdev@vger.kernel.org, devel@driverdev.osuosl.org, alsa-devel@alsa-project.org, linux-kernel@vger.kernel.org, linux-fbdev@vger.kernel.org, linux-wireless@vger.kernel.org, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linux-scsi@
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Sep 12, 2016 at 09:06:01AM -0700, Peter Huewe wrote:
+On Mon, Sep 12, 2016 at 03:52:08PM +0200, Julia Lawall wrote:
 > 
 > 
-> Am 12. September 2016 00:56:37 GMT-07:00, schrieb Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>:
-> >On Sun, Sep 11, 2016 at 09:39:04PM -0700, Peter Huewe wrote:
-> >> Jarkko,
-> >> what's the ack for?
-> >> As maintainer you usually apply and sign off or don't.
-> >> Ack is more if you are not touching the patch but still think it's
-> >good (e.g.goes through another tree.
+> On Mon, 12 Sep 2016, Felipe Balbi wrote:
+> 
 > >
-> >I've based my use of acked-by based on section 12 of
+> > Hi,
 > >
-> >https://www.kernel.org/doc/Documentation/SubmittingPatches
+> > Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> writes:
+> > > On Mon, Sep 12, 2016 at 10:54:07AM +0200, Julia Lawall wrote:
+> > >>
+> > >>
+> > >> On Sun, 11 Sep 2016, Jarkko Sakkinen wrote:
+> > >>
+> > >> > On Sun, Sep 11, 2016 at 03:05:42PM +0200, Julia Lawall wrote:
+> > >> > > Constify local structures.
+> > >> > >
+> > >> > > The semantic patch that makes this change is as follows:
+> > >> > > (http://coccinelle.lip6.fr/)
+> > >> >
+> > >> > Just my two cents but:
+> > >> >
+> > >> > 1. You *can* use a static analysis too to find bugs or other issues.
+> > >> > 2. However, you should manually do the commits and proper commit
+> > >> >    messages to subsystems based on your findings. And I generally think
+> > >> >    that if one contributes code one should also at least smoke test changes
+> > >> >    somehow.
+> > >> >
+> > >> > I don't know if I'm alone with my opinion. I just think that one should
+> > >> > also do the analysis part and not blindly create and submit patches.
+> > >>
+> > >> All of the patches are compile tested.  And the individual patches are
+> > >
+> > > Compile-testing is not testing. If you are not able to test a commit,
+> > > you should explain why.
 > >
-> >Have I somehow misunderstood it? I add signed-off-by's before I send
-> >a pull requst even if the patch contains reviewd/acked-by by me.
+> > Dude, Julia has been doing semantic patching for years already and
+> > nobody has raised any concerns so far. There's already an expectation
+> > that Coccinelle *works* and Julia's sematic patches are sound.
+> >
+> > Besides, adding 'const' is something that causes virtually no functional
+> > changes to the point that build-testing is really all you need. Any
+> > problems caused by adding 'const' to a definition will be seen by build
+> > errors or warnings.
+> >
+> > Really, just stop with the pointless discussion and go read a bit about
+> > Coccinelle and what semantic patches are giving you. The work done by
+> > Julia and her peers are INRIA have measurable benefits.
+> >
+> > You're really making a thunderstorm in a glass of water.
 > 
-> Hi,
-> you usually add your signed-off while applying.
-> If you apply the patch you take an active role in forwarding the patch.
+> Thanks for the defense, but since a lot of these patches torned out to be
+> wrong, due to an incorrect parse by Coccinelle, combined with an
+> unpleasantly lax compiler, Jarkko does have a point that I should have
+> looked at the patches more carefully.  In any case, I have written to the
+> maintainers relevant to the patches that turned out to be incorrect.
 
-All the applied commits have my signed-off-by so we should be good
-with that.
+Exactly. I'm not excepting that every commit would require extensive
+analysis but it would be good to quickly at least skim through commits
+and see if they make sense (or ask if unsure) :) 
 
-> That's why this section applies:
-> "The Signed-off-by: tag indicates that the signer was involved in the
-> development of the patch, or that he/she was in the patch's delivery
-> path."
-> " If a person was not directly involved in the preparation or handling
-> of a patch but wishes to signify and record their approval of it then
-> they can ask to have an Acked-by: line added to the patch's changelog.
-> "
-> 
-> E.g. Rob would do that for the dt bindings.
-> He does have a quick look at a binding and says "okay for him" by
-> indicating the ACK.
-> 
-> So rule of thumb
-> If it goes through your tree or you are the author ->signed off
-> If not -> ack
+And I'm fine with compile testing if it is mentioned in the commit msg.
 
-So Acked-by and Signed-off-by are mutually exclusive?
-
-
-> Reviewed-by is a bit unrelated, and content wise stronger as ack, but
-> weaker approval wise.
-> 
-> 
-> Peter
+> julia
 
 /Jarkko
-
-> 
-> 
-> >
-> >/Jarkko
-> >
-> >> @Thomas:thanks for your contribution, but please spellcheck your
-> >descriptions, please.
-> >> 
-> >> Am 11. September 2016 13:38:49 GMT-07:00, schrieb Jarkko Sakkinen
-> ><jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>:
-> >> >On Sun, Sep 11, 2016 at 10:22:10PM +0300, Tomas Winkler wrote:
-> >> >> Straighten unneeded line brake and drop useless cast to void.
-> >> >> 
-> >> >> Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-> >> >
-> >> >Thanks.
-> >> >
-> >> >Acked-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> >> >
-> >> >/Jarkko
-> >> >
-> >> >> ---
-> >> >>  drivers/char/tpm/tpm-dev.c | 3 +--
-> >> >>  1 file changed, 1 insertion(+), 2 deletions(-)
-> >> >> 
-> >> >> diff --git a/drivers/char/tpm/tpm-dev.c
-> >b/drivers/char/tpm/tpm-dev.c
-> >> >> index 912ad30be585..9782df406345 100644
-> >> >> --- a/drivers/char/tpm/tpm-dev.c
-> >> >> +++ b/drivers/char/tpm/tpm-dev.c
-> >> >> @@ -130,8 +130,7 @@ static ssize_t tpm_write(struct file *file,
-> >const
-> >> >char __user *buf,
-> >> >>  
-> >> >>  	mutex_lock(&priv->buffer_mutex);
-> >> >>  
-> >> >> -	if (copy_from_user
-> >> >> -	    (priv->data_buffer, (void __user *) buf, in_size)) {
-> >> >> +	if (copy_from_user(priv->data_buffer, buf, in_size)) {
-> >> >>  		mutex_unlock(&priv->buffer_mutex);
-> >> >>  		return -EFAULT;
-> >> >>  	}
-> >> >> -- 
-> >> >> 2.7.4
-> >> >> 
-> >> >
-> >>
-> >>------------------------------------------------------------------------------
-> >> >_______________________________________________
-> >> >tpmdd-devel mailing list
-> >> >tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-> >> >https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-> >> 
-> >> -- 
-> >> Sent from my mobile
-> 
-> -- 
-> Sent from my mobile
-
-------------------------------------------------------------------------------
-What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
-patterns at an interface-level. Reveals which users, apps, and protocols are 
-consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
-J-Flow, sFlow and other flows. Make informed decisions using capacity 
-planning reports. http://sdm.link/zohodev2dev
