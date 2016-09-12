@@ -1,68 +1,72 @@
-From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: Re: [PATCH v2 1/4] tpm/tpm_crb: implement tpm crb
-	idle state
-Date: Mon, 12 Sep 2016 20:58:48 +0000
-Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B542CE027@hasmsx108.ger.corp.intel.com>
-References: <1473670501-29281-1-git-send-email-tomas.winkler@intel.com>
-	<1473670501-29281-2-git-send-email-tomas.winkler@intel.com>
-	<20160912173737.GB5843@obsidianresearch.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B542CDF84@hasmsx108.ger.corp.intel.com>
-	<20160912204449.GA8241@obsidianresearch.com>
+From: Julia Lawall <julia.lawall@lip6.fr>
+Subject: Re: [PATCH 00/26] constify local structures
+Date: Mon, 12 Sep 2016 23:11:46 +0200 (CEST)
+Message-ID: <alpine.DEB.2.10.1609122311040.3549@hadrien>
+References: <1473599168-30561-1-git-send-email-Julia.Lawall@lip6.fr> <20160911172105.GB5493@intel.com> <alpine.DEB.2.10.1609121051050.3049@hadrien> <20160912131625.GD957@intel.com> <877fah5j35.fsf@linux.intel.com> <20160912201450.GA8889@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20160912204449.GA8241-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Content-Language: en-US
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: TEXT/PLAIN; charset=US-ASCII
+Return-path: <linux-can-owner@vger.kernel.org>
+In-Reply-To: <20160912201450.GA8889@intel.com>
+Sender: linux-can-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: Felipe Balbi <felipe.balbi@linux.intel.com>, Julia Lawall <julia.lawall@lip6.fr>, linux-renesas-soc@vger.kernel.org, joe@perches.com, kernel-janitors@vger.kernel.org, Sergei Shtylyov <sergei.shtylyov@cogentembedded.com>, linux-pm@vger.kernel.org, platform-driver-x86@vger.kernel.org, linux-media@vger.kernel.org, linux-can@vger.kernel.org, Tatyana Nikolova <tatyana.e.nikolova@intel.com>, Shiraz Saleem <shiraz.saleem@intel.com>, Mustafa Ismail <mustafa.ismail@intel.com>, Chien Tin Tung <chien.tin.tung@intel.com>, linux-rdma@vger.kernel.org, netdev@vger.kernel.org, devel@driverdev.osuosl.org, alsa-devel@alsa-project.org, linux-kernel@vger.kernel.org, linux-fbdev@vger.kernel.org, linux-wireless@vger.kernel.org, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>t
 List-Id: tpmdd-devel@lists.sourceforge.net
 
 
-> 
-> On Mon, Sep 12, 2016 at 08:26:34PM +0000, Winkler, Tomas wrote:
-> > > > Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-> > > > V2: do not export the functions via tpm ops
-> > >
-> > > You need to restructure this series, do not implement functions that
-> > > are not used in a patch.
+
+On Mon, 12 Sep 2016, Jarkko Sakkinen wrote:
+
+> On Mon, Sep 12, 2016 at 04:43:58PM +0300, Felipe Balbi wrote:
 > >
-> > It's perfectly fine to stage patches for easier review, even if it
-> > cause harmless warning.
-> 
-> That really isn't consistent with the kernel process, please don't do it.
-
-Fortunately none of us is a priest of the kernel process :),  I have some mileage in kernel too, and I agree it's not so encouraged but it's okay to easy on review.
-
-> 
-> > > > +static int __maybe_unused crb_go_idle(struct device *dev, struct
-> > > > +crb_priv *priv)
-> > >
-> > > .. and then don't hide the warnings with maybe_unused :(
+> > Hi,
 > >
-> > This is not hiding, the issue is that when runtime pm is not compiled
-> > and the hw bug is fixed in next gen of the hardware this function will
-> > be unused.
-> 
-> Hum, that might be ok, but it might be better to wrapper the functions in the
-> runtime pm ifdef
+> > Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> writes:
+> > > On Mon, Sep 12, 2016 at 10:54:07AM +0200, Julia Lawall wrote:
+> > >>
+> > >>
+> > >> On Sun, 11 Sep 2016, Jarkko Sakkinen wrote:
+> > >>
+> > >> > On Sun, Sep 11, 2016 at 03:05:42PM +0200, Julia Lawall wrote:
+> > >> > > Constify local structures.
+> > >> > >
+> > >> > > The semantic patch that makes this change is as follows:
+> > >> > > (http://coccinelle.lip6.fr/)
+> > >> >
+> > >> > Just my two cents but:
+> > >> >
+> > >> > 1. You *can* use a static analysis too to find bugs or other issues.
+> > >> > 2. However, you should manually do the commits and proper commit
+> > >> >    messages to subsystems based on your findings. And I generally think
+> > >> >    that if one contributes code one should also at least smoke test changes
+> > >> >    somehow.
+> > >> >
+> > >> > I don't know if I'm alone with my opinion. I just think that one should
+> > >> > also do the analysis part and not blindly create and submit patches.
+> > >>
+> > >> All of the patches are compile tested.  And the individual patches are
+> > >
+> > > Compile-testing is not testing. If you are not able to test a commit,
+> > > you should explain why.
+> >
+> > Dude, Julia has been doing semantic patching for years already and
+> > nobody has raised any concerns so far. There's already an expectation
+> > that Coccinelle *works* and Julia's sematic patches are sound.
+> >
+> > Besides, adding 'const' is something that causes virtually no functional
+> > changes to the point that build-testing is really all you need. Any
+> > problems caused by adding 'const' to a definition will be seen by build
+> > errors or warnings.
+> >
+> > Really, just stop with the pointless discussion and go read a bit about
+> > Coccinelle and what semantic patches are giving you. The work done by
+> > Julia and her peers are INRIA have measurable benefits.
+> >
+> > You're really making a thunderstorm in a glass of water.
+>
+> Hmm... I've been using coccinelle in cyclic basis for some time now.
+> My comment was oversized but I didn't mean it to be impolite or attack
+> of any kind for that matter.
 
-This would break the hw again... right.
-Thanks
-Tomas 
+No problem :)  Thanks for the feedback.
 
-
-------------------------------------------------------------------------------
-What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
-patterns at an interface-level. Reveals which users, apps, and protocols are 
-consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
-J-Flow, sFlow and other flows. Make informed decisions using capacity 
-planning reports. http://sdm.link/zohodev2dev
+julia
