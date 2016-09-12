@@ -1,8 +1,8 @@
 From: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v2 3/4] tpm/tpm_crb: open code the crb_init
-	into acpi_add
-Date: Mon, 12 Sep 2016 11:55:00 +0300
-Message-ID: <1473670501-29281-4-git-send-email-tomas.winkler@intel.com>
+Subject: [PATCH v2 2/4] tmp/tpm_crb: fix Intel PTT hw bug
+	during idle state
+Date: Mon, 12 Sep 2016 11:54:59 +0300
+Message-ID: <1473670501-29281-3-git-send-email-tomas.winkler@intel.com>
 References: <1473670501-29281-1-git-send-email-tomas.winkler@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,72 +20,113 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This is preparation step for implementing tpm crb
-runtime pm. We need to have tpm chip allocated
-and populated before we access the runtime handlers.
+There is a HW bug in Skylake, and Broxton PCH Intel PTT device, where
+most of the registers in the control area except START, REQUEST, CANCEL,
+and LOC_CTRL lost retention when the device is in the idle state. Hence
+we need to bring the device to ready state before accessing the other
+registers. The fix brings device to ready state before trying to read
+command and response buffer addresses in order to remap the for access.
 
 Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 ---
-V2: new in the series
+V2: cmd read need to be called also before crb_init as this will run
+ self test.
 
- drivers/char/tpm/tpm_crb.c | 26 ++++++++++----------------
- 1 file changed, 10 insertions(+), 16 deletions(-)
+ drivers/char/tpm/tpm_crb.c | 47 ++++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 39 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index 69e305f49310..524f34b5371e 100644
+index 49023ac3dea1..69e305f49310 100644
 --- a/drivers/char/tpm/tpm_crb.c
 +++ b/drivers/char/tpm/tpm_crb.c
-@@ -258,21 +258,6 @@ static const struct tpm_class_ops tpm_crb = {
- 	.req_complete_val = CRB_DRV_STS_COMPLETE,
- };
- 
--static int crb_init(struct acpi_device *device, struct crb_priv *priv)
--{
--	struct tpm_chip *chip;
--
--	chip = tpmm_chip_alloc(&device->dev, &tpm_crb);
--	if (IS_ERR(chip))
--		return PTR_ERR(chip);
--
--	dev_set_drvdata(&chip->dev, priv);
--	chip->acpi_dev_handle = device->handle;
--	chip->flags = TPM_CHIP_FLAG_TPM2;
--
--	return tpm_chip_register(chip);
--}
--
- static int crb_check_resource(struct acpi_resource *ares, void *data)
- {
- 	struct resource *io_res = data;
-@@ -394,6 +379,7 @@ static int crb_acpi_add(struct acpi_device *device)
- {
- 	struct acpi_table_tpm2 *buf;
- 	struct crb_priv *priv;
-+	struct tpm_chip *chip;
+@@ -311,6 +311,7 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+ 	struct list_head resources;
+ 	struct resource io_res;
  	struct device *dev = &device->dev;
- 	acpi_status status;
- 	u32 sm;
-@@ -431,11 +417,19 @@ static int crb_acpi_add(struct acpi_device *device)
++	u32 pa_high, pa_low;
+ 	u64 cmd_pa;
+ 	u32 cmd_size;
+ 	u64 rsp_pa;
+@@ -338,12 +339,27 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+ 	if (IS_ERR(priv->cca))
+ 		return PTR_ERR(priv->cca);
+ 
+-	cmd_pa = ((u64) ioread32(&priv->cca->cmd_pa_high) << 32) |
+-		  (u64) ioread32(&priv->cca->cmd_pa_low);
++	/*
++	 * PTT HW bug w/a: wake up the device to access
++	 * possibly not retained registers.
++	 */
++	ret = crb_cmd_ready(dev, priv);
++	if (ret)
++		return ret;
++
++	pa_high = ioread32(&priv->cca->cmd_pa_high);
++	pa_low  = ioread32(&priv->cca->cmd_pa_low);
++	cmd_pa = ((u64)pa_high << 32) | pa_low;
+ 	cmd_size = ioread32(&priv->cca->cmd_size);
++
++	dev_dbg(dev, "cmd_hi = %X cmd_low = %X cmd_size %X\n",
++		pa_high, pa_low, cmd_size);
++
+ 	priv->cmd = crb_map_res(dev, priv, &io_res, cmd_pa, cmd_size);
+-	if (IS_ERR(priv->cmd))
+-		return PTR_ERR(priv->cmd);
++	if (IS_ERR(priv->cmd)) {
++		ret = PTR_ERR(priv->cmd);
++		goto out;
++	}
+ 
+ 	memcpy_fromio(&rsp_pa, &priv->cca->rsp_pa, 8);
+ 	rsp_pa = le64_to_cpu(rsp_pa);
+@@ -351,7 +367,8 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+ 
+ 	if (cmd_pa != rsp_pa) {
+ 		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa, rsp_size);
+-		return PTR_ERR_OR_ZERO(priv->rsp);
++		ret = PTR_ERR_OR_ZERO(priv->rsp);
++		goto out;
+ 	}
+ 
+ 	/* According to the PTP specification, overlapping command and response
+@@ -359,12 +376,18 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+ 	 */
+ 	if (cmd_size != rsp_size) {
+ 		dev_err(dev, FW_BUG "overlapping command and response buffer sizes are not identical");
+-		return -EINVAL;
++		ret = -EINVAL;
++		goto out;
+ 	}
++
+ 	priv->cmd_size = cmd_size;
+ 
+ 	priv->rsp = priv->cmd;
+-	return 0;
++
++out:
++	crb_go_idle(dev, priv);
++
++	return ret;
+ }
+ 
+ static int crb_acpi_add(struct acpi_device *device)
+@@ -408,7 +431,15 @@ static int crb_acpi_add(struct acpi_device *device)
  	if (rc)
  		return rc;
  
-+	chip = tpmm_chip_alloc(dev, &tpm_crb);
-+	if (IS_ERR(chip))
-+		return PTR_ERR(chip);
+-	return crb_init(device, priv);
++	rc  = crb_cmd_ready(dev, priv);
++	if (rc)
++		return rc;
 +
-+	dev_set_drvdata(&chip->dev, priv);
-+	chip->acpi_dev_handle = device->handle;
-+	chip->flags = TPM_CHIP_FLAG_TPM2;
++	rc = crb_init(device, priv);
++	if (rc)
++		crb_go_idle(dev, priv);
 +
- 	rc  = crb_cmd_ready(dev, priv);
- 	if (rc)
- 		return rc;
++	return rc;
+ }
  
--	rc = crb_init(device, priv);
-+	rc = tpm_chip_register(chip);
- 	if (rc)
- 		crb_go_idle(dev, priv);
- 
+ static int crb_acpi_remove(struct acpi_device *device)
 -- 
 2.7.4
 
