@@ -1,17 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: 4b68112 causes 'Could not get TPM timeouts
- anddurations'
-Date: Mon, 12 Sep 2016 22:20:01 +0300
-Message-ID: <20160912192001.GB17314@intel.com>
-References: <OF8C8919AB.C1A2AE5E-ON0025802C.005396B8-8525802C.0053E181@notes.na.collabserv.com>
-	<OF094E5F6F.9F1CCCDF-ON0025802C.0056E42F-8525802C.0057EE5F@notes.na.collabserv.com>
-	<20160912191331.GA17314@intel.com>
+Subject: Re: [PATCH 10/26] tpm: constify local structures
+Date: Mon, 12 Sep 2016 22:27:31 +0300
+Message-ID: <20160912192731.GA3186@intel.com>
+References: <1473599168-30561-1-git-send-email-Julia.Lawall@lip6.fr>
+	<1473599168-30561-11-git-send-email-Julia.Lawall@lip6.fr>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160912191331.GA17314-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <1473599168-30561-11-git-send-email-Julia.Lawall-L2FTfq7BK8M@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,35 +18,106 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+To: Julia Lawall <Julia.Lawall-L2FTfq7BK8M@public.gmane.org>
+Cc: kernel-janitors-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, joe-6d6DIl74uiNBDgjK7y7TUQ@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Sep 12, 2016 at 10:13:31PM +0300, Jarkko Sakkinen wrote:
-> On Mon, Sep 12, 2016 at 11:59:49AM -0400, Stefan Berger wrote:
-> >    Stefan Berger/Watson/IBM@IBMUS wrote on 09/12/2016 11:15:34 AM:
-> > 
-> >    >
-> >    > Patch 4b68112 seems like an unlikely candidate for such a failure,
-> >    > nevertheless that's what I am seeing: 'Could not get TPM timeouts
-> >    > and durations'.
-> > 
-> >    Actually, the patch seems to be quite broken. tpm_cmd is being read from
-> >    after calling tpm1_getcap_cmd(), but tpm_cmd is not passed to that
-> >    function, so it wasn't touched. I am not sure how this was intended to
-> >    work and where the check for the returned size was going to be done.
+On Sun, Sep 11, 2016 at 03:05:52PM +0200, Julia Lawall wrote:
+> For structure types defined in the same file or local header files, find
+> top-level static structure declarations that have the following
+> properties:
+> 1. Never reassigned.
+> 2. Address never taken
+> 3. Not passed to a top-level macro call
+> 4. No pointer or array-typed field passed to a function or stored in a
+> variable.
+> Declare structures having all of these properties as const.
 > 
-> I will drop this commit. My bad. I looked my only test machine with
-> TPM 1.x and the commit was not applied in the test kernel.
+> Done using Coccinelle.
+> Based on a suggestion by Joe Perches <joe-6d6DIl74uiNBDgjK7y7TUQ@public.gmane.org>.
 > 
-> I'll resend this after the pull request after I've done proper testing.
-> Can you check it out then?
+> Signed-off-by: Julia Lawall <Julia.Lawall-L2FTfq7BK8M@public.gmane.org>
 
-It's now dropped from the master branch. Can you check that things
-work for you before I send the pull request? Thank you for reporting
-this and sorry for the inconvience.
+Applied to the tip of my tree:
+
+http://git.infradead.org/users/jjs/linux-tpmdd.git/log
+
+Thanks for the good work!
 
 /Jarkko
+
+> 
+> ---
+> The semantic patch seems too long for a commit log, but is in the cover
+> letter.
+> 
+>  drivers/char/tpm/tpm-interface.c |   10 +++++-----
+>  drivers/char/tpm/tpm-sysfs.c     |    2 +-
+>  2 files changed, 6 insertions(+), 6 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index 1abe2d7..e84888f 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -633,7 +633,7 @@ EXPORT_SYMBOL_GPL(tpm_get_timeouts);
+>  #define TPM_ORD_CONTINUE_SELFTEST 83
+>  #define CONTINUE_SELFTEST_RESULT_SIZE 10
+>  
+> -static struct tpm_input_header continue_selftest_header = {
+> +static const struct tpm_input_header continue_selftest_header = {
+>  	.tag = TPM_TAG_RQU_COMMAND,
+>  	.length = cpu_to_be32(10),
+>  	.ordinal = cpu_to_be32(TPM_ORD_CONTINUE_SELFTEST),
+> @@ -659,7 +659,7 @@ static int tpm_continue_selftest(struct tpm_chip *chip)
+>  
+>  #define TPM_ORDINAL_PCRREAD cpu_to_be32(21)
+>  #define READ_PCR_RESULT_SIZE 30
+> -static struct tpm_input_header pcrread_header = {
+> +static const struct tpm_input_header pcrread_header = {
+>  	.tag = TPM_TAG_RQU_COMMAND,
+>  	.length = cpu_to_be32(14),
+>  	.ordinal = TPM_ORDINAL_PCRREAD
+> @@ -745,7 +745,7 @@ EXPORT_SYMBOL_GPL(tpm_pcr_read);
+>   */
+>  #define TPM_ORD_PCR_EXTEND cpu_to_be32(20)
+>  #define EXTEND_PCR_RESULT_SIZE 34
+> -static struct tpm_input_header pcrextend_header = {
+> +static const struct tpm_input_header pcrextend_header = {
+>  	.tag = TPM_TAG_RQU_COMMAND,
+>  	.length = cpu_to_be32(34),
+>  	.ordinal = TPM_ORD_PCR_EXTEND
+> @@ -949,7 +949,7 @@ EXPORT_SYMBOL_GPL(wait_for_tpm_stat);
+>  #define TPM_ORD_SAVESTATE cpu_to_be32(152)
+>  #define SAVESTATE_RESULT_SIZE 10
+>  
+> -static struct tpm_input_header savestate_header = {
+> +static const struct tpm_input_header savestate_header = {
+>  	.tag = TPM_TAG_RQU_COMMAND,
+>  	.length = cpu_to_be32(10),
+>  	.ordinal = TPM_ORD_SAVESTATE
+> @@ -1032,7 +1032,7 @@ int tpm_pm_resume(struct device *dev)
+>  EXPORT_SYMBOL_GPL(tpm_pm_resume);
+>  
+>  #define TPM_GETRANDOM_RESULT_SIZE	18
+> -static struct tpm_input_header tpm_getrandom_header = {
+> +static const struct tpm_input_header tpm_getrandom_header = {
+>  	.tag = TPM_TAG_RQU_COMMAND,
+>  	.length = cpu_to_be32(14),
+>  	.ordinal = TPM_ORD_GET_RANDOM
+> diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+> index b46cf70..26fccad 100644
+> --- a/drivers/char/tpm/tpm-sysfs.c
+> +++ b/drivers/char/tpm/tpm-sysfs.c
+> @@ -22,7 +22,7 @@
+>  
+>  #define READ_PUBEK_RESULT_SIZE 314
+>  #define TPM_ORD_READPUBEK cpu_to_be32(124)
+> -static struct tpm_input_header tpm_readpubek_header = {
+> +static const struct tpm_input_header tpm_readpubek_header = {
+>  	.tag = TPM_TAG_RQU_COMMAND,
+>  	.length = cpu_to_be32(30),
+>  	.ordinal = TPM_ORD_READPUBEK
+> 
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
