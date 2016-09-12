@@ -1,18 +1,17 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v2 1/4] tpm/tpm_crb: implement tpm crb
-	idle state
-Date: Mon, 12 Sep 2016 14:44:49 -0600
-Message-ID: <20160912204449.GA8241@obsidianresearch.com>
+From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Subject: Re: [PATCH v2 3/4] tpm/tpm_crb: open code the
+	crb_init into acpi_add
+Date: Mon, 12 Sep 2016 20:46:07 +0000
+Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B542CDFF8@hasmsx108.ger.corp.intel.com>
 References: <1473670501-29281-1-git-send-email-tomas.winkler@intel.com>
-	<1473670501-29281-2-git-send-email-tomas.winkler@intel.com>
-	<20160912173737.GB5843@obsidianresearch.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B542CDF84@hasmsx108.ger.corp.intel.com>
+	<1473670501-29281-4-git-send-email-tomas.winkler@intel.com>
+	<20160912174137.GD5843@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B542CDF84-Jy8z56yoSI8MvF1YICWikbfspsVTdybXVpNB7YpNyf8@public.gmane.org>
+In-Reply-To: <20160912174137.GD5843-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,36 +20,22 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Sep 12, 2016 at 08:26:34PM +0000, Winkler, Tomas wrote:
-> > > Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-> > > V2: do not export the functions via tpm ops
-> > 
-> > You need to restructure this series, do not implement functions that are not
-> > used in a patch.
 > 
-> It's perfectly fine to stage patches for easier review, even if it
-> cause harmless warning.
-
-That really isn't consistent with the kernel process, please don't do
-it.
-
-> > > +static int __maybe_unused crb_go_idle(struct device *dev, struct
-> > > +crb_priv *priv)
-> > 
-> > .. and then don't hide the warnings with maybe_unused :(
+> On Mon, Sep 12, 2016 at 11:55:00AM +0300, Tomas Winkler wrote:
+> > This is preparation step for implementing tpm crb runtime pm. We need
+> > to have tpm chip allocated and populated before we access the runtime
+> > handlers.
 > 
-> This is not hiding, the issue is that when runtime pm is not
-> compiled and the hw bug is fixed in next gen of the hardware this
-> function will be unused.
+> This should probably be the first patch and then you can use the chip in the
+> signtuare for those functions you added, which is sort of the point..
 
-Hum, that might be ok, but it might be better to wrapper the functions
-in the runtime pm ifdef
-
-Jason
+This series is staged differently  before, first to address the hw bug in a minimalistic approach  just locally  within the tpm_crb as this has to be backported, This is a must, w/o it device just doesn't work,  and only on top of them add runtime pm framework which is important but not necessary feature. 
+ 
+Tomas
 
 ------------------------------------------------------------------------------
 What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
