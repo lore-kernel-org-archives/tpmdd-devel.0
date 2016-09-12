@@ -1,15 +1,17 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix buffer overflow in /dev/tpm0
-Date: Mon, 12 Sep 2016 10:50:57 +0300
-Message-ID: <20160912075057.GA5094@intel.com>
-References: <1473596340-11376-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<20160912040546.GA14625@obsidianresearch.com>
+Subject: Re: [PATCH 1/1] tpm/tpm-dev: fix broken style
+	in	copy_from_user
+Date: Mon, 12 Sep 2016 10:56:37 +0300
+Message-ID: <20160912075637.GB5094@intel.com>
+References: <1473621730-23125-1-git-send-email-tomas.winkler@intel.com>
+	<20160911203849.GA26511@intel.com>
+	<E2960FB9-598A-4289-9486-9B8AFD054E95@gmx.de>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160912040546.GA14625-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <E2960FB9-598A-4289-9486-9B8AFD054E95-Mmb7MZpHnFY@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,44 +20,69 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Sep 11, 2016 at 10:05:46PM -0600, Jason Gunthorpe wrote:
-> On Sun, Sep 11, 2016 at 03:19:00PM +0300, Jarkko Sakkinen wrote:
-> > tpm_write() does not check whether the buffer has at least enough space
-> > for the header before passing it to tpm_transmit() so an overflow can
-> > happen.
-> 
-> Eh?
-> 
-> tpm_write uses a hard wired buffer size of TPM_BUFSIZE when working
-> with tpm_transmit.
-> 
-> in_size is never used except for the copy. We should probably fix that
-> to sanity check the header length vs in_size.
-> 
-> That doesn't seem to be a security issue however because the header
-> length is propery limited to TPM_BUFSIZE and the data buffer is
-> allocated specifically for that process using kzalloc.
+On Sun, Sep 11, 2016 at 09:39:04PM -0700, Peter Huewe wrote:
+> Jarkko,
+> what's the ack for?
+> As maintainer you usually apply and sign off or don't.
+> Ack is more if you are not touching the patch but still think it's good (e.g.goes through another tree.
 
-I was working on something else when I bumped into this. The commit
-message is not the best possible but still the issue is valid although
-it does not cause any imaginable harm because there is always
-TPM_BUFSIZE of room in the buffer passed by tpm_write.
+I've based my use of acked-by based on section 12 of
 
-I'll update the commit message not to speak about tpm_write.
+https://www.kernel.org/doc/Documentation/SubmittingPatches
 
-"tpm_transmit() does not check whether the bufsiz can contain the TPM
-header. Add check for this and return -EINVAL if it the buffer is too
-small."
-
-The check should be in tpm_transmit() and also the commit message should
-be only about that.
-
-> Jason
+Have I somehow misunderstood it? I add signed-off-by's before I send
+a pull requst even if the patch contains reviewd/acked-by by me.
 
 /Jarkko
+
+> @Thomas:thanks for your contribution, but please spellcheck your descriptions, please.
+> 
+> Am 11. September 2016 13:38:49 GMT-07:00, schrieb Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>:
+> >On Sun, Sep 11, 2016 at 10:22:10PM +0300, Tomas Winkler wrote:
+> >> Straighten unneeded line brake and drop useless cast to void.
+> >> 
+> >> Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+> >
+> >Thanks.
+> >
+> >Acked-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> >
+> >/Jarkko
+> >
+> >> ---
+> >>  drivers/char/tpm/tpm-dev.c | 3 +--
+> >>  1 file changed, 1 insertion(+), 2 deletions(-)
+> >> 
+> >> diff --git a/drivers/char/tpm/tpm-dev.c b/drivers/char/tpm/tpm-dev.c
+> >> index 912ad30be585..9782df406345 100644
+> >> --- a/drivers/char/tpm/tpm-dev.c
+> >> +++ b/drivers/char/tpm/tpm-dev.c
+> >> @@ -130,8 +130,7 @@ static ssize_t tpm_write(struct file *file, const
+> >char __user *buf,
+> >>  
+> >>  	mutex_lock(&priv->buffer_mutex);
+> >>  
+> >> -	if (copy_from_user
+> >> -	    (priv->data_buffer, (void __user *) buf, in_size)) {
+> >> +	if (copy_from_user(priv->data_buffer, buf, in_size)) {
+> >>  		mutex_unlock(&priv->buffer_mutex);
+> >>  		return -EFAULT;
+> >>  	}
+> >> -- 
+> >> 2.7.4
+> >> 
+> >
+> >------------------------------------------------------------------------------
+> >_______________________________________________
+> >tpmdd-devel mailing list
+> >tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+> >https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+> 
+> -- 
+> Sent from my mobile
 
 ------------------------------------------------------------------------------
