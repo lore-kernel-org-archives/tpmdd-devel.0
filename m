@@ -1,14 +1,14 @@
-From: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH 4/4] tpm/tpm_crb: fix the over 80 characters
-	checkpatch warring
-Date: Mon, 12 Sep 2016 02:03:55 +0300
-Message-ID: <1473635035-14443-5-git-send-email-tomas.winkler@intel.com>
-References: <1473635035-14443-1-git-send-email-tomas.winkler@intel.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH] tpm: fix buffer overflow in /dev/tpm0
+Date: Sun, 11 Sep 2016 22:05:46 -0600
+Message-ID: <20160912040546.GA14625@obsidianresearch.com>
+References: <1473596340-11376-1-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1473635035-14443-1-git-send-email-tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <1473596340-11376-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,39 +17,27 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Because of the line break in the debug print the chackpatch is
-not silent on 80 characters limitation.
+On Sun, Sep 11, 2016 at 03:19:00PM +0300, Jarkko Sakkinen wrote:
+> tpm_write() does not check whether the buffer has at least enough space
+> for the header before passing it to tpm_transmit() so an overflow can
+> happen.
 
-The easiest fix is to straighten the lines, it's also more readable.
+Eh?
 
-WARNING: line over 80 characters
-+                       FW_BUG "TPM2 ACPI table does not define a memory
-resource\n");
+tpm_write uses a hard wired buffer size of TPM_BUFSIZE when working
+with tpm_transmit.
 
-Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
----
- drivers/char/tpm/tpm_crb.c | 3 +--
- 1 file changed, 1 insertion(+), 2 deletions(-)
+in_size is never used except for the copy. We should probably fix that
+to sanity check the header length vs in_size.
 
-diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index 0c9989d0106e..6e9d1bca712f 100644
---- a/drivers/char/tpm/tpm_crb.c
-+++ b/drivers/char/tpm/tpm_crb.c
-@@ -263,8 +263,7 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
- 	acpi_dev_free_resource_list(&resources);
- 
- 	if (resource_type(&io_res) != IORESOURCE_MEM) {
--		dev_err(dev,
--			FW_BUG "TPM2 ACPI table does not define a memory resource\n");
-+		dev_err(dev, FW_BUG "TPM2 ACPI table does not define a memory resource\n");
- 		return -EINVAL;
- 	}
- 
--- 
-2.7.4
+That doesn't seem to be a security issue however because the header
+length is propery limited to TPM_BUFSIZE and the data buffer is
+allocated specifically for that process using kzalloc.
 
+Jason
 
 ------------------------------------------------------------------------------
