@@ -1,14 +1,15 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix buffer overflow in /dev/tpm0
-Date: Sun, 11 Sep 2016 22:05:46 -0600
-Message-ID: <20160912040546.GA14625@obsidianresearch.com>
-References: <1473596340-11376-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+Subject: Re: [PATCH 1/1] tpm/tpm-dev: fix broken style
+	in	copy_from_user
+Date: Sun, 11 Sep 2016 21:39:04 -0700
+Message-ID: <E2960FB9-598A-4289-9486-9B8AFD054E95@gmx.de>
+References: <1473621730-23125-1-git-send-email-tomas.winkler@intel.com>
+	<20160911203849.GA26511@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1473596340-11376-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+In-Reply-To: <20160911203849.GA26511-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,27 +18,59 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Sep 11, 2016 at 03:19:00PM +0300, Jarkko Sakkinen wrote:
-> tpm_write() does not check whether the buffer has at least enough space
-> for the header before passing it to tpm_transmit() so an overflow can
-> happen.
+Jarkko,
+what's the ack for?
+As maintainer you usually apply and sign off or don't.
+Ack is more if you are not touching the patch but still think it's good (e.g.goes through another tree.
 
-Eh?
+@Thomas:thanks for your contribution, but please spellcheck your descriptions, please.
 
-tpm_write uses a hard wired buffer size of TPM_BUFSIZE when working
-with tpm_transmit.
+Am 11. September 2016 13:38:49 GMT-07:00, schrieb Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>:
+>On Sun, Sep 11, 2016 at 10:22:10PM +0300, Tomas Winkler wrote:
+>> Straighten unneeded line brake and drop useless cast to void.
+>> 
+>> Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+>
+>Thanks.
+>
+>Acked-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+>
+>/Jarkko
+>
+>> ---
+>>  drivers/char/tpm/tpm-dev.c | 3 +--
+>>  1 file changed, 1 insertion(+), 2 deletions(-)
+>> 
+>> diff --git a/drivers/char/tpm/tpm-dev.c b/drivers/char/tpm/tpm-dev.c
+>> index 912ad30be585..9782df406345 100644
+>> --- a/drivers/char/tpm/tpm-dev.c
+>> +++ b/drivers/char/tpm/tpm-dev.c
+>> @@ -130,8 +130,7 @@ static ssize_t tpm_write(struct file *file, const
+>char __user *buf,
+>>  
+>>  	mutex_lock(&priv->buffer_mutex);
+>>  
+>> -	if (copy_from_user
+>> -	    (priv->data_buffer, (void __user *) buf, in_size)) {
+>> +	if (copy_from_user(priv->data_buffer, buf, in_size)) {
+>>  		mutex_unlock(&priv->buffer_mutex);
+>>  		return -EFAULT;
+>>  	}
+>> -- 
+>> 2.7.4
+>> 
+>
+>------------------------------------------------------------------------------
+>_______________________________________________
+>tpmdd-devel mailing list
+>tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+>https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
 
-in_size is never used except for the copy. We should probably fix that
-to sanity check the header length vs in_size.
-
-That doesn't seem to be a security issue however because the header
-length is propery limited to TPM_BUFSIZE and the data buffer is
-allocated specifically for that process using kzalloc.
-
-Jason
+-- 
+Sent from my mobile
 
 ------------------------------------------------------------------------------
