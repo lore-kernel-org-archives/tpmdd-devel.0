@@ -1,8 +1,8 @@
 From: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH v3 3/4] tpm/tpm_crb: open code the crb_init
-	into acpi_add
-Date: Mon, 12 Sep 2016 16:04:20 +0300
-Message-ID: <1473685461-6540-4-git-send-email-tomas.winkler@intel.com>
+Subject: [PATCH v3 1/4] tpm/tpm_crb: implement tpm crb idle
+	state
+Date: Mon, 12 Sep 2016 16:04:18 +0300
+Message-ID: <1473685461-6540-2-git-send-email-tomas.winkler@intel.com>
 References: <1473685461-6540-1-git-send-email-tomas.winkler@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,72 +21,107 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Jason Gunthor
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This is preparation step for implementing tpm crb
-runtime pm. We need to have tpm chip allocated
-and populated before we access the runtime handlers.
+The register TPM_CRB_CTRL_REQ_x contains bits goIdle and cmdReady for
+SW to indicate that the device can enter or should exit the idle state.
+
+The legacy ACPI-start (SMI + DMA) based devices do not support these
+bits and the idle state management is not exposed to the host SW.
+Thus, this functionality only is enabled only for a CRB start (MMIO)
+based devices.
+
+Based on Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+oringal patch:
+'tpm_crb: implement power tpm crb power management'
+
 
 Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 ---
-V2: new in the series
-V3: resend
- drivers/char/tpm/tpm_crb.c | 26 ++++++++++----------------
- 1 file changed, 10 insertions(+), 16 deletions(-)
+V2: do not export the functions via tpm ops
+V3: fix lower case corruption; adjust function documentation
+
+ drivers/char/tpm/tpm_crb.c | 69 ++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 69 insertions(+)
 
 diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index e945177cf2c8..b0c0e2c9022b 100644
+index 6e9d1bca712f..b6923a8b3ff7 100644
 --- a/drivers/char/tpm/tpm_crb.c
 +++ b/drivers/char/tpm/tpm_crb.c
-@@ -265,21 +265,6 @@ static const struct tpm_class_ops tpm_crb = {
- 	.req_complete_val = CRB_DRV_STS_COMPLETE,
+@@ -83,6 +83,75 @@ struct crb_priv {
+ 	u32 cmd_size;
  };
  
--static int crb_init(struct acpi_device *device, struct crb_priv *priv)
--{
--	struct tpm_chip *chip;
--
--	chip = tpmm_chip_alloc(&device->dev, &tpm_crb);
--	if (IS_ERR(chip))
--		return PTR_ERR(chip);
--
--	dev_set_drvdata(&chip->dev, priv);
--	chip->acpi_dev_handle = device->handle;
--	chip->flags = TPM_CHIP_FLAG_TPM2;
--
--	return tpm_chip_register(chip);
--}
--
- static int crb_check_resource(struct acpi_resource *ares, void *data)
- {
- 	struct resource *io_res = data;
-@@ -401,6 +386,7 @@ static int crb_acpi_add(struct acpi_device *device)
- {
- 	struct acpi_table_tpm2 *buf;
- 	struct crb_priv *priv;
-+	struct tpm_chip *chip;
- 	struct device *dev = &device->dev;
- 	acpi_status status;
- 	u32 sm;
-@@ -438,11 +424,19 @@ static int crb_acpi_add(struct acpi_device *device)
- 	if (rc)
- 		return rc;
- 
-+	chip = tpmm_chip_alloc(dev, &tpm_crb);
-+	if (IS_ERR(chip))
-+		return PTR_ERR(chip);
++/**
++ * crb_go_idle - request tpm crb device to go the idle state
++ *
++ * @dev:  crb device
++ * @priv: crb private data
++ *
++ * Write CRB_CTRL_REQ_GO_IDLE to TPM_CRB_CTRL_REQ
++ * The device should respond within TIMEOUT_C by clearing the bit.
++ * Anyhow, we do not wait here as a consequent CMD_READY request
++ * will be handled correctly even if idle was not completed.
++ *
++ * The function does nothing for devices with ACPI-start method.
++ *
++ * Return: 0 always
++ */
++static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
++{
++	if (priv->flags & CRB_FL_ACPI_START)
++		return 0;
 +
-+	dev_set_drvdata(&chip->dev, priv);
-+	chip->acpi_dev_handle = device->handle;
-+	chip->flags = TPM_CHIP_FLAG_TPM2;
++	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->cca->req);
++	/* we don't really care when this settles */
 +
- 	rc  = crb_cmd_ready(dev, priv);
- 	if (rc)
- 		return rc;
++	return 0;
++}
++
++/**
++ * crb_cmd_ready - request tpm crb device to enter ready state
++ *
++ * @dev:  crb device
++ * @priv: crb private data
++ *
++ * Write CRB_CTRL_REQ_CMD_READY to TPM_CRB_CTRL_REQ
++ * and poll till the device acknowledge it by clearing the bit.
++ * The device should respond within TIMEOUT_C.
++ *
++ * The function does nothing for devices with ACPI-start method
++ *
++ * Return: 0 on success -ETIME on timeout;
++ */
++static int __maybe_unused crb_cmd_ready(struct device *dev,
++					struct crb_priv *priv)
++{
++	ktime_t stop, start;
++
++	if (priv->flags & CRB_FL_ACPI_START)
++		return 0;
++
++	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->cca->req);
++
++	start = ktime_get();
++	stop = ktime_add(start, ms_to_ktime(TPM2_TIMEOUT_C));
++	do {
++		if (!(ioread32(&priv->cca->req) & CRB_CTRL_REQ_CMD_READY)) {
++			dev_dbg(dev, "cmdReady in %lld usecs\n",
++				ktime_to_us(ktime_sub(ktime_get(), start)));
++			return 0;
++		}
++		usleep_range(50, 100);
++	} while (ktime_before(ktime_get(), stop));
++
++	if (ioread32(&priv->cca->req) & CRB_CTRL_REQ_CMD_READY) {
++		dev_warn(dev, "cmdReady timed out\n");
++		return -ETIME;
++	}
++
++	return 0;
++}
++
+ static SIMPLE_DEV_PM_OPS(crb_pm, tpm_pm_suspend, tpm_pm_resume);
  
--	rc = crb_init(device, priv);
-+	rc = tpm_chip_register(chip);
- 	if (rc)
- 		crb_go_idle(dev, priv);
- 
+ static u8 crb_status(struct tpm_chip *chip)
 -- 
 2.7.4
 
