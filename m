@@ -1,16 +1,19 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2] tpm: tpm_transmit() does not check for
- minimum buffer size.
-Date: Mon, 12 Sep 2016 23:16:06 +0300
-Message-ID: <20160912201606.GB8889@intel.com>
-References: <1473677010-13737-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<20160912173219.GA5843@obsidianresearch.com>
+Subject: Re: [PATCH v2 1/4] tpm/tpm_crb: implement tpm crb
+	idle state
+Date: Mon, 12 Sep 2016 23:17:03 +0300
+Message-ID: <20160912201703.GC8889@intel.com>
+References: <1473670501-29281-1-git-send-email-tomas.winkler@intel.com>
+	<1473670501-29281-2-git-send-email-tomas.winkler@intel.com>
+	<20160912120109.GA957@intel.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B542CDCB7@hasmsx108.ger.corp.intel.com>
+	<20160912173902.GC5843@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160912173219.GA5843-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <20160912173902.GC5843-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,21 +23,21 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Sep 12, 2016 at 11:32:19AM -0600, Jason Gunthorpe wrote:
-> On Mon, Sep 12, 2016 at 01:43:30PM +0300, Jarkko Sakkinen wrote:
-> > tpm_transmit() does not check that bufsiz is at least TPM_HEADER_SIZE
-> > before accessing data. This commit adds the check and returns -ENOMEM.
+On Mon, Sep 12, 2016 at 11:39:02AM -0600, Jason Gunthorpe wrote:
+> On Mon, Sep 12, 2016 at 12:25:21PM +0000, Winkler, Tomas wrote:
 > 
-> -EINVAL
+> > > @pdev:	CRB platform device
+> > 
+> > I find pdev here  a bit misleading this is not a platform device,
+> > also if we want to clean up the variable names this should not be
+> > mixed within these patches.
 > 
-> > v2: Updated commit msg
-> 
-> After the diffstat, do not commit that to the tree
+> These days within tpm core it means 'parent device'
 
-Duh, right. Thanks.
+That's a better name, agreed. 
 
 > Jason
 
