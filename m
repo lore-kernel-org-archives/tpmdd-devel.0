@@ -1,127 +1,82 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 10/26] tpm: constify local structures
-Date: Mon, 12 Sep 2016 22:27:31 +0300
-Message-ID: <20160912192731.GA3186@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH 00/26] constify local structures
+Date: Mon, 12 Sep 2016 23:14:50 +0300
+Message-ID: <20160912201450.GA8889@intel.com>
 References: <1473599168-30561-1-git-send-email-Julia.Lawall@lip6.fr>
-	<1473599168-30561-11-git-send-email-Julia.Lawall@lip6.fr>
+ <20160911172105.GB5493@intel.com>
+ <alpine.DEB.2.10.1609121051050.3049@hadrien>
+ <20160912131625.GD957@intel.com> <877fah5j35.fsf@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Return-path: <driverdev-devel-bounces@linuxdriverproject.org>
 Content-Disposition: inline
-In-Reply-To: <1473599168-30561-11-git-send-email-Julia.Lawall-L2FTfq7BK8M@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Julia Lawall <Julia.Lawall-L2FTfq7BK8M@public.gmane.org>
-Cc: kernel-janitors-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, joe-6d6DIl74uiNBDgjK7y7TUQ@public.gmane.org
+In-Reply-To: <877fah5j35.fsf@linux.intel.com>
+List-Unsubscribe: <http://driverdev.linuxdriverproject.org/mailman/options/driverdev-devel>,
+ <mailto:driverdev-devel-request@linuxdriverproject.org?subject=unsubscribe>
+List-Archive: <http://driverdev.linuxdriverproject.org/pipermail/driverdev-devel/>
+List-Post: <mailto:driverdev-devel@linuxdriverproject.org>
+List-Help: <mailto:driverdev-devel-request@linuxdriverproject.org?subject=help>
+List-Subscribe: <http://driverdev.linuxdriverproject.org/mailman/listinfo/driverdev-devel>,
+ <mailto:driverdev-devel-request@linuxdriverproject.org?subject=subscribe>
+Errors-To: driverdev-devel-bounces@linuxdriverproject.org
+Sender: "devel" <driverdev-devel-bounces@linuxdriverproject.org>
+To: Felipe Balbi <felipe.balbi@linux.intel.com>
+Cc: alsa-devel@alsa-project.org, Mustafa Ismail <mustafa.ismail@intel.com>, Tatyana Nikolova <tatyana.e.nikolova@intel.com>, kernel-janitors@vger.kernel.org, linux-fbdev@vger.kernel.org, platform-driver-x86@vger.kernel.org, devel@driverdev.osuosl.org, linux-scsi@vger.kernel.org, linux-rdma@vger.kernel.org, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, linux-acpi@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-media@vger.kernel.org, linux-pm@vger.kernel.org, linux-can@vger.kernel.org, Julia Lawall <julia.lawall@lip6.fr>, Shiraz Saleem <shiraz.saleem@intel.com>, Sergei Shtylyov <sergei.shtylyov@cogentembedded.com>, netdev@vger.kernel.org, Chien Tin Tung <chien.tin.tung@intel.com>, linux-wireless@vger.kernel.org, linux-kernel@vger.kernel.org, linux-spi@vger.kernel.org, linux-renesas-soc@vger.kernel.org, linux-usb@vger.kernel.org, joe@perches.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Sep 11, 2016 at 03:05:52PM +0200, Julia Lawall wrote:
-> For structure types defined in the same file or local header files, find
-> top-level static structure declarations that have the following
-> properties:
-> 1. Never reassigned.
-> 2. Address never taken
-> 3. Not passed to a top-level macro call
-> 4. No pointer or array-typed field passed to a function or stored in a
-> variable.
-> Declare structures having all of these properties as const.
+On Mon, Sep 12, 2016 at 04:43:58PM +0300, Felipe Balbi wrote:
 > 
-> Done using Coccinelle.
-> Based on a suggestion by Joe Perches <joe-6d6DIl74uiNBDgjK7y7TUQ@public.gmane.org>.
+> Hi,
 > 
-> Signed-off-by: Julia Lawall <Julia.Lawall-L2FTfq7BK8M@public.gmane.org>
+> Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> writes:
+> > On Mon, Sep 12, 2016 at 10:54:07AM +0200, Julia Lawall wrote:
+> >> 
+> >> 
+> >> On Sun, 11 Sep 2016, Jarkko Sakkinen wrote:
+> >> 
+> >> > On Sun, Sep 11, 2016 at 03:05:42PM +0200, Julia Lawall wrote:
+> >> > > Constify local structures.
+> >> > >
+> >> > > The semantic patch that makes this change is as follows:
+> >> > > (http://coccinelle.lip6.fr/)
+> >> >
+> >> > Just my two cents but:
+> >> >
+> >> > 1. You *can* use a static analysis too to find bugs or other issues.
+> >> > 2. However, you should manually do the commits and proper commit
+> >> >    messages to subsystems based on your findings. And I generally think
+> >> >    that if one contributes code one should also at least smoke test changes
+> >> >    somehow.
+> >> >
+> >> > I don't know if I'm alone with my opinion. I just think that one should
+> >> > also do the analysis part and not blindly create and submit patches.
+> >> 
+> >> All of the patches are compile tested.  And the individual patches are
+> >
+> > Compile-testing is not testing. If you are not able to test a commit,
+> > you should explain why.
+> 
+> Dude, Julia has been doing semantic patching for years already and
+> nobody has raised any concerns so far. There's already an expectation
+> that Coccinelle *works* and Julia's sematic patches are sound.
+> 
+> Besides, adding 'const' is something that causes virtually no functional
+> changes to the point that build-testing is really all you need. Any
+> problems caused by adding 'const' to a definition will be seen by build
+> errors or warnings.
+> 
+> Really, just stop with the pointless discussion and go read a bit about
+> Coccinelle and what semantic patches are giving you. The work done by
+> Julia and her peers are INRIA have measurable benefits.
+> 
+> You're really making a thunderstorm in a glass of water.
 
-Applied to the tip of my tree:
+Hmm... I've been using coccinelle in cyclic basis for some time now.
+My comment was oversized but I didn't mean it to be impolite or attack
+of any kind for that matter.
 
-http://git.infradead.org/users/jjs/linux-tpmdd.git/log
-
-Thanks for the good work!
+> -- 
+> balbi
 
 /Jarkko
-
-> 
-> ---
-> The semantic patch seems too long for a commit log, but is in the cover
-> letter.
-> 
->  drivers/char/tpm/tpm-interface.c |   10 +++++-----
->  drivers/char/tpm/tpm-sysfs.c     |    2 +-
->  2 files changed, 6 insertions(+), 6 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index 1abe2d7..e84888f 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -633,7 +633,7 @@ EXPORT_SYMBOL_GPL(tpm_get_timeouts);
->  #define TPM_ORD_CONTINUE_SELFTEST 83
->  #define CONTINUE_SELFTEST_RESULT_SIZE 10
->  
-> -static struct tpm_input_header continue_selftest_header = {
-> +static const struct tpm_input_header continue_selftest_header = {
->  	.tag = TPM_TAG_RQU_COMMAND,
->  	.length = cpu_to_be32(10),
->  	.ordinal = cpu_to_be32(TPM_ORD_CONTINUE_SELFTEST),
-> @@ -659,7 +659,7 @@ static int tpm_continue_selftest(struct tpm_chip *chip)
->  
->  #define TPM_ORDINAL_PCRREAD cpu_to_be32(21)
->  #define READ_PCR_RESULT_SIZE 30
-> -static struct tpm_input_header pcrread_header = {
-> +static const struct tpm_input_header pcrread_header = {
->  	.tag = TPM_TAG_RQU_COMMAND,
->  	.length = cpu_to_be32(14),
->  	.ordinal = TPM_ORDINAL_PCRREAD
-> @@ -745,7 +745,7 @@ EXPORT_SYMBOL_GPL(tpm_pcr_read);
->   */
->  #define TPM_ORD_PCR_EXTEND cpu_to_be32(20)
->  #define EXTEND_PCR_RESULT_SIZE 34
-> -static struct tpm_input_header pcrextend_header = {
-> +static const struct tpm_input_header pcrextend_header = {
->  	.tag = TPM_TAG_RQU_COMMAND,
->  	.length = cpu_to_be32(34),
->  	.ordinal = TPM_ORD_PCR_EXTEND
-> @@ -949,7 +949,7 @@ EXPORT_SYMBOL_GPL(wait_for_tpm_stat);
->  #define TPM_ORD_SAVESTATE cpu_to_be32(152)
->  #define SAVESTATE_RESULT_SIZE 10
->  
-> -static struct tpm_input_header savestate_header = {
-> +static const struct tpm_input_header savestate_header = {
->  	.tag = TPM_TAG_RQU_COMMAND,
->  	.length = cpu_to_be32(10),
->  	.ordinal = TPM_ORD_SAVESTATE
-> @@ -1032,7 +1032,7 @@ int tpm_pm_resume(struct device *dev)
->  EXPORT_SYMBOL_GPL(tpm_pm_resume);
->  
->  #define TPM_GETRANDOM_RESULT_SIZE	18
-> -static struct tpm_input_header tpm_getrandom_header = {
-> +static const struct tpm_input_header tpm_getrandom_header = {
->  	.tag = TPM_TAG_RQU_COMMAND,
->  	.length = cpu_to_be32(14),
->  	.ordinal = TPM_ORD_GET_RANDOM
-> diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
-> index b46cf70..26fccad 100644
-> --- a/drivers/char/tpm/tpm-sysfs.c
-> +++ b/drivers/char/tpm/tpm-sysfs.c
-> @@ -22,7 +22,7 @@
->  
->  #define READ_PUBEK_RESULT_SIZE 314
->  #define TPM_ORD_READPUBEK cpu_to_be32(124)
-> -static struct tpm_input_header tpm_readpubek_header = {
-> +static const struct tpm_input_header tpm_readpubek_header = {
->  	.tag = TPM_TAG_RQU_COMMAND,
->  	.length = cpu_to_be32(30),
->  	.ordinal = TPM_ORD_READPUBEK
-> 
-
-------------------------------------------------------------------------------
-What NetFlow Analyzer can do for you? Monitors network bandwidth and traffic
-patterns at an interface-level. Reveals which users, apps, and protocols are 
-consuming the most bandwidth. Provides multi-vendor support for NetFlow, 
-J-Flow, sFlow and other flows. Make informed decisions using capacity 
-planning reports. http://sdm.link/zohodev2dev
