@@ -1,32 +1,73 @@
-From: "Winkler, Tomas" <tomas.winkler@intel.com>
-Subject: Re: [PATCH v3 0/4] tpm/tpm_crb: implement power management.
-Date: Wed, 14 Sep 2016 06:28:03 +0000
-Message-ID: <1473834369.21459.4.camel@intel.com>
-References: <1473685461-6540-1-git-send-email-tomas.winkler@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v2 1/4] tpm/tpm_crb: implement tpm crb
+	idle state
+Date: Wed, 14 Sep 2016 19:05:02 +0300
+Message-ID: <20160914160441.GA11131@intel.com>
+References: <1473670501-29281-1-git-send-email-tomas.winkler@intel.com>
+	<1473670501-29281-2-git-send-email-tomas.winkler@intel.com>
+	<20160912120109.GA957@intel.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B542CDCB7@hasmsx108.ger.corp.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <1473685461-6540-1-git-send-email-tomas.winkler@intel.com>
-Content-Language: en-US
-Content-ID: <07793DA38D74B14F8E391A64442D3BAF@intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: "jarkko.sakkinen@linux.intel.com" <jarkko.sakkinen@linux.intel.com>, "jgunthorpe@obsidianresearch.com" <jgunthorpe@obsidianresearch.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B542CDCB7-Jy8z56yoSI8MvF1YICWikbfspsVTdybXVpNB7YpNyf8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gTW9uLCAyMDE2LTA5LTEyIGF0IDE2OjA0ICswMzAwLCBUb21hcyBXaW5rbGVyIHdyb3RlOg0K
-PiBUZSBvdmVyYWxsIHBsYXRmb3JtIGFiaWxpdHkgdG8gZW50ZXIgYSBsb3cgcG93ZXIgc3RhdGUg
-aXMgYWxzbw0KPiBjb25kaXRpb25lZCBvbiB0aGUgYWJpbGl0eSBvZiBhIHRwbSBkZXZpY2UgdG8g
-Z28gdG8gaWRsZSBzdGF0ZS4NCj4gVGhpcyBzZXJpZXMgc2hvdWxkIHByb3ZpZGUgdGhpcyBmZWF0
-dXJlLg0KPiANCj4gVW5mb3J0dW5hdGVseSwgdGhlcmUgaXMgYSBIVyBidWcgb24gSW50ZWwgUFRU
-IGRldmljZXMgb24gU2t5bGFrZSwNCj4gS2FieWxha2UsIGFuZCBCcm94dG9uIGRldmljZXMsIHdo
-ZXJlIGNlcnRhaW4gcmVnaXN0ZXJzIGxvc3QgcmV0ZW50aW9uDQo+IGR1cmluZyBUUE0gaWRsZSBz
-dGF0ZS4gSGVuY2UgdGhpcyBpbXBsZW1lbnRhdGlvbiB0YWtlcyB0aGlzIGludG8NCj4gY29uc2lk
-ZXJhdGlvbiBhbmQgaW1wbGVtZW50IHRoZSBmZWF0dXJlIGJhc2VkIG9ubHkgb24gYWNjZXNzIHRv
-DQo+IHJlZ2lzdGVycyB0aGF0IHJldGFpbiB0aGVpciBzdGF0ZS4gVGhpcyBzdGlsbCBjb25mb3Jt
-cyB0byB0aGUgc3BlYw0KPiBhbmQgc2hvdWxkIGJlIGNvcnJlY3QgYWxzbyBvbiBub24gSW50bGUg
-ZGV2aWNlcy4NCj4gDQo+IFYyOiBVdGlsaXplIHJ1bnRpbWVfcG0gZm9yIGRyaXZpbmcgdHBtIGNy
-YiBpZGxlIHN0YXRlcy4NCj4gVjMuIGZpeCBsb3dlciBjYXNlIGNvcnJ1cHRpb24gaW4gdGhlIGZp
-cnN0IHBhdGNoDQo+IA0KSmFya2tvLCBoYWQgeW91IGNoYW5jZSB0byB0ZXN0IHYzIHNlcmllcyBv
-bmUgb24geW91ciBzaWRlLCBpcyB0aGlzIG9rYXkNCnRvIGdvPw0KDQpUaGFua3MNClRvbWFzDQo=
+On Mon, Sep 12, 2016 at 12:25:21PM +0000, Winkler, Tomas wrote:
+> > Also, I don't like the naming. I would rather have the names I did for [1].
+> > There I have 'go_to_idle' and 'go_to_ready', which are much more obvious.
+> > I'm can live also with go_ready and go_idle if you prefer that.
+> 
+> go_idle and cmd_ready follow the TMP2 spec 
+
+'goIdle' and 'cmdReady' are CRB specific (PTP spec). I think here it
+would make sense to have readable names. 'cmd_ready' sounds like it
+would be return a status code or something.
+
+I'm open for other suggestions than the ones that I proposed abouve
+but cmd_ready sounds like it would return a status code.
+`
+> > Please use wait_for_tpm_stat(). Please argument in th commit message if
+> > you don't. So far the arguments haven't made sense to me.
+> 
+> I say it again this should not go via tpm_stat this is conceptually
+> wrong.  Second why would you want to use such complex function that
+> also cumulates side effects for simple polling of register that should
+> be used at one place. Plus other reason I've mentioned before.
+> 
+> Last you need 'struct tpm_chip' available which just not the case here.
+
+I do agree that the status callback and these masks that we have is a
+mess.
+
+I think the tpmdd should migrate to simple design where would have
+common synthetized status codes like
+
+enum tpm_chip_status {
+	TPM_CHIP_READY = BIT(0),
+	TPM_CHIP_IDLE = BIT(1),
+	TPM_CHIP_CANCELED = BIT(2), /* also idle */
+};
+
+(you might want to wait for two possible end states, that's why bits 
+ for states is a better idea than increasing number)
+
+However, until we have such thing, it would make sense not to introduce
+redundant code or go through the longer path and fix the status code
+handling.
+
+/Jarkko
+
+------------------------------------------------------------------------------
