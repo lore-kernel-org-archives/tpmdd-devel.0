@@ -1,55 +1,141 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v3 0/4] tpm/tpm_crb: implement power management.
-Date: Wed, 14 Sep 2016 21:25:40 +0300
-Message-ID: <20160914182540.GA5347@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v3 1/4] tpm/tpm_crb: implement tpm crb
+	idle state
+Date: Thu, 15 Sep 2016 09:22:04 +0300
+Message-ID: <20160915062204.GA12289@intel.com>
 References: <1473685461-6540-1-git-send-email-tomas.winkler@intel.com>
- <1473834369.21459.4.camel@intel.com>
- <20160914160602.GB11131@intel.com>
- <20160914160652.GA12158@intel.com>
+	<1473685461-6540-2-git-send-email-tomas.winkler@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160914160652.GA12158@intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: "Winkler, Tomas" <tomas.winkler@intel.com>
-Cc: "jgunthorpe@obsidianresearch.com" <jgunthorpe@obsidianresearch.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+In-Reply-To: <1473685461-6540-2-git-send-email-tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Sep 14, 2016 at 07:06:52PM +0300, Jarkko Sakkinen wrote:
-> On Wed, Sep 14, 2016 at 07:06:02PM +0300, Jarkko Sakkinen wrote:
-> > On Wed, Sep 14, 2016 at 06:28:03AM +0000, Winkler, Tomas wrote:
-> > > On Mon, 2016-09-12 at 16:04 +0300, Tomas Winkler wrote:
-> > > > Te overall platform ability to enter a low power state is also
-> > > > conditioned on the ability of a tpm device to go to idle state.
-> > > > This series should provide this feature.
-> > > > 
-> > > > Unfortunately, there is a HW bug on Intel PTT devices on Skylake,
-> > > > Kabylake, and Broxton devices, where certain registers lost retention
-> > > > during TPM idle state. Hence this implementation takes this into
-> > > > consideration and implement the feature based only on access to
-> > > > registers that retain their state. This still conforms to the spec
-> > > > and should be correct also on non Intle devices.
-> > > > 
-> > > > V2: Utilize runtime_pm for driving tpm crb idle states.
-> > > > V3. fix lower case corruption in the first patch
-> > > > 
-> > > Jarkko, had you chance to test v3 series one on your side, is this okay
-> > > to go?
-> > 
-> > Opens for me are:
-> > 
-> > - pm_runtime_put_sync() is still used 
-> > - callback names
-> > - wait_for_tpm_stat
+On Mon, Sep 12, 2016 at 04:04:18PM +0300, Tomas Winkler wrote:
+> The register TPM_CRB_CTRL_REQ_x contains bits goIdle and cmdReady for
+> SW to indicate that the device can enter or should exit the idle state.
+> 
+> The legacy ACPI-start (SMI + DMA) based devices do not support these
+> bits and the idle state management is not exposed to the host SW.
+> Thus, this functionality only is enabled only for a CRB start (MMIO)
+> based devices.
+> 
+> Based on Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> oringal patch:
+> 'tpm_crb: implement power tpm crb power management'
+> 
+> 
+> Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+> ---
+> V2: do not export the functions via tpm ops
+> V3: fix lower case corruption; adjust function documentation
+> 
+>  drivers/char/tpm/tpm_crb.c | 69 ++++++++++++++++++++++++++++++++++++++++++++++
+>  1 file changed, 69 insertions(+)
+> 
+> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+> index 6e9d1bca712f..b6923a8b3ff7 100644
+> --- a/drivers/char/tpm/tpm_crb.c
+> +++ b/drivers/char/tpm/tpm_crb.c
+> @@ -83,6 +83,75 @@ struct crb_priv {
+>  	u32 cmd_size;
+>  };
+>  
+> +/**
+> + * crb_go_idle - request tpm crb device to go the idle state
+> + *
+> + * @dev:  crb device
+> + * @priv: crb private data
+> + *
+> + * Write CRB_CTRL_REQ_GO_IDLE to TPM_CRB_CTRL_REQ
+> + * The device should respond within TIMEOUT_C by clearing the bit.
+> + * Anyhow, we do not wait here as a consequent CMD_READY request
+> + * will be handled correctly even if idle was not completed.
+> + *
+> + * The function does nothing for devices with ACPI-start method.
+> + *
+> + * Return: 0 always
+> + */
+> +static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+> +{
+> +	if (priv->flags & CRB_FL_ACPI_START)
+> +		return 0;
+> +
+> +	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->cca->req);
+> +	/* we don't really care when this settles */
+> +
+> +	return 0;
+> +}
+> +
+> +/**
+> + * crb_cmd_ready - request tpm crb device to enter ready state
+> + *
+> + * @dev:  crb device
+> + * @priv: crb private data
+> + *
+> + * Write CRB_CTRL_REQ_CMD_READY to TPM_CRB_CTRL_REQ
+> + * and poll till the device acknowledge it by clearing the bit.
+> + * The device should respond within TIMEOUT_C.
+> + *
+> + * The function does nothing for devices with ACPI-start method
+> + *
+> + * Return: 0 on success -ETIME on timeout;
+> + */
+> +static int __maybe_unused crb_cmd_ready(struct device *dev,
+> +					struct crb_priv *priv)
+> +{
+> +	ktime_t stop, start;
+> +
+> +	if (priv->flags & CRB_FL_ACPI_START)
+> +		return 0;
+> +
+> +	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->cca->req);
+> +
+> +	start = ktime_get();
+> +	stop = ktime_add(start, ms_to_ktime(TPM2_TIMEOUT_C));
+> +	do {
+> +		if (!(ioread32(&priv->cca->req) & CRB_CTRL_REQ_CMD_READY)) {
+> +			dev_dbg(dev, "cmdReady in %lld usecs\n",
+> +				ktime_to_us(ktime_sub(ktime_get(), start)));
+> +			return 0;
+> +		}
+> +		usleep_range(50, 100);
+> +	} while (ktime_before(ktime_get(), stop));
 
-I think I got you wit with_for_tpm_stat. It's CRB specific internal
-thing and thus using wait_for_tpm_stat would be abusing that function
-and making it dependent on CRB driver internals.
+Since this is HW specific this is right thing to do and not abuse
+wait_for_tpm_stat. However, this should be documented to the commit
+message.
 
-Could you add a note on this to the commit message and I would be
-find with your implementation.
+> +
+> +	if (ioread32(&priv->cca->req) & CRB_CTRL_REQ_CMD_READY) {
+> +		dev_warn(dev, "cmdReady timed out\n");
+> +		return -ETIME;
+> +	}
+> +
+> +	return 0;
+> +}
+> +
+>  static SIMPLE_DEV_PM_OPS(crb_pm, tpm_pm_suspend, tpm_pm_resume);
+>  
+>  static u8 crb_status(struct tpm_chip *chip)
+> -- 
+> 2.7.4
+> 
 
-I started to think about this after I wrote about callback names.
+Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
 /Jarkko
+
+------------------------------------------------------------------------------
