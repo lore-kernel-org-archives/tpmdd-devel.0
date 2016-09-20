@@ -1,47 +1,52 @@
-From: "Winkler, Tomas" <tomas.winkler@intel.com>
-Subject: RE: [tpmdd-devel] [PATCH 2/2] tpm: fix bad constant expressions
-Date: Tue, 20 Sep 2016 09:57:48 +0000
-Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B542EBC24@hasmsx108.ger.corp.intel.com>
-References: <1474316530-17315-1-git-send-email-jarkko.sakkinen@linux.intel.com>
- <1474316530-17315-3-git-send-email-jarkko.sakkinen@linux.intel.com>
- <5B8DA87D05A7694D9FA63FD143655C1B542EB9D8@hasmsx108.ger.corp.intel.com>
- <20160920095605.GA32433@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v3 0/7] tpm: TPM2.0 eventlog securityfs
+ support
+Date: Tue, 20 Sep 2016 13:04:23 +0300
+Message-ID: <20160920100423.GB32433@intel.com>
+References: <1472532619-22170-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<20160830101611.GA11819@intel.com>
+	<OFFF1DBFC5.1719C0A6-ON00258033.00514374-85258033.005192C5@notes.na.collabserv.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 8BIT
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <20160920095605.GA32433@intel.com>
-Content-Language: en-US
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <OFFF1DBFC5.1719C0A6-ON00258033.00514374-85258033.005192C5-8eTO7WVQ4XIsd+ienQ86orlN3bxYEBpz@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, philip.b.tricca-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-
-> On Tue, Sep 20, 2016 at 07:08:40AM +0000, Winkler, Tomas wrote:
-> >
-> > > -----Original Message-----
-> > > From: Jarkko Sakkinen [mailto:jarkko.sakkinen@linux.intel.com]
-> > > Sent: Monday, September 19, 2016 23:22
-> > > To: Peter Huewe <peterhuewe@gmx.de>
-> > > Cc: moderated list:TPM DEVICE DRIVER <tpmdd-
-> > > devel@lists.sourceforge.net>; open list
-> > > <linux-kernel@vger.kernel.org>
-> > > Subject: [tpmdd-devel] [PATCH 2/2] tpm: fix bad constant expressions
-> > >
-> > > Sparse reports "bad constant expression" for the use of cpu_to_be32
-> > > inside enums tpm_capabilities and tpm_sub_capabilities. Even though
-> > > it is probably expanded to a constant expression, it is probably cleaner
-> not to use it there.
-> >
-> >
-> > Swap macros were rewritten due to possible compiler bug
-> > https://lkml.org/lkml/2016/5/2/597
-> > And the warning is actually a bug in sparse, it fails to detect constant
-> expression now.
+On Mon, Sep 19, 2016 at 10:50:15AM -0400, Stefan Berger wrote:
+>    > You also fail to explain how this should work with ACPI even though
+>    > we know that there does not exist any kind for event log through ACPI
+>    > with TPM 2.0 hardware. I.e. just by reading the commits I can obviously
+>    > see that you are doing major untested code path changes.
 > 
-> I still think that these must be change in order to have some consistency in
-> the subsystem. Now there are two differing conventions.
+>    That's true there there's not spec for a BIOS at the moment and I would
+>    expect that TCG will likely not write one. Likely all vendors have moved
+>    on to (U)EFI. We realized this also while implementing TPM 2 support for
+>    SeaBIOS and I ended up reusing the ACPI TCPA table but adopted the EFI
+>    specified log format with that special first entry. Can we accomodate that
+>    ?
 
-Nothing against the convention just the commit message is misleading in that sense. 
-Tomas
+Does that match to "SHA1 Event Log Entry Format" defined in [1]? In
+addition "Crypto Agile Log Entry Format" must be supported.
+
+Philip: what was the UEFI handover procedure that was discussed in
+TPM BoF at LSS 2016?
+
+>       Stefan
+
+[1] http://www.trustedcomputinggroup.org/wp-content/uploads/EFI-Protocol-Specification-rev13-160330final.pdf
+
+/Jarkko
+
+------------------------------------------------------------------------------
