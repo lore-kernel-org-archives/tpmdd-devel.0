@@ -1,7 +1,8 @@
 From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v4 6/8] tpm: remove printk error messages
-Date: Wed, 28 Sep 2016 04:34:40 -0400
-Message-ID: <1475051682-23060-7-git-send-email-nayna@linux.vnet.ibm.com>
+Subject: [PATCH v4 3/8] tpm: validate event log access before
+	tpm_bios_log_setup
+Date: Wed, 28 Sep 2016 04:34:37 -0400
+Message-ID: <1475051682-23060-4-git-send-email-nayna@linux.vnet.ibm.com>
 References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -19,118 +20,241 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This patch removes the unnecessary messages for failure to allocate
-memory. It also replaces pr_err/printk with dev_dbg.
+Currently, the securityfs pseudo files for obtaining the firmware
+event log are created whether the event log properties exist or not.
+This patch creates ascii and bios measurements pseudo files
+only if read_log() is successful.
 
 Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 ---
- drivers/char/tpm/tpm_acpi.c | 17 +++++------------
- drivers/char/tpm/tpm_of.c   | 26 ++++++++++----------------
- 2 files changed, 15 insertions(+), 28 deletions(-)
+ drivers/char/tpm/tpm.h          |  6 +++++
+ drivers/char/tpm/tpm_acpi.c     | 12 +++++++---
+ drivers/char/tpm/tpm_eventlog.c | 53 +++++++++++++++++++----------------------
+ drivers/char/tpm/tpm_eventlog.h |  7 +++++-
+ drivers/char/tpm/tpm_of.c       |  4 +++-
+ 5 files changed, 48 insertions(+), 34 deletions(-)
 
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index b5866bb..68630cd 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -35,6 +35,8 @@
+ #include <linux/cdev.h>
+ #include <linux/highmem.h>
+ 
++#include "tpm_eventlog.h"
++
+ enum tpm_const {
+ 	TPM_MINOR = 224,	/* officially assigned */
+ 	TPM_BUFSIZE = 4096,
+@@ -156,6 +158,10 @@ struct tpm_chip {
+ 	struct rw_semaphore ops_sem;
+ 	const struct tpm_class_ops *ops;
+ 
++	struct tpm_bios_log log;
++	struct tpm_securityfs_data bin_sfs_data;
++	struct tpm_securityfs_data ascii_sfs_data;
++
+ 	unsigned int flags;
+ 
+ 	int dev_num;		/* /dev/tpm# */
 diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
-index 859bdba..22e42da 100644
+index 565a947..4d6c2d7 100644
 --- a/drivers/char/tpm/tpm_acpi.c
 +++ b/drivers/char/tpm/tpm_acpi.c
-@@ -60,11 +60,8 @@ int read_log_acpi(struct tpm_chip *chip)
- 	status = acpi_get_table(ACPI_SIG_TCPA, 1,
- 				(struct acpi_table_header **)&buff);
+@@ -45,13 +45,15 @@ struct acpi_tcpa {
+ };
  
--	if (ACPI_FAILURE(status)) {
--		printk(KERN_ERR "%s: ERROR - Could not get TCPA table\n",
--		       __func__);
-+	if (ACPI_FAILURE(status))
- 		return -EIO;
--	}
+ /* read binary bios log */
+-int read_log(struct tpm_bios_log *log)
++int read_log(struct tpm_chip *chip)
+ {
+ 	struct acpi_tcpa *buff;
+ 	acpi_status status;
+ 	void __iomem *virt;
+ 	u64 len, start;
++	struct tpm_bios_log *log;
  
- 	switch(buff->platform_class) {
- 	case BIOS_SERVER:
-@@ -78,25 +75,21 @@ int read_log_acpi(struct tpm_chip *chip)
- 		break;
- 	}
- 	if (!len) {
--		printk(KERN_ERR "%s: ERROR - TCPA log area empty\n", __func__);
-+		dev_dbg(&chip->dev, "%s: ERROR - TCPA log area empty\n",
-+			__func__);
- 		return -EIO;
- 	}
- 
- 	/* malloc EventLog space */
- 	log->bios_event_log = kmalloc(len, GFP_KERNEL);
--	if (!log->bios_event_log) {
--		printk("%s: ERROR - Not enough  Memory for BIOS measurements\n",
--			__func__);
-+	if (!log->bios_event_log)
- 		return -ENOMEM;
--	}
- 
- 	log->bios_event_log_end = log->bios_event_log + len;
++	log = &chip->log;
+ 	if (log->bios_event_log != NULL) {
+ 		printk(KERN_ERR
+ 		       "%s: ERROR - Eventlog already initialized\n",
+@@ -97,13 +99,17 @@ int read_log(struct tpm_bios_log *log)
  
  	virt = acpi_os_map_iomem(start, len);
--	if (!virt) {
--		printk("%s: ERROR - Unable to map memory\n", __func__);
-+	if (!virt)
- 		goto err;
--	}
+ 	if (!virt) {
+-		kfree(log->bios_event_log);
+ 		printk("%s: ERROR - Unable to map memory\n", __func__);
+-		return -EIO;
++		goto err;
+ 	}
  
  	memcpy_fromio(log->bios_event_log, virt, len);
  
+ 	acpi_os_unmap_iomem(virt, len);
+ 	return 0;
++
++err:
++	kfree(log->bios_event_log);
++	return -EIO;
++
+ }
+diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+index f1df782..a8cd4a1 100644
+--- a/drivers/char/tpm/tpm_eventlog.c
++++ b/drivers/char/tpm/tpm_eventlog.c
+@@ -261,14 +261,6 @@ static int tpm_binary_bios_measurements_show(struct seq_file *m, void *v)
+ static int tpm_bios_measurements_release(struct inode *inode,
+ 					 struct file *file)
+ {
+-	struct seq_file *seq = file->private_data;
+-	struct tpm_bios_log *log = seq->private;
+-
+-	if (log) {
+-		kfree(log->bios_event_log);
+-		kfree(log);
+-	}
+-
+ 	return seq_release(inode, file);
+ }
+ 
+@@ -323,34 +315,19 @@ static int tpm_bios_measurements_open(struct inode *inode,
+ 					    struct file *file)
+ {
+ 	int err;
+-	struct tpm_bios_log *log;
+ 	struct seq_file *seq;
+-	const struct seq_operations *seqops =
+-		(const struct seq_operations *)inode->i_private;
+-
+-	log = kzalloc(sizeof(struct tpm_bios_log), GFP_KERNEL);
+-	if (!log)
+-		return -ENOMEM;
+-
+-	err = read_log(log);
+-	if (err)
+-		goto out_free;
++	const struct tpm_securityfs_data *sfs_data =
++		(const struct tpm_securityfs_data *)inode->i_private;
++	const struct seq_operations *seqops = sfs_data->seqops;
+ 
+ 	/* now register seq file */
+ 	err = seq_open(file, seqops);
+ 	if (!err) {
+ 		seq = file->private_data;
+-		seq->private = log;
+-	} else {
+-		goto out_free;
++		seq->private = sfs_data->log;
+ 	}
+ 
+-out:
+ 	return err;
+-out_free:
+-	kfree(log->bios_event_log);
+-	kfree(log);
+-	goto out;
+ }
+ 
+ static const struct file_operations tpm_bios_measurements_ops = {
+@@ -372,6 +349,18 @@ static int is_bad(void *p)
+ int tpm_bios_log_setup(struct tpm_chip *chip)
+ {
+ 	const char *name = dev_name(&chip->dev);
++	int rc = 0;
++
++	rc = read_log(chip);
++	/*
++	 * read_log failure means event log is not supported except for ENOMEM
++	 */
++	if (rc < 0) {
++		if (rc == -ENOMEM)
++			return rc;
++		else
++			return 0;
++	}
+ 
+ 	chip->bios_dir_count = 0;
+ 	chip->bios_dir[chip->bios_dir_count] =
+@@ -380,19 +369,24 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+ 		goto err;
+ 	chip->bios_dir_count++;
+ 
++	chip->bin_sfs_data.log = &chip->log;
++	chip->bin_sfs_data.seqops = &tpm_binary_b_measurments_seqops;
++
+ 	chip->bios_dir[chip->bios_dir_count] =
+ 	    securityfs_create_file("binary_bios_measurements",
+ 				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
+-				   (void *)&tpm_binary_b_measurments_seqops,
++				   (void *)&chip->bin_sfs_data,
+ 				   &tpm_bios_measurements_ops);
+ 	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
+ 		goto err;
+ 	chip->bios_dir_count++;
+ 
++	chip->ascii_sfs_data.log = &chip->log;
++	chip->ascii_sfs_data.seqops =  &tpm_ascii_b_measurments_seqops;
+ 	chip->bios_dir[chip->bios_dir_count] =
+ 	    securityfs_create_file("ascii_bios_measurements",
+ 				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
+-				   (void *)&tpm_ascii_b_measurments_seqops,
++				   (void *)&chip->ascii_sfs_data,
+ 				   &tpm_bios_measurements_ops);
+ 	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
+ 		goto err;
+@@ -413,4 +407,5 @@ void tpm_bios_log_teardown(struct tpm_chip *chip)
+ 		securityfs_remove(chip->bios_dir[i-1]);
+ 	chip->bios_dir_count = i;
+ 
++	kfree(chip->log.bios_event_log);
+ }
+diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
+index fd3357e..7ea066c 100644
+--- a/drivers/char/tpm/tpm_eventlog.h
++++ b/drivers/char/tpm/tpm_eventlog.h
+@@ -22,6 +22,11 @@ struct tpm_bios_log {
+ 	void *bios_event_log_end;
+ };
+ 
++struct tpm_securityfs_data {
++	struct tpm_bios_log *log;
++	const struct seq_operations *seqops;
++};
++
+ struct tcpa_event {
+ 	u32 pcr_index;
+ 	u32 event_type;
+@@ -73,7 +78,7 @@ enum tcpa_pc_event_ids {
+ 	HOST_TABLE_OF_DEVICES,
+ };
+ 
+-int read_log(struct tpm_bios_log *log);
++int read_log(struct tpm_chip *chip);
+ 
+ #if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
+ 	defined(CONFIG_ACPI)
 diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
-index 22b8f81..1464cae 100644
+index 570f30c..68d891a 100644
 --- a/drivers/char/tpm/tpm_of.c
 +++ b/drivers/char/tpm/tpm_of.c
-@@ -31,40 +31,34 @@ int read_log_of(struct tpm_chip *chip)
- 	log = &chip->log;
- 	if (chip->dev.parent->of_node)
- 		np = chip->dev.parent->of_node;
--	if (!np) {
--		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
-+	if (!np)
- 		return -ENODEV;
--	}
+@@ -20,12 +20,14 @@
+ #include "tpm.h"
+ #include "tpm_eventlog.h"
  
- 	sizep = of_get_property(np, "linux,sml-size", NULL);
- 	if (sizep == NULL) {
--		pr_err("%s: ERROR - SML size not found\n", __func__);
--		goto cleanup_eio;
-+		dev_dbg(&chip->dev, "%s: ERROR - SML size not found\n",
-+			__func__);
-+		return -EIO;
- 	}
- 	if (*sizep == 0) {
--		pr_err("%s: ERROR - event log area empty\n", __func__);
--		goto cleanup_eio;
-+		dev_dbg(&chip->dev, "%s: ERROR - event log area empty\n",
-+			__func__);
-+		return -EIO;
- 	}
+-int read_log(struct tpm_bios_log *log)
++int read_log(struct tpm_chip *chip)
+ {
+ 	struct device_node *np;
+ 	const u32 *sizep;
+ 	const u64 *basep;
++	struct tpm_bios_log *log;
  
- 	basep = of_get_property(np, "linux,sml-base", NULL);
- 	if (basep == NULL) {
--		pr_err("%s: ERROR - SML not found\n", __func__);
--		goto cleanup_eio;
-+		dev_dbg(&chip->dev, "%s: ERROR - SML not found\n", __func__);
-+		return -EIO;
- 	}
- 
- 	log->bios_event_log = kmalloc(*sizep, GFP_KERNEL);
--	if (!log->bios_event_log) {
--		pr_err("%s: ERROR - Not enough memory for BIOS measurements\n",
--		       __func__);
-+	if (!log->bios_event_log)
- 		return -ENOMEM;
--	}
- 
- 	log->bios_event_log_end = log->bios_event_log + *sizep;
- 
- 	memcpy(log->bios_event_log, __va(*basep), *sizep);
- 
- 	return 0;
--
--cleanup_eio:
--	return -EIO;
- }
++	log = &chip->log;
+ 	if (log->bios_event_log != NULL) {
+ 		pr_err("%s: ERROR - Eventlog already initialized\n", __func__);
+ 		return -EFAULT;
 -- 
 2.5.0
 
