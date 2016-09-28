@@ -1,8 +1,8 @@
 From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v4 2/8] tpm: replace dynamically allocated
-	bios_dir with dentry array
-Date: Wed, 28 Sep 2016 04:34:36 -0400
-Message-ID: <1475051682-23060-3-git-send-email-nayna@linux.vnet.ibm.com>
+Subject: [PATCH v4 5/8] tpm: replace of_find_node_by_name()
+	with dev of_node property
+Date: Wed, 28 Sep 2016 04:34:39 -0400
+Message-ID: <1475051682-23060-6-git-send-email-nayna@linux.vnet.ibm.com>
 References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,187 +20,48 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-bios_dir is defined as struct dentry **bios_dir, which results in
-dynamic allocation and therefore possibly a memory leak. This patch
-replaces it with struct dentry array(struct dentry *bios_dir[3])
-similar to what is done for sysfs groups.
+Using the device of_node property is a better way to refer to the
+device tree node rather than of_find_node_by_name().
 
 Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 ---
- drivers/char/tpm/tpm-chip.c     |  8 +++---
- drivers/char/tpm/tpm.h          |  3 +-
- drivers/char/tpm/tpm_eventlog.c | 63 +++++++++++++++++++----------------------
- drivers/char/tpm/tpm_eventlog.h | 10 +++----
- 4 files changed, 40 insertions(+), 44 deletions(-)
+ drivers/char/tpm/tpm_of.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index e595013..826609d 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -278,14 +278,15 @@ static void tpm_del_char_device(struct tpm_chip *chip)
+diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
+index 7c30752..22b8f81 100644
+--- a/drivers/char/tpm/tpm_of.c
++++ b/drivers/char/tpm/tpm_of.c
+@@ -29,7 +29,8 @@ int read_log_of(struct tpm_chip *chip)
+ 	struct tpm_bios_log *log;
  
- static int tpm1_chip_register(struct tpm_chip *chip)
- {
-+	int rc;
- 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
- 		return 0;
- 
- 	tpm_sysfs_add_device(chip);
- 
--	chip->bios_dir = tpm_bios_log_setup(dev_name(&chip->dev));
-+	rc = tpm_bios_log_setup(chip);
- 
--	return 0;
-+	return rc;
- }
- 
- static void tpm1_chip_unregister(struct tpm_chip *chip)
-@@ -293,8 +294,7 @@ static void tpm1_chip_unregister(struct tpm_chip *chip)
- 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
- 		return;
- 
--	if (chip->bios_dir)
--		tpm_bios_log_teardown(chip->bios_dir);
-+	tpm_bios_log_teardown(chip);
- }
- 
- static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 3e952fb..b5866bb 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -171,7 +171,8 @@ struct tpm_chip {
- 	unsigned long duration[3]; /* jiffies */
- 	bool duration_adjusted;
- 
--	struct dentry **bios_dir;
-+	struct dentry *bios_dir[3];
-+	unsigned int bios_dir_count;
- 
- 	const struct attribute_group *groups[3];
- 	unsigned int groups_cnt;
-diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-index 75e6644..f1df782 100644
---- a/drivers/char/tpm/tpm_eventlog.c
-+++ b/drivers/char/tpm/tpm_eventlog.c
-@@ -332,7 +332,8 @@ static int tpm_bios_measurements_open(struct inode *inode,
- 	if (!log)
+ 	log = &chip->log;
+-	np = of_find_node_by_name(NULL, "vtpm");
++	if (chip->dev.parent->of_node)
++		np = chip->dev.parent->of_node;
+ 	if (!np) {
+ 		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
+ 		return -ENODEV;
+@@ -55,18 +56,15 @@ int read_log_of(struct tpm_chip *chip)
+ 	if (!log->bios_event_log) {
+ 		pr_err("%s: ERROR - Not enough memory for BIOS measurements\n",
+ 		       __func__);
+-		of_node_put(np);
  		return -ENOMEM;
+ 	}
  
--	if ((err = read_log(log)))
-+	err = read_log(log);
-+	if (err)
- 		goto out_free;
+ 	log->bios_event_log_end = log->bios_event_log + *sizep;
  
- 	/* now register seq file */
-@@ -368,54 +369,48 @@ static int is_bad(void *p)
+ 	memcpy(log->bios_event_log, __va(*basep), *sizep);
+-	of_node_put(np);
+ 
  	return 0;
+ 
+ cleanup_eio:
+-	of_node_put(np);
+ 	return -EIO;
  }
- 
--struct dentry **tpm_bios_log_setup(const char *name)
-+int tpm_bios_log_setup(struct tpm_chip *chip)
- {
--	struct dentry **ret = NULL, *tpm_dir, *bin_file, *ascii_file;
-+	const char *name = dev_name(&chip->dev);
- 
--	tpm_dir = securityfs_create_dir(name, NULL);
--	if (is_bad(tpm_dir))
--		goto out;
-+	chip->bios_dir_count = 0;
-+	chip->bios_dir[chip->bios_dir_count] =
-+		securityfs_create_dir(name, NULL);
-+	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
-+		goto err;
-+	chip->bios_dir_count++;
- 
--	bin_file =
-+	chip->bios_dir[chip->bios_dir_count] =
- 	    securityfs_create_file("binary_bios_measurements",
--				   S_IRUSR | S_IRGRP, tpm_dir,
-+				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
- 				   (void *)&tpm_binary_b_measurments_seqops,
- 				   &tpm_bios_measurements_ops);
--	if (is_bad(bin_file))
--		goto out_tpm;
-+	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
-+		goto err;
-+	chip->bios_dir_count++;
- 
--	ascii_file =
-+	chip->bios_dir[chip->bios_dir_count] =
- 	    securityfs_create_file("ascii_bios_measurements",
--				   S_IRUSR | S_IRGRP, tpm_dir,
-+				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
- 				   (void *)&tpm_ascii_b_measurments_seqops,
- 				   &tpm_bios_measurements_ops);
--	if (is_bad(ascii_file))
--		goto out_bin;
-+	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
-+		goto err;
-+	chip->bios_dir_count++;
- 
--	ret = kmalloc(3 * sizeof(struct dentry *), GFP_KERNEL);
--	if (!ret)
--		goto out_ascii;
--
--	ret[0] = ascii_file;
--	ret[1] = bin_file;
--	ret[2] = tpm_dir;
--
--	return ret;
-+	return 0;
- 
--out_ascii:
--	securityfs_remove(ascii_file);
--out_bin:
--	securityfs_remove(bin_file);
--out_tpm:
--	securityfs_remove(tpm_dir);
--out:
--	return NULL;
-+err:
-+	tpm_bios_log_teardown(chip);
-+	return -EIO;
- }
- 
--void tpm_bios_log_teardown(struct dentry **lst)
-+void tpm_bios_log_teardown(struct tpm_chip *chip)
- {
- 	int i;
- 
--	for (i = 0; i < 3; i++)
--		securityfs_remove(lst[i]);
-+	for (i = chip->bios_dir_count; i > 0; --i)
-+		securityfs_remove(chip->bios_dir[i-1]);
-+	chip->bios_dir_count = i;
-+
- }
-diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
-index 8de62b0..fd3357e 100644
---- a/drivers/char/tpm/tpm_eventlog.h
-+++ b/drivers/char/tpm/tpm_eventlog.h
-@@ -77,14 +77,14 @@ int read_log(struct tpm_bios_log *log);
- 
- #if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
- 	defined(CONFIG_ACPI)
--extern struct dentry **tpm_bios_log_setup(const char *);
--extern void tpm_bios_log_teardown(struct dentry **);
-+extern int tpm_bios_log_setup(struct tpm_chip *chip);
-+extern void tpm_bios_log_teardown(struct tpm_chip *chip);
- #else
--static inline struct dentry **tpm_bios_log_setup(const char *name)
-+static inline int tpm_bios_log_setup(struct tpm_chip *chip)
- {
--	return NULL;
-+	return 0;
- }
--static inline void tpm_bios_log_teardown(struct dentry **dir)
-+static inline void tpm_bios_log_teardown(struct tpm_chip *chip)
- {
- }
- #endif
 -- 
 2.5.0
 
