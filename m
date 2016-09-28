@@ -1,8 +1,7 @@
 From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v4 1/8] tpm: define a generic open() method
-	for ascii & bios measurements
-Date: Wed, 28 Sep 2016 04:34:35 -0400
-Message-ID: <1475051682-23060-2-git-send-email-nayna@linux.vnet.ibm.com>
+Subject: [PATCH v4 6/8] tpm: remove printk error messages
+Date: Wed, 28 Sep 2016 04:34:40 -0400
+Message-ID: <1475051682-23060-7-git-send-email-nayna@linux.vnet.ibm.com>
 References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,126 +19,118 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-open() method for event log ascii and binary bios measurements file
-operations are very similar. This patch refactors the code into a
-single open() call by passing seq_operations as i_node->private data.
+This patch removes the unnecessary messages for failure to allocate
+memory. It also replaces pr_err/printk with dev_dbg.
 
 Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 ---
- drivers/char/tpm/tpm_eventlog.c | 59 +++++++++--------------------------------
- 1 file changed, 13 insertions(+), 46 deletions(-)
+ drivers/char/tpm/tpm_acpi.c | 17 +++++------------
+ drivers/char/tpm/tpm_of.c   | 26 ++++++++++----------------
+ 2 files changed, 15 insertions(+), 28 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-index e722886..75e6644 100644
---- a/drivers/char/tpm/tpm_eventlog.c
-+++ b/drivers/char/tpm/tpm_eventlog.c
-@@ -7,6 +7,7 @@
-  *	Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-  *	Reiner Sailer <sailer-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
-  *	Kylene Hall <kjhall-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-+ *	Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-  *
-  * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-  *
-@@ -318,12 +319,14 @@ static const struct seq_operations tpm_binary_b_measurments_seqops = {
- 	.show = tpm_binary_bios_measurements_show,
- };
+diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
+index 859bdba..22e42da 100644
+--- a/drivers/char/tpm/tpm_acpi.c
++++ b/drivers/char/tpm/tpm_acpi.c
+@@ -60,11 +60,8 @@ int read_log_acpi(struct tpm_chip *chip)
+ 	status = acpi_get_table(ACPI_SIG_TCPA, 1,
+ 				(struct acpi_table_header **)&buff);
  
--static int tpm_ascii_bios_measurements_open(struct inode *inode,
-+static int tpm_bios_measurements_open(struct inode *inode,
- 					    struct file *file)
- {
- 	int err;
- 	struct tpm_bios_log *log;
- 	struct seq_file *seq;
-+	const struct seq_operations *seqops =
-+		(const struct seq_operations *)inode->i_private;
- 
- 	log = kzalloc(sizeof(struct tpm_bios_log), GFP_KERNEL);
- 	if (!log)
-@@ -333,7 +336,7 @@ static int tpm_ascii_bios_measurements_open(struct inode *inode,
- 		goto out_free;
- 
- 	/* now register seq file */
--	err = seq_open(file, &tpm_ascii_b_measurments_seqops);
-+	err = seq_open(file, seqops);
- 	if (!err) {
- 		seq = file->private_data;
- 		seq->private = log;
-@@ -349,46 +352,8 @@ out_free:
- 	goto out;
- }
- 
--static const struct file_operations tpm_ascii_bios_measurements_ops = {
--	.open = tpm_ascii_bios_measurements_open,
--	.read = seq_read,
--	.llseek = seq_lseek,
--	.release = tpm_bios_measurements_release,
--};
--
--static int tpm_binary_bios_measurements_open(struct inode *inode,
--					     struct file *file)
--{
--	int err;
--	struct tpm_bios_log *log;
--	struct seq_file *seq;
--
--	log = kzalloc(sizeof(struct tpm_bios_log), GFP_KERNEL);
--	if (!log)
--		return -ENOMEM;
--
--	if ((err = read_log(log)))
--		goto out_free;
--
--	/* now register seq file */
--	err = seq_open(file, &tpm_binary_b_measurments_seqops);
--	if (!err) {
--		seq = file->private_data;
--		seq->private = log;
--	} else {
--		goto out_free;
+-	if (ACPI_FAILURE(status)) {
+-		printk(KERN_ERR "%s: ERROR - Could not get TCPA table\n",
+-		       __func__);
++	if (ACPI_FAILURE(status))
+ 		return -EIO;
 -	}
+ 
+ 	switch(buff->platform_class) {
+ 	case BIOS_SERVER:
+@@ -78,25 +75,21 @@ int read_log_acpi(struct tpm_chip *chip)
+ 		break;
+ 	}
+ 	if (!len) {
+-		printk(KERN_ERR "%s: ERROR - TCPA log area empty\n", __func__);
++		dev_dbg(&chip->dev, "%s: ERROR - TCPA log area empty\n",
++			__func__);
+ 		return -EIO;
+ 	}
+ 
+ 	/* malloc EventLog space */
+ 	log->bios_event_log = kmalloc(len, GFP_KERNEL);
+-	if (!log->bios_event_log) {
+-		printk("%s: ERROR - Not enough  Memory for BIOS measurements\n",
+-			__func__);
++	if (!log->bios_event_log)
+ 		return -ENOMEM;
+-	}
+ 
+ 	log->bios_event_log_end = log->bios_event_log + len;
+ 
+ 	virt = acpi_os_map_iomem(start, len);
+-	if (!virt) {
+-		printk("%s: ERROR - Unable to map memory\n", __func__);
++	if (!virt)
+ 		goto err;
+-	}
+ 
+ 	memcpy_fromio(log->bios_event_log, virt, len);
+ 
+diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
+index 22b8f81..1464cae 100644
+--- a/drivers/char/tpm/tpm_of.c
++++ b/drivers/char/tpm/tpm_of.c
+@@ -31,40 +31,34 @@ int read_log_of(struct tpm_chip *chip)
+ 	log = &chip->log;
+ 	if (chip->dev.parent->of_node)
+ 		np = chip->dev.parent->of_node;
+-	if (!np) {
+-		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
++	if (!np)
+ 		return -ENODEV;
+-	}
+ 
+ 	sizep = of_get_property(np, "linux,sml-size", NULL);
+ 	if (sizep == NULL) {
+-		pr_err("%s: ERROR - SML size not found\n", __func__);
+-		goto cleanup_eio;
++		dev_dbg(&chip->dev, "%s: ERROR - SML size not found\n",
++			__func__);
++		return -EIO;
+ 	}
+ 	if (*sizep == 0) {
+-		pr_err("%s: ERROR - event log area empty\n", __func__);
+-		goto cleanup_eio;
++		dev_dbg(&chip->dev, "%s: ERROR - event log area empty\n",
++			__func__);
++		return -EIO;
+ 	}
+ 
+ 	basep = of_get_property(np, "linux,sml-base", NULL);
+ 	if (basep == NULL) {
+-		pr_err("%s: ERROR - SML not found\n", __func__);
+-		goto cleanup_eio;
++		dev_dbg(&chip->dev, "%s: ERROR - SML not found\n", __func__);
++		return -EIO;
+ 	}
+ 
+ 	log->bios_event_log = kmalloc(*sizep, GFP_KERNEL);
+-	if (!log->bios_event_log) {
+-		pr_err("%s: ERROR - Not enough memory for BIOS measurements\n",
+-		       __func__);
++	if (!log->bios_event_log)
+ 		return -ENOMEM;
+-	}
+ 
+ 	log->bios_event_log_end = log->bios_event_log + *sizep;
+ 
+ 	memcpy(log->bios_event_log, __va(*basep), *sizep);
+ 
+ 	return 0;
 -
--out:
--	return err;
--out_free:
--	kfree(log->bios_event_log);
--	kfree(log);
--	goto out;
--}
--
--static const struct file_operations tpm_binary_bios_measurements_ops = {
--	.open = tpm_binary_bios_measurements_open,
-+static const struct file_operations tpm_bios_measurements_ops = {
-+	.open = tpm_bios_measurements_open,
- 	.read = seq_read,
- 	.llseek = seq_lseek,
- 	.release = tpm_bios_measurements_release,
-@@ -413,15 +378,17 @@ struct dentry **tpm_bios_log_setup(const char *name)
- 
- 	bin_file =
- 	    securityfs_create_file("binary_bios_measurements",
--				   S_IRUSR | S_IRGRP, tpm_dir, NULL,
--				   &tpm_binary_bios_measurements_ops);
-+				   S_IRUSR | S_IRGRP, tpm_dir,
-+				   (void *)&tpm_binary_b_measurments_seqops,
-+				   &tpm_bios_measurements_ops);
- 	if (is_bad(bin_file))
- 		goto out_tpm;
- 
- 	ascii_file =
- 	    securityfs_create_file("ascii_bios_measurements",
--				   S_IRUSR | S_IRGRP, tpm_dir, NULL,
--				   &tpm_ascii_bios_measurements_ops);
-+				   S_IRUSR | S_IRGRP, tpm_dir,
-+				   (void *)&tpm_ascii_b_measurments_seqops,
-+				   &tpm_bios_measurements_ops);
- 	if (is_bad(ascii_file))
- 		goto out_bin;
- 
+-cleanup_eio:
+-	return -EIO;
+ }
 -- 
 2.5.0
 
