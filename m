@@ -1,79 +1,80 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: Possible issue with tpm_crb runtime PM
-Date: Wed, 28 Sep 2016 08:48:58 +0300
-Message-ID: <20160928054858.GA4414@intel.com>
-References: <20160920131522.GA950@intel.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B542EBE42@hasmsx108.ger.corp.intel.com>
-	<20160920174712.GA12175@intel.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B542EC0CB@hasmsx108.ger.corp.intel.com>
-	<20160922155140.GA28886@intel.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B542EEC58@hasmsx108.ger.corp.intel.com>
-	<20160926221427.GA2212@intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20160926221427.GA2212-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH v2 1/2] Documentation: tpm: add the IBM Virtual TPM device tree binding documentation
+Date: Wed, 28 Sep 2016 04:30:40 -0400
+Message-ID: <1475051441-23008-1-git-send-email-nayna@linux.vnet.ibm.com>
+Return-path: <devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Sender: devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: robh-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org, wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org, pawel.moll-5wv7dgnIgG8@public.gmane.org, mark.rutland-5wv7dgnIgG8@public.gmane.org, ijc+devicetree-KcIKpvwj1kUDXYZnReoRVg@public.gmane.org, galak-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org, linux-i2c-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, peterhuewe-Mmb7MZpHnFY@public.gmane.org, tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org, jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, hellerda-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org, ltcgcw-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, cclaudio-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org, honclo-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org, Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Sep 27, 2016 at 01:14:27AM +0300, Jarkko Sakkinen wrote:
-> On Sun, Sep 25, 2016 at 12:38:56PM +0000, Winkler, Tomas wrote:
-> > > 
-> > > On Tue, Sep 20, 2016 at 07:26:08PM +0000, Winkler, Tomas wrote:
-> > > > > On Tue, Sep 20, 2016 at 01:30:58PM +0000, Winkler, Tomas wrote:
-> > > > > >
-> > > > > > >
-> > > > > > > Hi
-> > > > > > >
-> > > > > > > I get this (probably every time) when I do rmmod:
-> > > > > > >
-> > > > > > > [ 4372.725616] tpm tpm0: A TPM error (325) occurred stopping the
-> > > > > > > TPM
-> > > > > > >
-> > > > > > > That is probably caused by failing TPM2_Shutdown. My guess is
-> > > > > > > that runtime PM patches cause this.
-> > > > > > >
-> > > > > > > I'll verify that the problem does not occur with the next
-> > > > > > > branch, which does not include runtime PM patches.
-> > > > > >
-> > > > > > Can you produce the full log?
-> > > > >
-> > > > > I just compiled kernel from the 'next' branch and it doesn't have
-> > > > > this issue. If you want, I can recompile the kernel but that's the
-> > > > > only error message that is emitted and it is obviously emitted by
-> > > tpm2_shutdown().
-> > > > > This is a Skylake m7-6Y75 machine that I use for ad-hoc testing
-> > > > > (runs Ubuntu
-> > > > > 16.04 LTS, usually I test kernel with buildroot initramfs) of TPM and SGX.
-> > > >
-> > > > If you can just revert the last patch, so the device  will be always up, see if
-> > > this helps?
-> > > 
-> > > This error does not occur with
-> > > 
-> > > 0c22db435bf7 ("tpm/tpm_crb: open code the crb_init into acpi_add")
-> > >
-> > Okay, can you apply the my original patch with pm_rurntime_put_sync ? 
-> > Thanks
-> 
-> The same error still happens with pm_runtime_put_sync().
+Virtual TPM, which is being used on IBM POWER7+ and POWER8 systems running
+POWERVM, is currently supported by tpm device driver but lacks the
+documentation. This patch adds the missing documentation for the existing
+support.
 
-Now that I replied the patches the problem does not occur anymore.
-So it should be ready for 4.10. I guess the problem was really this.
-Probably put callback was delayed. If we change this behaviour it's
-better to do as a separate commit with its own test cycle.
+Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+---
+Changelog v2:
 
-/Jarkko
+- New Patch
 
-------------------------------------------------------------------------------
+ .../devicetree/bindings/security/tpm/ibmvtpm.txt   | 41 ++++++++++++++++++++++
+ 1 file changed, 41 insertions(+)
+ create mode 100644 Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt
+
+diff --git a/Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt b/Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt
+new file mode 100644
+index 0000000..d89f999
+--- /dev/null
++++ b/Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt
+@@ -0,0 +1,41 @@
++* Device Tree Bindings for IBM Virtual Trusted Platform Module(vtpm)
++
++Required properties:
++
++- compatible            : property name that conveys the platform architecture
++                          identifiers, as 'IBM,vtpm'
++- device_type           : specifies type of virtual device
++- interrupts            : property specifying the interrupt source number and
++                          sense code associated with this virtual I/O Adapters
++- ibm,my-drc-index      : integer index for the connector between the device
++                          and its parent - present only if Dynamic
++                          Reconfiguration(DR) Connector is enabled
++- ibm,#dma-address-cells: specifies the number of cells that are used to
++                          encode the physical address field of dma-window
++                          properties
++- ibm,#dma-size-cells   : specifies the number of cells that are used to
++                          encode the size field of dma-window properties
++- ibm,my-dma-window     : specifies DMA window associated with this virtual
++                          IOA
++- ibm,loc-code          : specifies the unique and persistent location code
++                          associated with this virtual I/O Adapters
++- linux,sml-base        : 64-bit base address of the reserved memory allocated
++                          for the firmware event log
++- linux,sml-size        : size of the memory allocated for the firmware event log
++
++Example (IBM Virtual Trusted Platform Module)
++---------------------------------------------
++
++                vtpm@30000003 {
++                        ibm,#dma-size-cells = <0x2>;
++                        compatible = "IBM,vtpm";
++                        device_type = "IBM,vtpm";
++                        ibm,my-drc-index = <0x30000003>;
++                        ibm,#dma-address-cells = <0x2>;
++                        linux,sml-base = <0xc60e 0x0>;
++                        interrupts = <0xa0003 0x0>;
++                        ibm,my-dma-window = <0x10000003 0x0 0x0 0x0 0x10000000>;
++                        ibm,loc-code = "U8286.41A.10082DV-V3-C3";
++                        reg = <0x30000003>;
++                        linux,sml-size = <0xbce10200>;
++                };
+-- 
+2.5.0
+
+--
+To unsubscribe from this list: send the line "unsubscribe devicetree" in
+the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+More majordomo info at  http://vger.kernel.org/majordomo-info.html
