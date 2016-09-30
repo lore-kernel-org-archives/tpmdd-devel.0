@@ -1,17 +1,16 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v4 2/8] tpm: replace dynamically allocated
- bios_dir with dentry array
-Date: Fri, 30 Sep 2016 12:30:26 -0600
-Message-ID: <20160930183026.GC1867@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v4 3/8] tpm: validate event log access
+ before tpm_bios_log_setup
+Date: Fri, 30 Sep 2016 21:57:43 +0300
+Message-ID: <20160930185742.GB9595@intel.com>
 References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1475051682-23060-3-git-send-email-nayna@linux.vnet.ibm.com>
-	<20160930182703.GA9595@intel.com>
+	<1475051682-23060-4-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20160930182703.GA9595-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <1475051682-23060-4-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,24 +19,25 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Sep 30, 2016 at 09:27:03PM +0300, Jarkko Sakkinen wrote:
-> On Wed, Sep 28, 2016 at 04:34:36AM -0400, Nayna Jain wrote:
-
-> > -	struct dentry **bios_dir;
-> > +	struct dentry *bios_dir[3];
-> > +	unsigned int bios_dir_count;
+On Wed, Sep 28, 2016 at 04:34:37AM -0400, Nayna Jain wrote:
+> Currently, the securityfs pseudo files for obtaining the firmware
+> event log are created whether the event log properties exist or not.
+> This patch creates ascii and bios measurements pseudo files
+> only if read_log() is successful.
 > 
-> You should rather have a four entry array and use a NULL terminator.
+> Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 
-Why? Then everything has to compute the length before doing
-anything. The basic ops are 'append to back' and 'pop off back' which
-require length.
+I'm not going to accept this commit as this increases permanent memory
+consumption of the subsystem.
 
-Jason
+You don't need to read the log in order check if it is there.
+
+/Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
