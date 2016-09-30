@@ -1,16 +1,17 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Subject: Re: [PATCH v4 2/8] tpm: replace dynamically allocated
  bios_dir with dentry array
-Date: Fri, 30 Sep 2016 21:27:03 +0300
-Message-ID: <20160930182703.GA9595@intel.com>
+Date: Fri, 30 Sep 2016 12:30:26 -0600
+Message-ID: <20160930183026.GC1867@obsidianresearch.com>
 References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
 	<1475051682-23060-3-git-send-email-nayna@linux.vnet.ibm.com>
+	<20160930182703.GA9595@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1475051682-23060-3-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <20160930182703.GA9595-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,199 +20,24 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Sep 28, 2016 at 04:34:36AM -0400, Nayna Jain wrote:
-> bios_dir is defined as struct dentry **bios_dir, which results in
-> dynamic allocation and therefore possibly a memory leak. This patch
-> replaces it with struct dentry array(struct dentry *bios_dir[3])
-> similar to what is done for sysfs groups.
-> 
-> Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> ---
->  drivers/char/tpm/tpm-chip.c     |  8 +++---
->  drivers/char/tpm/tpm.h          |  3 +-
->  drivers/char/tpm/tpm_eventlog.c | 63 +++++++++++++++++++----------------------
->  drivers/char/tpm/tpm_eventlog.h | 10 +++----
->  4 files changed, 40 insertions(+), 44 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> index e595013..826609d 100644
-> --- a/drivers/char/tpm/tpm-chip.c
-> +++ b/drivers/char/tpm/tpm-chip.c
-> @@ -278,14 +278,15 @@ static void tpm_del_char_device(struct tpm_chip *chip)
->  
->  static int tpm1_chip_register(struct tpm_chip *chip)
->  {
-> +	int rc;
->  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
->  		return 0;
->  
->  	tpm_sysfs_add_device(chip);
->  
-> -	chip->bios_dir = tpm_bios_log_setup(dev_name(&chip->dev));
-> +	rc = tpm_bios_log_setup(chip);
->  
-> -	return 0;
-> +	return rc;
->  }
->  
->  static void tpm1_chip_unregister(struct tpm_chip *chip)
-> @@ -293,8 +294,7 @@ static void tpm1_chip_unregister(struct tpm_chip *chip)
->  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
->  		return;
->  
-> -	if (chip->bios_dir)
-> -		tpm_bios_log_teardown(chip->bios_dir);
-> +	tpm_bios_log_teardown(chip);
->  }
->  
->  static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
-> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> index 3e952fb..b5866bb 100644
-> --- a/drivers/char/tpm/tpm.h
-> +++ b/drivers/char/tpm/tpm.h
-> @@ -171,7 +171,8 @@ struct tpm_chip {
->  	unsigned long duration[3]; /* jiffies */
->  	bool duration_adjusted;
->  
-> -	struct dentry **bios_dir;
-> +	struct dentry *bios_dir[3];
-> +	unsigned int bios_dir_count;
+On Fri, Sep 30, 2016 at 09:27:03PM +0300, Jarkko Sakkinen wrote:
+> On Wed, Sep 28, 2016 at 04:34:36AM -0400, Nayna Jain wrote:
 
-You should rather have a four entry array and use a NULL terminator.
-
->  	const struct attribute_group *groups[3];
->  	unsigned int groups_cnt;
-> diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-> index 75e6644..f1df782 100644
-> --- a/drivers/char/tpm/tpm_eventlog.c
-> +++ b/drivers/char/tpm/tpm_eventlog.c
-> @@ -332,7 +332,8 @@ static int tpm_bios_measurements_open(struct inode *inode,
->  	if (!log)
->  		return -ENOMEM;
->  
-> -	if ((err = read_log(log)))
-> +	err = read_log(log);
-> +	if (err)
->  		goto out_free;
->  
->  	/* now register seq file */
-> @@ -368,54 +369,48 @@ static int is_bad(void *p)
->  	return 0;
->  }
->  
-> -struct dentry **tpm_bios_log_setup(const char *name)
-> +int tpm_bios_log_setup(struct tpm_chip *chip)
->  {
-> -	struct dentry **ret = NULL, *tpm_dir, *bin_file, *ascii_file;
-> +	const char *name = dev_name(&chip->dev);
->  
-> -	tpm_dir = securityfs_create_dir(name, NULL);
-> -	if (is_bad(tpm_dir))
-> -		goto out;
-> +	chip->bios_dir_count = 0;
-> +	chip->bios_dir[chip->bios_dir_count] =
-> +		securityfs_create_dir(name, NULL);
-> +	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
-> +		goto err;
-> +	chip->bios_dir_count++;
->  
-> -	bin_file =
-> +	chip->bios_dir[chip->bios_dir_count] =
->  	    securityfs_create_file("binary_bios_measurements",
-> -				   S_IRUSR | S_IRGRP, tpm_dir,
-> +				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
->  				   (void *)&tpm_binary_b_measurments_seqops,
->  				   &tpm_bios_measurements_ops);
-> -	if (is_bad(bin_file))
-> -		goto out_tpm;
-> +	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
-> +		goto err;
-> +	chip->bios_dir_count++;
->  
-> -	ascii_file =
-> +	chip->bios_dir[chip->bios_dir_count] =
->  	    securityfs_create_file("ascii_bios_measurements",
-> -				   S_IRUSR | S_IRGRP, tpm_dir,
-> +				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
->  				   (void *)&tpm_ascii_b_measurments_seqops,
->  				   &tpm_bios_measurements_ops);
-> -	if (is_bad(ascii_file))
-> -		goto out_bin;
-> +	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
-> +		goto err;
-> +	chip->bios_dir_count++;
->  
-> -	ret = kmalloc(3 * sizeof(struct dentry *), GFP_KERNEL);
-> -	if (!ret)
-> -		goto out_ascii;
-> -
-> -	ret[0] = ascii_file;
-> -	ret[1] = bin_file;
-> -	ret[2] = tpm_dir;
-> -
-> -	return ret;
-> +	return 0;
->  
-> -out_ascii:
-> -	securityfs_remove(ascii_file);
-> -out_bin:
-> -	securityfs_remove(bin_file);
-> -out_tpm:
-> -	securityfs_remove(tpm_dir);
-> -out:
-> -	return NULL;
-> +err:
-> +	tpm_bios_log_teardown(chip);
-> +	return -EIO;
->  }
->  
-> -void tpm_bios_log_teardown(struct dentry **lst)
-> +void tpm_bios_log_teardown(struct tpm_chip *chip)
->  {
->  	int i;
->  
-> -	for (i = 0; i < 3; i++)
-> -		securityfs_remove(lst[i]);
-> +	for (i = chip->bios_dir_count; i > 0; --i)
-> +		securityfs_remove(chip->bios_dir[i-1]);
-> +	chip->bios_dir_count = i;
-> +
->  }
-> diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
-> index 8de62b0..fd3357e 100644
-> --- a/drivers/char/tpm/tpm_eventlog.h
-> +++ b/drivers/char/tpm/tpm_eventlog.h
-> @@ -77,14 +77,14 @@ int read_log(struct tpm_bios_log *log);
->  
->  #if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
->  	defined(CONFIG_ACPI)
-> -extern struct dentry **tpm_bios_log_setup(const char *);
-> -extern void tpm_bios_log_teardown(struct dentry **);
-> +extern int tpm_bios_log_setup(struct tpm_chip *chip);
-> +extern void tpm_bios_log_teardown(struct tpm_chip *chip);
->  #else
-> -static inline struct dentry **tpm_bios_log_setup(const char *name)
-> +static inline int tpm_bios_log_setup(struct tpm_chip *chip)
->  {
-> -	return NULL;
-> +	return 0;
->  }
-> -static inline void tpm_bios_log_teardown(struct dentry **dir)
-> +static inline void tpm_bios_log_teardown(struct tpm_chip *chip)
->  {
->  }
->  #endif
-> -- 
-> 2.5.0
+> > -	struct dentry **bios_dir;
+> > +	struct dentry *bios_dir[3];
+> > +	unsigned int bios_dir_count;
 > 
+> You should rather have a four entry array and use a NULL terminator.
 
-/Jarkko
+Why? Then everything has to compute the length before doing
+anything. The basic ops are 'append to back' and 'pop off back' which
+require length.
+
+Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
