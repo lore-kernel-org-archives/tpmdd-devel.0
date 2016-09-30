@@ -1,51 +1,218 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v2 1/2] Documentation: tpm: add the IBM Virtual TPM
- device tree binding documentation
-Date: Thu, 29 Sep 2016 14:04:13 +0300
-Message-ID: <20160929110413.GA14359@intel.com>
-References: <1475051441-23008-1-git-send-email-nayna@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v4 2/8] tpm: replace dynamically allocated
+ bios_dir with dentry array
+Date: Fri, 30 Sep 2016 21:27:03 +0300
+Message-ID: <20160930182703.GA9595@intel.com>
+References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1475051682-23060-3-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-i2c-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1475051441-23008-1-git-send-email-nayna@linux.vnet.ibm.com>
-Sender: linux-i2c-owner@vger.kernel.org
-To: Nayna Jain <nayna@linux.vnet.ibm.com>
-Cc: devicetree@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, robh@kernel.org, wsa@the-dreams.de, pawel.moll@arm.com, mark.rutland@arm.com, ijc+devicetree@hellion.org.uk, galak@codeaurora.org, linux-i2c@vger.kernel.org, peterhuewe@gmx.de, tpmdd@selhorst.net, hellerda@linux.vnet.ibm.com, ltcgcw@us.ibm.com, cclaudio@linux.vnet.ibm.com, honclo@linux.vnet.ibm.com
+In-Reply-To: <1475051682-23060-3-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Sep 28, 2016 at 04:30:40AM -0400, Nayna Jain wrote:
-> Virtual TPM, which is being used on IBM POWER7+ and POWER8 systems running
-> POWERVM, is currently supported by tpm device driver but lacks the
-> documentation. This patch adds the missing documentation for the existing
-> support.
+On Wed, Sep 28, 2016 at 04:34:36AM -0400, Nayna Jain wrote:
+> bios_dir is defined as struct dentry **bios_dir, which results in
+> dynamic allocation and therefore possibly a memory leak. This patch
+> replaces it with struct dentry array(struct dentry *bios_dir[3])
+> similar to what is done for sysfs groups.
 > 
-> Suggested-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-> Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
+> Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 > ---
-> Changelog v2:
+>  drivers/char/tpm/tpm-chip.c     |  8 +++---
+>  drivers/char/tpm/tpm.h          |  3 +-
+>  drivers/char/tpm/tpm_eventlog.c | 63 +++++++++++++++++++----------------------
+>  drivers/char/tpm/tpm_eventlog.h | 10 +++----
+>  4 files changed, 40 insertions(+), 44 deletions(-)
 > 
-> - New Patch
-> 
->  .../devicetree/bindings/security/tpm/ibmvtpm.txt   | 41 ++++++++++++++++++++++
->  1 file changed, 41 insertions(+)
->  create mode 100644 Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt
-> 
-> diff --git a/Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt b/Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt
-> new file mode 100644
-> index 0000000..d89f999
-> --- /dev/null
-> +++ b/Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt
-> @@ -0,0 +1,41 @@
-> +* Device Tree Bindings for IBM Virtual Trusted Platform Module(vtpm)
-> +
-> +Required properties:
-> +
-> +- compatible            : property name that conveys the platform architecture
-> +                          identifiers, as 'IBM,vtpm'
-> +- device_type           : specifies type of virtual device
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index e595013..826609d 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -278,14 +278,15 @@ static void tpm_del_char_device(struct tpm_chip *chip)
+>  
+>  static int tpm1_chip_register(struct tpm_chip *chip)
+>  {
+> +	int rc;
+>  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+>  		return 0;
+>  
+>  	tpm_sysfs_add_device(chip);
+>  
+> -	chip->bios_dir = tpm_bios_log_setup(dev_name(&chip->dev));
+> +	rc = tpm_bios_log_setup(chip);
+>  
+> -	return 0;
+> +	return rc;
+>  }
+>  
+>  static void tpm1_chip_unregister(struct tpm_chip *chip)
+> @@ -293,8 +294,7 @@ static void tpm1_chip_unregister(struct tpm_chip *chip)
+>  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+>  		return;
+>  
+> -	if (chip->bios_dir)
+> -		tpm_bios_log_teardown(chip->bios_dir);
+> +	tpm_bios_log_teardown(chip);
+>  }
+>  
+>  static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 3e952fb..b5866bb 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -171,7 +171,8 @@ struct tpm_chip {
+>  	unsigned long duration[3]; /* jiffies */
+>  	bool duration_adjusted;
+>  
+> -	struct dentry **bios_dir;
+> +	struct dentry *bios_dir[3];
+> +	unsigned int bios_dir_count;
 
-A generic device tree question. What is the difference between
-these fields? Why the I2C one does have 'device_type'?
+You should rather have a four entry array and use a NULL terminator.
+
+>  	const struct attribute_group *groups[3];
+>  	unsigned int groups_cnt;
+> diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+> index 75e6644..f1df782 100644
+> --- a/drivers/char/tpm/tpm_eventlog.c
+> +++ b/drivers/char/tpm/tpm_eventlog.c
+> @@ -332,7 +332,8 @@ static int tpm_bios_measurements_open(struct inode *inode,
+>  	if (!log)
+>  		return -ENOMEM;
+>  
+> -	if ((err = read_log(log)))
+> +	err = read_log(log);
+> +	if (err)
+>  		goto out_free;
+>  
+>  	/* now register seq file */
+> @@ -368,54 +369,48 @@ static int is_bad(void *p)
+>  	return 0;
+>  }
+>  
+> -struct dentry **tpm_bios_log_setup(const char *name)
+> +int tpm_bios_log_setup(struct tpm_chip *chip)
+>  {
+> -	struct dentry **ret = NULL, *tpm_dir, *bin_file, *ascii_file;
+> +	const char *name = dev_name(&chip->dev);
+>  
+> -	tpm_dir = securityfs_create_dir(name, NULL);
+> -	if (is_bad(tpm_dir))
+> -		goto out;
+> +	chip->bios_dir_count = 0;
+> +	chip->bios_dir[chip->bios_dir_count] =
+> +		securityfs_create_dir(name, NULL);
+> +	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
+> +		goto err;
+> +	chip->bios_dir_count++;
+>  
+> -	bin_file =
+> +	chip->bios_dir[chip->bios_dir_count] =
+>  	    securityfs_create_file("binary_bios_measurements",
+> -				   S_IRUSR | S_IRGRP, tpm_dir,
+> +				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
+>  				   (void *)&tpm_binary_b_measurments_seqops,
+>  				   &tpm_bios_measurements_ops);
+> -	if (is_bad(bin_file))
+> -		goto out_tpm;
+> +	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
+> +		goto err;
+> +	chip->bios_dir_count++;
+>  
+> -	ascii_file =
+> +	chip->bios_dir[chip->bios_dir_count] =
+>  	    securityfs_create_file("ascii_bios_measurements",
+> -				   S_IRUSR | S_IRGRP, tpm_dir,
+> +				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
+>  				   (void *)&tpm_ascii_b_measurments_seqops,
+>  				   &tpm_bios_measurements_ops);
+> -	if (is_bad(ascii_file))
+> -		goto out_bin;
+> +	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
+> +		goto err;
+> +	chip->bios_dir_count++;
+>  
+> -	ret = kmalloc(3 * sizeof(struct dentry *), GFP_KERNEL);
+> -	if (!ret)
+> -		goto out_ascii;
+> -
+> -	ret[0] = ascii_file;
+> -	ret[1] = bin_file;
+> -	ret[2] = tpm_dir;
+> -
+> -	return ret;
+> +	return 0;
+>  
+> -out_ascii:
+> -	securityfs_remove(ascii_file);
+> -out_bin:
+> -	securityfs_remove(bin_file);
+> -out_tpm:
+> -	securityfs_remove(tpm_dir);
+> -out:
+> -	return NULL;
+> +err:
+> +	tpm_bios_log_teardown(chip);
+> +	return -EIO;
+>  }
+>  
+> -void tpm_bios_log_teardown(struct dentry **lst)
+> +void tpm_bios_log_teardown(struct tpm_chip *chip)
+>  {
+>  	int i;
+>  
+> -	for (i = 0; i < 3; i++)
+> -		securityfs_remove(lst[i]);
+> +	for (i = chip->bios_dir_count; i > 0; --i)
+> +		securityfs_remove(chip->bios_dir[i-1]);
+> +	chip->bios_dir_count = i;
+> +
+>  }
+> diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
+> index 8de62b0..fd3357e 100644
+> --- a/drivers/char/tpm/tpm_eventlog.h
+> +++ b/drivers/char/tpm/tpm_eventlog.h
+> @@ -77,14 +77,14 @@ int read_log(struct tpm_bios_log *log);
+>  
+>  #if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
+>  	defined(CONFIG_ACPI)
+> -extern struct dentry **tpm_bios_log_setup(const char *);
+> -extern void tpm_bios_log_teardown(struct dentry **);
+> +extern int tpm_bios_log_setup(struct tpm_chip *chip);
+> +extern void tpm_bios_log_teardown(struct tpm_chip *chip);
+>  #else
+> -static inline struct dentry **tpm_bios_log_setup(const char *name)
+> +static inline int tpm_bios_log_setup(struct tpm_chip *chip)
+>  {
+> -	return NULL;
+> +	return 0;
+>  }
+> -static inline void tpm_bios_log_teardown(struct dentry **dir)
+> +static inline void tpm_bios_log_teardown(struct tpm_chip *chip)
+>  {
+>  }
+>  #endif
+> -- 
+> 2.5.0
+> 
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most 
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
