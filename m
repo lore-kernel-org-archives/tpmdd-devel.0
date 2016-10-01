@@ -1,136 +1,144 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [PATCH RESEND 1/3] tpm: define a generic open() method for ascii & bios measurements
-Date: Sat,  1 Oct 2016 22:25:24 +0300
-Message-ID: <1475349926-476-2-git-send-email-jarkko.sakkinen@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: [PATCH RESEND 3/3] tpm: drop
+	tpm1_chip_register(/unregister)
+Date: Sat,  1 Oct 2016 22:25:26 +0300
+Message-ID: <1475349926-476-4-git-send-email-jarkko.sakkinen@linux.intel.com>
 References: <1475349926-476-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <1475349926-476-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Peter Huewe <peterhuewe@gmx.de>
-Cc: Nayna Jain <nayna@linux.vnet.ibm.com>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1475349926-476-1-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Nayna Jain <nayna@linux.vnet.ibm.com>
+Check for TPM2 chip in tpm_sysfs_add_device, tpm_bios_log_setup and
+tpm_bios_log_teardown in order to make code flow cleaner and to enable
+to implement TPM 2.0 support later on. This is partially derived from
+the commit by Nayna Jain with the extension that also tpm1_chip_register
+is dropped.
 
-open() method for event log ascii and binary bios measurements file
-operations are very similar. This patch refactors the code into a
-single open() call by passing seq_operations as i_node->private data.
-
-Suggested-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm_eventlog.c | 59 +++++++++--------------------------------
- 1 file changed, 13 insertions(+), 46 deletions(-)
+ drivers/char/tpm/tpm-chip.c     | 31 +++++--------------------------
+ drivers/char/tpm/tpm-sysfs.c    |  3 +++
+ drivers/char/tpm/tpm_eventlog.c |  6 ++++++
+ 3 files changed, 14 insertions(+), 26 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-index e722886..75e6644 100644
---- a/drivers/char/tpm/tpm_eventlog.c
-+++ b/drivers/char/tpm/tpm_eventlog.c
-@@ -7,6 +7,7 @@
-  *	Stefan Berger <stefanb@us.ibm.com>
-  *	Reiner Sailer <sailer@watson.ibm.com>
-  *	Kylene Hall <kjhall@us.ibm.com>
-+ *	Nayna Jain <nayna@linux.vnet.ibm.com>
-  *
-  * Maintained by: <tpmdd-devel@lists.sourceforge.net>
-  *
-@@ -318,12 +319,14 @@ static const struct seq_operations tpm_binary_b_measurments_seqops = {
- 	.show = tpm_binary_bios_measurements_show,
- };
- 
--static int tpm_ascii_bios_measurements_open(struct inode *inode,
-+static int tpm_bios_measurements_open(struct inode *inode,
- 					    struct file *file)
- {
- 	int err;
- 	struct tpm_bios_log *log;
- 	struct seq_file *seq;
-+	const struct seq_operations *seqops =
-+		(const struct seq_operations *)inode->i_private;
- 
- 	log = kzalloc(sizeof(struct tpm_bios_log), GFP_KERNEL);
- 	if (!log)
-@@ -333,7 +336,7 @@ static int tpm_ascii_bios_measurements_open(struct inode *inode,
- 		goto out_free;
- 
- 	/* now register seq file */
--	err = seq_open(file, &tpm_ascii_b_measurments_seqops);
-+	err = seq_open(file, seqops);
- 	if (!err) {
- 		seq = file->private_data;
- 		seq->private = log;
-@@ -349,46 +352,8 @@ out_free:
- 	goto out;
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index a56b609..eac1f10 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -276,28 +276,6 @@ static void tpm_del_char_device(struct tpm_chip *chip)
+ 	up_write(&chip->ops_sem);
  }
  
--static const struct file_operations tpm_ascii_bios_measurements_ops = {
--	.open = tpm_ascii_bios_measurements_open,
--	.read = seq_read,
--	.llseek = seq_lseek,
--	.release = tpm_bios_measurements_release,
--};
--
--static int tpm_binary_bios_measurements_open(struct inode *inode,
--					     struct file *file)
+-static int tpm1_chip_register(struct tpm_chip *chip)
 -{
--	int err;
--	struct tpm_bios_log *log;
--	struct seq_file *seq;
+-	int rc;
 -
--	log = kzalloc(sizeof(struct tpm_bios_log), GFP_KERNEL);
--	if (!log)
--		return -ENOMEM;
+-	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+-		return 0;
 -
--	if ((err = read_log(log)))
--		goto out_free;
+-	tpm_sysfs_add_device(chip);
 -
--	/* now register seq file */
--	err = seq_open(file, &tpm_binary_b_measurments_seqops);
--	if (!err) {
--		seq = file->private_data;
--		seq->private = log;
--	} else {
--		goto out_free;
--	}
+-	rc = tpm_bios_log_setup(chip);
 -
--out:
--	return err;
--out_free:
--	kfree(log->bios_event_log);
--	kfree(log);
--	goto out;
+-	return rc;
 -}
 -
--static const struct file_operations tpm_binary_bios_measurements_ops = {
--	.open = tpm_binary_bios_measurements_open,
-+static const struct file_operations tpm_bios_measurements_ops = {
-+	.open = tpm_bios_measurements_open,
- 	.read = seq_read,
- 	.llseek = seq_lseek,
- 	.release = tpm_bios_measurements_release,
-@@ -413,15 +378,17 @@ struct dentry **tpm_bios_log_setup(const char *name)
+-static void tpm1_chip_unregister(struct tpm_chip *chip)
+-{
+-	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+-		return;
+-
+-	tpm_bios_log_teardown(chip);
+-}
+-
+ static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
+ {
+ 	struct attribute **i;
+@@ -364,7 +342,9 @@ int tpm_chip_register(struct tpm_chip *chip)
+ 			return rc;
+ 	}
  
- 	bin_file =
- 	    securityfs_create_file("binary_bios_measurements",
--				   S_IRUSR | S_IRGRP, tpm_dir, NULL,
--				   &tpm_binary_bios_measurements_ops);
-+				   S_IRUSR | S_IRGRP, tpm_dir,
-+				   (void *)&tpm_binary_b_measurments_seqops,
-+				   &tpm_bios_measurements_ops);
- 	if (is_bad(bin_file))
- 		goto out_tpm;
+-	rc = tpm1_chip_register(chip);
++	tpm_sysfs_add_device(chip);
++
++	rc = tpm_bios_log_setup(chip);
+ 	if (rc)
+ 		return rc;
  
- 	ascii_file =
- 	    securityfs_create_file("ascii_bios_measurements",
--				   S_IRUSR | S_IRGRP, tpm_dir, NULL,
--				   &tpm_ascii_bios_measurements_ops);
-+				   S_IRUSR | S_IRGRP, tpm_dir,
-+				   (void *)&tpm_ascii_b_measurments_seqops,
-+				   &tpm_bios_measurements_ops);
- 	if (is_bad(ascii_file))
- 		goto out_bin;
+@@ -372,7 +352,7 @@ int tpm_chip_register(struct tpm_chip *chip)
  
+ 	rc = tpm_add_char_device(chip);
+ 	if (rc) {
+-		tpm1_chip_unregister(chip);
++		tpm_bios_log_teardown(chip);
+ 		return rc;
+ 	}
+ 
+@@ -407,8 +387,7 @@ void tpm_chip_unregister(struct tpm_chip *chip)
+ 		return;
+ 
+ 	tpm_del_legacy_sysfs(chip);
+-
+-	tpm1_chip_unregister(chip);
++	tpm_bios_log_teardown(chip);
+ 	tpm_del_char_device(chip);
+ }
+ EXPORT_SYMBOL_GPL(tpm_chip_unregister);
+diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+index a76ab4a..1eca5ec 100644
+--- a/drivers/char/tpm/tpm-sysfs.c
++++ b/drivers/char/tpm/tpm-sysfs.c
+@@ -284,6 +284,9 @@ static const struct attribute_group tpm_dev_group = {
+ 
+ void tpm_sysfs_add_device(struct tpm_chip *chip)
+ {
++	if (chip->flags & TPM_CHIP_FLAG_TPM2)
++		return;
++
+ 	/* The sysfs routines rely on an implicit tpm_try_get_ops, device_del
+ 	 * is called before ops is null'd and the sysfs core synchronizes this
+ 	 * removal so that no callbacks are running or can run again
+diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+index f5e1d06..c57b981 100644
+--- a/drivers/char/tpm/tpm_eventlog.c
++++ b/drivers/char/tpm/tpm_eventlog.c
+@@ -373,6 +373,9 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+ 	const char *name = dev_name(&chip->dev);
+ 	unsigned int cnt;
+ 
++	if (chip->flags & TPM_CHIP_FLAG_TPM2)
++		return 0;
++
+ 	cnt = 0;
+ 	chip->bios_dir[cnt] =
+ 		securityfs_create_dir(name, NULL);
+@@ -410,6 +413,9 @@ void tpm_bios_log_teardown(struct tpm_chip *chip)
+ {
+ 	int i;
+ 
++	if (chip->flags & TPM_CHIP_FLAG_TPM2)
++		return;
++
+ 	for (i = (TPM_NUM_EVENT_LOG_FILES - 1); i >= 0; i--) {
+ 		if (chip->bios_dir[i])
+ 			securityfs_remove(chip->bios_dir[i]);
 -- 
 2.7.4
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most 
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
