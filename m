@@ -1,59 +1,32 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v4 3/8] tpm: validate event log access
- before tpm_bios_log_setup
-Date: Mon, 3 Oct 2016 15:20:13 +0300
-Message-ID: <20161003122013.GA9990@intel.com>
-References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1475051682-23060-4-git-send-email-nayna@linux.vnet.ibm.com>
-	<20161001120125.GC8664@intel.com>
-	<20161001165436.GB13462@obsidianresearch.com>
-	<20161001193239.GA3862@intel.com>
-	<20161002212551.GB25872@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH RESEND 2/3] tpm: replace dynamically allocated bios_dir
+ with a static array
+Date: Mon, 3 Oct 2016 15:21:35 +0300
+Message-ID: <20161003122135.GB9990@intel.com>
+References: <1475349926-476-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+ <1475349926-476-3-git-send-email-jarkko.sakkinen@linux.intel.com>
+ <20161002212801.GC25872@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20161002212551.GB25872-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <20161002212801.GC25872@obsidianresearch.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, Nayna Jain <nayna@linux.vnet.ibm.com>, Marcel Selhorst <tpmdd@selhorst.net>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Oct 02, 2016 at 03:25:51PM -0600, Jason Gunthorpe wrote:
-> On Sat, Oct 01, 2016 at 10:32:39PM +0300, Jarkko Sakkinen wrote:
-> > > chip held for the duration of any fops. Can open() start after the
-> > > kref is dropped, etc.
-> > 
-> > Why not make tpm_securityfs_data refcounted in order to remove
-> > binding to the chip?
+On Sun, Oct 02, 2016 at 03:28:01PM -0600, Jason Gunthorpe wrote:
+> On Sat, Oct 01, 2016 at 10:25:25PM +0300, Jarkko Sakkinen wrote:
 > 
-> The chip is already kref'd. How does swapping one kref for another
-> solve anything?
+> > +	for (i = (TPM_NUM_EVENT_LOG_FILES - 1); i >= 0; i--) {
+> > +		if (chip->bios_dir[i])
 > 
-> The possible issue is that the krefs are not covering
-> the right code.
-> 
-> The scheme you suggested is also way off the mark for how fops works,
-> fops->close has no relation to the needed duration for 'data', the
-> duration is related to securityfs_remove.
+> The entries can't actually be null here, right?
 
-Right, the above would not work because it's not linked to
-securityfs_remove by any means.
+They can because this function is called as a rollbcak procedure for
+tpm_bios_log_setup.
 
-Are you trying to say that after securityfs_remove() there might be a
-"grace period" when user space could still see the files visible and
-open them?
+> Jason
 
 /Jarkko
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most 
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
