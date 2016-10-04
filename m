@@ -1,118 +1,102 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v4 3/8] tpm: validate event log access
- before tpm_bios_log_setup
-Date: Tue, 4 Oct 2016 11:12:31 -0600
-Message-ID: <20161004171231.GB17149@obsidianresearch.com>
-References: <20161001120125.GC8664@intel.com>
-	<20161001165436.GB13462@obsidianresearch.com>
-	<20161001193239.GA3862@intel.com>
-	<20161002212551.GB25872@obsidianresearch.com>
-	<20161003122013.GA9990@intel.com> <20161003123523.GC9990@intel.com>
-	<20161003163516.GB6801@obsidianresearch.com>
-	<20161003202230.GA14624@intel.com>
-	<20161003211129.GA26880@obsidianresearch.com>
-	<20161004052651.GB10572@intel.com>
+From: "Winkler, Tomas" <tomas.winkler@intel.com>
+Subject: RE: [PATCH] tpm: don't destroy chip device prematurely
+Date: Tue, 4 Oct 2016 21:55:36 +0000
+Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B542F4C92@hasmsx108.ger.corp.intel.com>
+References: <1475393971-12715-1-git-send-email-tomas.winkler@intel.com>
+ <20161002101755.GA25844@intel.com> <20161002102455.GA27464@intel.com>
+ <20161002212126.GA25872@obsidianresearch.com>
+ <5B8DA87D05A7694D9FA63FD143655C1B542F466B@hasmsx108.ger.corp.intel.com>
+ <20161003124836.GE9990@intel.com> <20161004051946.GA10572@intel.com>
+ <20161004164738.GA17149@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20161004052651.GB10572-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Transfer-Encoding: 8BIT
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20161004164738.GA17149@obsidianresearch.com>
+Content-Language: en-US
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Oct 04, 2016 at 08:26:51AM +0300, Jarkko Sakkinen wrote:
-> On Mon, Oct 03, 2016 at 03:11:29PM -0600, Jason Gunthorpe wrote:
-> > On Mon, Oct 03, 2016 at 11:22:30PM +0300, Jarkko Sakkinen wrote:
-> > 
-> > > > Sort of, the typical race is broadly
-> > > > 
-> > > >     CPU0                           CPU1
-> > > > 
-> > > > fops->open()
-> > > >                                 securityfs_remove()
-> > > > 				kref_put(chip)
-> > > > 				kfree(chip)
-> > > > kref_get(data->chip.kref)
 
-> > You need to actually race open and securityfs_remove to see the
-> > kref_get() loose its race and then use-after-free.
+> On Tue, Oct 04, 2016 at 08:19:46AM +0300, Jarkko Sakkinen wrote:
 > 
-> So you are worried that get_device() might come when the chip is already
-> gone?
-
-Yes, I'm worried that securityfs_remove doesn not guarentee that
-all threads running open() have completed and that no new threads can
-start an open(). If that is guarenteed then we are fine once the
-get_device is added.
-
-There might be some tricky thing guaranteeing that but I haven't found
-it..
-
-> > Well, it is not so bad, it is just missing the fence on removal that
-> > sysfs has, or the kref tracking that cdev has. Sadly this is a typical
-> > error within the fops stuff, I've seen it in many places.
+> > > Make the driver uncallable first. The worst race that can happen is
+> > > that open("/dev/tpm0", ...) returns -EPIPE. I do not consider this
+> > > fatal at all.
+> >
+> > No responses for this reasonable proposal so I'll show what I mean:
 > 
-> Do you think that this should be fixed above the driver i.e. add fencing
-> to the securityfs code itself?
-
-It appears debugfs choose to do that, so yes.
-
-I'm not sure what a driver is supposed to do. The problem is managing
-the lifetime of the 'data' (aka i_private) memory. We are using a kref
-for 'data' so we need to know when it is s that open is fenced
-
-synchronize with 
-
-> > That would be very hard to do, racing two calls like that is
-> > quite difficult in any sort of automatic way, AFAIK.
+> How is this any better than what Thomas proposed? It seems much worse to
+> me since now we have even more stuff in the wrong order.
 > 
-> I wonder if SPI has similar file to 'remove' that PCI devices have
-> (checking from the documentation later on).
+> There are three purposes to the ordering as it stands today
+>  1) To guarantee that tpm2_shutdown is the last command delivered to
+>     the TPM. When it is issued all other ways to access the device
+>     are hard fenced off.
 
-IIRC belive remove comes from the device core, so it should be present
-for spi also...
+I'm not sure where are you taking this requirements from simple bit is just enough to make the HW inaccessible if the interface is designed right.
 
-This solution might work.. Assuming the inode_lock is safe to get
-within open.
+>  2) To hard fence the tpm subsystem for the 'platform' driver. Once
+>     tpm_del_char_device completes no callback into the driver
+>     is possible *at all*. The driver can destroy everything
+>     (iounmap, dereg irq, etc) and the driver module can be unloaded.
 
-tpm_bios_measurements_open(struct inode *inode)
-{
-	struct tpm_chip *chip;
+There is some wrong terminology character device is related to user space only,  a device driver can function w/o it. 
 
-	inode_lock(inode);
-	if (!inode->i_private) {
-		inode_unlock(inode);
-		return -ENODEV;
-	}
-	chip = inode->i_private;
-	get_device(&chip->dev);
-	inode_unlock(inode);
-}
+>  3) To prevent oopsing with the sysfs code. Recall this comment
 
-tpm_bios_log_teardown()
-{
-	for (dentry *I ...) {
-	    struct inode *inode = d_inode(I);
-	    // securityfs_remove does not fence open, do it ourselves
-	    inode_lock(inode);
-	    inode->i_private = NULL;
-	    inode_unlock(inode);
-	    securityfs_remove(I);
-	}
-}
+> 
+>         /* The sysfs routines rely on an implicit tpm_try_get_ops, device_del
+>          * is called before ops is null'd and the sysfs core synchronizes this
+>          * removal so that no callbacks are running or can run again
+>          */
+> 
+>     device_del is what eliminates the sysfs access path, so
+>     ordering device_del after ops = null is just unconditionally
+>     wrong.
 
-Jason
+The ordering can be resolved, like this 
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most 
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+down_write(&chip->ops_sem);
+        if (chip->flags & TPM_CHIP_FLAG_TPM2)
+                tpm2_shutdown(chip, TPM2_SU_CLEAR);
+up_write(&chip->ops_sem);
+
+device_del(&chip->dev);
+
+down_write(&chip->ops_sem);
+chip->ops = NULL;
+up_write(&chip->ops_sem);
+
+> 
+> I still haven't heard an explanation why Thomas's other patches need this, or
+> why trying to change this ordering makes any sense at all considering how the
+> subsystem is constructed.
+
+I thought it's quite clear form the commit message, the device_del naturally toggles runtime_pm of the parent device, it tries to resume the parent device so it can perform denationalization  and then suspend the parent device back which caused tpm2_shutdown to fail. 
+> 
+> Further, if tpm_crb now needs a registered device, how on earth do all the
+> chip ops we call work *before* registration? Or is that another bug?
+> 
+> Why can't tpm_crb return to the pre-registration operating state in the driver
+> remove function before calling unregister?
+> 
+> None of this makes any sense to me. 
+
+I general we can not to implement power management via runtime_pm and resolve the issue within tpm_crb driver but it's not abouth tpm_crb.
+tpm2_shutdown is a  tpm stack call it's not tpm_crb function, it uses tpm_transmit_cmd and friends it should have valid  tpm_chip initialized and valid.
+I'm not sure what could be more clearer than that. 
+
+> This whole thing was very carefully constructed to work *correctly* during
+> unregister. Many other subsystems have races and bugs during remove (eg see
+> the securityfs discussion). TPM has a hard requirement to support safe
+> unregister due to the vtpm stuff, so we don't get to screw it up just to support
+> one driver.
+
+I have to admit that I'm not sure what the vtpm does yet,  but I have a feeling that a simple flag can fix this. 
+
+
+Thanks
+Tomas
