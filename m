@@ -1,19 +1,23 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: don't destroy chip device prematurely
-Date: Tue, 4 Oct 2016 08:19:46 +0300
-Message-ID: <20161004051946.GA10572@intel.com>
-References: <1475393971-12715-1-git-send-email-tomas.winkler@intel.com>
-	<20161002101755.GA25844@intel.com>
-	<20161002102455.GA27464@intel.com>
-	<20161002212126.GA25872@obsidianresearch.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B542F466B@hasmsx108.ger.corp.intel.com>
-	<20161003124836.GE9990@intel.com>
+Subject: Re: [PATCH v4 3/8] tpm: validate event log access
+ before tpm_bios_log_setup
+Date: Tue, 4 Oct 2016 08:26:51 +0300
+Message-ID: <20161004052651.GB10572@intel.com>
+References: <1475051682-23060-4-git-send-email-nayna@linux.vnet.ibm.com>
+	<20161001120125.GC8664@intel.com>
+	<20161001165436.GB13462@obsidianresearch.com>
+	<20161001193239.GA3862@intel.com>
+	<20161002212551.GB25872@obsidianresearch.com>
+	<20161003122013.GA9990@intel.com> <20161003123523.GC9990@intel.com>
+	<20161003163516.GB6801@obsidianresearch.com>
+	<20161003202230.GA14624@intel.com>
+	<20161003211129.GA26880@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20161003124836.GE9990-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20161003211129.GA26880-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,64 +26,69 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Oct 03, 2016 at 03:48:36PM +0300, Jarkko Sakkinen wrote:
-> On Mon, Oct 03, 2016 at 07:05:48AM +0000, Winkler, Tomas wrote:
-> > 
-> > > On Sun, Oct 02, 2016 at 01:24:55PM +0300, Jarkko Sakkinen wrote:
-> > > > On Sun, Oct 02, 2016 at 01:17:55PM +0300, Jarkko Sakkinen wrote:
-> > > > > On Sun, Oct 02, 2016 at 10:39:31AM +0300, Tomas Winkler wrote:
-> > > > > > In tpm_del_char_device device_del is called prior to tpm2_shutdown
-> > > > > > where it is still used.
-> > > > > >
-> > > > > > Fortunately, so far chip->dev was used only for printouts int
-> > > > > > tpm2_shutdown flow, hence system didn't crash. But with the
-> > > > > > introduction of runtime power management it will result in
-> > > > > > shutting down the parent device while it still in use.
-> > > > > >
-> > > > > > Fixes: 20e0152393b41 ("tpm: fix crash in tpm_tis
-> > > > > > deinitialization")
-> > > > > > Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-> > > > >
-> > > > > Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> > > > > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> > > >
-> > > > Applied.
-> > > 
-> > > This patch is wrong, I though the comments were clear. All entry points to find
-> > > the device must be deleted before we commit to shutting down the device.
-> > > 
-> > > You need to figure out some other way to solve your problem.
-> > 
-> > Please  be more specific regarding flows you think will be wrong  with
-> > this patch, you must agree that the current code is broken even w/o
-> > runtime pm.
+On Mon, Oct 03, 2016 at 03:11:29PM -0600, Jason Gunthorpe wrote:
+> On Mon, Oct 03, 2016 at 11:22:30PM +0300, Jarkko Sakkinen wrote:
 > 
-> Make the driver uncallable first. The worst race that can happen is that
-> open("/dev/tpm0", ...) returns -EPIPE. I do not consider this fatal at
-> all.
+> > > Sort of, the typical race is broadly
+> > > 
+> > >     CPU0                           CPU1
+> > > 
+> > > fops->open()
+> > >                                 securityfs_remove()
+> > > 				kref_put(chip)
+> > > 				kfree(chip)
+> > > kref_get(data->chip.kref)
+> > 
+> > I see. So could this be reproduced by:
+> > 
+> > 1. Open binary_measurements.
+> > 2. rmmod tpm_tis
+> > 3. Read contents of binary_measurements.
+> 
+> No, but that method shows the bug I pointed out in my email to Nayna
+> where the fops stuff is not getting a kref on the chip.
+> 
+> You need to actually race open and securityfs_remove to see the
+> kref_get() loose its race and then use-after-free.
 
-No responses for this reasonable proposal so I'll show what I mean:
+So you are worried that get_device() might come when the chip is already
+gone?
 
-/* Make the driver uncallable. */
-down_write(&chip->ops_sem);
-if (chip->flags & TPM_CHIP_FLAG_TPM2)
-	tpm2_shutdown(chip, TPM2_SU_CLEAR);
-chip->ops = NULL;
-up_write(&chip->ops_sem);
+> > Yeah, I get it. These securityfs files are nasty in a way compared to
+> > sysfs attributes that they are not connected to the device hierachy.
+> 
+> Well, it is not so bad, it is just missing the fence on removal that
+> sysfs has, or the kref tracking that cdev has. Sadly this is a typical
+> error within the fops stuff, I've seen it in many places.
 
-cdev_del(&chip->cdev);
-device_del(&chip->dev);
+Do you think that this should be fixed above the driver i.e. add fencing
+to the securityfs code itself?
 
-/* Make the chip unavailable. */
-mutex_lock(&idr_lock);
-idr_replace(&dev_nums_idr, NULL, chip->dev_num);
-mutex_unlock(&idr_lock);
+> > Rather than finding a perfect solution in the code I think a better
+> > angle would be find ways to test and reproduce possible races, which
+> > you already started in your response.
+> 
+> That would be very hard to do, racing two calls like that is
+> quite difficult in any sort of automatic way, AFAIK.
 
-The worst thing that can happen is -EPIPE.
+I wonder if SPI has similar file to 'remove' that PCI devices have
+(checking from the documentation later on).
+
+> > Right now we basically don't have any good acceptance criteria to make
+> > any changes to securityfs stuff. Yes, you can do the analysis (and
+> > should) but human mind is weak sometimes :)
+> 
+> Since it is unlikely and not caused by our subsystem I'm inclined to
+> just leave a comment (that we expect securityfs_remove to fence) and
+> you can send a note to James to see what they think.
+
+Agreed.
+
+> Jason
 
 /Jarkko
 
