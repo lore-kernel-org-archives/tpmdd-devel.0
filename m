@@ -1,80 +1,118 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm: don't destroy chip device prematurely
-Date: Wed, 5 Oct 2016 13:09:15 +0300
-Message-ID: <20161005100915.GB20851@intel.com>
-References: <1475393971-12715-1-git-send-email-tomas.winkler@intel.com>
- <20161002101755.GA25844@intel.com>
- <20161002102455.GA27464@intel.com>
- <20161002212126.GA25872@obsidianresearch.com>
- <5B8DA87D05A7694D9FA63FD143655C1B542F466B@hasmsx108.ger.corp.intel.com>
- <20161003124836.GE9990@intel.com>
- <20161004051946.GA10572@intel.com>
- <20161004164738.GA17149@obsidianresearch.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+From: Tomas Winkler <tomas.winkler@intel.com>
+Subject: [PATCH] tpm/tpm_crb: revamp starting method setting.
+Date: Wed,  5 Oct 2016 16:12:08 +0300
+Message-ID: <1475673128-32262-1-git-send-email-tomas.winkler@intel.com>
 Return-path: <linux-kernel-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20161004164738.GA17149@obsidianresearch.com>
 Sender: linux-kernel-owner@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: "Winkler, Tomas" <tomas.winkler@intel.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+To: tpmdd-devel@lists.sourceforge.net, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: linux-kernel@vger.kernel.org, Tomas Winkler <tomas.winkler@intel.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Oct 04, 2016 at 10:47:38AM -0600, Jason Gunthorpe wrote:
-> On Tue, Oct 04, 2016 at 08:19:46AM +0300, Jarkko Sakkinen wrote:
-> 
-> > > Make the driver uncallable first. The worst race that can happen is that
-> > > open("/dev/tpm0", ...) returns -EPIPE. I do not consider this fatal at
-> > > all.
-> > 
-> > No responses for this reasonable proposal so I'll show what I mean:
-> 
-> How is this any better than what Thomas proposed? It seems much worse
-> to me since now we have even more stuff in the wrong order.
-> 
-> There are three purposes to the ordering as it stands today
->  1) To guarantee that tpm2_shutdown is the last command delivered to
->     the TPM. When it is issued all other ways to access the device
->     are hard fenced off.
->  2) To hard fence the tpm subsystem for the 'platform' driver. Once
->     tpm_del_char_device completes no callback into the driver
->     is possible *at all*. The driver can destroy everything
->     (iounmap, dereg irq, etc) and the driver module can be unloaded.
->  3) To prevent oopsing with the sysfs code. Recall this comment
-> 
->         /* The sysfs routines rely on an implicit tpm_try_get_ops, device_del
->          * is called before ops is null'd and the sysfs core synchronizes this
->          * removal so that no callbacks are running or can run again
->          */
-> 
->     device_del is what eliminates the sysfs access path, so
->     ordering device_del after ops = null is just unconditionally
->     wrong.
-> 
-> I still haven't heard an explanation why Thomas's other patches need
-> this, or why trying to change this ordering makes any sense at
-> all considering how the subsystem is constructed.
-> 
-> Further, if tpm_crb now needs a registered device, how on earth do all
-> the chip ops we call work *before* registration? Or is that another
-> bug?
-> 
-> Why can't tpm_crb return to the pre-registration operating state
-> in the driver remove function before calling unregister?
-> 
-> None of this makes any sense to me.
-> 
-> This whole thing was very carefully constructed to work *correctly*
-> during unregister. Many other subsystems have races and bugs during
-> remove (eg see the securityfs discussion). TPM has a hard requirement
-> to support safe unregister due to the vtpm stuff, so we don't get to
-> screw it up just to support one driver.
+Encapsulate the start method parsing in a single function
+and add needed debug printouts.
+It eliminates small issue with useless double checking for
+ACPI_TPM2_MEMORY_MAPPED.
 
-Obviously a device is needed because it's required by the PM runtime
-FW. I'm not following what you're saying about tpm2_shutdown(). With
-the change I proposed it's the *very last* command delivered to the
-device (because it's fenced by write lock).
+Signed-off-by: Tomas Winkler <tomas.winkler@intel.com>
+---
+ drivers/char/tpm/tpm_crb.c | 65 +++++++++++++++++++++++++++++++++++-----------
+ 1 file changed, 50 insertions(+), 15 deletions(-)
 
-> Jason
-
-/Jarkko
+diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+index aa0ef742ac03..aeec313384d7 100644
+--- a/drivers/char/tpm/tpm_crb.c
++++ b/drivers/char/tpm/tpm_crb.c
+@@ -381,6 +381,52 @@ out:
+ 	return ret;
+ }
+ 
++/**
++ * crb_start_method - parse starting method
++ *
++ * @device: acpi device
++ * @sm: starting method
++ *
++ * Return 0 if supported starting method was not found
++ *    CRB_FL_CRB_START or CRB_FL_ACPI_START otherwise
++ */
++static unsigned int crb_start_method(struct acpi_device *device, u32 sm)
++{
++	struct device *dev = &device->dev;
++	u32 flags;
++
++	switch (sm) {
++	/* Should the FIFO driver handle this? */
++	case ACPI_TPM2_MEMORY_MAPPED:
++		dev_dbg(dev, "starting method[%d]: MM\n", sm);
++		return 0;
++	case ACPI_TPM2_COMMAND_BUFFER:
++		flags = CRB_FL_CRB_START;
++		dev_dbg(dev, "starting method[%d]: CB\n", sm);
++		break;
++	case ACPI_TPM2_START_METHOD:
++		flags = CRB_FL_ACPI_START;
++		dev_dbg(dev, "starting method[%d]: SM\n", sm);
++		break;
++	case ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD:
++		flags = CRB_FL_ACPI_START;
++		dev_dbg(dev, "starting method[%d]: CB w/ SM\n",
++			sm);
++		break;
++	default:
++		return 0;
++	}
++
++	/* The reason for the extra quirk is that the PTT in 4th Gen Core CPUs
++	 * report only ACPI start but in practice seems to require both
++	 * ACPI start and CRB start.
++	 */
++	if (!strcmp(acpi_device_hid(device), "MSFT0101"))
++		flags |= CRB_FL_CRB_START;
++
++	return flags;
++}
++
+ static int crb_acpi_add(struct acpi_device *device)
+ {
+ 	struct acpi_table_tpm2 *buf;
+@@ -388,7 +434,7 @@ static int crb_acpi_add(struct acpi_device *device)
+ 	struct tpm_chip *chip;
+ 	struct device *dev = &device->dev;
+ 	acpi_status status;
+-	u32 sm;
++	unsigned int sm;
+ 	int rc;
+ 
+ 	status = acpi_get_table(ACPI_SIG_TPM2, 1,
+@@ -398,26 +444,15 @@ static int crb_acpi_add(struct acpi_device *device)
+ 		return -EINVAL;
+ 	}
+ 
+-	/* Should the FIFO driver handle this? */
+-	sm = buf->start_method;
+-	if (sm == ACPI_TPM2_MEMORY_MAPPED)
++	sm = crb_start_method(device, buf->start_method);
++	if (!sm)
+ 		return -ENODEV;
+ 
+ 	priv = devm_kzalloc(dev, sizeof(struct crb_priv), GFP_KERNEL);
+ 	if (!priv)
+ 		return -ENOMEM;
+ 
+-	/* The reason for the extra quirk is that the PTT in 4th Gen Core CPUs
+-	 * report only ACPI start but in practice seems to require both
+-	 * ACPI start and CRB start.
+-	 */
+-	if (sm == ACPI_TPM2_COMMAND_BUFFER || sm == ACPI_TPM2_MEMORY_MAPPED ||
+-	    !strcmp(acpi_device_hid(device), "MSFT0101"))
+-		priv->flags |= CRB_FL_CRB_START;
+-
+-	if (sm == ACPI_TPM2_START_METHOD ||
+-	    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
+-		priv->flags |= CRB_FL_ACPI_START;
++	priv->flags = sm;
+ 
+ 	rc = crb_map_io(device, priv, buf);
+ 	if (rc)
+-- 
+2.7.4
