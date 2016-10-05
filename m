@@ -1,7 +1,7 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 Subject: Re: [PATCH] tpm: don't destroy chip device prematurely
-Date: Wed, 5 Oct 2016 13:02:34 +0300
-Message-ID: <20161005100234.GA20851@intel.com>
+Date: Wed, 5 Oct 2016 13:09:15 +0300
+Message-ID: <20161005100915.GB20851@intel.com>
 References: <1475393971-12715-1-git-send-email-tomas.winkler@intel.com>
  <20161002101755.GA25844@intel.com>
  <20161002102455.GA27464@intel.com>
@@ -31,18 +31,7 @@ On Tue, Oct 04, 2016 at 10:47:38AM -0600, Jason Gunthorpe wrote:
 > 
 > How is this any better than what Thomas proposed? It seems much worse
 > to me since now we have even more stuff in the wrong order.
-
-It moves a logical block to the front instead of moving one thing
-from one logical block to another place.
-
-I'll repeat my question: what worse can happen than returning -EPIPE?  I
-though the whole rw lock scheme was introduced just for this purpose.
-
-Why there's even that branch in tpm-dev.c if it's so bad to let it
-happen?
-
-/Jarkko
-
+> 
 > There are three purposes to the ordering as it stands today
 >  1) To guarantee that tpm2_shutdown is the last command delivered to
 >     the TPM. When it is issued all other ways to access the device
@@ -80,5 +69,12 @@ happen?
 > remove (eg see the securityfs discussion). TPM has a hard requirement
 > to support safe unregister due to the vtpm stuff, so we don't get to
 > screw it up just to support one driver.
-> 
+
+Obviously a device is needed because it's required by the PM runtime
+FW. I'm not following what you're saying about tpm2_shutdown(). With
+the change I proposed it's the *very last* command delivered to the
+device (because it's fenced by write lock).
+
 > Jason
+
+/Jarkko
