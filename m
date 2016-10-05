@@ -1,118 +1,72 @@
-From: Tomas Winkler <tomas.winkler@intel.com>
-Subject: [PATCH] tpm/tpm_crb: revamp starting method setting.
-Date: Wed,  5 Oct 2016 16:12:08 +0300
-Message-ID: <1475673128-32262-1-git-send-email-tomas.winkler@intel.com>
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Sender: linux-kernel-owner@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: linux-kernel@vger.kernel.org, Tomas Winkler <tomas.winkler@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm: don't destroy chip device prematurely
+Date: Wed, 5 Oct 2016 18:15:26 +0300
+Message-ID: <20161005151526.GA9847@intel.com>
+References: <20161002101755.GA25844@intel.com>
+	<20161002102455.GA27464@intel.com>
+	<20161002212126.GA25872@obsidianresearch.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B542F466B@hasmsx108.ger.corp.intel.com>
+	<20161003124836.GE9990@intel.com>
+	<20161004051946.GA10572@intel.com>
+	<20161004164738.GA17149@obsidianresearch.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B542F4C92@hasmsx108.ger.corp.intel.com>
+	<20161004231057.GA20062@obsidianresearch.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B542F5084@hasmsx108.ger.corp.intel.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B542F5084-Jy8z56yoSI8MvF1YICWikbfspsVTdybXVpNB7YpNyf8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Encapsulate the start method parsing in a single function
-and add needed debug printouts.
-It eliminates small issue with useless double checking for
-ACPI_TPM2_MEMORY_MAPPED.
+On Wed, Oct 05, 2016 at 07:48:59AM +0000, Winkler, Tomas wrote:
+> > >
+> > > > On Tue, Oct 04, 2016 at 08:19:46AM +0300, Jarkko Sakkinen wrote:
+> > > >
+> > > > > > Make the driver uncallable first. The worst race that can happen
+> > > > > > is that open("/dev/tpm0", ...) returns -EPIPE. I do not consider
+> > > > > > this fatal at all.
+> > > > >
+> > > > > No responses for this reasonable proposal so I'll show what I mean:
+> > > >
+> > > > How is this any better than what Thomas proposed? It seems much
+> > > > worse to me since now we have even more stuff in the wrong order.
+> > > >
+> > > > There are three purposes to the ordering as it stands today
+> > > >  1) To guarantee that tpm2_shutdown is the last command delivered to
+> > > >     the TPM. When it is issued all other ways to access the device
+> > > >     are hard fenced off.
+> > >
+> > > I'm not sure where are you taking this requirements from simple bit is
+> > > just enough to make the HW inaccessible if the interface is designed
+> > > right.
+> > 
+> > I'm having a hard time understanding the english in your email. (Jarkko do you
+> > know what Tomas is talking about??)
+> 
+> Will try to do better. 
 
-Signed-off-by: Tomas Winkler <tomas.winkler@intel.com>
----
- drivers/char/tpm/tpm_crb.c | 65 +++++++++++++++++++++++++++++++++++-----------
- 1 file changed, 50 insertions(+), 15 deletions(-)
+Jason, sorry your question slipped while going through the dicussion
+:-)
 
-diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index aa0ef742ac03..aeec313384d7 100644
---- a/drivers/char/tpm/tpm_crb.c
-+++ b/drivers/char/tpm/tpm_crb.c
-@@ -381,6 +381,52 @@ out:
- 	return ret;
- }
- 
-+/**
-+ * crb_start_method - parse starting method
-+ *
-+ * @device: acpi device
-+ * @sm: starting method
-+ *
-+ * Return 0 if supported starting method was not found
-+ *    CRB_FL_CRB_START or CRB_FL_ACPI_START otherwise
-+ */
-+static unsigned int crb_start_method(struct acpi_device *device, u32 sm)
-+{
-+	struct device *dev = &device->dev;
-+	u32 flags;
-+
-+	switch (sm) {
-+	/* Should the FIFO driver handle this? */
-+	case ACPI_TPM2_MEMORY_MAPPED:
-+		dev_dbg(dev, "starting method[%d]: MM\n", sm);
-+		return 0;
-+	case ACPI_TPM2_COMMAND_BUFFER:
-+		flags = CRB_FL_CRB_START;
-+		dev_dbg(dev, "starting method[%d]: CB\n", sm);
-+		break;
-+	case ACPI_TPM2_START_METHOD:
-+		flags = CRB_FL_ACPI_START;
-+		dev_dbg(dev, "starting method[%d]: SM\n", sm);
-+		break;
-+	case ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD:
-+		flags = CRB_FL_ACPI_START;
-+		dev_dbg(dev, "starting method[%d]: CB w/ SM\n",
-+			sm);
-+		break;
-+	default:
-+		return 0;
-+	}
-+
-+	/* The reason for the extra quirk is that the PTT in 4th Gen Core CPUs
-+	 * report only ACPI start but in practice seems to require both
-+	 * ACPI start and CRB start.
-+	 */
-+	if (!strcmp(acpi_device_hid(device), "MSFT0101"))
-+		flags |= CRB_FL_CRB_START;
-+
-+	return flags;
-+}
-+
- static int crb_acpi_add(struct acpi_device *device)
- {
- 	struct acpi_table_tpm2 *buf;
-@@ -388,7 +434,7 @@ static int crb_acpi_add(struct acpi_device *device)
- 	struct tpm_chip *chip;
- 	struct device *dev = &device->dev;
- 	acpi_status status;
--	u32 sm;
-+	unsigned int sm;
- 	int rc;
- 
- 	status = acpi_get_table(ACPI_SIG_TPM2, 1,
-@@ -398,26 +444,15 @@ static int crb_acpi_add(struct acpi_device *device)
- 		return -EINVAL;
- 	}
- 
--	/* Should the FIFO driver handle this? */
--	sm = buf->start_method;
--	if (sm == ACPI_TPM2_MEMORY_MAPPED)
-+	sm = crb_start_method(device, buf->start_method);
-+	if (!sm)
- 		return -ENODEV;
- 
- 	priv = devm_kzalloc(dev, sizeof(struct crb_priv), GFP_KERNEL);
- 	if (!priv)
- 		return -ENOMEM;
- 
--	/* The reason for the extra quirk is that the PTT in 4th Gen Core CPUs
--	 * report only ACPI start but in practice seems to require both
--	 * ACPI start and CRB start.
--	 */
--	if (sm == ACPI_TPM2_COMMAND_BUFFER || sm == ACPI_TPM2_MEMORY_MAPPED ||
--	    !strcmp(acpi_device_hid(device), "MSFT0101"))
--		priv->flags |= CRB_FL_CRB_START;
--
--	if (sm == ACPI_TPM2_START_METHOD ||
--	    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
--		priv->flags |= CRB_FL_ACPI_START;
-+	priv->flags = sm;
- 
- 	rc = crb_map_io(device, priv, buf);
- 	if (rc)
--- 
-2.7.4
+I think I'll take the standpoint that I'll wait for the next version.
+
+The important thing is to notice that runtime PM requires the device
+to be "alive" and in the device hierarchy. It's a constraint...
+
+/Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most 
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
