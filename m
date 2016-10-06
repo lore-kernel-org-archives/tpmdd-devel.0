@@ -1,19 +1,23 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Subject: Re: [PATCH v4 3/8] tpm: validate event log access
  before tpm_bios_log_setup
-Date: Thu, 6 Oct 2016 14:10:47 -0600
-Message-ID: <20161006201047.GA12085@obsidianresearch.com>
-References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1475051682-23060-4-git-send-email-nayna@linux.vnet.ibm.com>
-	<20161001120125.GC8664@intel.com>
+Date: Fri, 7 Oct 2016 01:41:29 +0530
+Message-ID: <57F6AFF1.4000103@linux.vnet.ibm.com>
+References: <20161001120125.GC8664@intel.com>
 	<20161001165436.GB13462@obsidianresearch.com>
-	<57F6AC7D.9070507@linux.vnet.ibm.com>
+	<20161001193239.GA3862@intel.com>
+	<20161002212551.GB25872@obsidianresearch.com>
+	<20161003122013.GA9990@intel.com> <20161003123523.GC9990@intel.com>
+	<20161003163516.GB6801@obsidianresearch.com>
+	<20161003202230.GA14624@intel.com>
+	<20161003211129.GA26880@obsidianresearch.com>
+	<20161004052651.GB10572@intel.com>
+	<20161004171231.GB17149@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <57F6AC7D.9070507-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <20161004171231.GB17149-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,71 +26,111 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Oct 07, 2016 at 01:26:45AM +0530, Nayna wrote:
 
-> - there is no kref increment during eventlog fops or seq_ops operations.
-> - fops and seq ops are parsing over memory buffer. fops->open() returns
-> after giving the memory buffer(log) to seq->open(). And, seq ops on reading
-> of log memory are not bound to any locks or krefs.
 
-I sent a email about this, you are missing a get_device(chip) in open.
-(see entry Jason Gunthorpe - Oct. 3, 2016, 5:14 p.m.
- https://patchwork.kernel.org/patch/9353259/ )
+On 10/04/2016 10:42 PM, Jason Gunthorpe wrote:
+> On Tue, Oct 04, 2016 at 08:26:51AM +0300, Jarkko Sakkinen wrote:
+>> On Mon, Oct 03, 2016 at 03:11:29PM -0600, Jason Gunthorpe wrote:
+>>> On Mon, Oct 03, 2016 at 11:22:30PM +0300, Jarkko Sakkinen wrote:
+>>>
+>>>>> Sort of, the typical race is broadly
+>>>>>
+>>>>>      CPU0                           CPU1
+>>>>>
+>>>>> fops->open()
+>>>>>                                  securityfs_remove()
+>>>>> 				kref_put(chip)
+>>>>> 				kfree(chip)
+>>>>> kref_get(data->chip.kref)
+>
+>>> You need to actually race open and securityfs_remove to see the
+>>> kref_get() loose its race and then use-after-free.
+>>
+>> So you are worried that get_device() might come when the chip is already
+>> gone?
+>
+> Yes, I'm worried that securityfs_remove doesn not guarentee that
+> all threads running open() have completed and that no new threads can
+> start an open(). If that is guarenteed then we are fine once the
+> get_device is added.
+>
+> There might be some tricky thing guaranteeing that but I haven't found
+> it..
+>
+>>> Well, it is not so bad, it is just missing the fence on removal that
+>>> sysfs has, or the kref tracking that cdev has. Sadly this is a typical
+>>> error within the fops stuff, I've seen it in many places.
+>>
+>> Do you think that this should be fixed above the driver i.e. add fencing
+>> to the securityfs code itself?
+>
+> It appears debugfs choose to do that, so yes.
+>
+> I'm not sure what a driver is supposed to do. The problem is managing
+> the lifetime of the 'data' (aka i_private) memory. We are using a kref
+> for 'data' so we need to know when it is s that open is fenced
+>
+> synchronize with
+>
+>>> That would be very hard to do, racing two calls like that is
+>>> quite difficult in any sort of automatic way, AFAIK.
+>>
+>> I wonder if SPI has similar file to 'remove' that PCI devices have
+>> (checking from the documentation later on).
+>
+> IIRC belive remove comes from the device core, so it should be present
+> for spi also...
+>
+> This solution might work.. Assuming the inode_lock is safe to get
+> within open.
+>
+> tpm_bios_measurements_open(struct inode *inode)
+> {
+> 	struct tpm_chip *chip;
+>
+> 	inode_lock(inode);
+> 	if (!inode->i_private) {
+> 		inode_unlock(inode);
+> 		return -ENODEV;
+> 	}
+> 	chip = inode->i_private;
+> 	get_device(&chip->dev);
+> 	inode_unlock(inode);
+> }
 
-> - once securityfs_remove() is done, there are no more files accessible to
-> user to do open(). Which implies, there can't be any new open() after chip
-> unregister, but existing open() might continue to work(this is I expecting
-> for now).
+>
+> tpm_bios_log_teardown()
+> {
+> 	for (dentry *I ...) {
+> 	    struct inode *inode = d_inode(I);
+> 	    // securityfs_remove does not fence open, do it ourselves
+> 	    inode_lock(inode);
+> 	    inode->i_private = NULL;
+> 	    inode_unlock(inode);
 
-Right..
+Are we trying to say that, once the teardown() is started, no more 
+opening of files are allowed, even if they are visible ?
 
-> However, I do see one issue as I am freeing log.bios_event_log during
-> teardown().
+But if open() has happened first, and then teardown(), in that case 
+private data is already passed to seq_open(). That means here the 
+behaviour will still be same as existing.. that opened files continue to 
+access the data, and teardown will not be waiting for opened files to be 
+closed() ? Is this correct understanding of what we are trying to do ?
 
-Correct, I thought I pointed that out last round, that kfree must be
-moved to tpm_dev_release
+Thanks & Regards,
+    - Nayna
 
-> which implies seq_ops might fail if there is no proper null
-> checks for log.bios_event_log.
+> 	    securityfs_remove(I);
+> 	}
+> }
+>
+> Jason
+>
 
-No, hold the chip mutex between fops->open() -> release() which will
-ensure that the log memory continues exists.
-
-> #1. Do we want securityfs_remove() to wait till all the opened eventlog
-> files are closed().
-
-That is not simple, or necessary..
-
-> #2 Are we ok with securityfs_remove() being done and files are removed, but
-> existing seq ops, eventlog parsing should continue to work till closed by
-> user. That implies, we should not unknowingly nullify log pointers which are
-> used by parser.
-
-This is simpler, moving the kfree to tpm_dev_release and holding the
-chip kref for the lifetime of the filp is easy and safe.
-
-> I took sometime to understand how is kref getting accessed for tpm_chip. And
-> I tried tracing krefs. I have been looking at
-> chip->dev.kobj.kref.. Please
-
-Right, it used with get_device/put_device
-
-The model to go for is that open() acquires a get_device() kref on
-the chip and that kref is held for the duration of the lifetime of the
-filp.
-
-The log and data members of chip must remain allocated and unchanged until
-tpm_dev_release.
-
-Try something like the algorithm I gave in 'Jason Gunthorpe - Oct. 4,
-2016, 5:12 p.m.' to solve the remove/open race for now with a big fat
-comment.
-
-Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
