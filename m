@@ -1,19 +1,24 @@
-From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v4 3/8] tpm: validate event log access
- before tpm_bios_log_setup
-Date: Fri, 7 Oct 2016 02:23:12 +0530
-Message-ID: <57F6B9B8.3010800@linux.vnet.ibm.com>
-References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1475051682-23060-4-git-send-email-nayna@linux.vnet.ibm.com>
-	<20161001120125.GC8664@intel.com>
-	<20161001165436.GB13462@obsidianresearch.com>
-	<57F6AC7D.9070507@linux.vnet.ibm.com>
-	<20161006201047.GA12085@obsidianresearch.com>
+From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Subject: Re: [PATCH] tpm: don't destroy chip device prematurely
+Date: Fri, 7 Oct 2016 14:24:59 +0000
+Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B542F625A@hasmsx108.ger.corp.intel.com>
+References: <20161003124836.GE9990@intel.com>
+	<20161004051946.GA10572@intel.com>
+	<20161004164738.GA17149@obsidianresearch.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B542F4C92@hasmsx108.ger.corp.intel.com>
+	<20161004231057.GA20062@obsidianresearch.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B542F5084@hasmsx108.ger.corp.intel.com>
+	<20161005171132.GE18636@obsidianresearch.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B542F54E9@hasmsx108.ger.corp.intel.com>
+	<20161005211656.GA20920@obsidianresearch.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B542F561B@hasmsx108.ger.corp.intel.com>
+	<20161006020748.GA17479@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20161006201047.GA12085-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <20161006020748.GA17479-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,80 +28,96 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
 
+> On Thu, Oct 06, 2016 at 12:43:13AM +0000, Winkler, Tomas wrote:
+> 
+> > > You keep asserting that, but it just isn't true at all.
+> >
+> > Okay, let's rephrase, that calling device_del before tpm_transmit is not sane
+> when using runtime_pm.
+> 
+> Maybe, but I haven't heard an explanation from you why that is the case, and I
+> haven't found one on my own..
+> 
+> > > Sure, but that relationship only maters if something does a PM call
+> > > on the
+> > > chip->dev, and AFAIK, nothing does that.
+> > >
+> > > Do you know differently?
+> >
+> > You've pasted that code in in the previous mail, parent is involved on device
+> remove.
+> 
+> I pasted the code to show it didn't seem possible to hit it because irq_safe
+> should not be true for chip->dev. You never explained how this code can run.
+> 
+> > > You pointed at something that isn't even run and said it is the
+> > > source of the problem.. You really need to set up here and explain
+> > > exactly what is happening.
+> >
+> > Sorry, lost you here.
+> 
+> You haven't done a good job explaining the problem in detail beyond some
+> general blame toward PM.
+> 
+> > > > > Even if that pm_runtime_put is happening, why doesn't the
+> > > > >
+> > > > > +    pm_runtime_get_sync(chip->dev.parent);
+> > > > >
+> > > > > The runtime_pm patch adds to tpm_transmit take care of bringing
+> > > > > the device back?
+> > > >
+> > > > Unfortunately not because, because it gets out of sync and what is
+> > > > actually happening is that idle callback is called and device is
+> > > > put to idle between send and receive.
+> > >
+> > > What? As far as I understand this PM stuff, I would call that a very serious
+> bug.
+> >
+> > Maybe, but then you have to find what a bug,  currently it looks like
+> > wrong usage of the device.
+> 
+> Yes, you actually have to find and explain the bug to fix it.
+> 
+> You still haven't explained at all why device_del on the child causes
+> pm_runtime_get_sync() on the parent to malfunction. There is certainly seems
+> to be nothing intrinsic about the PM core that would cause that.
+> 
+> *That* is the really critical bit of explanation that is missing.
+> 
+> Until you can provide it there is no reason to continue discussing.
+> 
+> > > If a PM transition during transmit_cmd causes the TPM to abort/fail
+> > > command execution then it *MUST* be prevented. Period.
+> >
+> > Or, we can call device_del after tpm2_shutdown.
+> 
+> What? You haven't even established root cause, how do you know this bug
+> won't manifest in other cases? It could very well be some kind of generic race-
+> bug triggered by the proximity of device_del and pm_runtime_get_sync. Or a
+> HW bug of some kind..
+> 
+> > I will send you the actual trace, anyhow I've respin the original
+> > version with go_idle and cmd_ready handlers, this is contra
+> > productive, the time is just not right.
+> 
+> I'm deeply skeptical about all your patches if you can't root-cause identify why
+> the existing implementation isn't working.
+> 
+> But, you can sort out with Jarkko what to do with crb.
+> 
+> As long at the rest of the drivers and the core subsystem are not broken by the
+> device_del change. Jarkko - can you confirm you will drop that patch?
 
-On 10/07/2016 01:40 AM, Jason Gunthorpe wrote:
-> On Fri, Oct 07, 2016 at 01:26:45AM +0530, Nayna wrote:
->
->> - there is no kref increment during eventlog fops or seq_ops operations.
->> - fops and seq ops are parsing over memory buffer. fops->open() returns
->> after giving the memory buffer(log) to seq->open(). And, seq ops on reading
->> of log memory are not bound to any locks or krefs.
->
-> I sent a email about this, you are missing a get_device(chip) in open.
-> (see entry Jason Gunthorpe - Oct. 3, 2016, 5:14 p.m.
->   https://patchwork.kernel.org/patch/9353259/ )
->
->> - once securityfs_remove() is done, there are no more files accessible to
->> user to do open(). Which implies, there can't be any new open() after chip
->> unregister, but existing open() might continue to work(this is I expecting
->> for now).
->
-> Right..
->
->> However, I do see one issue as I am freeing log.bios_event_log during
->> teardown().
->
-> Correct, I thought I pointed that out last round, that kfree must be
-> moved to tpm_dev_release
->
->> which implies seq_ops might fail if there is no proper null
->> checks for log.bios_event_log.
->
-> No, hold the chip mutex between fops->open() -> release() which will
-> ensure that the log memory continues exists.
->
->> #1. Do we want securityfs_remove() to wait till all the opened eventlog
->> files are closed().
->
-> That is not simple, or necessary..
->
->> #2 Are we ok with securityfs_remove() being done and files are removed, but
->> existing seq ops, eventlog parsing should continue to work till closed by
->> user. That implies, we should not unknowingly nullify log pointers which are
->> used by parser.
->
-> This is simpler, moving the kfree to tpm_dev_release and holding the
-> chip kref for the lifetime of the filp is easy and safe.
->
->> I took sometime to understand how is kref getting accessed for tpm_chip. And
->> I tried tracing krefs. I have been looking at
->> chip->dev.kobj.kref.. Please
->
-> Right, it used with get_device/put_device
->
-> The model to go for is that open() acquires a get_device() kref on
-> the chip and that kref is held for the duration of the lifetime of the
-> filp.
->
-> The log and data members of chip must remain allocated and unchanged until
-> tpm_dev_release.
->
-> Try something like the algorithm I gave in 'Jason Gunthorpe - Oct. 4,
-> 2016, 5:12 p.m.' to solve the remove/open race for now with a big fat
-> comment.
-
-Sure, will try this and will also include all other feedbacks.
-
-Thanks & Regards,
-    - Nayna
-
->
-> Jason
->
+So  here I'm to say I'm sorry for misleading this, after all the doubts I got back to debugging and traces. 
+One thing for a reason moving the device_del, had really made the problem go away,  but the real  problem was unbalance runtime_pm PUT/GET from the tpm_crb probe function. 
+I will post the fixed patch, of course, this one should be dropped. 
+In any case,  and this is not just to keep my ego up, that calling to the tom stack with unutilized dev is not healthy and we should look for that. 
+Thanks
+Tomas
 
 
 ------------------------------------------------------------------------------
