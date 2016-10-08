@@ -1,210 +1,114 @@
-From: "Winkler, Tomas" <tomas.winkler@intel.com>
-Subject: RE: [tpmdd-devel] [PATCH 2/4] tmp/tpm_crb: fix Intel PTT hw bug
-        during idle state
-Date: Sat, 8 Oct 2016 18:53:49 +0000
-Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B542F6871@hasmsx108.ger.corp.intel.com>
-References: <1475927979-23484-1-git-send-email-tomas.winkler@intel.com>
-        <1475927979-23484-3-git-send-email-tomas.winkler@intel.com>
-        <20161008125003.GB10317@intel.com>
-        <5B8DA87D05A7694D9FA63FD143655C1B542F6768@hasmsx108.ger.corp.intel.com>
-        <20161008160006.GA25893@intel.com>
-        <5B8DA87D05A7694D9FA63FD143655C1B542F67C8@hasmsx108.ger.corp.intel.com>
-        <20161008170651.GA8747@intel.com>
- <5B8DA87D05A7694D9FA63FD143655C1B542F6814@hasmsx108.ger.corp.intel.com>
+From: Rob Herring <robh-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
+Subject: Re: [PATCH v2 1/2] Documentation: tpm: add the IBM
+ Virtual TPM device tree binding documentation
+Date: Sat, 8 Oct 2016 16:01:12 -0500
+Message-ID: <20161008210112.GA22112@rob-hp-laptop>
+References: <1475051441-23008-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<20160929110413.GA14359@intel.com>
+	<57F55F28.1090005@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 8BIT
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B542F6814@hasmsx108.ger.corp.intel.com>
-Content-Language: en-US
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, "Winkler, Tomas" <tomas.winkler@intel.com>
-Cc: "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <57F55F28.1090005-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: mark.rutland-5wv7dgnIgG8@public.gmane.org, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, pawel.moll-5wv7dgnIgG8@public.gmane.org, wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org, ijc+devicetree-KcIKpvwj1kUDXYZnReoRVg@public.gmane.org, honclo-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-i2c-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, galak-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org, cclaudio-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Thu, Oct 06, 2016 at 01:44:32AM +0530, Nayna wrote:
+> 
+> 
+> On 09/29/2016 04:34 PM, Jarkko Sakkinen wrote:
+> >On Wed, Sep 28, 2016 at 04:30:40AM -0400, Nayna Jain wrote:
+> >>Virtual TPM, which is being used on IBM POWER7+ and POWER8 systems running
+> >>POWERVM, is currently supported by tpm device driver but lacks the
+> >>documentation. This patch adds the missing documentation for the existing
+> >>support.
+> >>
+> >>Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> >>Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> >>---
+> >>Changelog v2:
+> >>
+> >>- New Patch
+> >>
+> >>  .../devicetree/bindings/security/tpm/ibmvtpm.txt   | 41 ++++++++++++++++++++++
+> >>  1 file changed, 41 insertions(+)
+> >>  create mode 100644 Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt
+> >>
+> >>diff --git a/Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt b/Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt
+> >>new file mode 100644
+> >>index 0000000..d89f999
+> >>--- /dev/null
+> >>+++ b/Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt
+> >>@@ -0,0 +1,41 @@
+> >>+* Device Tree Bindings for IBM Virtual Trusted Platform Module(vtpm)
+> >>+
+> >>+Required properties:
+> >>+
+> >>+- compatible            : property name that conveys the platform architecture
+> >>+                          identifiers, as 'IBM,vtpm'
+> >>+- device_type           : specifies type of virtual device
+> >
+> >A generic device tree question. What is the difference between
+> >these fields? Why the I2C one does have 'device_type'?
+> 
+> Please find the details as below:
+> 
+> compatible - Standard property name as per IEEE 1275, specifying the
+> interface compatible with this device. This property is consumed by linux
+> kernel for selection of device driver.
+> 
+> device_type - Standard property name as per IEEE 1275, specifying the device
+> type. This property MAY be used by linux kernel for device driver selection.
+> It is used in the case of IBM virtual TPM driver.
+
+AIUI, this should be a standard value such as serial, pci, etc. I don't 
+think your use here is correct, but I could be wrong. I'm not certain 
+what you do with devices that don't have a standard type.
 
 > 
-> > Subject: Re: [PATCH 2/4] tmp/tpm_crb: fix Intel PTT hw bug during idle
-> > state
-> >
-> > On Sat, Oct 08, 2016 at 04:56:39PM +0000, Winkler, Tomas wrote:
-> > >
-> > > >
-> > > > On Sat, Oct 08, 2016 at 02:27:06PM +0000, Winkler, Tomas wrote:
-> > > > > >
-> > > > > > On Sat, Oct 08, 2016 at 02:59:37PM +0300, Tomas Winkler wrote:
-> > > > > > > From: "Winkler, Tomas" <tomas.winkler@intel.com>
-> > > > > > >
-> > > > > > > There is a HW bug in Skylake, Kabylake, and Broxton PCH
-> > > > > > > Intel PTT device, where most of the registers in the control
-> > > > > > > area except START, REQUEST, CANCEL, and LOC_CTRL lost
-> > > > > > > retention when the device is in the
-> > > > > > idle state.
-> > > > > > > Hence we need to bring the device to ready state before
-> > > > > > > accessing the other registers. The fix brings device to
-> > > > > > > ready state before trying to read command and response
-> > > > > > > buffer addresses in order to remap the for
-> > > > > > access.
-> > > > > > >
-> > > > > > > Signed-off-by: Tomas Winkler <tomas.winkler@intel.com>
-> > > > > > > ---
-> > > > > > > V2: cmd read need to be called also before crb_init as this
-> > > > > > > will run self test.
-> > > > > > > V3: resend.
-> > > > > > > V4: add Kabylake to the list of effected platforms
-> > > > > > >
-> > > > > > >  drivers/char/tpm/tpm_crb.c | 47
-> > > > > > > ++++++++++++++++++++++++++++++++++++++--------
-> > > > > > >  1 file changed, 39 insertions(+), 8 deletions(-)
-> > > > > > >
-> > > > > > > diff --git a/drivers/char/tpm/tpm_crb.c
-> > > > > > > b/drivers/char/tpm/tpm_crb.c index
-> > > > > > > 0f3b3f3d12d3..4eb96b85c653
-> > > > > > > 100644
-> > > > > > > --- a/drivers/char/tpm/tpm_crb.c
-> > > > > > > +++ b/drivers/char/tpm/tpm_crb.c
-> > > > > > > @@ -319,6 +319,7 @@ static int crb_map_io(struct acpi_device
-> > > > > > > *device,
-> > > > > > struct crb_priv *priv,
-> > > > > > >  	struct list_head resources;
-> > > > > > >  	struct resource io_res;
-> > > > > > >  	struct device *dev = &device->dev;
-> > > > > > > +	u32 pa_high, pa_low;
-> > > > > > >  	u64 cmd_pa;
-> > > > > > >  	u32 cmd_size;
-> > > > > > >  	u64 rsp_pa;
-> > > > > > > @@ -346,12 +347,27 @@ static int crb_map_io(struct
-> > > > > > > acpi_device *device,
-> > > > > > struct crb_priv *priv,
-> > > > > > >  	if (IS_ERR(priv->cca))
-> > > > > > >  		return PTR_ERR(priv->cca);
-> > > > > > >
-> > > > > > > -	cmd_pa = ((u64) ioread32(&priv->cca->cmd_pa_high) << 32) |
-> > > > > > > -		  (u64) ioread32(&priv->cca->cmd_pa_low);
-> > > > > > > +	/*
-> > > > > > > +	 * PTT HW bug w/a: wake up the device to access
-> > > > > > > +	 * possibly not retained registers.
-> > > > > > > +	 */
-> > > > > > > +	ret = crb_cmd_ready(dev, priv);
-> > > > > > > +	if (ret)
-> > > > > > > +		return ret;
-> > > > > > > +
-> > > > > > > +	pa_high = ioread32(&priv->cca->cmd_pa_high);
-> > > > > > > +	pa_low  = ioread32(&priv->cca->cmd_pa_low);
-> > > > > > > +	cmd_pa = ((u64)pa_high << 32) | pa_low;
-> > > > > > >  	cmd_size = ioread32(&priv->cca->cmd_size);
-> > > > > > > +
-> > > > > > > +	dev_dbg(dev, "cmd_hi = %X cmd_low = %X cmd_size %X\n",
-> > > > > > > +		pa_high, pa_low, cmd_size);
-> > > > > > > +
-> > > > > > >  	priv->cmd = crb_map_res(dev, priv, &io_res, cmd_pa,
-> > cmd_size);
-> > > > > > > -	if (IS_ERR(priv->cmd))
-> > > > > > > -		return PTR_ERR(priv->cmd);
-> > > > > > > +	if (IS_ERR(priv->cmd)) {
-> > > > > > > +		ret = PTR_ERR(priv->cmd);
-> > > > > > > +		goto out;
-> > > > > > > +	}
-> > > > > > >
-> > > > > > >  	memcpy_fromio(&rsp_pa, &priv->cca->rsp_pa, 8);
-> > > > > > >  	rsp_pa = le64_to_cpu(rsp_pa); @@ -359,7 +375,8 @@ static
-> > int
-> > > > > > > crb_map_io(struct acpi_device *device, struct crb_priv
-> > > > > > > *priv,
-> > > > > > >
-> > > > > > >  	if (cmd_pa != rsp_pa) {
-> > > > > > >  		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa,
-> > rsp_size);
-> > > > > > > -		return PTR_ERR_OR_ZERO(priv->rsp);
-> > > > > > > +		ret = PTR_ERR_OR_ZERO(priv->rsp);
-> > > > > > > +		goto out;
-> > > > > > >  	}
-> > > > > > >
-> > > > > > >  	/* According to the PTP specification, overlapping command
-> > > > > > > and response @@ -367,12 +384,18 @@ static int
-> > > > > > > crb_map_io(struct acpi_device
-> > > > > > *device, struct crb_priv *priv,
-> > > > > > >  	 */
-> > > > > > >  	if (cmd_size != rsp_size) {
-> > > > > > >  		dev_err(dev, FW_BUG "overlapping command and
-> > response
-> > > > > > buffer sizes are not identical");
-> > > > > > > -		return -EINVAL;
-> > > > > > > +		ret = -EINVAL;
-> > > > > > > +		goto out;
-> > > > > > >  	}
-> > > > > > > +
-> > > > > > >  	priv->cmd_size = cmd_size;
-> > > > > > >
-> > > > > > >  	priv->rsp = priv->cmd;
-> > > > > > > -	return 0;
-> > > > > > > +
-> > > > > > > +out:
-> > > > > > > +	crb_go_idle(dev, priv);
-> > > > > > > +
-> > > > > > > +	return ret;
-> > > > > > >  }
-> > > > > > >
-> > > > > > >  static int crb_acpi_add(struct acpi_device *device) @@
-> > > > > > > -416,7
-> > > > > > > +439,15 @@ static int crb_acpi_add(struct acpi_device
-> > > > > > > +*device)
-> > > > > > >  	if (rc)
-> > > > > > >  		return rc;
-> > > > > > >
-> > > > > > > -	return crb_init(device, priv);
-> > > > > > > +	rc  = crb_cmd_ready(dev, priv);
-> > > > > > > +	if (rc)
-> > > > > > > +		return rc;
-> > > > > >
-> > > > > > I cannot find any valid reason why crb_map_io calls
-> > > > > > crb_go_idle in the except in the case of a failure. This is
-> > > > > > something I complained
-> > earlier.
-> > > > >
-> > > > > Haven't I've already explained that?  Each flow has to be
-> > > > > enclosed by cmdReady and goIdle.  There is nothing different
-> > > > > here from the other flows in that matter.  The assumption here
-> > > > > is that we are starting in the idle state bug because of the HW
-> > > > > bug we cannot access the registers. So the whole w/o is enclosed
-> > > > > in the crb_map_io.  After that we are starting from new, from the idle
-> state.
-> > > >
-> > > > But why you have to do crb_go_idle upon returning from crb_map_io()?
-> > >
-> > > As written above it's is closed code... cmdReady  <perform the task>
-> goIdle.
-> >
-> > It does extra cmdReady/goIdle. I don't really get your explanation here.
-> > crb_map_io() is not a utility function used after the driver has initialized.
-> >
-> > crb_map_io() could just leave it ready so you don't have to do an
-> > explicit call to crb_cmd_ready() in crb_acpi_add. I think this is quite obvious.
-> >
-> > > >
-> > > > > > A minor thing but the extra crb_cmd_ready is basically clutter
-> > > > > > to the initialization.
-> > > > >
-> > > > > The extra cmdReady is here in case runtime pm is not compiled
-> > > > > into the kernel and assumption here is that we are starting in the idle
-> state.
-> > > > > Please remember that unfortunately we cannot detect whether we
-> > > > > are in ready on idle state as the status register is not
-> > > > > retained, so everything has to be ordered properly.
-> > > >
-> > > > Rather you it would be better not to use cmdReady/goIdle at all if
-> > > > kernel is not compiled with CONFIG_PM.
-> > >
-> > > ????. You have to do the initial cmdReady, and that's what the code
-> > > does, otherwise your driver won't work at all.  CONFIG_PM is the
-> > > software thing, it doesn't magically match the HW power state. So
-> > > you need to do cmdReady.
-> >
-> > In every machine that I've tried so far the PTT has worked if
-> > cmdReady/goIdle haven't been used at all by the OS during a power cycle.
+> /**
+>  * vio_register_device_node: - Register a new vio device.
+>  * @of_node:    The OF node for this device.
+>  *
+>  * Creates and initializes a vio_dev structure from the data in
+>  * of_node and adds it to the list of virtual devices.
+>  * Returns a pointer to the created vio_dev or NULL if node has
+>  * NULL device_type or compatible fields.
+>  */
+> struct vio_dev *vio_register_device_node(struct device_node *of_node)
 > 
-> You mean BXT and SKL, right, but that's because you've been blessed with a
-> specific BIOS that keeps it up.
+> and vtpm device table being defined as below:
+> 
+> static struct vio_device_id tpm_ibmvtpm_device_table[] = {
+>         { "IBM,vtpm", "IBM,vtpm"}, ----------------------------------->
+> type,compat
+>         { "", "" }
+> };
+> 
+> So, vio (virtual) devices uses both device_type and compatible property for
+> device registration and driver selection.
+> In case of physical TPM, it is only compatible property being used for
+> device driver selection
+> 
+> Also, please note that device_type property is now deprecated in latest
+> Device Tree specs.
 
-Hmm, now I understand why you have a bit different angle on the problem. 
-Tomas
+Deprecated for Flattened DT only. OpenFirmware implementations 
+can/should still use this.
+
+Rob
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most 
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
