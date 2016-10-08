@@ -1,20 +1,18 @@
 From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: Re: [PATCH 2/4] tmp/tpm_crb: fix Intel PTT hw bug
-	during idle state
-Date: Sat, 8 Oct 2016 17:27:53 +0000
-Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B542F6814@hasmsx108.ger.corp.intel.com>
+Subject: Re: [PATCH 4/4] tmp/tpm_crb: implement runtime pm for
+	tpm_crb
+Date: Sat, 8 Oct 2016 18:18:36 +0000
+Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B542F684D@hasmsx108.ger.corp.intel.com>
 References: <1475927979-23484-1-git-send-email-tomas.winkler@intel.com>
-	<1475927979-23484-3-git-send-email-tomas.winkler@intel.com>
-	<20161008125003.GB10317@intel.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B542F6768@hasmsx108.ger.corp.intel.com>
-	<20161008160006.GA25893@intel.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B542F67C8@hasmsx108.ger.corp.intel.com>
-	<20161008170651.GA8747@intel.com>
+	<1475927979-23484-5-git-send-email-tomas.winkler@intel.com>
+	<20161008124708.GA10317@intel.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B542F6741@hasmsx108.ger.corp.intel.com>
+	<20161008160112.GB25893@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20161008170651.GA8747-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20161008160112.GB25893-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
@@ -28,185 +26,51 @@ To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-> Subject: Re: [PATCH 2/4] tmp/tpm_crb: fix Intel PTT hw bug during idle state
+
+
+> -----Original Message-----
+> From: Jarkko Sakkinen [mailto:jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org]
+> Sent: Saturday, October 08, 2016 19:01
+> To: Winkler, Tomas <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+> Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org; Jason Gunthorpe
+> <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>; linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+> Subject: Re: [PATCH 4/4] tmp/tpm_crb: implement runtime pm for tpm_crb
 > 
-> On Sat, Oct 08, 2016 at 04:56:39PM +0000, Winkler, Tomas wrote:
-> >
+> On Sat, Oct 08, 2016 at 01:37:31PM +0000, Winkler, Tomas wrote:
 > > >
-> > > On Sat, Oct 08, 2016 at 02:27:06PM +0000, Winkler, Tomas wrote:
-> > > > >
-> > > > > On Sat, Oct 08, 2016 at 02:59:37PM +0300, Tomas Winkler wrote:
-> > > > > > From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-> > > > > >
-> > > > > > There is a HW bug in Skylake, Kabylake, and Broxton PCH Intel
-> > > > > > PTT device, where most of the registers in the control area
-> > > > > > except START, REQUEST, CANCEL, and LOC_CTRL lost retention
-> > > > > > when the device is in the
-> > > > > idle state.
-> > > > > > Hence we need to bring the device to ready state before
-> > > > > > accessing the other registers. The fix brings device to ready
-> > > > > > state before trying to read command and response buffer
-> > > > > > addresses in order to remap the for
-> > > > > access.
-> > > > > >
-> > > > > > Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-> > > > > > ---
-> > > > > > V2: cmd read need to be called also before crb_init as this
-> > > > > > will run self test.
-> > > > > > V3: resend.
-> > > > > > V4: add Kabylake to the list of effected platforms
-> > > > > >
-> > > > > >  drivers/char/tpm/tpm_crb.c | 47
-> > > > > > ++++++++++++++++++++++++++++++++++++++--------
-> > > > > >  1 file changed, 39 insertions(+), 8 deletions(-)
-> > > > > >
-> > > > > > diff --git a/drivers/char/tpm/tpm_crb.c
-> > > > > > b/drivers/char/tpm/tpm_crb.c index 0f3b3f3d12d3..4eb96b85c653
-> > > > > > 100644
-> > > > > > --- a/drivers/char/tpm/tpm_crb.c
-> > > > > > +++ b/drivers/char/tpm/tpm_crb.c
-> > > > > > @@ -319,6 +319,7 @@ static int crb_map_io(struct acpi_device
-> > > > > > *device,
-> > > > > struct crb_priv *priv,
-> > > > > >  	struct list_head resources;
-> > > > > >  	struct resource io_res;
-> > > > > >  	struct device *dev = &device->dev;
-> > > > > > +	u32 pa_high, pa_low;
-> > > > > >  	u64 cmd_pa;
-> > > > > >  	u32 cmd_size;
-> > > > > >  	u64 rsp_pa;
-> > > > > > @@ -346,12 +347,27 @@ static int crb_map_io(struct acpi_device
-> > > > > > *device,
-> > > > > struct crb_priv *priv,
-> > > > > >  	if (IS_ERR(priv->cca))
-> > > > > >  		return PTR_ERR(priv->cca);
-> > > > > >
-> > > > > > -	cmd_pa = ((u64) ioread32(&priv->cca->cmd_pa_high) << 32) |
-> > > > > > -		  (u64) ioread32(&priv->cca->cmd_pa_low);
-> > > > > > +	/*
-> > > > > > +	 * PTT HW bug w/a: wake up the device to access
-> > > > > > +	 * possibly not retained registers.
-> > > > > > +	 */
-> > > > > > +	ret = crb_cmd_ready(dev, priv);
-> > > > > > +	if (ret)
-> > > > > > +		return ret;
-> > > > > > +
-> > > > > > +	pa_high = ioread32(&priv->cca->cmd_pa_high);
-> > > > > > +	pa_low  = ioread32(&priv->cca->cmd_pa_low);
-> > > > > > +	cmd_pa = ((u64)pa_high << 32) | pa_low;
-> > > > > >  	cmd_size = ioread32(&priv->cca->cmd_size);
-> > > > > > +
-> > > > > > +	dev_dbg(dev, "cmd_hi = %X cmd_low = %X cmd_size %X\n",
-> > > > > > +		pa_high, pa_low, cmd_size);
-> > > > > > +
-> > > > > >  	priv->cmd = crb_map_res(dev, priv, &io_res, cmd_pa,
-> cmd_size);
-> > > > > > -	if (IS_ERR(priv->cmd))
-> > > > > > -		return PTR_ERR(priv->cmd);
-> > > > > > +	if (IS_ERR(priv->cmd)) {
-> > > > > > +		ret = PTR_ERR(priv->cmd);
-> > > > > > +		goto out;
-> > > > > > +	}
-> > > > > >
-> > > > > >  	memcpy_fromio(&rsp_pa, &priv->cca->rsp_pa, 8);
-> > > > > >  	rsp_pa = le64_to_cpu(rsp_pa); @@ -359,7 +375,8 @@ static
-> int
-> > > > > > crb_map_io(struct acpi_device *device, struct crb_priv *priv,
-> > > > > >
-> > > > > >  	if (cmd_pa != rsp_pa) {
-> > > > > >  		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa,
-> rsp_size);
-> > > > > > -		return PTR_ERR_OR_ZERO(priv->rsp);
-> > > > > > +		ret = PTR_ERR_OR_ZERO(priv->rsp);
-> > > > > > +		goto out;
-> > > > > >  	}
-> > > > > >
-> > > > > >  	/* According to the PTP specification, overlapping command
-> > > > > > and response @@ -367,12 +384,18 @@ static int
-> > > > > > crb_map_io(struct acpi_device
-> > > > > *device, struct crb_priv *priv,
-> > > > > >  	 */
-> > > > > >  	if (cmd_size != rsp_size) {
-> > > > > >  		dev_err(dev, FW_BUG "overlapping command and
-> response
-> > > > > buffer sizes are not identical");
-> > > > > > -		return -EINVAL;
-> > > > > > +		ret = -EINVAL;
-> > > > > > +		goto out;
-> > > > > >  	}
-> > > > > > +
-> > > > > >  	priv->cmd_size = cmd_size;
-> > > > > >
-> > > > > >  	priv->rsp = priv->cmd;
-> > > > > > -	return 0;
-> > > > > > +
-> > > > > > +out:
-> > > > > > +	crb_go_idle(dev, priv);
-> > > > > > +
-> > > > > > +	return ret;
-> > > > > >  }
-> > > > > >
-> > > > > >  static int crb_acpi_add(struct acpi_device *device) @@ -416,7
-> > > > > > +439,15 @@ static int crb_acpi_add(struct acpi_device *device)
-> > > > > >  	if (rc)
-> > > > > >  		return rc;
-> > > > > >
-> > > > > > -	return crb_init(device, priv);
-> > > > > > +	rc  = crb_cmd_ready(dev, priv);
-> > > > > > +	if (rc)
-> > > > > > +		return rc;
-> > > > >
-> > > > > I cannot find any valid reason why crb_map_io calls crb_go_idle
-> > > > > in the except in the case of a failure. This is something I complained
-> earlier.
+> > > On Sat, Oct 08, 2016 at 02:59:39PM +0300, Tomas Winkler wrote:
+> > > > From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 > > > >
-> > > > Haven't I've already explained that?  Each flow has to be enclosed
-> > > > by cmdReady and goIdle.  There is nothing different here from the
-> > > > other flows in that matter.  The assumption here is that we are
-> > > > starting in the idle state bug because of the HW bug we cannot
-> > > > access the registers. So the whole w/o is enclosed in the
-> > > > crb_map_io.  After that we are starting from new, from the idle state.
-> > >
-> > > But why you have to do crb_go_idle upon returning from crb_map_io()?
-> >
-> > As written above it's is closed code... cmdReady  <perform the task>   goIdle.
-> 
-> It does extra cmdReady/goIdle. I don't really get your explanation here.
-> crb_map_io() is not a utility function used after the driver has initialized.
-> 
-> crb_map_io() could just leave it ready so you don't have to do an explicit call
-> to crb_cmd_ready() in crb_acpi_add. I think this is quite obvious.
-> 
-> > >
-> > > > > A minor thing but the extra crb_cmd_ready is basically clutter
-> > > > > to the initialization.
+> > > > Utilize runtime_pm for driving tpm crb idle states.
+> > > > The framework calls cmd_ready from the pm_runtime_resume handler
+> > > > and go idle from the pm_runtime_suspend handler.
+> > > > The TPM framework should wake the device before transmit and receive.
+> > > > In case the runtime_pm framework is not compiled in or enabled,
+> > > > the device will be in the permanent ready state.
 > > > >
-> > > > The extra cmdReady is here in case runtime pm is not compiled into
-> > > > the kernel and assumption here is that we are starting in the idle state.
-> > > > Please remember that unfortunately we cannot detect whether we are
-> > > > in ready on idle state as the status register is not retained, so
-> > > > everything has to be ordered properly.
+> > > > Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 > > >
-> > > Rather you it would be better not to use cmdReady/goIdle at all if
-> > > kernel is not compiled with CONFIG_PM.
+> > > I would rather want the fix as a separate patch to make review +
+> > > testing easier (without and with). Thanks.
 > >
-> > ????. You have to do the initial cmdReady, and that's what the code
-> > does, otherwise your driver won't work at all.  CONFIG_PM is the
-> > software thing, it doesn't magically match the HW power state. So you
-> > need to do cmdReady.
+> > But you've dropped the patches, so I've resent them.
+> > Can you do the diff yourself, just branch it off.  it's really just
+> > few lines
 > 
-> In every machine that I've tried so far the PTT has worked if cmdReady/goIdle
-> haven't been used at all by the OS during a power cycle.
+> Nope. I have only dropped the workaround.
 
-You mean BXT and SKL, right, but that's because you've been blessed with a specific BIOS that keeps it up.
+This is what is current in the linus tree:
 
-> 
-> I'll keep the current commit (v4 version) because it is tested quite well, no
-> worries about that, but this is something where a cleanup would make sense
-> later on.
+git log --oneline linux/master -- drivers/char/tpm/
 
-No problem, though so far I believe the flow is correct.
-Tomas
+324152502b0e Revert "tpm/tpm_crb: implement tpm crb idle state"
+cfa188220363 Revert "tmp/tpm_crb: fix Intel PTT hw bug during idle state"
+2b7926ae1cd4 Revert "tpm/tpm_crb: open code the crb_init into acpi_add"
+4886cd80cb8e Revert "tmp/tpm_crb: implement runtime pm for tpm_crb"
+e350e24694e4 tmp/tpm_crb: implement runtime pm for tpm_crb
+0c22db435bf7 tpm/tpm_crb: open code the crb_init into acpi_add
+9514ff1961c6 tmp/tpm_crb: fix Intel PTT hw bug during idle state
+e17acbbb69d3 tpm/tpm_crb: implement tpm crb idle state
 
 
 ------------------------------------------------------------------------------
