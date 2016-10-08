@@ -1,8 +1,8 @@
 From: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH 2/4] tmp/tpm_crb: fix Intel PTT hw bug during
-	idle state
-Date: Sat,  8 Oct 2016 14:59:37 +0300
-Message-ID: <1475927979-23484-3-git-send-email-tomas.winkler@intel.com>
+Subject: [PATCH v4 1/4] tpm/tpm_crb: implement tpm crb idle
+	state
+Date: Sat,  8 Oct 2016 14:59:36 +0300
+Message-ID: <1475927979-23484-2-git-send-email-tomas.winkler@intel.com>
 References: <1475927979-23484-1-git-send-email-tomas.winkler@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -23,115 +23,113 @@ List-Id: tpmdd-devel@lists.sourceforge.net
 
 From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 
-There is a HW bug in Skylake, Kabylake, and Broxton PCH Intel PTT device,
-where most of the registers in the control area except START, REQUEST,
-CANCEL, and LOC_CTRL lost retention when the device is in the idle state.
-Hence we need to bring the device to ready state before accessing the other
-registers. The fix brings device to ready state before trying to read
-command and response buffer addresses in order to remap the for access.
+The register TPM_CRB_CTRL_REQ_x contains bits goIdle and cmdReady for
+SW to indicate that the device can enter or should exit the idle state.
+
+The legacy ACPI-start (SMI + DMA) based devices do not support these
+bits and the idle state management is not exposed to the host SW.
+Thus, this functionality only is enabled only for a CRB start (MMIO)
+based devices.
+
+Based on Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+original patch:
+'tpm_crb: implement power tpm crb power management'
+
+To keep the implementation local to the hw we don't use wait_for_tpm_stat
+for polling the TPM_CRB_CTRL_REQ.
 
 Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
-V2: cmd read need to be called also before crb_init as this will run
- self test.
-V3: resend.
-V4: add Kabylake to the list of effected platforms
+V2: do not export the functions via tpm ops
+V3: fix lower case corruption; adjust function documentation
+V4: resend
 
- drivers/char/tpm/tpm_crb.c | 47 ++++++++++++++++++++++++++++++++++++++--------
- 1 file changed, 39 insertions(+), 8 deletions(-)
+ drivers/char/tpm/tpm_crb.c | 70 ++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 70 insertions(+)
 
 diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index 0f3b3f3d12d3..4eb96b85c653 100644
+index a7c870af916c..0f3b3f3d12d3 100644
 --- a/drivers/char/tpm/tpm_crb.c
 +++ b/drivers/char/tpm/tpm_crb.c
-@@ -319,6 +319,7 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
- 	struct list_head resources;
- 	struct resource io_res;
- 	struct device *dev = &device->dev;
-+	u32 pa_high, pa_low;
- 	u64 cmd_pa;
+@@ -83,6 +83,76 @@ struct crb_priv {
  	u32 cmd_size;
- 	u64 rsp_pa;
-@@ -346,12 +347,27 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
- 	if (IS_ERR(priv->cca))
- 		return PTR_ERR(priv->cca);
+ };
  
--	cmd_pa = ((u64) ioread32(&priv->cca->cmd_pa_high) << 32) |
--		  (u64) ioread32(&priv->cca->cmd_pa_low);
-+	/*
-+	 * PTT HW bug w/a: wake up the device to access
-+	 * possibly not retained registers.
-+	 */
-+	ret = crb_cmd_ready(dev, priv);
-+	if (ret)
-+		return ret;
++/**
++ * crb_go_idle - request tpm crb device to go the idle state
++ *
++ * @dev:  crb device
++ * @priv: crb private data
++ *
++ * Write CRB_CTRL_REQ_GO_IDLE to TPM_CRB_CTRL_REQ
++ * The device should respond within TIMEOUT_C by clearing the bit.
++ * Anyhow, we do not wait here as a consequent CMD_READY request
++ * will be handled correctly even if idle was not completed.
++ *
++ * The function does nothing for devices with ACPI-start method.
++ *
++ * Return: 0 always
++ */
++static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
++{
++	if (priv->flags & CRB_FL_ACPI_START)
++		return 0;
 +
-+	pa_high = ioread32(&priv->cca->cmd_pa_high);
-+	pa_low  = ioread32(&priv->cca->cmd_pa_low);
-+	cmd_pa = ((u64)pa_high << 32) | pa_low;
- 	cmd_size = ioread32(&priv->cca->cmd_size);
++	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->cca->req);
++	/* we don't really care when this settles */
++	dev_dbg(dev, "goIdle\n");
 +
-+	dev_dbg(dev, "cmd_hi = %X cmd_low = %X cmd_size %X\n",
-+		pa_high, pa_low, cmd_size);
++	return 0;
++}
 +
- 	priv->cmd = crb_map_res(dev, priv, &io_res, cmd_pa, cmd_size);
--	if (IS_ERR(priv->cmd))
--		return PTR_ERR(priv->cmd);
-+	if (IS_ERR(priv->cmd)) {
-+		ret = PTR_ERR(priv->cmd);
-+		goto out;
++/**
++ * crb_cmd_ready - request tpm crb device to enter ready state
++ *
++ * @dev:  crb device
++ * @priv: crb private data
++ *
++ * Write CRB_CTRL_REQ_CMD_READY to TPM_CRB_CTRL_REQ
++ * and poll till the device acknowledge it by clearing the bit.
++ * The device should respond within TIMEOUT_C.
++ *
++ * The function does nothing for devices with ACPI-start method
++ *
++ * Return: 0 on success -ETIME on timeout;
++ */
++static int __maybe_unused crb_cmd_ready(struct device *dev,
++					struct crb_priv *priv)
++{
++	ktime_t stop, start;
++
++	if (priv->flags & CRB_FL_ACPI_START)
++		return 0;
++
++	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->cca->req);
++
++	start = ktime_get();
++	stop = ktime_add(start, ms_to_ktime(TPM2_TIMEOUT_C));
++	do {
++		if (!(ioread32(&priv->cca->req) & CRB_CTRL_REQ_CMD_READY)) {
++			dev_dbg(dev, "cmdReady in %lld usecs\n",
++				ktime_to_us(ktime_sub(ktime_get(), start)));
++			return 0;
++		}
++		usleep_range(50, 100);
++	} while (ktime_before(ktime_get(), stop));
++
++	if (ioread32(&priv->cca->req) & CRB_CTRL_REQ_CMD_READY) {
++		dev_warn(dev, "cmdReady timed out\n");
++		return -ETIME;
 +	}
- 
- 	memcpy_fromio(&rsp_pa, &priv->cca->rsp_pa, 8);
- 	rsp_pa = le64_to_cpu(rsp_pa);
-@@ -359,7 +375,8 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
- 
- 	if (cmd_pa != rsp_pa) {
- 		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa, rsp_size);
--		return PTR_ERR_OR_ZERO(priv->rsp);
-+		ret = PTR_ERR_OR_ZERO(priv->rsp);
-+		goto out;
- 	}
- 
- 	/* According to the PTP specification, overlapping command and response
-@@ -367,12 +384,18 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
- 	 */
- 	if (cmd_size != rsp_size) {
- 		dev_err(dev, FW_BUG "overlapping command and response buffer sizes are not identical");
--		return -EINVAL;
-+		ret = -EINVAL;
-+		goto out;
- 	}
 +
- 	priv->cmd_size = cmd_size;
- 
- 	priv->rsp = priv->cmd;
--	return 0;
++	return 0;
++}
 +
-+out:
-+	crb_go_idle(dev, priv);
-+
-+	return ret;
- }
+ static SIMPLE_DEV_PM_OPS(crb_pm, tpm_pm_suspend, tpm_pm_resume);
  
- static int crb_acpi_add(struct acpi_device *device)
-@@ -416,7 +439,15 @@ static int crb_acpi_add(struct acpi_device *device)
- 	if (rc)
- 		return rc;
- 
--	return crb_init(device, priv);
-+	rc  = crb_cmd_ready(dev, priv);
-+	if (rc)
-+		return rc;
-+
-+	rc = crb_init(device, priv);
-+	if (rc)
-+		crb_go_idle(dev, priv);
-+
-+	return rc;
- }
- 
- static int crb_acpi_remove(struct acpi_device *device)
+ static u8 crb_status(struct tpm_chip *chip)
 -- 
 2.7.4
 
