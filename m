@@ -1,16 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 4/4] tmp/tpm_crb: implement runtime pm for
-	tpm_crb
-Date: Sat, 8 Oct 2016 15:47:08 +0300
-Message-ID: <20161008124708.GA10317@intel.com>
+Subject: Re: [PATCH 2/4] tmp/tpm_crb: fix Intel PTT hw bug
+	during idle state
+Date: Sat, 8 Oct 2016 15:50:03 +0300
+Message-ID: <20161008125003.GB10317@intel.com>
 References: <1475927979-23484-1-git-send-email-tomas.winkler@intel.com>
-	<1475927979-23484-5-git-send-email-tomas.winkler@intel.com>
+	<1475927979-23484-3-git-send-email-tomas.winkler@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1475927979-23484-5-git-send-email-tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <1475927979-23484-3-git-send-email-tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,145 +23,117 @@ To: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat, Oct 08, 2016 at 02:59:39PM +0300, Tomas Winkler wrote:
+On Sat, Oct 08, 2016 at 02:59:37PM +0300, Tomas Winkler wrote:
 > From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 > 
-> Utilize runtime_pm for driving tpm crb idle states.
-> The framework calls cmd_ready from the pm_runtime_resume handler
-> and go idle from the pm_runtime_suspend handler.
-> The TPM framework should wake the device before transmit and receive.
-> In case the runtime_pm framework is not compiled in or enabled, the device
-> will be in the permanent ready state.
+> There is a HW bug in Skylake, Kabylake, and Broxton PCH Intel PTT device,
+> where most of the registers in the control area except START, REQUEST,
+> CANCEL, and LOC_CTRL lost retention when the device is in the idle state.
+> Hence we need to bring the device to ready state before accessing the other
+> registers. The fix brings device to ready state before trying to read
+> command and response buffer addresses in order to remap the for access.
 > 
 > Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-
-I would rather want the fix as a separate patch to make review + testing
-easier (without and with). Thanks.
-
-/Jarkko
-
 > ---
-> V2: new in the series
-> V3: resend
-> V4: fix unbalanced runtime pm put and get
+> V2: cmd read need to be called also before crb_init as this will run
+>  self test.
+> V3: resend.
+> V4: add Kabylake to the list of effected platforms
 > 
->  drivers/char/tpm/tpm-interface.c |  5 +++++
->  drivers/char/tpm/tpm_crb.c       | 42 ++++++++++++++++++++++++++++++++++++----
->  2 files changed, 43 insertions(+), 4 deletions(-)
+>  drivers/char/tpm/tpm_crb.c | 47 ++++++++++++++++++++++++++++++++++++++--------
+>  1 file changed, 39 insertions(+), 8 deletions(-)
 > 
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index 8de61876f633..7743e8a21b82 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -29,6 +29,7 @@
->  #include <linux/mutex.h>
->  #include <linux/spinlock.h>
->  #include <linux/freezer.h>
-> +#include <linux/pm_runtime.h>
->  
->  #include "tpm.h"
->  #include "tpm_eventlog.h"
-> @@ -356,6 +357,8 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
->  	if (!(flags & TPM_TRANSMIT_UNLOCKED))
->  		mutex_lock(&chip->tpm_mutex);
->  
-> +	pm_runtime_get_sync(chip->dev.parent);
-> +
->  	rc = chip->ops->send(chip, (u8 *) buf, count);
->  	if (rc < 0) {
->  		dev_err(&chip->dev,
-> @@ -397,6 +400,8 @@ out_recv:
->  		dev_err(&chip->dev,
->  			"tpm_transmit: tpm_recv: error %zd\n", rc);
->  out:
-> +	pm_runtime_put_sync(chip->dev.parent);
-> +
->  	if (!(flags & TPM_TRANSMIT_UNLOCKED))
->  		mutex_unlock(&chip->tpm_mutex);
->  	return rc;
 > diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> index def50b7d47b2..eccd82af6215 100644
+> index 0f3b3f3d12d3..4eb96b85c653 100644
 > --- a/drivers/char/tpm/tpm_crb.c
 > +++ b/drivers/char/tpm/tpm_crb.c
-> @@ -19,6 +19,7 @@
->  #include <linux/highmem.h>
->  #include <linux/rculist.h>
->  #include <linux/module.h>
-> +#include <linux/pm_runtime.h>
->  #include "tpm.h"
+> @@ -319,6 +319,7 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+>  	struct list_head resources;
+>  	struct resource io_res;
+>  	struct device *dev = &device->dev;
+> +	u32 pa_high, pa_low;
+>  	u64 cmd_pa;
+>  	u32 cmd_size;
+>  	u64 rsp_pa;
+> @@ -346,12 +347,27 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+>  	if (IS_ERR(priv->cca))
+>  		return PTR_ERR(priv->cca);
 >  
->  #define ACPI_SIG_TPM2 "TPM2"
-> @@ -153,8 +154,6 @@ static int __maybe_unused crb_cmd_ready(struct device *dev,
->  	return 0;
+> -	cmd_pa = ((u64) ioread32(&priv->cca->cmd_pa_high) << 32) |
+> -		  (u64) ioread32(&priv->cca->cmd_pa_low);
+> +	/*
+> +	 * PTT HW bug w/a: wake up the device to access
+> +	 * possibly not retained registers.
+> +	 */
+> +	ret = crb_cmd_ready(dev, priv);
+> +	if (ret)
+> +		return ret;
+> +
+> +	pa_high = ioread32(&priv->cca->cmd_pa_high);
+> +	pa_low  = ioread32(&priv->cca->cmd_pa_low);
+> +	cmd_pa = ((u64)pa_high << 32) | pa_low;
+>  	cmd_size = ioread32(&priv->cca->cmd_size);
+> +
+> +	dev_dbg(dev, "cmd_hi = %X cmd_low = %X cmd_size %X\n",
+> +		pa_high, pa_low, cmd_size);
+> +
+>  	priv->cmd = crb_map_res(dev, priv, &io_res, cmd_pa, cmd_size);
+> -	if (IS_ERR(priv->cmd))
+> -		return PTR_ERR(priv->cmd);
+> +	if (IS_ERR(priv->cmd)) {
+> +		ret = PTR_ERR(priv->cmd);
+> +		goto out;
+> +	}
+>  
+>  	memcpy_fromio(&rsp_pa, &priv->cca->rsp_pa, 8);
+>  	rsp_pa = le64_to_cpu(rsp_pa);
+> @@ -359,7 +375,8 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+>  
+>  	if (cmd_pa != rsp_pa) {
+>  		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa, rsp_size);
+> -		return PTR_ERR_OR_ZERO(priv->rsp);
+> +		ret = PTR_ERR_OR_ZERO(priv->rsp);
+> +		goto out;
+>  	}
+>  
+>  	/* According to the PTP specification, overlapping command and response
+> @@ -367,12 +384,18 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+>  	 */
+>  	if (cmd_size != rsp_size) {
+>  		dev_err(dev, FW_BUG "overlapping command and response buffer sizes are not identical");
+> -		return -EINVAL;
+> +		ret = -EINVAL;
+> +		goto out;
+>  	}
+> +
+>  	priv->cmd_size = cmd_size;
+>  
+>  	priv->rsp = priv->cmd;
+> -	return 0;
+> +
+> +out:
+> +	crb_go_idle(dev, priv);
+> +
+> +	return ret;
 >  }
 >  
-> -static SIMPLE_DEV_PM_OPS(crb_pm, tpm_pm_suspend, tpm_pm_resume);
-> -
->  static u8 crb_status(struct tpm_chip *chip)
->  {
->  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-> @@ -437,11 +436,21 @@ static int crb_acpi_add(struct acpi_device *device)
+>  static int crb_acpi_add(struct acpi_device *device)
+> @@ -416,7 +439,15 @@ static int crb_acpi_add(struct acpi_device *device)
 >  	if (rc)
 >  		return rc;
 >  
-> +	pm_runtime_get_noresume(dev);
-> +	pm_runtime_set_active(dev);
-> +	pm_runtime_enable(dev);
-> +
->  	rc = tpm_chip_register(chip);
-> -	if (rc)
-> +	if (rc) {
->  		crb_go_idle(dev, priv);
-> +		pm_runtime_put_noidle(dev);
-> +		pm_runtime_disable(dev);
+> -	return crb_init(device, priv);
+> +	rc  = crb_cmd_ready(dev, priv);
+> +	if (rc)
 > +		return rc;
-> +	}
->  
-> -	return rc;
-> +	pm_runtime_put(dev);
-> +
-> +	return 0;
->  }
->  
->  static int crb_acpi_remove(struct acpi_device *device)
-> @@ -451,9 +460,34 @@ static int crb_acpi_remove(struct acpi_device *device)
->  
->  	tpm_chip_unregister(chip);
->  
-> +	pm_runtime_disable(dev);
-> +
->  	return 0;
->  }
->  
-> +#ifdef CONFIG_PM
-> +static int crb_pm_runtime_suspend(struct device *dev)
-> +{
-> +	struct tpm_chip *chip = dev_get_drvdata(dev);
-> +	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-> +
-> +	return crb_go_idle(dev, priv);
-> +}
-> +
-> +static int crb_pm_runtime_resume(struct device *dev)
-> +{
-> +	struct tpm_chip *chip = dev_get_drvdata(dev);
-> +	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-> +
-> +	return crb_cmd_ready(dev, priv);
-> +}
-> +#endif /* CONFIG_PM */
-> +
-> +static const struct dev_pm_ops crb_pm = {
-> +	SET_SYSTEM_SLEEP_PM_OPS(tpm_pm_suspend, tpm_pm_resume)
-> +	SET_RUNTIME_PM_OPS(crb_pm_runtime_suspend, crb_pm_runtime_resume, NULL)
-> +};
-> +
->  static struct acpi_device_id crb_device_ids[] = {
->  	{"MSFT0101", 0},
->  	{"", 0},
-> -- 
-> 2.7.4
-> 
+
+I cannot find any valid reason why crb_map_io calls crb_go_idle in the
+except in the case of a failure. This is something I complained earlier.
+
+A minor thing but the extra crb_cmd_ready is basically clutter to the
+initialization.
+
+/Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
