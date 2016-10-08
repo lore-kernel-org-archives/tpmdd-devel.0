@@ -1,41 +1,59 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH 4/4] tmp/tpm_crb: implement runtime pm for tpm_crb
-Date: Sat, 8 Oct 2016 19:01:12 +0300
-Message-ID: <20161008160112.GB25893@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v4 1/4] tpm/tpm_crb: implement tpm crb
+	idle state
+Date: Sat, 8 Oct 2016 19:30:38 +0300
+Message-ID: <20161008163038.GA10489@intel.com>
 References: <1475927979-23484-1-git-send-email-tomas.winkler@intel.com>
- <1475927979-23484-5-git-send-email-tomas.winkler@intel.com>
- <20161008124708.GA10317@intel.com>
- <5B8DA87D05A7694D9FA63FD143655C1B542F6741@hasmsx108.ger.corp.intel.com>
+	<1475927979-23484-2-git-send-email-tomas.winkler@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B542F6741@hasmsx108.ger.corp.intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: "Winkler, Tomas" <tomas.winkler@intel.com>
-Cc: "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+In-Reply-To: <1475927979-23484-2-git-send-email-tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat, Oct 08, 2016 at 01:37:31PM +0000, Winkler, Tomas wrote:
-> > 
-> > On Sat, Oct 08, 2016 at 02:59:39PM +0300, Tomas Winkler wrote:
-> > > From: "Winkler, Tomas" <tomas.winkler@intel.com>
-> > >
-> > > Utilize runtime_pm for driving tpm crb idle states.
-> > > The framework calls cmd_ready from the pm_runtime_resume handler and
-> > > go idle from the pm_runtime_suspend handler.
-> > > The TPM framework should wake the device before transmit and receive.
-> > > In case the runtime_pm framework is not compiled in or enabled, the
-> > > device will be in the permanent ready state.
-> > >
-> > > Signed-off-by: Tomas Winkler <tomas.winkler@intel.com>
-> > 
-> > I would rather want the fix as a separate patch to make review + testing easier
-> > (without and with). Thanks.
+On Sat, Oct 08, 2016 at 02:59:36PM +0300, Tomas Winkler wrote:
+> From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 > 
-> But you've dropped the patches, so I've resent them. 
-> Can you do the diff yourself, just branch it off.  it's really just few lines 
+> The register TPM_CRB_CTRL_REQ_x contains bits goIdle and cmdReady for
+> SW to indicate that the device can enter or should exit the idle state.
+> 
+> The legacy ACPI-start (SMI + DMA) based devices do not support these
+> bits and the idle state management is not exposed to the host SW.
+> Thus, this functionality only is enabled only for a CRB start (MMIO)
+> based devices.
+> 
+> Based on Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> original patch:
+> 'tpm_crb: implement power tpm crb power management'
+> 
+> To keep the implementation local to the hw we don't use wait_for_tpm_stat
+> for polling the TPM_CRB_CTRL_REQ.
 
-Nope. I have only dropped the workaround.
+I just realized that the HW specific argument does not hold at all.  The
+tpm_tis_core heavily uses wait_for_tpm_stat and return value of status
+is synthetized.
+
+It's upper layer for FIFO implemetations but still the arguement still
+holds.
+
+Lets keep it the way it is for now because this is fairly well test but
+I might consider sending patch  that migrates to wait_for_tpm_stat unless
+there is no real reason not to do so.
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most 
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
