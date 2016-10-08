@@ -1,8 +1,8 @@
 From: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH 3/4] tpm/tpm_crb: open code the crb_init into
-	acpi_add
-Date: Sat,  8 Oct 2016 14:59:38 +0300
-Message-ID: <1475927979-23484-4-git-send-email-tomas.winkler@intel.com>
+Subject: [PATCH 4/4] tmp/tpm_crb: implement runtime pm for
+	tpm_crb
+Date: Sat,  8 Oct 2016 14:59:39 +0300
+Message-ID: <1475927979-23484-5-git-send-email-tomas.winkler@intel.com>
 References: <1475927979-23484-1-git-send-email-tomas.winkler@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -23,76 +23,133 @@ List-Id: tpmdd-devel@lists.sourceforge.net
 
 From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 
-This is preparation step for implementing tpm crb
-runtime pm. We need to have tpm chip allocated
-and populated before we access the runtime handlers.
+Utilize runtime_pm for driving tpm crb idle states.
+The framework calls cmd_ready from the pm_runtime_resume handler
+and go idle from the pm_runtime_suspend handler.
+The TPM framework should wake the device before transmit and receive.
+In case the runtime_pm framework is not compiled in or enabled, the device
+will be in the permanent ready state.
 
 Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
 V2: new in the series
 V3: resend
-V4: resend
+V4: fix unbalanced runtime pm put and get
 
- drivers/char/tpm/tpm_crb.c | 26 ++++++++++----------------
- 1 file changed, 10 insertions(+), 16 deletions(-)
+ drivers/char/tpm/tpm-interface.c |  5 +++++
+ drivers/char/tpm/tpm_crb.c       | 42 ++++++++++++++++++++++++++++++++++++----
+ 2 files changed, 43 insertions(+), 4 deletions(-)
 
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index 8de61876f633..7743e8a21b82 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -29,6 +29,7 @@
+ #include <linux/mutex.h>
+ #include <linux/spinlock.h>
+ #include <linux/freezer.h>
++#include <linux/pm_runtime.h>
+ 
+ #include "tpm.h"
+ #include "tpm_eventlog.h"
+@@ -356,6 +357,8 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
+ 	if (!(flags & TPM_TRANSMIT_UNLOCKED))
+ 		mutex_lock(&chip->tpm_mutex);
+ 
++	pm_runtime_get_sync(chip->dev.parent);
++
+ 	rc = chip->ops->send(chip, (u8 *) buf, count);
+ 	if (rc < 0) {
+ 		dev_err(&chip->dev,
+@@ -397,6 +400,8 @@ out_recv:
+ 		dev_err(&chip->dev,
+ 			"tpm_transmit: tpm_recv: error %zd\n", rc);
+ out:
++	pm_runtime_put_sync(chip->dev.parent);
++
+ 	if (!(flags & TPM_TRANSMIT_UNLOCKED))
+ 		mutex_unlock(&chip->tpm_mutex);
+ 	return rc;
 diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index 4eb96b85c653..def50b7d47b2 100644
+index def50b7d47b2..eccd82af6215 100644
 --- a/drivers/char/tpm/tpm_crb.c
 +++ b/drivers/char/tpm/tpm_crb.c
-@@ -266,21 +266,6 @@ static const struct tpm_class_ops tpm_crb = {
- 	.req_complete_val = CRB_DRV_STS_COMPLETE,
- };
+@@ -19,6 +19,7 @@
+ #include <linux/highmem.h>
+ #include <linux/rculist.h>
+ #include <linux/module.h>
++#include <linux/pm_runtime.h>
+ #include "tpm.h"
  
--static int crb_init(struct acpi_device *device, struct crb_priv *priv)
--{
--	struct tpm_chip *chip;
+ #define ACPI_SIG_TPM2 "TPM2"
+@@ -153,8 +154,6 @@ static int __maybe_unused crb_cmd_ready(struct device *dev,
+ 	return 0;
+ }
+ 
+-static SIMPLE_DEV_PM_OPS(crb_pm, tpm_pm_suspend, tpm_pm_resume);
 -
--	chip = tpmm_chip_alloc(&device->dev, &tpm_crb);
--	if (IS_ERR(chip))
--		return PTR_ERR(chip);
--
--	dev_set_drvdata(&chip->dev, priv);
--	chip->acpi_dev_handle = device->handle;
--	chip->flags = TPM_CHIP_FLAG_TPM2;
--
--	return tpm_chip_register(chip);
--}
--
- static int crb_check_resource(struct acpi_resource *ares, void *data)
+ static u8 crb_status(struct tpm_chip *chip)
  {
- 	struct resource *io_res = data;
-@@ -402,6 +387,7 @@ static int crb_acpi_add(struct acpi_device *device)
- {
- 	struct acpi_table_tpm2 *buf;
- 	struct crb_priv *priv;
-+	struct tpm_chip *chip;
- 	struct device *dev = &device->dev;
- 	acpi_status status;
- 	u32 sm;
-@@ -439,11 +425,19 @@ static int crb_acpi_add(struct acpi_device *device)
+ 	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+@@ -437,11 +436,21 @@ static int crb_acpi_add(struct acpi_device *device)
  	if (rc)
  		return rc;
  
-+	chip = tpmm_chip_alloc(dev, &tpm_crb);
-+	if (IS_ERR(chip))
-+		return PTR_ERR(chip);
++	pm_runtime_get_noresume(dev);
++	pm_runtime_set_active(dev);
++	pm_runtime_enable(dev);
 +
-+	dev_set_drvdata(&chip->dev, priv);
-+	chip->acpi_dev_handle = device->handle;
-+	chip->flags = TPM_CHIP_FLAG_TPM2;
-+
- 	rc  = crb_cmd_ready(dev, priv);
- 	if (rc)
- 		return rc;
- 
--	rc = crb_init(device, priv);
-+	rc = tpm_chip_register(chip);
- 	if (rc)
+ 	rc = tpm_chip_register(chip);
+-	if (rc)
++	if (rc) {
  		crb_go_idle(dev, priv);
++		pm_runtime_put_noidle(dev);
++		pm_runtime_disable(dev);
++		return rc;
++	}
  
+-	return rc;
++	pm_runtime_put(dev);
++
++	return 0;
+ }
+ 
+ static int crb_acpi_remove(struct acpi_device *device)
+@@ -451,9 +460,34 @@ static int crb_acpi_remove(struct acpi_device *device)
+ 
+ 	tpm_chip_unregister(chip);
+ 
++	pm_runtime_disable(dev);
++
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_PM
++static int crb_pm_runtime_suspend(struct device *dev)
++{
++	struct tpm_chip *chip = dev_get_drvdata(dev);
++	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
++
++	return crb_go_idle(dev, priv);
++}
++
++static int crb_pm_runtime_resume(struct device *dev)
++{
++	struct tpm_chip *chip = dev_get_drvdata(dev);
++	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
++
++	return crb_cmd_ready(dev, priv);
++}
++#endif /* CONFIG_PM */
++
++static const struct dev_pm_ops crb_pm = {
++	SET_SYSTEM_SLEEP_PM_OPS(tpm_pm_suspend, tpm_pm_resume)
++	SET_RUNTIME_PM_OPS(crb_pm_runtime_suspend, crb_pm_runtime_resume, NULL)
++};
++
+ static struct acpi_device_id crb_device_ids[] = {
+ 	{"MSFT0101", 0},
+ 	{"", 0},
 -- 
 2.7.4
 
