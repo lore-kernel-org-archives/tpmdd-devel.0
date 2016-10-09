@@ -1,16 +1,14 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH RFC 1/3] tpm_crb: expand struct
- crb_control_area to struct crb_regs
-Date: Sat, 8 Oct 2016 19:42:56 -0600
-Message-ID: <20161009014256.GA8210@obsidianresearch.com>
-References: <1475972112-2819-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<1475972112-2819-2-git-send-email-jarkko.sakkinen@linux.intel.com>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH v4 6/8] tpm: remove printk error messages
+Date: Sun, 9 Oct 2016 07:25:30 +0530
+Message-ID: <57F9A392.7050302@linux.vnet.ibm.com>
+References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1475051682-23060-7-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1475972112-2819-2-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+In-Reply-To: <1475051682-23060-7-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,45 +17,131 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Oct 09, 2016 at 03:15:09AM +0300, Jarkko Sakkinen wrote:
-> +	ctrl = crb_map_res(dev, priv, &io_res, buf->control_address,
-> +			   sizeof(struct crb_regs) -
-> +			   offsetof(struct crb_regs, ctrl_req));
-> +	if (IS_ERR(ctrl))
-> +		return PTR_ERR(ctrl);
-> +
-> +	/* The control area always overrlaps IO memory mapped from the ACPI
-> +	 * object with CRB start only devices. Thus, this is perfectly safe.
-> +	 */
-> +	priv->regs = (void *)((unsigned long)ctrl -
-> +		offsetof(struct crb_regs, ctrl_req));
+Hi,
 
-Hum. No, this makes bad assumptions about the structure of iomapping.
+Does this patch (v4 6/8) and next patch (v4 7/8) looks fine ?
 
-The map itself needs to be done with the adjustment:
+Thanks & Regards,
+    - Nayna
 
-	ctrl = crb_map_res(dev, priv, &io_res, buf->control_address -
-		offsetof(struct crb_regs, ctrl_req),
-	   	sizeof(struct crb_regs));
+On 09/28/2016 02:04 PM, Nayna Jain wrote:
+> This patch removes the unnecessary messages for failure to allocate
+> memory. It also replaces pr_err/printk with dev_dbg.
+>
+> Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> ---
+>   drivers/char/tpm/tpm_acpi.c | 17 +++++------------
+>   drivers/char/tpm/tpm_of.c   | 26 ++++++++++----------------
+>   2 files changed, 15 insertions(+), 28 deletions(-)
+>
+> diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
+> index 859bdba..22e42da 100644
+> --- a/drivers/char/tpm/tpm_acpi.c
+> +++ b/drivers/char/tpm/tpm_acpi.c
+> @@ -60,11 +60,8 @@ int read_log_acpi(struct tpm_chip *chip)
+>   	status = acpi_get_table(ACPI_SIG_TCPA, 1,
+>   				(struct acpi_table_header **)&buff);
+>
+> -	if (ACPI_FAILURE(status)) {
+> -		printk(KERN_ERR "%s: ERROR - Could not get TCPA table\n",
+> -		       __func__);
+> +	if (ACPI_FAILURE(status))
+>   		return -EIO;
+> -	}
+>
+>   	switch(buff->platform_class) {
+>   	case BIOS_SERVER:
+> @@ -78,25 +75,21 @@ int read_log_acpi(struct tpm_chip *chip)
+>   		break;
+>   	}
+>   	if (!len) {
+> -		printk(KERN_ERR "%s: ERROR - TCPA log area empty\n", __func__);
+> +		dev_dbg(&chip->dev, "%s: ERROR - TCPA log area empty\n",
+> +			__func__);
+>   		return -EIO;
+>   	}
+>
+>   	/* malloc EventLog space */
+>   	log->bios_event_log = kmalloc(len, GFP_KERNEL);
+> -	if (!log->bios_event_log) {
+> -		printk("%s: ERROR - Not enough  Memory for BIOS measurements\n",
+> -			__func__);
+> +	if (!log->bios_event_log)
+>   		return -ENOMEM;
+> -	}
+>
+>   	log->bios_event_log_end = log->bios_event_log + len;
+>
+>   	virt = acpi_os_map_iomem(start, len);
+> -	if (!virt) {
+> -		printk("%s: ERROR - Unable to map memory\n", __func__);
+> +	if (!virt)
+>   		goto err;
+> -	}
+>
+>   	memcpy_fromio(log->bios_event_log, virt, len);
+>
+> diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
+> index 22b8f81..1464cae 100644
+> --- a/drivers/char/tpm/tpm_of.c
+> +++ b/drivers/char/tpm/tpm_of.c
+> @@ -31,40 +31,34 @@ int read_log_of(struct tpm_chip *chip)
+>   	log = &chip->log;
+>   	if (chip->dev.parent->of_node)
+>   		np = chip->dev.parent->of_node;
+> -	if (!np) {
+> -		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
+> +	if (!np)
+>   		return -ENODEV;
+> -	}
+>
+>   	sizep = of_get_property(np, "linux,sml-size", NULL);
+>   	if (sizep == NULL) {
+> -		pr_err("%s: ERROR - SML size not found\n", __func__);
+> -		goto cleanup_eio;
+> +		dev_dbg(&chip->dev, "%s: ERROR - SML size not found\n",
+> +			__func__);
+> +		return -EIO;
+>   	}
+>   	if (*sizep == 0) {
+> -		pr_err("%s: ERROR - event log area empty\n", __func__);
+> -		goto cleanup_eio;
+> +		dev_dbg(&chip->dev, "%s: ERROR - event log area empty\n",
+> +			__func__);
+> +		return -EIO;
+>   	}
+>
+>   	basep = of_get_property(np, "linux,sml-base", NULL);
+>   	if (basep == NULL) {
+> -		pr_err("%s: ERROR - SML not found\n", __func__);
+> -		goto cleanup_eio;
+> +		dev_dbg(&chip->dev, "%s: ERROR - SML not found\n", __func__);
+> +		return -EIO;
+>   	}
+>
+>   	log->bios_event_log = kmalloc(*sizep, GFP_KERNEL);
+> -	if (!log->bios_event_log) {
+> -		pr_err("%s: ERROR - Not enough memory for BIOS measurements\n",
+> -		       __func__);
+> +	if (!log->bios_event_log)
+>   		return -ENOMEM;
+> -	}
+>
+>   	log->bios_event_log_end = log->bios_event_log + *sizep;
+>
+>   	memcpy(log->bios_event_log, __va(*basep), *sizep);
+>
+>   	return 0;
+> -
+> -cleanup_eio:
+> -	return -EIO;
+>   }
+>
 
-.. and nothing actually proves that control_address follows anything
-in the driver, so this seems like a terrifying blind assumption, but
-everything about the iomap in this ACPI binding seems totally bonkers
-so that is in good company I guess.
-
-.. and the comment says this only holds for 'crb start only' devices,
-but the code doesn't actually act differently based on what sort of
-device we have..
-
-Your commit message also seems to imply the new registers are only on
-newer hardware, but nothing seems to check for that before acessing
-them?  Confusing.
-
-Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
