@@ -1,59 +1,90 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v4 8/8] tpm: add securityfs support for
- TPM 2.0 firmware event log
-Date: Sun, 9 Oct 2016 12:14:10 +0300
-Message-ID: <20161009091409.GD31891@intel.com>
-References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1475051682-23060-9-git-send-email-nayna@linux.vnet.ibm.com>
-	<20161001115154.GB8664@intel.com>
-	<57F9A52C.7050405@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [PATCH RFC 3/3] tpm_crb: request and relinquish
+ locality 0
+Date: Sun, 9 Oct 2016 12:25:22 +0300
+Message-ID: <20161009092522.GE31891@intel.com>
+References: <1475972112-2819-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+ <1475972112-2819-4-git-send-email-jarkko.sakkinen@linux.intel.com>
+ <5B8DA87D05A7694D9FA63FD143655C1B542F6C98@hasmsx108.ger.corp.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <57F9A52C.7050405-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B542F6C98@hasmsx108.ger.corp.intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: "Winkler, Tomas" <tomas.winkler@intel.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-HI
-
-On Sun, Oct 09, 2016 at 07:32:20AM +0530, Nayna wrote:
+On Sun, Oct 09, 2016 at 06:35:28AM +0000, Winkler, Tomas wrote:
 > 
 > 
-> On 10/01/2016 05:21 PM, Jarkko Sakkinen wrote:
-> >On Wed, Sep 28, 2016 at 04:34:42AM -0400, Nayna Jain wrote:
-> >>Unlike the device driver support for TPM 1.2, the TPM 2.0 support
-> >>does not create the securityfs pseudo files for displaying the
-> >>firmware event log.
-> >>
-> >>This patch enables support for providing the TPM 2.0 event log in
-> >>binary form. TPM 2.0 event log supports a crypto agile format that
-> >>records multiple digests, which is different from TPM 1.2. This
-> >>patch adds the TPM 2.0 event log parser to understand the crypto
-> >>agile format.
-> >
-> >I'll got through the patch (the split comment is valid)
+> > 
+> > Request and relinquish locality for the driver use in order to be a better citizen
+> > in a multi locality environment like with TXT as it uses locality 2.	
 > 
-> Sure, will do it.
+> > 
+> > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> > ---
+> >  drivers/char/tpm/tpm_crb.c | 36 ++++++++++++++++++++++++------------
+> >  1 file changed, 24 insertions(+), 12 deletions(-)
+> > 
+> > diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c index
+> > ffd3a6c..9e07cf3 100644
+> > --- a/drivers/char/tpm/tpm_crb.c
+> > +++ b/drivers/char/tpm/tpm_crb.c
+> > @@ -34,6 +34,15 @@ enum crb_defaults {
+> >  	CRB_ACPI_START_INDEX = 1,
+> >  };
+> > 
+> > +enum crb_loc_ctrl {
+> > +	CRB_LOC_CTRL_REQUEST_ACCESS	= BIT(0),
+> > +	CRB_LOC_CTRL_RELINQUISH		= BIT(1),
+> > +};
+> > +
+> > +enum crb_loc_state {
+> > +	CRB_LOC_STATE_LOC_ASSIGNED	= BIT(1),
+> > +};
+> > +
+> >  enum crb_ctrl_req {
+> >  	CRB_CTRL_REQ_CMD_READY	= BIT(0),
+> >  	CRB_CTRL_REQ_GO_IDLE	= BIT(1),
+> > @@ -98,12 +107,8 @@ struct crb_priv {
+> >   * @dev:  crb device
+> >   * @priv: crb private data
+> >   *
+> > - * Write CRB_CTRL_REQ_GO_IDLE to TPM_CRB_CTRL_REQ
+> > - * The device should respond within TIMEOUT_C by clearing the bit.
+> > - * Anyhow, we do not wait here as a consequent CMD_READY request
+> > - * will be handled correctly even if idle was not completed.
+> > - *
+> > - * The function does nothing for devices with ACPI-start method.
+> > + * Put device to the idle state and relinquish locality. The function
+> > + does
+> > + * nothing for devices with the ACPI-start method.
+> >   *
+> >   * Return: 0 always
+> >   */
+> > @@ -112,6 +117,7 @@ static int __maybe_unused crb_go_idle(struct device
+> > *dev, struct crb_priv *priv)
+> >  	if (priv->flags & CRB_FL_ACPI_START)
+> >  		return 0;
+> > 
+> > +	iowrite32(CRB_LOC_CTRL_RELINQUISH, &priv->regs->loc_ctrl);
+> 
+> 
+> Please don't mix different functionalities in one function 
 
-Please go through this series and see if they look good to you:
+??
 
-  https://lkml.org/lkml/2016/10/1/121
+> Also those functions are called from runtime pm, this has nothing to
+> do with the power management 
 
-You should have them in your email archive (posted a week ago).
+It all depends on granularity. If you want to make an argument, could
+you propose a better granularity? Do you think it'd be better to do it
+for each transmission?
+
+You are saying that this is all bad without saying really backing up
+your statements by any means.
 
 /Jarkko
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most 
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
