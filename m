@@ -1,16 +1,18 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 2/2] tpm: enhance TPM 2.0 PCR extend to
- support multiple banks
-Date: Sun, 9 Oct 2016 13:24:01 +0300
-Message-ID: <20161009102401.GB733@intel.com>
+Subject: Re: [PATCH 0/2] tpm: enhance TPM 2.0 extend function
+ to support multiple PCR banks
+Date: Sun, 9 Oct 2016 13:37:05 +0300
+Message-ID: <20161009103705.GA2855@intel.com>
 References: <1475979357-1167-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1475979357-1167-3-git-send-email-nayna@linux.vnet.ibm.com>
+	<20161009090827.GC31891@intel.com>
+	<20161009092911.GF31891@intel.com>
+	<57FA1532.30603@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1475979357-1167-3-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <57FA1532.30603-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,242 +21,115 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat, Oct 08, 2016 at 10:15:57PM -0400, Nayna Jain wrote:
-> Like TPM 1.2, the current device driver for TPM 2.0 supports
-> extending only to the SHA1 PCR bank. But the TPM 2.0 supports multiple
-> PCR banks and the specification recommends extending to all active PCR
-> banks, this patch enhances the existing device driver support for
-> TPM 2.0 extend function and its in-kernel interface to extend to all
-> active PCR banks.
+On Sun, Oct 09, 2016 at 03:30:18PM +0530, Nayna wrote:
 > 
-> The existing in-kernel interface expects only a SHA1 digest.
-> Hence, to extend all active PCR banks with differing digest sizes
-> for TPM 2.0, the SHA1 digest is padded with trailing 0's as needed.
 > 
-> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> On 10/09/2016 02:59 PM, Jarkko Sakkinen wrote:
+> >On Sun, Oct 09, 2016 at 12:08:27PM +0300, Jarkko Sakkinen wrote:
+> >>On Sat, Oct 08, 2016 at 10:15:55PM -0400, Nayna Jain wrote:
+> >>>The existing in-kernel interface for extending a TPM PCR extends
+> >>>the SHA1 PCR bank. For TPM 1.2, that is the one and only PCR bank
+> >>>defined. TPM 2.0 adds support for multiple PCR banks, to support
+> >>>different hash algorithms. The TPM 2.0 Specification[1]
+> >>>recommends extending all active PCR banks. This patch set enhances
+> >>>the existing TPM 2.0 extend function and corresponding in-kernel
+> >>>interface to support extending all active PCR banks.
+> >>>
+> >>>The first patch implements the TPM 2.0 capability to retrieve
+> >>>the list of active PCR banks.
+> >>>
+> >>>The second patch modifies the TPM 2.0 device driver extend function
+> >>>to support extending multiple PCR banks. The existing in-kernel
+> >>>interface expects only a SHA1 digest. Hence, to extend all active
+> >>>PCR banks with differing digest sizes for TPM 2.0, the SHA1 digest
+> >>>is padded with 0's as needed.
+> >>>
+> >>>This approach is taken to maintain backwards compatibility for the
+> >>>existing users (i.e. IMA) in order to continue working with both
+> >>>TPM 1.2 and TPM 2.0 without any changes and still comply with the
+> >>>TPM 2.0 Specification[1] requirement of extending all active PCR
+> >>>banks.
+> >>>
+> >>>This patch series has a prerequisite(header file tpm2.h) of TPM 2.0
+> >>>event log patch series.
+> >>
+> >>This is an unacceptable requirement. I don't even like the idea
+> >>of having tpm2.h (rather would keep stuff in tpm2-cmd.c).
+> >>
+> >>Also I seriously cannot accept patch sets that add code without
+> >>giving value.
+> >
+> >I would propose that you work on a PoC for IMA with TPM 2.0 that
+> >includes these patches. Then we can try it out. Depending on half
+> >finished patch sets is not just right way to do it. I'm happy to
+> >test if you have someting runnable :)
+> 
+> I actually created tpm2.h in eventlog patch series thinking just like tpm.h
+> and tpm_eventlog.h is meant for TPM 1.2 specific structs, there can be
+> tpm2.h specific to TPM 2.0 structs. It was just my thought to segregate the
+> headers, but if it doesn't look good idea, I can change it to more
+> recommended way.
 
-Please use struct tpm_buf for variable size stuff. You can see example
-from trusted keys code in tpm2-cmd.c how to work on it.
+The structures that are in tpm2-cmd.c are there because they are and
+should not be exposed to anywhere else.
+
+But this is essentially a meta-discussion. If you send a series it 
+should always apply to upstream. There was not commit that creates
+tpm2.h.
+
+> Also, struct tpml_digest_values are used by both eventlog and extend
+> function as shown below:
+> 
+> struct tcg_pcr_event2 {
+> u32 pcr_idx;
+> u32 event_type;
+> struct tpml_digest_values digests;
+> struct tcg_event_field event;
+> } __packed;
+> 
+> /* Crypto agile extend format. */
+> struct tpm2_pcr_extend_in {
+> __be32 pcr_idx;
+> __be32 auth_area_size;
+> struct tpm2_null_auth_area auth_area;
+> struct tpml_digest_values digests;
+> } __packed;
+> 
+> So, I continued using tpm2.h for this patch series and created a
+> pre-requisite on eventlog patch series.
+
+One thing that I would see useful would be to move TPM 1.x command
+functions and headers to tpm1-cmd.c and enable conditional compilation
+for TPM 1.x and TPM 2.0 protocols.
+
+> I have applied to upstream and tested on top of eventlog patch series, so
+> yes, it doesn't apply directly to upstream without eventlog patches because
+> of tpm2.h file.
+
+You should always try to send series in a form that applies to
+upstream. Mistakes happen and that's OK but as general rule....
+
+> If this doesn't look an acceptable approach, I would be happy to redo it in
+> new way which is more acceptable.
+
+OK, here's what you could do (just a proposal):
+
+1. Take the commits I posted and apply them to your upstream tree.
+2. Rewrite code that gets active PCR banks with tpm2_get_cap 
+3. Rewrite PCR extend code with tpm_buf
+4. git format-patch --subject-prefix="PATCH RFC v2"
+
+Please carry the RFC tag if this is not something directly usable (user
+visible functionality). I won't apply these before they are used but I'm
+glad to help reviewing RFC-tagged series.
+
+Hope these help.
 
 /Jarkko
-
-> ---
->  drivers/char/tpm/tpm-interface.c | 17 ++++++++--
->  drivers/char/tpm/tpm2-cmd.c      | 71 ++++++++++++++++++++++++++--------------
->  drivers/char/tpm/tpm2.h          | 18 ++++++++++
->  3 files changed, 79 insertions(+), 27 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index 7743e8a..5dd5005 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -7,6 +7,7 @@
->   * Dave Safford <safford-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
->   * Reiner Sailer <sailer-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
->   * Kylene Hall <kjhall-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-> + * Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
->   *
->   * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
->   *
-> @@ -32,6 +33,7 @@
->  #include <linux/pm_runtime.h>
->  
->  #include "tpm.h"
-> +#include "tpm2.h"
->  #include "tpm_eventlog.h"
->  
->  #define TPM_MAX_ORDINAL 243
-> @@ -752,7 +754,7 @@ static const struct tpm_input_header pcrextend_header = {
->  int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
->  {
->  	struct tpm_cmd_t cmd;
-> -	int rc;
-> +	int i, rc;
->  	struct tpm_chip *chip;
->  
->  	chip = tpm_chip_find_get(chip_num);
-> @@ -760,7 +762,18 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
->  		return -ENODEV;
->  
->  	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
-> -		rc = tpm2_pcr_extend(chip, pcr_idx, hash);
-> +		struct tpml_digest_values d_values;
-> +
-> +		memset(&d_values, 0, sizeof(d_values));
-> +
-> +		for (i = 0; i < chip->no_of_active_banks; i++) {
-> +			d_values.digests[i].alg_id =
-> +				chip->active_banks[i];
-> +			memcpy(d_values.digests[i].digest, hash,
-> +			       TPM_DIGEST_SIZE);
-> +			d_values.count++;
-> +		}
-> +		rc = tpm2_pcr_extend(chip, pcr_idx, &d_values);
->  		tpm_put_ops(chip);
->  		return rc;
->  	}
-> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-> index c597cf3c..8ba2992 100644
-> --- a/drivers/char/tpm/tpm2-cmd.c
-> +++ b/drivers/char/tpm/tpm2-cmd.c
-> @@ -16,6 +16,7 @@
->   */
->  
->  #include "tpm.h"
-> +#include "tpm2.h"
->  #include <crypto/hash_info.h>
->  #include <keys/trusted-type.h>
->  
-> @@ -53,22 +54,6 @@ struct tpm2_pcr_read_out {
->  	u8	digest[TPM_DIGEST_SIZE];
->  } __packed;
->  
-> -struct tpm2_null_auth_area {
-> -	__be32			handle;
-> -	__be16			nonce_size;
-> -	u8			attributes;
-> -	__be16			auth_size;
-> -} __packed;
-> -
-> -struct tpm2_pcr_extend_in {
-> -	__be32				pcr_idx;
-> -	__be32				auth_area_size;
-> -	struct tpm2_null_auth_area	auth_area;
-> -	__be32				digest_cnt;
-> -	__be16				hash_alg;
-> -	u8				digest[TPM_DIGEST_SIZE];
-> -} __packed;
-> -
->  struct tpm2_get_tpm_pt_in {
->  	__be32	cap_id;
->  	__be32	property_id;
-> @@ -300,38 +285,74 @@ int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
->  
->  static const struct tpm_input_header tpm2_pcrextend_header = {
->  	.tag = cpu_to_be16(TPM2_ST_SESSIONS),
-> -	.length = cpu_to_be32(TPM2_GET_PCREXTEND_IN_SIZE),
->  	.ordinal = cpu_to_be32(TPM2_CC_PCR_EXTEND)
->  };
->  
->  /**
->   * tpm2_pcr_extend() - extend a PCR value
-> - * @chip:	TPM chip to use.
-> - * @pcr_idx:	index of the PCR.
-> - * @hash:	hash value to use for the extend operation.
-> + * @chip:		TPM chip to use.
-> + * @pcr_idx:		index of the PCR.
-> + * @digest_values:	list of hash values to be extended.
->   *
->   * 0 is returned when the operation is successful. If a negative number is
->   * returned it remarks a POSIX error code. If a positive number is returned
->   * it remarks a TPM error.
->   */
-> -int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash)
-> +int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx,
-> +		    struct tpml_digest_values *digest_list)
->  {
->  	struct tpm2_cmd cmd;
-> -	int rc;
-> +	int i, j, rc;
-> +	void *marker;
-> +	size_t size;
-> +	u32 halg_size;
-> +	u16 halg;
->  
->  	cmd.header.in = tpm2_pcrextend_header;
-> +	size = sizeof(struct tpm_input_header);
-> +
->  	cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(pcr_idx);
-> +	size = size + sizeof(cmd.params.pcrextend_in.pcr_idx);
-> +
->  	cmd.params.pcrextend_in.auth_area_size =
->  		cpu_to_be32(sizeof(struct tpm2_null_auth_area));
-> +	size = size + sizeof(cmd.params.pcrextend_in.auth_area_size);
-> +
->  	cmd.params.pcrextend_in.auth_area.handle =
->  		cpu_to_be32(TPM2_RS_PW);
->  	cmd.params.pcrextend_in.auth_area.nonce_size = 0;
->  	cmd.params.pcrextend_in.auth_area.attributes = 0;
->  	cmd.params.pcrextend_in.auth_area.auth_size = 0;
-> -	cmd.params.pcrextend_in.digest_cnt = cpu_to_be32(1);
-> -	cmd.params.pcrextend_in.hash_alg = cpu_to_be16(TPM2_ALG_SHA1);
-> -	memcpy(cmd.params.pcrextend_in.digest, hash, TPM_DIGEST_SIZE);
-> +	size = size + sizeof(cmd.params.pcrextend_in.auth_area);
-> +
-> +	cmd.params.pcrextend_in.digests.count =
-> +		cpu_to_be32(digest_list->count);
-> +	size = size + sizeof(cmd.params.pcrextend_in.digests.count);
-> +	marker = &cmd.params.pcrextend_in.digests.digests[0];
-> +
-> +	for (i = 0; i < digest_list->count; i++) {
-> +		for (j = 0; j < ARRAY_SIZE(tpm2_hash_map); j++) {
-> +
-> +			if (digest_list->digests[i].alg_id !=
-> +			    tpm2_hash_map[j].tpm_id)
-> +				continue;
-> +
-> +			halg_size = sizeof(digest_list->digests[i].alg_id);
-> +			halg = cpu_to_be16(digest_list->digests[i].alg_id);
-> +			memcpy(marker, &halg, halg_size);
-> +			marker = marker + halg_size;
-> +			size = size + halg_size;
-> +
-> +			memcpy(marker, &digest_list->digests[i].digest,
-> +			       hash_digest_size[tpm2_hash_map[j].crypto_id]);
-> +			marker = marker +
-> +				hash_digest_size[tpm2_hash_map[j].crypto_id];
-> +			size = size +
-> +				hash_digest_size[tpm2_hash_map[j].crypto_id];
-> +		}
-> +	}
->  
-> +	cmd.header.in.length = cpu_to_be32(size);
->  	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0,
->  			      "attempting extend a PCR value");
->  
-> diff --git a/drivers/char/tpm/tpm2.h b/drivers/char/tpm/tpm2.h
-> index 919fb05..0b1a107 100644
-> --- a/drivers/char/tpm/tpm2.h
-> +++ b/drivers/char/tpm/tpm2.h
-> @@ -74,6 +74,22 @@ struct tcg_pcr_event2 {
->  	struct tcg_event_field		event;
->  } __packed;
->  
-> +/* Auth Area Structure. */
-> +struct tpm2_null_auth_area {
-> +	__be32		handle;
-> +	__be16		nonce_size;
-> +	u8		attributes;
-> +	__be16		auth_size;
-> +} __packed;
-> +
-> +/* Crypto agile extend format. */
-> +struct tpm2_pcr_extend_in {
-> +	__be32				pcr_idx;
-> +	__be32				auth_area_size;
-> +	struct tpm2_null_auth_area	auth_area;
-> +	struct tpml_digest_values	digests;
-> +} __packed;
-> +
->  struct tpm2_get_cap_in {
->  	__be32 cap_id;
->  	__be32 property_id;
-> @@ -108,6 +124,8 @@ struct tpm2_get_cap_out {
->  extern const struct seq_operations tpm2_binary_b_measurments_seqops;
->  
->  extern int tpm2_get_active_pcr_banks(struct tpm_chip *chip);
-> +extern int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx,
-> +			   struct tpml_digest_values *digest_values);
->  extern int tpm2_get_capability(struct tpm_chip *chip, struct tpm2_get_cap_in
->  	*cap_in, struct tpm2_get_cap_out *cap_out);
->  
-> -- 
-> 2.5.0
-> 
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
