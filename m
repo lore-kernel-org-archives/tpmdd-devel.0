@@ -1,8 +1,8 @@
 From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH 2/2] tpm: enhance TPM 2.0 PCR extend to
-	support multiple banks
-Date: Sat,  8 Oct 2016 22:15:57 -0400
-Message-ID: <1475979357-1167-3-git-send-email-nayna@linux.vnet.ibm.com>
+Subject: [PATCH 1/2] tpm: implement TPM 2.0 capability to get
+	active PCR banks
+Date: Sat,  8 Oct 2016 22:15:56 -0400
+Message-ID: <1475979357-1167-2-git-send-email-nayna@linux.vnet.ibm.com>
 References: <1475979357-1167-1-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,228 +20,224 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Like TPM 1.2, the current device driver for TPM 2.0 supports
-extending only to the SHA1 PCR bank. But the TPM 2.0 supports multiple
-PCR banks and the specification recommends extending to all active PCR
-banks, this patch enhances the existing device driver support for
-TPM 2.0 extend function and its in-kernel interface to extend to all
-active PCR banks.
+As per the TCG 2.0 spec, the extend operation should be done to
+all active PCR banks. However, current TPM 2.0 support doesn't
+have the capability implemented to get active PCR banks.
 
-The existing in-kernel interface expects only a SHA1 digest.
-Hence, to extend all active PCR banks with differing digest sizes
-for TPM 2.0, the SHA1 digest is padded with trailing 0's as needed.
+This patch implements the TPM 2.0 capability TPM_CAP_PCRS to
+retrieve active PCR banks from the TPM.
 
 Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 ---
- drivers/char/tpm/tpm-interface.c | 17 ++++++++--
- drivers/char/tpm/tpm2-cmd.c      | 71 ++++++++++++++++++++++++++--------------
- drivers/char/tpm/tpm2.h          | 18 ++++++++++
- 3 files changed, 79 insertions(+), 27 deletions(-)
+ drivers/char/tpm/tpm-chip.c |  4 +++
+ drivers/char/tpm/tpm.h      |  8 ++++-
+ drivers/char/tpm/tpm2-cmd.c | 80 +++++++++++++++++++++++++++++++++++++++++++++
+ drivers/char/tpm/tpm2.h     | 35 ++++++++++++++++++++
+ 4 files changed, 126 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 7743e8a..5dd5005 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -7,6 +7,7 @@
-  * Dave Safford <safford-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
-  * Reiner Sailer <sailer-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
-  * Kylene Hall <kjhall-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-+ * Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-  *
-  * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-  *
-@@ -32,6 +33,7 @@
- #include <linux/pm_runtime.h>
- 
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 72715fa..667240b 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -27,6 +27,7 @@
+ #include <linux/freezer.h>
+ #include <linux/major.h>
  #include "tpm.h"
 +#include "tpm2.h"
  #include "tpm_eventlog.h"
  
- #define TPM_MAX_ORDINAL 243
-@@ -752,7 +754,7 @@ static const struct tpm_input_header pcrextend_header = {
- int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
- {
- 	struct tpm_cmd_t cmd;
--	int rc;
-+	int i, rc;
- 	struct tpm_chip *chip;
+ DEFINE_IDR(dev_nums_idr);
+@@ -364,6 +365,9 @@ int tpm_chip_register(struct tpm_chip *chip)
  
- 	chip = tpm_chip_find_get(chip_num);
-@@ -760,7 +762,18 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
- 		return -ENODEV;
+ 	chip->flags |= TPM_CHIP_FLAG_REGISTERED;
  
- 	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
--		rc = tpm2_pcr_extend(chip, pcr_idx, hash);
-+		struct tpml_digest_values d_values;
++	if (chip->flags & TPM_CHIP_FLAG_TPM2)
++		tpm2_get_active_pcr_banks(chip);
 +
-+		memset(&d_values, 0, sizeof(d_values));
-+
-+		for (i = 0; i < chip->no_of_active_banks; i++) {
-+			d_values.digests[i].alg_id =
-+				chip->active_banks[i];
-+			memcpy(d_values.digests[i].digest, hash,
-+			       TPM_DIGEST_SIZE);
-+			d_values.count++;
-+		}
-+		rc = tpm2_pcr_extend(chip, pcr_idx, &d_values);
- 		tpm_put_ops(chip);
- 		return rc;
- 	}
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index c597cf3c..8ba2992 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -16,6 +16,7 @@
-  */
+ 	rc = tpm_add_legacy_sysfs(chip);
+ 	if (rc) {
+ 		tpm_chip_unregister(chip);
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 989227a..70f5ac4 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -36,6 +36,9 @@
+ #include <linux/highmem.h>
  
- #include "tpm.h"
+ #include "tpm_eventlog.h"
 +#include "tpm2.h"
- #include <crypto/hash_info.h>
- #include <keys/trusted-type.h>
++
++#define TPM2_ACTIVE_BANKS_COUNT		HASH_COUNT
  
-@@ -53,22 +54,6 @@ struct tpm2_pcr_read_out {
- 	u8	digest[TPM_DIGEST_SIZE];
- } __packed;
- 
--struct tpm2_null_auth_area {
--	__be32			handle;
--	__be16			nonce_size;
--	u8			attributes;
--	__be16			auth_size;
--} __packed;
--
--struct tpm2_pcr_extend_in {
--	__be32				pcr_idx;
--	__be32				auth_area_size;
--	struct tpm2_null_auth_area	auth_area;
--	__be32				digest_cnt;
--	__be16				hash_alg;
--	u8				digest[TPM_DIGEST_SIZE];
--} __packed;
--
- struct tpm2_get_tpm_pt_in {
- 	__be32	cap_id;
- 	__be32	property_id;
-@@ -300,38 +285,74 @@ int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
- 
- static const struct tpm_input_header tpm2_pcrextend_header = {
- 	.tag = cpu_to_be16(TPM2_ST_SESSIONS),
--	.length = cpu_to_be32(TPM2_GET_PCREXTEND_IN_SIZE),
- 	.ordinal = cpu_to_be32(TPM2_CC_PCR_EXTEND)
+ enum tpm_const {
+ 	TPM_MINOR = 224,	/* officially assigned */
+@@ -126,6 +129,7 @@ enum tpm2_permanent_handles {
  };
  
- /**
-  * tpm2_pcr_extend() - extend a PCR value
-- * @chip:	TPM chip to use.
-- * @pcr_idx:	index of the PCR.
-- * @hash:	hash value to use for the extend operation.
-+ * @chip:		TPM chip to use.
-+ * @pcr_idx:		index of the PCR.
-+ * @digest_values:	list of hash values to be extended.
-  *
-  * 0 is returned when the operation is successful. If a negative number is
-  * returned it remarks a POSIX error code. If a positive number is returned
-  * it remarks a TPM error.
-  */
--int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash)
-+int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx,
-+		    struct tpml_digest_values *digest_list)
- {
- 	struct tpm2_cmd cmd;
--	int rc;
-+	int i, j, rc;
-+	void *marker;
-+	size_t size;
-+	u32 halg_size;
-+	u16 halg;
+ enum tpm2_capabilities {
++	TPM2_CAP_PCRS		= 5,
+ 	TPM2_CAP_TPM_PROPERTIES = 6,
+ };
  
- 	cmd.header.in = tpm2_pcrextend_header;
-+	size = sizeof(struct tpm_input_header);
+@@ -167,6 +171,9 @@ struct tpm_chip {
+ 	int dev_num;		/* /dev/tpm# */
+ 	unsigned long is_open;	/* only one allowed */
+ 
++	int no_of_active_banks; /* Applicable on TPM2.0 */
++	enum tpm2_algorithms active_banks[TPM2_ACTIVE_BANKS_COUNT];
 +
- 	cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(pcr_idx);
-+	size = size + sizeof(cmd.params.pcrextend_in.pcr_idx);
+ 	struct mutex tpm_mutex;	/* tpm is processing */
+ 
+ 	unsigned long timeout_a; /* jiffies */
+@@ -526,7 +533,6 @@ static inline void tpm_add_ppi(struct tpm_chip *chip)
+ #endif
+ 
+ int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf);
+-int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash);
+ int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max);
+ int tpm2_seal_trusted(struct tpm_chip *chip,
+ 		      struct trusted_key_payload *payload,
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index 7df55d5..c597cf3c 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -100,6 +100,8 @@ union tpm2_cmd_params {
+ 	struct	tpm2_pcr_extend_in	pcrextend_in;
+ 	struct	tpm2_get_tpm_pt_in	get_tpm_pt_in;
+ 	struct	tpm2_get_tpm_pt_out	get_tpm_pt_out;
++	struct  tpm2_get_cap_in         get_cap_in;
++	struct  tpm2_get_cap_out        get_cap_out;
+ 	struct	tpm2_get_random_in	getrandom_in;
+ 	struct	tpm2_get_random_out	getrandom_out;
+ };
+@@ -990,3 +992,81 @@ out:
+ 		rc = -ENODEV;
+ 	return rc;
+ }
 +
- 	cmd.params.pcrextend_in.auth_area_size =
- 		cpu_to_be32(sizeof(struct tpm2_null_auth_area));
-+	size = size + sizeof(cmd.params.pcrextend_in.auth_area_size);
++#define TPM2_GET_CAPABILITY_IN_SIZE \
++	(sizeof(struct tpm_input_header) + \
++	 sizeof(struct tpm2_get_cap_in))
 +
- 	cmd.params.pcrextend_in.auth_area.handle =
- 		cpu_to_be32(TPM2_RS_PW);
- 	cmd.params.pcrextend_in.auth_area.nonce_size = 0;
- 	cmd.params.pcrextend_in.auth_area.attributes = 0;
- 	cmd.params.pcrextend_in.auth_area.auth_size = 0;
--	cmd.params.pcrextend_in.digest_cnt = cpu_to_be32(1);
--	cmd.params.pcrextend_in.hash_alg = cpu_to_be16(TPM2_ALG_SHA1);
--	memcpy(cmd.params.pcrextend_in.digest, hash, TPM_DIGEST_SIZE);
-+	size = size + sizeof(cmd.params.pcrextend_in.auth_area);
++static const struct tpm_input_header tpm2_get_capability_header = {
++	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
++	.length = cpu_to_be32(TPM2_GET_CAPABILITY_IN_SIZE),
++	.ordinal = cpu_to_be32(TPM2_CC_GET_CAPABILITY)
++};
 +
-+	cmd.params.pcrextend_in.digests.count =
-+		cpu_to_be32(digest_list->count);
-+	size = size + sizeof(cmd.params.pcrextend_in.digests.count);
-+	marker = &cmd.params.pcrextend_in.digests.digests[0];
++int tpm2_get_capability(struct tpm_chip *chip, struct tpm2_get_cap_in *cap_in,
++			struct tpm2_get_cap_out *cap_out)
++{
 +
-+	for (i = 0; i < digest_list->count; i++) {
-+		for (j = 0; j < ARRAY_SIZE(tpm2_hash_map); j++) {
++	struct tpm2_cmd cmd;
++	int rc;
++	u32 cap_id;
 +
-+			if (digest_list->digests[i].alg_id !=
-+			    tpm2_hash_map[j].tpm_id)
-+				continue;
++	cmd.header.in = tpm2_get_capability_header;
++	cmd.params.get_cap_in.cap_id = cpu_to_be32(cap_in->cap_id);
++	cmd.params.get_cap_in.property_id = cpu_to_be32(cap_in->property_id);
++	cmd.params.get_cap_in.property_cnt = cpu_to_be32(cap_in->property_cnt);
 +
-+			halg_size = sizeof(digest_list->digests[i].alg_id);
-+			halg = cpu_to_be16(digest_list->digests[i].alg_id);
-+			memcpy(marker, &halg, halg_size);
-+			marker = marker + halg_size;
-+			size = size + halg_size;
++	rc = tpm_transmit_cmd(chip, (const char *) &cmd, sizeof(cmd), 0,
++			      "attempting get capability operation");
++	if (rc < 0)
++		return rc;
++	cap_id = be32_to_cpu(cmd.params.get_cap_out.cap_data.cap_id);
 +
-+			memcpy(marker, &digest_list->digests[i].digest,
-+			       hash_digest_size[tpm2_hash_map[j].crypto_id]);
-+			marker = marker +
-+				hash_digest_size[tpm2_hash_map[j].crypto_id];
-+			size = size +
-+				hash_digest_size[tpm2_hash_map[j].crypto_id];
-+		}
++	switch (cap_id) {
++	case TPM2_CAP_PCRS:
++		memcpy(&cap_out->cap_data, &cmd.params.get_cap_out.cap_data,
++		       sizeof(cmd.params.get_cap_out.cap_data));
++		break;
++	default:
++		return -EOPNOTSUPP;
 +	}
- 
-+	cmd.header.in.length = cpu_to_be32(size);
- 	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0,
- 			      "attempting extend a PCR value");
- 
++
++	return rc;
++}
++
++int tpm2_get_active_pcr_banks(struct tpm_chip *chip)
++{
++	struct tpm2_get_cap_in cap_in;
++	struct tpm2_get_cap_out cap_out;
++	struct tpm2_tpms_pcr_selection *pcr_selection;
++	void *marker;
++	u32 cap_id;
++	int rc, count, i;
++
++	cap_in.cap_id = TPM2_CAP_PCRS;
++	cap_in.property_id = 0;
++	cap_in.property_cnt = 1;
++
++	rc = tpm2_get_capability(chip, &cap_in, &cap_out);
++
++	if (rc < 0)
++		return rc;
++
++	cap_id = be32_to_cpu(cap_out.cap_data.cap_id);
++	count = be32_to_cpu(cap_out.cap_data.data.assigned_pcr.count);
++	pcr_selection =
++		&cap_out.cap_data.data.assigned_pcr.pcr_selections[0];
++	marker = pcr_selection;
++	chip->no_of_active_banks = 0;
++
++	for (i = 0; (i < count) && (i < TPM2_ACTIVE_BANKS_COUNT); i++) {
++		memcpy(pcr_selection, marker, sizeof(*pcr_selection));
++		chip->active_banks[chip->no_of_active_banks] =
++			be16_to_cpu(pcr_selection->hash_alg);
++		chip->no_of_active_banks++;
++		marker = marker + sizeof(pcr_selection->hash_alg) + sizeof(u8)
++			+ sizeof(u8) * pcr_selection->size_of_select;
++	}
++
++	return rc;
++}
 diff --git a/drivers/char/tpm/tpm2.h b/drivers/char/tpm/tpm2.h
-index 919fb05..0b1a107 100644
+index 399c15c..919fb05 100644
 --- a/drivers/char/tpm/tpm2.h
 +++ b/drivers/char/tpm/tpm2.h
-@@ -74,6 +74,22 @@ struct tcg_pcr_event2 {
+@@ -74,6 +74,41 @@ struct tcg_pcr_event2 {
  	struct tcg_event_field		event;
  } __packed;
  
-+/* Auth Area Structure. */
-+struct tpm2_null_auth_area {
-+	__be32		handle;
-+	__be16		nonce_size;
-+	u8		attributes;
-+	__be16		auth_size;
++struct tpm2_get_cap_in {
++	__be32 cap_id;
++	__be32 property_id;
++	__be32 property_cnt;
 +} __packed;
 +
-+/* Crypto agile extend format. */
-+struct tpm2_pcr_extend_in {
-+	__be32				pcr_idx;
-+	__be32				auth_area_size;
-+	struct tpm2_null_auth_area	auth_area;
-+	struct tpml_digest_values	digests;
++struct tpm2_tpms_pcr_selection {
++	__be16  hash_alg;
++	u8      size_of_select;
++	u8      pcr_select[3];
 +} __packed;
 +
- struct tpm2_get_cap_in {
- 	__be32 cap_id;
- 	__be32 property_id;
-@@ -108,6 +124,8 @@ struct tpm2_get_cap_out {
++struct tpm2_tpml_pcr_selection {
++	__be32 count;
++	struct tpm2_tpms_pcr_selection pcr_selections[HASH_COUNT];
++} __packed;
++
++union tpm2_tpmu_capabilities {
++	struct tpm2_tpml_pcr_selection assigned_pcr;
++} __packed;
++
++struct tpm2_tpms_capability_data {
++	__be32  cap_id;
++	union tpm2_tpmu_capabilities data;
++} __packed;
++
++struct tpm2_get_cap_out {
++	u8      more_data;
++	struct tpm2_tpms_capability_data cap_data;
++} __packed;
++
  extern const struct seq_operations tpm2_binary_b_measurments_seqops;
  
- extern int tpm2_get_active_pcr_banks(struct tpm_chip *chip);
-+extern int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx,
-+			   struct tpml_digest_values *digest_values);
- extern int tpm2_get_capability(struct tpm_chip *chip, struct tpm2_get_cap_in
- 	*cap_in, struct tpm2_get_cap_out *cap_out);
- 
++extern int tpm2_get_active_pcr_banks(struct tpm_chip *chip);
++extern int tpm2_get_capability(struct tpm_chip *chip, struct tpm2_get_cap_in
++	*cap_in, struct tpm2_get_cap_out *cap_out);
++
+ #endif
 -- 
 2.5.0
 
