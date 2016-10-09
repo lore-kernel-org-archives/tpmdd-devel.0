@@ -1,16 +1,16 @@
 From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH 0/2] tpm: enhance TPM 2.0 extend function
- to support multiple PCR banks
-Date: Sun, 9 Oct 2016 16:40:06 +0530
-Message-ID: <57FA258E.3040308@linux.vnet.ibm.com>
-References: <1475979357-1167-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<20161009090827.GC31891@intel.com> <20161009092911.GF31891@intel.com>
-	<57FA1532.30603@linux.vnet.ibm.com> <20161009103705.GA2855@intel.com>
+Subject: Re: [PATCH v4 4/8] tpm: redefine read_log() to handle
+ ACPI/OF at runtime
+Date: Sun, 9 Oct 2016 16:59:15 +0530
+Message-ID: <57FA2A0B.7060404@linux.vnet.ibm.com>
+References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1475051682-23060-5-git-send-email-nayna@linux.vnet.ibm.com>
+	<20160930190511.GC9595@intel.com> <57F6B647.1070206@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20161009103705.GA2855-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <57F6B647.1070206-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -25,120 +25,153 @@ List-Id: tpmdd-devel@lists.sourceforge.net
 
 
 
-On 10/09/2016 04:07 PM, Jarkko Sakkinen wrote:
-> On Sun, Oct 09, 2016 at 03:30:18PM +0530, Nayna wrote:
->>
->>
->> On 10/09/2016 02:59 PM, Jarkko Sakkinen wrote:
->>> On Sun, Oct 09, 2016 at 12:08:27PM +0300, Jarkko Sakkinen wrote:
->>>> On Sat, Oct 08, 2016 at 10:15:55PM -0400, Nayna Jain wrote:
->>>>> The existing in-kernel interface for extending a TPM PCR extends
->>>>> the SHA1 PCR bank. For TPM 1.2, that is the one and only PCR bank
->>>>> defined. TPM 2.0 adds support for multiple PCR banks, to support
->>>>> different hash algorithms. The TPM 2.0 Specification[1]
->>>>> recommends extending all active PCR banks. This patch set enhances
->>>>> the existing TPM 2.0 extend function and corresponding in-kernel
->>>>> interface to support extending all active PCR banks.
->>>>>
->>>>> The first patch implements the TPM 2.0 capability to retrieve
->>>>> the list of active PCR banks.
->>>>>
->>>>> The second patch modifies the TPM 2.0 device driver extend function
->>>>> to support extending multiple PCR banks. The existing in-kernel
->>>>> interface expects only a SHA1 digest. Hence, to extend all active
->>>>> PCR banks with differing digest sizes for TPM 2.0, the SHA1 digest
->>>>> is padded with 0's as needed.
->>>>>
->>>>> This approach is taken to maintain backwards compatibility for the
->>>>> existing users (i.e. IMA) in order to continue working with both
->>>>> TPM 1.2 and TPM 2.0 without any changes and still comply with the
->>>>> TPM 2.0 Specification[1] requirement of extending all active PCR
->>>>> banks.
->>>>>
->>>>> This patch series has a prerequisite(header file tpm2.h) of TPM 2.0
->>>>> event log patch series.
->>>>
->>>> This is an unacceptable requirement. I don't even like the idea
->>>> of having tpm2.h (rather would keep stuff in tpm2-cmd.c).
->>>>
->>>> Also I seriously cannot accept patch sets that add code without
->>>> giving value.
+On 10/07/2016 02:08 AM, Nayna wrote:
+>
+>
+> On 10/01/2016 12:35 AM, Jarkko Sakkinen wrote:
+>> On Wed, Sep 28, 2016 at 04:34:38AM -0400, Nayna Jain wrote:
+>>> Currently, read_log() has two implementations: one for ACPI platforms
+>>> and the other for OF platforms. The proper one is selected at compile
+>>> time using Kconfig and #ifdef in the Makefile, which is not the
+>>> recommended approach.
 >>>
->>> I would propose that you work on a PoC for IMA with TPM 2.0 that
->>> includes these patches. Then we can try it out. Depending on half
->>> finished patch sets is not just right way to do it. I'm happy to
->>> test if you have someting runnable :)
+>>> This patch removes the #ifdef in the Makefile by defining a single
+>>> read_log() method, which checks for ACPI/OF event log properties at
+>>> runtime.
+>>>
+>>> Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+>>> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+>>> Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+>>> ---
+>>>    drivers/char/tpm/Makefile       | 14 ++++----------
+>>>    drivers/char/tpm/tpm_acpi.c     |  9 ++-------
+>>>    drivers/char/tpm/tpm_eventlog.c | 18 ++++++++++++++++++
+>>>    drivers/char/tpm/tpm_eventlog.h | 22 +++++++++++++---------
+>>>    drivers/char/tpm/tpm_of.c       |  8 ++------
+>>>    5 files changed, 39 insertions(+), 32 deletions(-)
+>>>
+>>> diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
+>>> index a385fb8..a05b1eb 100644
+>>> --- a/drivers/char/tpm/Makefile
+>>> +++ b/drivers/char/tpm/Makefile
+>>> @@ -2,16 +2,10 @@
+>>>    # Makefile for the kernel tpm device drivers.
+>>>    #
+>>>    obj-$(CONFIG_TCG_TPM) += tpm.o
+>>> -tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o
+>>> -tpm-$(CONFIG_ACPI) += tpm_ppi.o
+>>> -
+>>> -ifdef CONFIG_ACPI
+>>> -	tpm-y += tpm_eventlog.o tpm_acpi.o
+>>> -else
+>>> -ifdef CONFIG_TCG_IBMVTPM
+>>> -	tpm-y += tpm_eventlog.o tpm_of.o
+>>> -endif
+>>> -endif
+>>> +tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o \
+>>> +		tpm_eventlog.o
+>>> +tpm-$(CONFIG_ACPI) += tpm_ppi.o tpm_acpi.o
+>>> +tpm-$(CONFIG_OF) += tpm_of.o
+>>>    obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
+>>>    obj-$(CONFIG_TCG_TIS) += tpm_tis.o
+>>>    obj-$(CONFIG_TCG_TIS_SPI) += tpm_tis_spi.o
+>>> diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
+>>> index 4d6c2d7..859bdba 100644
+>>> --- a/drivers/char/tpm/tpm_acpi.c
+>>> +++ b/drivers/char/tpm/tpm_acpi.c
+>>> @@ -6,6 +6,7 @@
+>>>     *	Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+>>>     *	Reiner Sailer <sailer-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
+>>>     *	Kylene Hall <kjhall-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+>>> + *	Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+>>>     *
+>>>     * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+>>>     *
+>>> @@ -45,7 +46,7 @@ struct acpi_tcpa {
+>>>    };
+>>>
+>>>    /* read binary bios log */
+>>> -int read_log(struct tpm_chip *chip)
+>>> +int read_log_acpi(struct tpm_chip *chip)
+>>>    {
+>>>    	struct acpi_tcpa *buff;
+>>>    	acpi_status status;
+>>> @@ -54,12 +55,6 @@ int read_log(struct tpm_chip *chip)
+>>>    	struct tpm_bios_log *log;
+>>>
+>>>    	log = &chip->log;
+>>> -	if (log->bios_event_log != NULL) {
+>>> -		printk(KERN_ERR
+>>> -		       "%s: ERROR - Eventlog already initialized\n",
+>>> -		       __func__);
+>>> -		return -EFAULT;
+>>> -	}
+>>>
+>>>    	/* Find TCPA entry in RSDT (ACPI_LOGICAL_ADDRESSING) */
+>>>    	status = acpi_get_table(ACPI_SIG_TCPA, 1,
+>>> diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+>>> index a8cd4a1..c327089 100644
+>>> --- a/drivers/char/tpm/tpm_eventlog.c
+>>> +++ b/drivers/char/tpm/tpm_eventlog.c
+>>> @@ -346,6 +346,24 @@ static int is_bad(void *p)
+>>>    	return 0;
+>>>    }
+>>>
+>>> +int read_log(struct tpm_chip *chip)
+>>> +{
+>>> +	int rc;
+>>> +
+>>> +	if (chip->log.bios_event_log != NULL) {
+>>> +		dev_dbg(&chip->dev, "%s: ERROR - Eventlog already initialized\n",
+>>> +			__func__);
+>>> +		return -EFAULT;
+>>> +	}
+>>> +
+>>> +	rc = read_log_acpi(chip);
+>>> +	if ((rc == 0) || (rc == -ENOMEM))
+>>> +		return rc;
+>>> +	rc = read_log_of(chip);
+>>> +	return rc;
+>>> +
+>>> +}
 >>
->> I actually created tpm2.h in eventlog patch series thinking just like tpm.h
->> and tpm_eventlog.h is meant for TPM 1.2 specific structs, there can be
->> tpm2.h specific to TPM 2.0 structs. It was just my thought to segregate the
->> headers, but if it doesn't look good idea, I can change it to more
->> recommended way.
+>> I'm wondering if it is a better idea to leverage tpm_class_ops? This
+>> would be kind of cool idea to implement this because then the decision
+>> to support event log could be leveraged to the driver level.
 >
-> The structures that are in tpm2-cmd.c are there because they are and
-> should not be exposed to anywhere else.
+> Can you please explain me this bit more ?
 >
-> But this is essentially a meta-discussion. If you send a series it
-> should always apply to upstream. There was not commit that creates
-> tpm2.h.
+> For eg, when we say driver level.. does that mean to the level of tis,
+> nuvoton ?
 >
->> Also, struct tpml_digest_values are used by both eventlog and extend
->> function as shown below:
->>
->> struct tcg_pcr_event2 {
->> u32 pcr_idx;
->> u32 event_type;
->> struct tpml_digest_values digests;
->> struct tcg_event_field event;
->> } __packed;
->>
->> /* Crypto agile extend format. */
->> struct tpm2_pcr_extend_in {
->> __be32 pcr_idx;
->> __be32 auth_area_size;
->> struct tpm2_null_auth_area auth_area;
->> struct tpml_digest_values digests;
->> } __packed;
->>
->> So, I continued using tpm2.h for this patch series and created a
->> pre-requisite on eventlog patch series.
->
-> One thing that I would see useful would be to move TPM 1.x command
-> functions and headers to tpm1-cmd.c and enable conditional compilation
-> for TPM 1.x and TPM 2.0 protocols.
->
->> I have applied to upstream and tested on top of eventlog patch series, so
->> yes, it doesn't apply directly to upstream without eventlog patches because
->> of tpm2.h file.
->
-> You should always try to send series in a form that applies to
-> upstream. Mistakes happen and that's OK but as general rule....
->
->> If this doesn't look an acceptable approach, I would be happy to redo it in
->> new way which is more acceptable.
->
-> OK, here's what you could do (just a proposal):
->
-> 1. Take the commits I posted and apply them to your upstream tree.
-> 2. Rewrite code that gets active PCR banks with tpm2_get_cap
-> 3. Rewrite PCR extend code with tpm_buf
-> 4. git format-patch --subject-prefix="PATCH RFC v2"
->
-> Please carry the RFC tag if this is not something directly usable (user
-> visible functionality). I won't apply these before they are used but I'm
-> glad to help reviewing RFC-tagged series.
->
-> Hope these help.
+> And what type of decision ? I mean like decision to create securityfs
+> setup for userspace to read eventlog ? or there are other things ?
 >
 
-Sure Jarkko. This is helpful. Thanks for reviewing and all your inputs.
-
-I will include your suggestions and post the next version.
+Jarkko, can you please also help me to understand here more ?
 
 Thanks & Regards,
-    - Nayna
+   - Nayna
 
-> /Jarkko
+>>
+>> If the event_log pointer is NULL, then event log is not supported.
+>
+> Yeah, sure will fix this.
+>
+> Thanks & Regards,
+>       - Nayna
+>>
+>> /Jarkko
+>>
+>
+>
+> ------------------------------------------------------------------------------
+> Check out the vibrant tech community on one of the world's most
+> engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+> _______________________________________________
+> tpmdd-devel mailing list
+> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
 >
 
 
