@@ -1,15 +1,15 @@
 From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: Re: [PATCH 2/2] tpm: enhance TPM 2.0 PCR extend
-	to	support multiple banks
-Date: Sun, 9 Oct 2016 06:28:34 +0000
-Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B542F6C75@hasmsx108.ger.corp.intel.com>
-References: <1475979357-1167-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1475979357-1167-3-git-send-email-nayna@linux.vnet.ibm.com>
+Subject: Re: [PATCH RFC 3/3] tpm_crb: request and
+	relinquish	locality 0
+Date: Sun, 9 Oct 2016 06:35:28 +0000
+Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B542F6C98@hasmsx108.ger.corp.intel.com>
+References: <1475972112-2819-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<1475972112-2819-4-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1475979357-1167-3-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1475972112-2819-4-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
@@ -19,252 +19,113 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-> Like TPM 1.2, the current device driver for TPM 2.0 supports extending only to
-> the SHA1 PCR bank. But the TPM 2.0 supports multiple PCR banks and the
-> specification recommends extending to all active PCR banks, this patch
-> enhances the existing device driver support for TPM 2.0 extend function and
-> its in-kernel interface to extend to all active PCR banks.
+
+
 > 
-> The existing in-kernel interface expects only a SHA1 digest.
-> Hence, to extend all active PCR banks with differing digest sizes for TPM 2.0,
-> the SHA1 digest is padded with trailing 0's as needed.
+> Request and relinquish locality for the driver use in order to be a better citizen
+> in a multi locality environment like with TXT as it uses locality 2.	
+
 > 
-> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 > ---
->  drivers/char/tpm/tpm-interface.c | 17 ++++++++--
->  drivers/char/tpm/tpm2-cmd.c      | 71 ++++++++++++++++++++++++++------------
-> --
->  drivers/char/tpm/tpm2.h          | 18 ++++++++++
->  3 files changed, 79 insertions(+), 27 deletions(-)
+>  drivers/char/tpm/tpm_crb.c | 36 ++++++++++++++++++++++++------------
+>  1 file changed, 24 insertions(+), 12 deletions(-)
 > 
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-
-> interface.c
-> index 7743e8a..5dd5005 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -7,6 +7,7 @@
->   * Dave Safford <safford-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
->   * Reiner Sailer <sailer-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
->   * Kylene Hall <kjhall-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-> + * Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
->   *
->   * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
->   *
-> @@ -32,6 +33,7 @@
->  #include <linux/pm_runtime.h>
+> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c index
+> ffd3a6c..9e07cf3 100644
+> --- a/drivers/char/tpm/tpm_crb.c
+> +++ b/drivers/char/tpm/tpm_crb.c
+> @@ -34,6 +34,15 @@ enum crb_defaults {
+>  	CRB_ACPI_START_INDEX = 1,
+>  };
 > 
->  #include "tpm.h"
-> +#include "tpm2.h"
->  #include "tpm_eventlog.h"
-> 
->  #define TPM_MAX_ORDINAL 243
-> @@ -752,7 +754,7 @@ static const struct tpm_input_header
-> pcrextend_header = {  int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8
-> *hash)  {
->  	struct tpm_cmd_t cmd;
-> -	int rc;
-> +	int i, rc;
->  	struct tpm_chip *chip;
-> 
->  	chip = tpm_chip_find_get(chip_num);
-> @@ -760,7 +762,18 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const
-> u8 *hash)
->  		return -ENODEV;
-> 
->  	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
-> -		rc = tpm2_pcr_extend(chip, pcr_idx, hash);
-> +		struct tpml_digest_values d_values;
+> +enum crb_loc_ctrl {
+> +	CRB_LOC_CTRL_REQUEST_ACCESS	= BIT(0),
+> +	CRB_LOC_CTRL_RELINQUISH		= BIT(1),
+> +};
 > +
-> +		memset(&d_values, 0, sizeof(d_values));
+> +enum crb_loc_state {
+> +	CRB_LOC_STATE_LOC_ASSIGNED	= BIT(1),
+> +};
 > +
-> +		for (i = 0; i < chip->no_of_active_banks; i++) {
-> +			d_values.digests[i].alg_id =
-> +				chip->active_banks[i];
-> +			memcpy(d_values.digests[i].digest, hash,
-> +			       TPM_DIGEST_SIZE);
-> +			d_values.count++;
-> +		}
-
-This is tpm2 only feature so  I suggest to create a function inside tpm2-chip.c instead of  open coding  it here.
-This will probably also prevent all this code movement. 
-
-
-> +		rc = tpm2_pcr_extend(chip, pcr_idx, &d_values);
->  		tpm_put_ops(chip);
->  		return rc;
->  	}
-> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-> index c597cf3c..8ba2992 100644
-> --- a/drivers/char/tpm/tpm2-cmd.c
-> +++ b/drivers/char/tpm/tpm2-cmd.c
-> @@ -16,6 +16,7 @@
+>  enum crb_ctrl_req {
+>  	CRB_CTRL_REQ_CMD_READY	= BIT(0),
+>  	CRB_CTRL_REQ_GO_IDLE	= BIT(1),
+> @@ -98,12 +107,8 @@ struct crb_priv {
+>   * @dev:  crb device
+>   * @priv: crb private data
+>   *
+> - * Write CRB_CTRL_REQ_GO_IDLE to TPM_CRB_CTRL_REQ
+> - * The device should respond within TIMEOUT_C by clearing the bit.
+> - * Anyhow, we do not wait here as a consequent CMD_READY request
+> - * will be handled correctly even if idle was not completed.
+> - *
+> - * The function does nothing for devices with ACPI-start method.
+> + * Put device to the idle state and relinquish locality. The function
+> + does
+> + * nothing for devices with the ACPI-start method.
+>   *
+>   * Return: 0 always
 >   */
+> @@ -112,6 +117,7 @@ static int __maybe_unused crb_go_idle(struct device
+> *dev, struct crb_priv *priv)
+>  	if (priv->flags & CRB_FL_ACPI_START)
+>  		return 0;
 > 
->  #include "tpm.h"
-> +#include "tpm2.h"
->  #include <crypto/hash_info.h>
->  #include <keys/trusted-type.h>
+> +	iowrite32(CRB_LOC_CTRL_RELINQUISH, &priv->regs->loc_ctrl);
+
+
+Please don't mix different functionalities in one function 
+Also those functions are called from runtime pm, this has nothing to do with the power management 
+
+>  	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs->ctrl_req);
+>  	/* we don't really care when this settles */
 > 
-> @@ -53,22 +54,6 @@ struct tpm2_pcr_read_out {
->  	u8	digest[TPM_DIGEST_SIZE];
->  } __packed;
-> 
-> -struct tpm2_null_auth_area {
-> -	__be32			handle;
-> -	__be16			nonce_size;
-> -	u8			attributes;
-> -	__be16			auth_size;
-> -} __packed;
-> -
-> -struct tpm2_pcr_extend_in {
-> -	__be32				pcr_idx;
-> -	__be32				auth_area_size;
-> -	struct tpm2_null_auth_area	auth_area;
-> -	__be32				digest_cnt;
-> -	__be16				hash_alg;
-> -	u8				digest[TPM_DIGEST_SIZE];
-> -} __packed;
-> -
->  struct tpm2_get_tpm_pt_in {
->  	__be32	cap_id;
->  	__be32	property_id;
-> @@ -300,38 +285,74 @@ int tpm2_pcr_read(struct tpm_chip *chip, int
-> pcr_idx, u8 *res_buf)
-> 
->  static const struct tpm_input_header tpm2_pcrextend_header = {
->  	.tag = cpu_to_be16(TPM2_ST_SESSIONS),
-> -	.length = cpu_to_be32(TPM2_GET_PCREXTEND_IN_SIZE),
->  	.ordinal = cpu_to_be32(TPM2_CC_PCR_EXTEND)  };
-> 
->  /**
->   * tpm2_pcr_extend() - extend a PCR value
-> - * @chip:	TPM chip to use.
-> - * @pcr_idx:	index of the PCR.
-> - * @hash:	hash value to use for the extend operation.
-> + * @chip:		TPM chip to use.
-> + * @pcr_idx:		index of the PCR.
-> + * @digest_values:	list of hash values to be extended.
+> @@ -143,11 +149,8 @@ static bool crb_wait_for_reg_32(u32 __iomem *reg,
+> u32 mask, u32 value,
+>   * @dev:  crb device
+>   * @priv: crb private data
 >   *
->   * 0 is returned when the operation is successful. If a negative number is
->   * returned it remarks a POSIX error code. If a positive number is returned
->   * it remarks a TPM error.
+> - * Write CRB_CTRL_REQ_CMD_READY to TPM_CRB_CTRL_REQ
+> - * and poll till the device acknowledge it by clearing the bit.
+> - * The device should respond within TIMEOUT_C.
+> - *
+> - * The function does nothing for devices with ACPI-start method
+> + * Try to wake up the device and request locality. The function does
+> + nothing
+> + * for devices with the ACPI-start method.
+>   *
+>   * Return: 0 on success -ETIME on timeout;
 >   */
-> -int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash)
-> +int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx,
-> +		    struct tpml_digest_values *digest_list)
->  {
->  	struct tpm2_cmd cmd;
-> -	int rc;
-> +	int i, j, rc;
-> +	void *marker;
-> +	size_t size;
-> +	u32 halg_size;
-> +	u16 halg;
-> 
->  	cmd.header.in = tpm2_pcrextend_header;
-> +	size = sizeof(struct tpm_input_header);
-> +
->  	cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(pcr_idx);
-> +	size = size + sizeof(cmd.params.pcrextend_in.pcr_idx);
-> +
->  	cmd.params.pcrextend_in.auth_area_size =
->  		cpu_to_be32(sizeof(struct tpm2_null_auth_area));
-> +	size = size + sizeof(cmd.params.pcrextend_in.auth_area_size);
-> +
->  	cmd.params.pcrextend_in.auth_area.handle =
->  		cpu_to_be32(TPM2_RS_PW);
->  	cmd.params.pcrextend_in.auth_area.nonce_size = 0;
->  	cmd.params.pcrextend_in.auth_area.attributes = 0;
->  	cmd.params.pcrextend_in.auth_area.auth_size = 0;
-> -	cmd.params.pcrextend_in.digest_cnt = cpu_to_be32(1);
-> -	cmd.params.pcrextend_in.hash_alg = cpu_to_be16(TPM2_ALG_SHA1);
-> -	memcpy(cmd.params.pcrextend_in.digest, hash, TPM_DIGEST_SIZE);
-> +	size = size + sizeof(cmd.params.pcrextend_in.auth_area);
-> +
-> +	cmd.params.pcrextend_in.digests.count =
-> +		cpu_to_be32(digest_list->count);
-> +	size = size + sizeof(cmd.params.pcrextend_in.digests.count);
-> +	marker = &cmd.params.pcrextend_in.digests.digests[0];
-> +
-> +	for (i = 0; i < digest_list->count; i++) {
-> +		for (j = 0; j < ARRAY_SIZE(tpm2_hash_map); j++) {
-> +
-> +			if (digest_list->digests[i].alg_id !=
-> +			    tpm2_hash_map[j].tpm_id)
-> +				continue;
-> +
-> +			halg_size = sizeof(digest_list->digests[i].alg_id);
-> +			halg = cpu_to_be16(digest_list->digests[i].alg_id);
-> +			memcpy(marker, &halg, halg_size);
-> +			marker = marker + halg_size;
-> +			size = size + halg_size;
-> +
-> +			memcpy(marker, &digest_list->digests[i].digest,
-> +			       hash_digest_size[tpm2_hash_map[j].crypto_id]);
-> +			marker = marker +
-> +
-> 	hash_digest_size[tpm2_hash_map[j].crypto_id];
-> +			size = size +
-> +
-> 	hash_digest_size[tpm2_hash_map[j].crypto_id];
-> +		}
+> @@ -162,7 +165,16 @@ static int __maybe_unused crb_cmd_ready(struct
+> device *dev,
+>  				 CRB_CTRL_REQ_CMD_READY /* mask */,
+>  				 0, /* value */
+>  				 TPM2_TIMEOUT_C)) {
+> -		dev_warn(dev, "cmdReady timed out\n");
+> +		dev_warn(dev, "TPM_CRB_CTRL_REQ_x.cmdReady timed
+> out\n");
+> +		return -ETIME;
 > +	}
-> 
-> +	cmd.header.in.length = cpu_to_be32(size);
->  	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0,
->  			      "attempting extend a PCR value");
-> 
-> diff --git a/drivers/char/tpm/tpm2.h b/drivers/char/tpm/tpm2.h index
-> 919fb05..0b1a107 100644
-> --- a/drivers/char/tpm/tpm2.h
-> +++ b/drivers/char/tpm/tpm2.h
-> @@ -74,6 +74,22 @@ struct tcg_pcr_event2 {
->  	struct tcg_event_field		event;
->  } __packed;
-> 
-> +/* Auth Area Structure. */
-> +struct tpm2_null_auth_area {
-> +	__be32		handle;
-> +	__be16		nonce_size;
-> +	u8		attributes;
-> +	__be16		auth_size;
-> +} __packed;
 > +
-> +/* Crypto agile extend format. */
-> +struct tpm2_pcr_extend_in {
-> +	__be32				pcr_idx;
-> +	__be32				auth_area_size;
-> +	struct tpm2_null_auth_area	auth_area;
-> +	struct tpml_digest_values	digests;
-> +} __packed;
-> +
->  struct tpm2_get_cap_in {
->  	__be32 cap_id;
->  	__be32 property_id;
-> @@ -108,6 +124,8 @@ struct tpm2_get_cap_out {  extern const struct
-> seq_operations tpm2_binary_b_measurments_seqops;
-> 
->  extern int tpm2_get_active_pcr_banks(struct tpm_chip *chip);
-> +extern int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx,
-> +			   struct tpml_digest_values *digest_values);
->  extern int tpm2_get_capability(struct tpm_chip *chip, struct
-> tpm2_get_cap_in
->  	*cap_in, struct tpm2_get_cap_out *cap_out);
+> +	iowrite32(CRB_LOC_CTRL_REQUEST_ACCESS, &priv->regs->loc_ctrl);
+> +	if (!crb_wait_for_reg_32(&priv->regs->loc_state,
+> +				 CRB_LOC_STATE_LOC_ASSIGNED, /* mask */
+> +				 CRB_LOC_STATE_LOC_ASSIGNED, /* value */
+> +				 TPM2_TIMEOUT_C)) {
+> +		dev_warn(dev, "TPM_LOC_STATE_x.requestAccess timed
+> out\n");
+Same here
+
+>  		return -ETIME;
+>  	}
 > 
 > --
-> 2.5.0
-> 
-> 
-> ------------------------------------------------------------------------------
-> Check out the vibrant tech community on one of the world's most
-> engaging tech sites, SlashDot.org! http://sdm.link/slashdot
-> _______________________________________________
-> tpmdd-devel mailing list
-> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
