@@ -1,29 +1,21 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH RFC 1/3] tpm_crb: expand struct
- crb_control_area to struct crb_regs
-Date: Sun, 9 Oct 2016 21:06:13 +0300
-Message-ID: <20161009180613.GA26794@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH RFC 1/3] tpm_crb: expand struct crb_control_area to
+ struct crb_regs
+Date: Sun, 9 Oct 2016 21:32:32 +0300
+Message-ID: <20161009183232.GA27764@intel.com>
 References: <1475972112-2819-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<1475972112-2819-2-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<20161009014256.GA8210@obsidianresearch.com>
-	<20161009093818.GG31891@intel.com>
-	<20161009164905.GA12551@obsidianresearch.com>
+ <1475972112-2819-2-git-send-email-jarkko.sakkinen@linux.intel.com>
+ <20161009014256.GA8210@obsidianresearch.com>
+ <20161009093818.GG31891@intel.com>
+ <20161009164905.GA12551@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20161009164905.GA12551-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+In-Reply-To: <20161009164905.GA12551@obsidianresearch.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
 On Sun, Oct 09, 2016 at 10:49:05AM -0600, Jason Gunthorpe wrote:
@@ -61,21 +53,29 @@ On Sun, Oct 09, 2016 at 10:49:05AM -0600, Jason Gunthorpe wrote:
 >  		offsetof(struct crb_regs, ctrl_req),
 >  	   	sizeof(struct crb_regs));
 >         ctrl = &priv->regs.ctrl_req;
-> 
-> > I think the crb_map_io and crb_map_res are too generic. Better way to do
-> > things would be to validate that assumptions for these two cases hold.
-> 
-> If the driver is going to be using a negative offset like this, then
-> it very much should validate the assumptions before doing it.
-> 
-> and not even map these regsiters if they are not supported by
-> hardware.
 
-Yes, that's what the point I tried to make in my response in the part
-that is not quoted here.
+Sorry I missed this part.
+
+Here are the constraints for existing hardware:
+
+1. All the existing CRB start only hardware has the iomem covering the
+   control area and registers for multiple localities.
+2. All the existing ACPI start hardware has only the control area.
+
+If you assume that SSDT does not have malicous behavior caused by either
+a BIOS bug or maybe a rootkit, then the current patch works for all the
+existing hardware.
+
+To counter-measure for unexpected behavior in non-existing hardware and
+buggy or malicious firmware it probably make sense to use crb_map_res to
+validate the part of the CRB registers that is not part of the control
+area.
+
+Doing it in the way you proposed does not work for ACPI start devices.
+
+For them it should be done in the same way as I'm doing in the existing
+patch as for ACPI start devices the address below the control area are
+never accessed. Having a separate crb_map_res for CRB start only devices
+is sane thing to do for validation.
 
 /Jarkko
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most 
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
