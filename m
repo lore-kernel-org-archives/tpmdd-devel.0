@@ -1,16 +1,17 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 0/2] tpm: enhance TPM 2.0 extend function
- to support multiple PCR banks
-Date: Sun, 9 Oct 2016 12:29:12 +0300
-Message-ID: <20161009092911.GF31891@intel.com>
-References: <1475979357-1167-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<20161009090827.GC31891@intel.com>
+Subject: Re: [PATCH RFC 1/3] tpm_crb: expand struct
+ crb_control_area to struct crb_regs
+Date: Sun, 9 Oct 2016 12:38:18 +0300
+Message-ID: <20161009093818.GG31891@intel.com>
+References: <1475972112-2819-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<1475972112-2819-2-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<20161009014256.GA8210@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20161009090827.GC31891-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20161009014256.GA8210-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,48 +20,62 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Oct 09, 2016 at 12:08:27PM +0300, Jarkko Sakkinen wrote:
-> On Sat, Oct 08, 2016 at 10:15:55PM -0400, Nayna Jain wrote:
-> > The existing in-kernel interface for extending a TPM PCR extends
-> > the SHA1 PCR bank. For TPM 1.2, that is the one and only PCR bank
-> > defined. TPM 2.0 adds support for multiple PCR banks, to support
-> > different hash algorithms. The TPM 2.0 Specification[1]
-> > recommends extending all active PCR banks. This patch set enhances
-> > the existing TPM 2.0 extend function and corresponding in-kernel
-> > interface to support extending all active PCR banks.
-> > 
-> > The first patch implements the TPM 2.0 capability to retrieve
-> > the list of active PCR banks.
-> > 
-> > The second patch modifies the TPM 2.0 device driver extend function
-> > to support extending multiple PCR banks. The existing in-kernel
-> > interface expects only a SHA1 digest. Hence, to extend all active
-> > PCR banks with differing digest sizes for TPM 2.0, the SHA1 digest
-> > is padded with 0's as needed.
-> > 
-> > This approach is taken to maintain backwards compatibility for the
-> > existing users (i.e. IMA) in order to continue working with both
-> > TPM 1.2 and TPM 2.0 without any changes and still comply with the
-> > TPM 2.0 Specification[1] requirement of extending all active PCR
-> > banks.
-> > 
-> > This patch series has a prerequisite(header file tpm2.h) of TPM 2.0
-> > event log patch series.
+On Sat, Oct 08, 2016 at 07:42:56PM -0600, Jason Gunthorpe wrote:
+> On Sun, Oct 09, 2016 at 03:15:09AM +0300, Jarkko Sakkinen wrote:
+> > +	ctrl = crb_map_res(dev, priv, &io_res, buf->control_address,
+> > +			   sizeof(struct crb_regs) -
+> > +			   offsetof(struct crb_regs, ctrl_req));
+> > +	if (IS_ERR(ctrl))
+> > +		return PTR_ERR(ctrl);
+> > +
+> > +	/* The control area always overrlaps IO memory mapped from the ACPI
+> > +	 * object with CRB start only devices. Thus, this is perfectly safe.
+> > +	 */
+> > +	priv->regs = (void *)((unsigned long)ctrl -
+> > +		offsetof(struct crb_regs, ctrl_req));
 > 
-> This is an unacceptable requirement. I don't even like the idea
-> of having tpm2.h (rather would keep stuff in tpm2-cmd.c).
+> Hum. No, this makes bad assumptions about the structure of iomapping.
 > 
-> Also I seriously cannot accept patch sets that add code without
-> giving value.
+> The map itself needs to be done with the adjustment:
+> 
+> 	ctrl = crb_map_res(dev, priv, &io_res, buf->control_address -
+> 		offsetof(struct crb_regs, ctrl_req),
+> 	   	sizeof(struct crb_regs));
 
-I would propose that you work on a PoC for IMA with TPM 2.0 that
-includes these patches. Then we can try it out. Depending on half
-finished patch sets is not just right way to do it. I'm happy to
-test if you have someting runnable :)
+That would be wrong address for the control area as it does not start
+from the beginning of CRB registers.
+
+> .. and nothing actually proves that control_address follows anything
+> in the driver, so this seems like a terrifying blind assumption, but
+> everything about the iomap in this ACPI binding seems totally bonkers
+> so that is in good company I guess.
+
+There are basically two kinds of CRB devices in the wild:
+
+1. ACPI start devices that use DMA
+2. CRB MMIO devices
+
+For 1 you always iomap control area. For 2 the ACPI object given buffer
+covers the control area.
+
+I think the crb_map_io and crb_map_res are too generic. Better way to do
+things would be to validate that assumptions for these two cases hold.
+
+> .. and the comment says this only holds for 'crb start only' devices,
+> but the code doesn't actually act differently based on what sort of
+> device we have..
+> 
+> Your commit message also seems to imply the new registers are only on
+> newer hardware, but nothing seems to check for that before acessing
+> them?  Confusing.
+
+That's why there's this thing called RFC :)
+
+> Jason
 
 /Jarkko
 
