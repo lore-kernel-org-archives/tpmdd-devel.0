@@ -1,19 +1,18 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v4 4/8] tpm: redefine read_log() to handle
- ACPI/OF at runtime
-Date: Sun, 9 Oct 2016 15:05:53 +0300
-Message-ID: <20161009120553.GA6224@intel.com>
-References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1475051682-23060-5-git-send-email-nayna@linux.vnet.ibm.com>
-	<20160930190511.GC9595@intel.com>
-	<57F6B647.1070206@linux.vnet.ibm.com>
-	<57FA2A0B.7060404@linux.vnet.ibm.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH RFC 1/3] tpm_crb: expand struct
+ crb_control_area to struct crb_regs
+Date: Sun, 9 Oct 2016 10:49:05 -0600
+Message-ID: <20161009164905.GA12551@obsidianresearch.com>
+References: <1475972112-2819-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<1475972112-2819-2-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<20161009014256.GA8210@obsidianresearch.com>
+	<20161009093818.GG31891@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <57FA2A0B.7060404-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <20161009093818.GG31891-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,144 +21,55 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Oct 09, 2016 at 04:59:15PM +0530, Nayna wrote:
+On Sun, Oct 09, 2016 at 12:38:18PM +0300, Jarkko Sakkinen wrote:
+> On Sat, Oct 08, 2016 at 07:42:56PM -0600, Jason Gunthorpe wrote:
+> > On Sun, Oct 09, 2016 at 03:15:09AM +0300, Jarkko Sakkinen wrote:
+> > > +	ctrl = crb_map_res(dev, priv, &io_res, buf->control_address,
+> > > +			   sizeof(struct crb_regs) -
+> > > +			   offsetof(struct crb_regs, ctrl_req));
+> > > +	if (IS_ERR(ctrl))
+> > > +		return PTR_ERR(ctrl);
+> > > +
+> > > +	/* The control area always overrlaps IO memory mapped from the ACPI
+> > > +	 * object with CRB start only devices. Thus, this is perfectly safe.
+> > > +	 */
+> > > +	priv->regs = (void *)((unsigned long)ctrl -
+> > > +		offsetof(struct crb_regs, ctrl_req));
+> > 
+> > Hum. No, this makes bad assumptions about the structure of iomapping.
+> > 
+> > The map itself needs to be done with the adjustment:
+> > 
+> > 	ctrl = crb_map_res(dev, priv, &io_res, buf->control_address -
+> > 		offsetof(struct crb_regs, ctrl_req),
+> > 	   	sizeof(struct crb_regs));
 > 
-> 
-> On 10/07/2016 02:08 AM, Nayna wrote:
-> >
-> >
-> >On 10/01/2016 12:35 AM, Jarkko Sakkinen wrote:
-> >>On Wed, Sep 28, 2016 at 04:34:38AM -0400, Nayna Jain wrote:
-> >>>Currently, read_log() has two implementations: one for ACPI platforms
-> >>>and the other for OF platforms. The proper one is selected at compile
-> >>>time using Kconfig and #ifdef in the Makefile, which is not the
-> >>>recommended approach.
-> >>>
-> >>>This patch removes the #ifdef in the Makefile by defining a single
-> >>>read_log() method, which checks for ACPI/OF event log properties at
-> >>>runtime.
-> >>>
-> >>>Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> >>>Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> >>>Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> >>>---
-> >>>   drivers/char/tpm/Makefile       | 14 ++++----------
-> >>>   drivers/char/tpm/tpm_acpi.c     |  9 ++-------
-> >>>   drivers/char/tpm/tpm_eventlog.c | 18 ++++++++++++++++++
-> >>>   drivers/char/tpm/tpm_eventlog.h | 22 +++++++++++++---------
-> >>>   drivers/char/tpm/tpm_of.c       |  8 ++------
-> >>>   5 files changed, 39 insertions(+), 32 deletions(-)
-> >>>
-> >>>diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
-> >>>index a385fb8..a05b1eb 100644
-> >>>--- a/drivers/char/tpm/Makefile
-> >>>+++ b/drivers/char/tpm/Makefile
-> >>>@@ -2,16 +2,10 @@
-> >>>   # Makefile for the kernel tpm device drivers.
-> >>>   #
-> >>>   obj-$(CONFIG_TCG_TPM) += tpm.o
-> >>>-tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o
-> >>>-tpm-$(CONFIG_ACPI) += tpm_ppi.o
-> >>>-
-> >>>-ifdef CONFIG_ACPI
-> >>>-	tpm-y += tpm_eventlog.o tpm_acpi.o
-> >>>-else
-> >>>-ifdef CONFIG_TCG_IBMVTPM
-> >>>-	tpm-y += tpm_eventlog.o tpm_of.o
-> >>>-endif
-> >>>-endif
-> >>>+tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o \
-> >>>+		tpm_eventlog.o
-> >>>+tpm-$(CONFIG_ACPI) += tpm_ppi.o tpm_acpi.o
-> >>>+tpm-$(CONFIG_OF) += tpm_of.o
-> >>>   obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
-> >>>   obj-$(CONFIG_TCG_TIS) += tpm_tis.o
-> >>>   obj-$(CONFIG_TCG_TIS_SPI) += tpm_tis_spi.o
-> >>>diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
-> >>>index 4d6c2d7..859bdba 100644
-> >>>--- a/drivers/char/tpm/tpm_acpi.c
-> >>>+++ b/drivers/char/tpm/tpm_acpi.c
-> >>>@@ -6,6 +6,7 @@
-> >>>    *	Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-> >>>    *	Reiner Sailer <sailer-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
-> >>>    *	Kylene Hall <kjhall-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-> >>>+ *	Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> >>>    *
-> >>>    * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-> >>>    *
-> >>>@@ -45,7 +46,7 @@ struct acpi_tcpa {
-> >>>   };
-> >>>
-> >>>   /* read binary bios log */
-> >>>-int read_log(struct tpm_chip *chip)
-> >>>+int read_log_acpi(struct tpm_chip *chip)
-> >>>   {
-> >>>   	struct acpi_tcpa *buff;
-> >>>   	acpi_status status;
-> >>>@@ -54,12 +55,6 @@ int read_log(struct tpm_chip *chip)
-> >>>   	struct tpm_bios_log *log;
-> >>>
-> >>>   	log = &chip->log;
-> >>>-	if (log->bios_event_log != NULL) {
-> >>>-		printk(KERN_ERR
-> >>>-		       "%s: ERROR - Eventlog already initialized\n",
-> >>>-		       __func__);
-> >>>-		return -EFAULT;
-> >>>-	}
-> >>>
-> >>>   	/* Find TCPA entry in RSDT (ACPI_LOGICAL_ADDRESSING) */
-> >>>   	status = acpi_get_table(ACPI_SIG_TCPA, 1,
-> >>>diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-> >>>index a8cd4a1..c327089 100644
-> >>>--- a/drivers/char/tpm/tpm_eventlog.c
-> >>>+++ b/drivers/char/tpm/tpm_eventlog.c
-> >>>@@ -346,6 +346,24 @@ static int is_bad(void *p)
-> >>>   	return 0;
-> >>>   }
-> >>>
-> >>>+int read_log(struct tpm_chip *chip)
-> >>>+{
-> >>>+	int rc;
-> >>>+
-> >>>+	if (chip->log.bios_event_log != NULL) {
-> >>>+		dev_dbg(&chip->dev, "%s: ERROR - Eventlog already initialized\n",
-> >>>+			__func__);
-> >>>+		return -EFAULT;
-> >>>+	}
-> >>>+
-> >>>+	rc = read_log_acpi(chip);
-> >>>+	if ((rc == 0) || (rc == -ENOMEM))
-> >>>+		return rc;
-> >>>+	rc = read_log_of(chip);
-> >>>+	return rc;
-> >>>+
-> >>>+}
-> >>
-> >>I'm wondering if it is a better idea to leverage tpm_class_ops? This
-> >>would be kind of cool idea to implement this because then the decision
-> >>to support event log could be leveraged to the driver level.
-> >
-> >Can you please explain me this bit more ?
-> >
-> >For eg, when we say driver level.. does that mean to the level of tis,
-> >nuvoton ?
-> >
-> >And what type of decision ? I mean like decision to create securityfs
-> >setup for userspace to read eventlog ? or there are other things ?
-> >
-> 
-> Jarkko, can you please also help me to understand here more ?
+> That would be wrong address for the control area as it does not start
+> from the beginning of CRB registers.
 
-Sorry, I missed your original response.
+Of course, I just pointed out what the map call should look like
 
-Umh, it was more like an open question and I'm not sure if it even
-makes sense. Maybe you can just ignore it until the next revision.
+Something like this
 
-/Jarkko
+ 	priv->regs = crb_map_res(dev, priv, &io_res, buf->control_address -
+ 		offsetof(struct crb_regs, ctrl_req),
+ 	   	sizeof(struct crb_regs));
+        ctrl = &priv->regs.ctrl_req;
+
+> I think the crb_map_io and crb_map_res are too generic. Better way to do
+> things would be to validate that assumptions for these two cases hold.
+
+If the driver is going to be using a negative offset like this, then
+it very much should validate the assumptions before doing it.
+
+and not even map these regsiters if they are not supported by
+hardware.
+
+Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
