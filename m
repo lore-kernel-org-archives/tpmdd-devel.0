@@ -1,20 +1,22 @@
-From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v4 3/8] tpm: validate event log access
- before tpm_bios_log_setup
-Date: Mon, 10 Oct 2016 09:43:05 +0530
-Message-ID: <57FB1551.9000806@linux.vnet.ibm.com>
-References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1475051682-23060-4-git-send-email-nayna@linux.vnet.ibm.com>
-	<20161003171419.GE6801@obsidianresearch.com>
-	<57F9C4C4.2070508@linux.vnet.ibm.com>
-	<20161009232544.GC24139@obsidianresearch.com>
-	<57FAF49D.7040009@linux.vnet.ibm.com>
-	<20161010032113.GA26363@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH RFC 1/3] tpm_crb: expand struct
+ crb_control_area to struct crb_regs
+Date: Mon, 10 Oct 2016 07:45:08 +0300
+Message-ID: <20161010044508.GA5920@intel.com>
+References: <1475972112-2819-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<1475972112-2819-2-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<20161009014256.GA8210@obsidianresearch.com>
+	<20161009093818.GG31891@intel.com>
+	<20161009164905.GA12551@obsidianresearch.com>
+	<20161009183232.GA27764@intel.com>
+	<20161009183358.GB27764@intel.com>
+	<20161009230737.GA23823@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20161010032113.GA26363-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20161009230737.GA23823-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -24,69 +26,57 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Sun, Oct 09, 2016 at 05:07:37PM -0600, Jason Gunthorpe wrote:
+> On Sun, Oct 09, 2016 at 09:33:58PM +0300, Jarkko Sakkinen wrote:
+> 
+> > > Sorry I missed this part.
+> > > 
+> > > Here are the constraints for existing hardware:
+> > > 
+> > > 1. All the existing CRB start only hardware has the iomem covering the
+> > >    control area and registers for multiple localities.
+> > > 2. All the existing ACPI start hardware has only the control area.
+> > > 
+> > > If you assume that SSDT does not have malicous behavior caused by either
+> > > a BIOS bug or maybe a rootkit, then the current patch works for all the
+> > > existing hardware.
+> > > 
+> > > To counter-measure for unexpected behavior in non-existing hardware and
+> > > buggy or malicious firmware it probably make sense to use crb_map_res to
+> > > validate the part of the CRB registers that is not part of the control
+> > > area.
+> 
+> I don't know how much I'd assume BIOS authors do what you think - the
+> spec I saw for this seems very vauge.
+> 
+> Certainly checking that locality region falls within the acpi mapping
+> seems essential.
+> 
+> > > Doing it in the way you proposed does not work for ACPI start devices.
+> > > 
+> > > For them it should be done in the same way as I'm doing in the existing
+> > > patch as for ACPI start devices the address below the control area are
+> > > never accessed. Having a separate crb_map_res for CRB start only devices
+> > > is sane thing to do for validation.
+> > 
+> > Alternative is to do two structures crb_regs_head and crb_regs_tail,
+> > which might be cleaner. I'm fine with going either route.
+> 
+> Since the iomem doesn't actually exist for a configuration having two
+> pointers is the better choice. Make sure one is null for the
+> configuration that does not support it.
+> 
+> The negative offset thing is way too subtle.
 
+Yeah, I do agree with you on this. Even if it was functionalliy correct,
+it is hard to understand if you don't proactively work on the driver.
 
-On 10/10/2016 08:51 AM, Jason Gunthorpe wrote:
-> On Mon, Oct 10, 2016 at 07:23:33AM +0530, Nayna wrote:
->
->> And we pass this as private data to i_node in tpm_bios_log_setup.
->
->> So, we are referring chip as i_node->i_private->chip.
->
-> That probably works, but you can't use the i_private = NULL scheme I
-> outlined with that.
-
-Why ? we are doing i_private = NULL during teardown to imply that chip 
-unregister is in progress. and no more securityfs operations should be 
-done. So, whether chip is NULL or securityfs_data is NULL, either should 
-be ok. Isn't it ?
-
-Below is the open() function with NULL check and get_device(). 
-put_device() I will do in release()
-
-static int tpm_bios_measurements_open(struct inode *inode,
-                                             struct file *file)
-{
-         int err;
-         struct seq_file *seq;
-         struct tpm_securityfs_data *sfs_data;
-         const struct seq_operations *seqops;
-         struct tpm_chip *chip;
-
-         inode_lock(inode);
-         if (!inode->i_private) {  ---> This would be made NULL by teardown
-                 inode_unlock(inode);
-                 return -ENODEV;
-         }
-         sfs_data = (const struct tpm_securityfs_data *)inode->i_private;
-         seqops = sfs_data->seqops;
-         chip = sfs_data->chip;
-         get_device(&chip->dev);
-         /* now register seq file */
-         err = seq_open(file, seqops);
-         if (!err) {
-                 seq = file->private_data;
-                 seq->private = &chip->log;
-         }
-         inode_unlock(inode);
-
-         return err;
-}
-
-
-Let me know if I am missing something basic.
-
-Thanks & Regards,
-   - Nayna
-
-
->
 > Jason
->
 
+/Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
