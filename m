@@ -1,15 +1,17 @@
 From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH RESEND 2/3] tpm: replace dynamically
- allocated bios_dir with a static array
-Date: Tue, 11 Oct 2016 00:23:15 +0530
-Message-ID: <57FBE39B.2030301@linux.vnet.ibm.com>
-References: <1475349926-476-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<1475349926-476-3-git-send-email-jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v4 8/8] tpm: add securityfs support for
+ TPM 2.0 firmware event log
+Date: Tue, 11 Oct 2016 00:24:17 +0530
+Message-ID: <57FBE3D9.7010505@linux.vnet.ibm.com>
+References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1475051682-23060-9-git-send-email-nayna@linux.vnet.ibm.com>
+	<20161001115154.GB8664@intel.com> <57F9A52C.7050405@linux.vnet.ibm.com>
+	<20161009091409.GD31891@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1475349926-476-3-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+In-Reply-To: <20161009091409.GD31891-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,203 +20,48 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
 
 
-On 10/02/2016 12:55 AM, Jarkko Sakkinen wrote:
-> This commit is based on a commit by Nayna Jain. Replaced dynamically
-> allocated bios_dir with a static array as the size is always constant.
+On 10/09/2016 02:44 PM, Jarkko Sakkinen wrote:
+> HI
 >
-> Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> ---
->   drivers/char/tpm/tpm-chip.c     |  9 +++---
->   drivers/char/tpm/tpm.h          |  3 +-
->   drivers/char/tpm/tpm_eventlog.c | 62 +++++++++++++++++++----------------------
->   drivers/char/tpm/tpm_eventlog.h | 10 +++----
->   4 files changed, 41 insertions(+), 43 deletions(-)
+> On Sun, Oct 09, 2016 at 07:32:20AM +0530, Nayna wrote:
+>>
+>>
+>> On 10/01/2016 05:21 PM, Jarkko Sakkinen wrote:
+>>> On Wed, Sep 28, 2016 at 04:34:42AM -0400, Nayna Jain wrote:
+>>>> Unlike the device driver support for TPM 1.2, the TPM 2.0 support
+>>>> does not create the securityfs pseudo files for displaying the
+>>>> firmware event log.
+>>>>
+>>>> This patch enables support for providing the TPM 2.0 event log in
+>>>> binary form. TPM 2.0 event log supports a crypto agile format that
+>>>> records multiple digests, which is different from TPM 1.2. This
+>>>> patch adds the TPM 2.0 event log parser to understand the crypto
+>>>> agile format.
+>>>
+>>> I'll got through the patch (the split comment is valid)
+>>
+>> Sure, will do it.
 >
-> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> index e595013..a56b609 100644
-> --- a/drivers/char/tpm/tpm-chip.c
-> +++ b/drivers/char/tpm/tpm-chip.c
-> @@ -278,14 +278,16 @@ static void tpm_del_char_device(struct tpm_chip *chip)
+> Please go through this series and see if they look good to you:
 >
->   static int tpm1_chip_register(struct tpm_chip *chip)
->   {
-> +	int rc;
-> +
->   	if (chip->flags & TPM_CHIP_FLAG_TPM2)
->   		return 0;
+>    https://lkml.org/lkml/2016/10/1/121
 >
->   	tpm_sysfs_add_device(chip);
->
-> -	chip->bios_dir = tpm_bios_log_setup(dev_name(&chip->dev));
-> +	rc = tpm_bios_log_setup(chip);
->
-> -	return 0;
-> +	return rc;
->   }
->
->   static void tpm1_chip_unregister(struct tpm_chip *chip)
-> @@ -293,8 +295,7 @@ static void tpm1_chip_unregister(struct tpm_chip *chip)
->   	if (chip->flags & TPM_CHIP_FLAG_TPM2)
->   		return;
->
-> -	if (chip->bios_dir)
-> -		tpm_bios_log_teardown(chip->bios_dir);
-> +	tpm_bios_log_teardown(chip);
->   }
->
->   static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
-> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> index 4d183c9..4c118a4 100644
-> --- a/drivers/char/tpm/tpm.h
-> +++ b/drivers/char/tpm/tpm.h
-> @@ -40,6 +40,7 @@ enum tpm_const {
->   	TPM_BUFSIZE = 4096,
->   	TPM_NUM_DEVICES = 65536,
->   	TPM_RETRY = 50,		/* 5 seconds */
-> +	TPM_NUM_EVENT_LOG_FILES = 3,
->   };
->
->   enum tpm_timeout {
-> @@ -171,7 +172,7 @@ struct tpm_chip {
->   	unsigned long duration[3]; /* jiffies */
->   	bool duration_adjusted;
->
-> -	struct dentry **bios_dir;
-> +	struct dentry *bios_dir[TPM_NUM_EVENT_LOG_FILES];
->
->   	const struct attribute_group *groups[3];
->   	unsigned int groups_cnt;
-> diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-> index 75e6644..f5e1d06 100644
-> --- a/drivers/char/tpm/tpm_eventlog.c
-> +++ b/drivers/char/tpm/tpm_eventlog.c
-> @@ -368,54 +368,50 @@ static int is_bad(void *p)
->   	return 0;
->   }
->
-> -struct dentry **tpm_bios_log_setup(const char *name)
-> +int tpm_bios_log_setup(struct tpm_chip *chip)
->   {
-> -	struct dentry **ret = NULL, *tpm_dir, *bin_file, *ascii_file;
-> +	const char *name = dev_name(&chip->dev);
-> +	unsigned int cnt;
->
-> -	tpm_dir = securityfs_create_dir(name, NULL);
-> -	if (is_bad(tpm_dir))
-> -		goto out;
-> +	cnt = 0;
-> +	chip->bios_dir[cnt] =
-> +		securityfs_create_dir(name, NULL);
-> +	if (is_bad(chip->bios_dir[cnt]))
-> +		goto err;
-> +	cnt++;
->
-> -	bin_file =
-> +	chip->bios_dir[cnt] =
->   	    securityfs_create_file("binary_bios_measurements",
-> -				   S_IRUSR | S_IRGRP, tpm_dir,
-> +				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
->   				   (void *)&tpm_binary_b_measurments_seqops,
->   				   &tpm_bios_measurements_ops);
-> -	if (is_bad(bin_file))
-> -		goto out_tpm;
-> +	if (is_bad(chip->bios_dir[cnt]))
-> +		goto err;
-> +	cnt++;
->
-> -	ascii_file =
-> +	chip->bios_dir[cnt] =
->   	    securityfs_create_file("ascii_bios_measurements",
-> -				   S_IRUSR | S_IRGRP, tpm_dir,
-> +				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
->   				   (void *)&tpm_ascii_b_measurments_seqops,
->   				   &tpm_bios_measurements_ops);
-> -	if (is_bad(ascii_file))
-> -		goto out_bin;
-> +	if (is_bad(chip->bios_dir[cnt]))
-> +		goto err;
-> +	cnt++;
->
-> -	ret = kmalloc(3 * sizeof(struct dentry *), GFP_KERNEL);
-> -	if (!ret)
-> -		goto out_ascii;
-> -
-> -	ret[0] = ascii_file;
-> -	ret[1] = bin_file;
-> -	ret[2] = tpm_dir;
-> -
-> -	return ret;
-> +	return 0;
->
-> -out_ascii:
-> -	securityfs_remove(ascii_file);
-> -out_bin:
-> -	securityfs_remove(bin_file);
-> -out_tpm:
-> -	securityfs_remove(tpm_dir);
-> -out:
-> -	return NULL;
-> +err:
-> +	chip->bios_dir[cnt] = NULL;
+> You should have them in your email archive (posted a week ago).
 
-The updated patch looks fine.
-Just, I am not sure if NULL assignment is needed.
-
-> +	tpm_bios_log_teardown(chip);
-> +	return -EIO;
->   }
->
-> -void tpm_bios_log_teardown(struct dentry **lst)
-> +void tpm_bios_log_teardown(struct tpm_chip *chip)
->   {
->   	int i;
->
-> -	for (i = 0; i < 3; i++)
-> -		securityfs_remove(lst[i]);
-> +	for (i = (TPM_NUM_EVENT_LOG_FILES - 1); i >= 0; i--) {
-> +		if (chip->bios_dir[i])
-
-Probably, this check is not required because securityfs_remove() takes 
-care of checking both NULL and err dentry.
+I went through this series, looks good to me, just a minor comment on 
+Patch 2/3.
 
 Thanks & Regards,
     - Nayna
 
-> +			securityfs_remove(chip->bios_dir[i]);
-> +	}
->   }
-> diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
-> index 8de62b0..fd3357e 100644
-> --- a/drivers/char/tpm/tpm_eventlog.h
-> +++ b/drivers/char/tpm/tpm_eventlog.h
-> @@ -77,14 +77,14 @@ int read_log(struct tpm_bios_log *log);
 >
->   #if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
->   	defined(CONFIG_ACPI)
-> -extern struct dentry **tpm_bios_log_setup(const char *);
-> -extern void tpm_bios_log_teardown(struct dentry **);
-> +extern int tpm_bios_log_setup(struct tpm_chip *chip);
-> +extern void tpm_bios_log_teardown(struct tpm_chip *chip);
->   #else
-> -static inline struct dentry **tpm_bios_log_setup(const char *name)
-> +static inline int tpm_bios_log_setup(struct tpm_chip *chip)
->   {
-> -	return NULL;
-> +	return 0;
->   }
-> -static inline void tpm_bios_log_teardown(struct dentry **dir)
-> +static inline void tpm_bios_log_teardown(struct tpm_chip *chip)
->   {
->   }
->   #endif
+> /Jarkko
 >
 
 
