@@ -1,93 +1,60 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [PATCH] char/tpm: Check return code of wait_for_tpm_stat
-Date: Tue, 11 Oct 2016 15:01:01 +0300
-Message-ID: <1476187261-29027-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Sender: linux-kernel-owner@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: Peter Huewe <peterhuewe@gmx.de>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH v4 3/8] tpm: validate event log access
+ before tpm_bios_log_setup
+Date: Tue, 11 Oct 2016 10:51:43 -0600
+Message-ID: <20161011165143.GA6881@obsidianresearch.com>
+References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1475051682-23060-4-git-send-email-nayna@linux.vnet.ibm.com>
+	<20161003171419.GE6801@obsidianresearch.com>
+	<57F9C4C4.2070508@linux.vnet.ibm.com>
+	<20161009232544.GC24139@obsidianresearch.com>
+	<57FAF49D.7040009@linux.vnet.ibm.com>
+	<20161010032113.GA26363@obsidianresearch.com>
+	<57FB1551.9000806@linux.vnet.ibm.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <57FB1551.9000806-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Peter Huewe <peterhuewe@gmx.de>
+On Mon, Oct 10, 2016 at 09:43:05AM +0530, Nayna wrote:
+> 
+> 
+> On 10/10/2016 08:51 AM, Jason Gunthorpe wrote:
+> >On Mon, Oct 10, 2016 at 07:23:33AM +0530, Nayna wrote:
+> >
+> >>And we pass this as private data to i_node in tpm_bios_log_setup.
+> >
+> >>So, we are referring chip as i_node->i_private->chip.
+> >
+> >That probably works, but you can't use the i_private = NULL scheme I
+> >outlined with that.
+> 
+> Why ? we are doing i_private = NULL during teardown to imply that chip
+> unregister is in progress. and no more securityfs operations should be done.
+> So, whether chip is NULL or securityfs_data is NULL, either should be ok.
+> Isn't it ?
 
-In some weird cases it might be possible that the TPM does not set
-STS.VALID within the given timeout time (or ever) but sets STS.EXPECT
-(STS=0x0C) In this case the driver gets stuck in the while loop of
-tpm_tis_send_data and loops endlessly.
+How does release() work if you have to do:
 
-Checking the return value of wait_for_tpm_stat fixes this and the driver
-bails out correctly.  While at it fixing all other users since if the
-TPM does not manage to set STS.VALID within the reasonable timeframe
-something is definitely wrong and the driver should react correctly.
+  put_device(&((const struct tpm_securityfs_data *)inode->i_private)->chip.dev)
 
-Signed-off-by: Peter Huewe <peterhuewe@gmx.de>
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
----
- drivers/char/tpm/tpm_tis_core.c | 29 ++++++++++++++++++++---------
- 1 file changed, 20 insertions(+), 9 deletions(-)
+i_private could be null
 
-diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-index e3bf31b..73f4c4b 100644
---- a/drivers/char/tpm/tpm_tis_core.c
-+++ b/drivers/char/tpm/tpm_tis_core.c
-@@ -180,11 +180,13 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
- 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	int size = 0, burstcnt, rc;
- 
--	while (size < count &&
--	       wait_for_tpm_stat(chip,
-+	while (size < count) {
-+		rc = wait_for_tpm_stat(chip,
- 				 TPM_STS_DATA_AVAIL | TPM_STS_VALID,
- 				 chip->timeout_c,
--				 &priv->read_queue, true) == 0) {
-+				 &priv->read_queue, true);
-+		if (rc < 0)
-+			return rc;
- 		burstcnt = min_t(int, get_burstcount(chip), count - size);
- 
- 		rc = tpm_tis_read_bytes(priv, TPM_DATA_FIFO(priv->locality),
-@@ -229,8 +231,11 @@ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
- 		goto out;
- 	}
- 
--	wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
--			  &priv->int_queue, false);
-+	if (wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
-+				&priv->int_queue, false) < 0) {
-+		size = -ETIME;
-+		goto out;
-+	}
- 	status = tpm_tis_status(chip);
- 	if (status & TPM_STS_DATA_AVAIL) {	/* retry? */
- 		dev_err(&chip->dev, "Error left over data\n");
-@@ -279,8 +284,11 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 
- 		count += burstcnt;
- 
--		wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
--				  &priv->int_queue, false);
-+		if (wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
-+					&priv->int_queue, false) < 0) {
-+			rc = -ETIME;
-+			goto out_err;
-+		}
- 		status = tpm_tis_status(chip);
- 		if (!itpm && (status & TPM_STS_DATA_EXPECT) == 0) {
- 			rc = -EIO;
-@@ -293,8 +301,11 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 	if (rc < 0)
- 		goto out_err;
- 
--	wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
--			  &priv->int_queue, false);
-+	if (wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
-+				&priv->int_queue, false) < 0) {
-+		rc = -ETIME;
-+		goto out_err;
-+	}
- 	status = tpm_tis_status(chip);
- 	if (!itpm && (status & TPM_STS_DATA_EXPECT) != 0) {
- 		rc = -EIO;
--- 
-2.7.4
+Jason
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most 
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
