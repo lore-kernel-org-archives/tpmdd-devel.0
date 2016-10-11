@@ -1,15 +1,19 @@
-From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Subject: Re: [PATCH] char/tpm: Check return code of
-	wait_for_tpm_stat
-Date: Tue, 11 Oct 2016 20:01:09 +0200
-Message-ID: <9174B547-9CD1-4F1B-A2A7-38B9A6AA3B33@gmx.de>
-References: <1476187261-29027-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<20161011171313.GD6881@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH RESEND 2/3] tpm: replace dynamically
+ allocated bios_dir with a static array
+Date: Tue, 11 Oct 2016 21:09:32 +0300
+Message-ID: <20161011180932.GA6900@intel.com>
+References: <1475349926-476-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<1475349926-476-3-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<57FBE39B.2030301@linux.vnet.ibm.com>
+	<20161011112315.GB21688@intel.com>
+	<20161011165355.GB6881@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20161011171313.GD6881-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20161011165355.GB6881-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,39 +22,39 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Tue, Oct 11, 2016 at 10:53:55AM -0600, Jason Gunthorpe wrote:
+> On Tue, Oct 11, 2016 at 02:23:15PM +0300, Jarkko Sakkinen wrote:
+> > > >+	chip->bios_dir[cnt] =
+> > > >  	    securityfs_create_file("ascii_bios_measurements",
+> > > >-				   S_IRUSR | S_IRGRP, tpm_dir,
+> > > >+				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
+> > > >  				   (void *)&tpm_ascii_b_measurments_seqops,
+> > > >  				   &tpm_bios_measurements_ops);
+> 
+> > > >+	if (is_bad(chip->bios_dir[cnt]))
+> > > >+		goto err;
+> 
+> > > >+err:
+> > > >+	chip->bios_dir[cnt] = NULL;
+> > > 
+> > > The updated patch looks fine.
+> > > Just, I am not sure if NULL assignment is needed.
+> > 
+> > It's not needed.
+> 
+> It is required to switch an ERR_PTR to NULL, see is_bad()
+> 
+> The original version that used a counter in chip did not need it.
 
+Oops, sorry. I added it back. Thanks for pointing this out.
 
-Hi
-Am 11. Oktober 2016 19:13:13 MESZ, schrieb Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>:
->On Tue, Oct 11, 2016 at 03:01:01PM +0300, Jarkko Sakkinen wrote:
->> From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
->> 
->> In some weird cases it might be possible that the TPM does not set
->> STS.VALID within the given timeout time (or ever) but sets STS.EXPECT
->> (STS=0x0C) In this case the driver gets stuck in the while loop of
->> tpm_tis_send_data and loops endlessly.
->
->Doesn't that exchange mean the TPM has lost synchronization with the
->driver? Or maybe it crashed executing a command or something..
+> Jason
 
-I saw that in the field on quite a few (similar) systems with our lpc tpms - so it affects end users.
-Yes it is caused by some desynchronization or something similar.
-
-If you manually send a commandReady by mmaping the memory region you can un-stuck the driver and the situation was never seen again on that system.
-
-The exact reason how this happens is yet unknown, but the driver should definitely not be stuck in an endless loop (which zombies the application too) in that case but bail out as defined in the TIS protocol. The next access sends the cr which cures the unsynchronization.
-
-
-
-
-Peter
-
--- 
-Sent from my mobile
+/Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
