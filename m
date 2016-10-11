@@ -1,17 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH RESEND 2/3] tpm: replace dynamically
- allocated bios_dir with a static array
-Date: Tue, 11 Oct 2016 14:23:15 +0300
-Message-ID: <20161011112315.GB21688@intel.com>
-References: <1475349926-476-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<1475349926-476-3-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<57FBE39B.2030301@linux.vnet.ibm.com>
+Subject: Re: [PATCH 1/3] tpm_crb: map locality registers
+Date: Tue, 11 Oct 2016 14:25:30 +0300
+Message-ID: <20161011112530.GC21688@intel.com>
+References: <1476177787-15003-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<1476177787-15003-3-git-send-email-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <57FBE39B.2030301-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1476177787-15003-3-git-send-email-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,188 +18,206 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
 Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Oct 11, 2016 at 12:23:15AM +0530, Nayna wrote:
+On Tue, Oct 11, 2016 at 12:23:04PM +0300, Jarkko Sakkinen wrote:
+> In order to provide access to locality registers, this commits adds
+> mapping of the head of the CRB registers, which are located right
+> before the control area.
 > 
+> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> ---
+>  drivers/char/tpm/tpm_crb.c | 86 +++++++++++++++++++++++++++++-----------------
+>  1 file changed, 54 insertions(+), 32 deletions(-)
 > 
-> On 10/02/2016 12:55 AM, Jarkko Sakkinen wrote:
-> >This commit is based on a commit by Nayna Jain. Replaced dynamically
-> >allocated bios_dir with a static array as the size is always constant.
-> >
-> >Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> >Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> >Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> >---
-> >  drivers/char/tpm/tpm-chip.c     |  9 +++---
-> >  drivers/char/tpm/tpm.h          |  3 +-
-> >  drivers/char/tpm/tpm_eventlog.c | 62 +++++++++++++++++++----------------------
-> >  drivers/char/tpm/tpm_eventlog.h | 10 +++----
-> >  4 files changed, 41 insertions(+), 43 deletions(-)
-> >
-> >diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> >index e595013..a56b609 100644
-> >--- a/drivers/char/tpm/tpm-chip.c
-> >+++ b/drivers/char/tpm/tpm-chip.c
-> >@@ -278,14 +278,16 @@ static void tpm_del_char_device(struct tpm_chip *chip)
-> >
-> >  static int tpm1_chip_register(struct tpm_chip *chip)
-> >  {
-> >+	int rc;
-> >+
-> >  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> >  		return 0;
-> >
-> >  	tpm_sysfs_add_device(chip);
-> >
-> >-	chip->bios_dir = tpm_bios_log_setup(dev_name(&chip->dev));
-> >+	rc = tpm_bios_log_setup(chip);
-> >
-> >-	return 0;
-> >+	return rc;
-> >  }
-> >
-> >  static void tpm1_chip_unregister(struct tpm_chip *chip)
-> >@@ -293,8 +295,7 @@ static void tpm1_chip_unregister(struct tpm_chip *chip)
-> >  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> >  		return;
-> >
-> >-	if (chip->bios_dir)
-> >-		tpm_bios_log_teardown(chip->bios_dir);
-> >+	tpm_bios_log_teardown(chip);
-> >  }
-> >
-> >  static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
-> >diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> >index 4d183c9..4c118a4 100644
-> >--- a/drivers/char/tpm/tpm.h
-> >+++ b/drivers/char/tpm/tpm.h
-> >@@ -40,6 +40,7 @@ enum tpm_const {
-> >  	TPM_BUFSIZE = 4096,
-> >  	TPM_NUM_DEVICES = 65536,
-> >  	TPM_RETRY = 50,		/* 5 seconds */
-> >+	TPM_NUM_EVENT_LOG_FILES = 3,
-> >  };
-> >
-> >  enum tpm_timeout {
-> >@@ -171,7 +172,7 @@ struct tpm_chip {
-> >  	unsigned long duration[3]; /* jiffies */
-> >  	bool duration_adjusted;
-> >
-> >-	struct dentry **bios_dir;
-> >+	struct dentry *bios_dir[TPM_NUM_EVENT_LOG_FILES];
-> >
-> >  	const struct attribute_group *groups[3];
-> >  	unsigned int groups_cnt;
-> >diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-> >index 75e6644..f5e1d06 100644
-> >--- a/drivers/char/tpm/tpm_eventlog.c
-> >+++ b/drivers/char/tpm/tpm_eventlog.c
-> >@@ -368,54 +368,50 @@ static int is_bad(void *p)
-> >  	return 0;
-> >  }
-> >
-> >-struct dentry **tpm_bios_log_setup(const char *name)
-> >+int tpm_bios_log_setup(struct tpm_chip *chip)
-> >  {
-> >-	struct dentry **ret = NULL, *tpm_dir, *bin_file, *ascii_file;
-> >+	const char *name = dev_name(&chip->dev);
-> >+	unsigned int cnt;
-> >
-> >-	tpm_dir = securityfs_create_dir(name, NULL);
-> >-	if (is_bad(tpm_dir))
-> >-		goto out;
-> >+	cnt = 0;
-> >+	chip->bios_dir[cnt] =
-> >+		securityfs_create_dir(name, NULL);
-> >+	if (is_bad(chip->bios_dir[cnt]))
-> >+		goto err;
-> >+	cnt++;
-> >
-> >-	bin_file =
-> >+	chip->bios_dir[cnt] =
-> >  	    securityfs_create_file("binary_bios_measurements",
-> >-				   S_IRUSR | S_IRGRP, tpm_dir,
-> >+				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
-> >  				   (void *)&tpm_binary_b_measurments_seqops,
-> >  				   &tpm_bios_measurements_ops);
-> >-	if (is_bad(bin_file))
-> >-		goto out_tpm;
-> >+	if (is_bad(chip->bios_dir[cnt]))
-> >+		goto err;
-> >+	cnt++;
-> >
-> >-	ascii_file =
-> >+	chip->bios_dir[cnt] =
-> >  	    securityfs_create_file("ascii_bios_measurements",
-> >-				   S_IRUSR | S_IRGRP, tpm_dir,
-> >+				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
-> >  				   (void *)&tpm_ascii_b_measurments_seqops,
-> >  				   &tpm_bios_measurements_ops);
-> >-	if (is_bad(ascii_file))
-> >-		goto out_bin;
-> >+	if (is_bad(chip->bios_dir[cnt]))
-> >+		goto err;
-> >+	cnt++;
-> >
-> >-	ret = kmalloc(3 * sizeof(struct dentry *), GFP_KERNEL);
-> >-	if (!ret)
-> >-		goto out_ascii;
-> >-
-> >-	ret[0] = ascii_file;
-> >-	ret[1] = bin_file;
-> >-	ret[2] = tpm_dir;
-> >-
-> >-	return ret;
-> >+	return 0;
-> >
-> >-out_ascii:
-> >-	securityfs_remove(ascii_file);
-> >-out_bin:
-> >-	securityfs_remove(bin_file);
-> >-out_tpm:
-> >-	securityfs_remove(tpm_dir);
-> >-out:
-> >-	return NULL;
-> >+err:
-> >+	chip->bios_dir[cnt] = NULL;
-> 
-> The updated patch looks fine.
-> Just, I am not sure if NULL assignment is needed.
+> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+> index 65040d7..c34318b 100644
+> --- a/drivers/char/tpm/tpm_crb.c
+> +++ b/drivers/char/tpm/tpm_crb.c
+> @@ -52,18 +52,28 @@ enum crb_cancel {
+>  	CRB_CANCEL_INVOKE	= BIT(0),
+>  };
+>  
+> -struct crb_control_area {
+> -	u32 req;
+> -	u32 sts;
+> -	u32 cancel;
+> -	u32 start;
+> -	u32 int_enable;
+> -	u32 int_sts;
+> -	u32 cmd_size;
+> -	u32 cmd_pa_low;
+> -	u32 cmd_pa_high;
+> -	u32 rsp_size;
+> -	u64 rsp_pa;
+> +struct crb_regs_head {
+> +	u32 loc_state;
+> +	u32 reserved1;
+> +	u32 loc_ctrl;
+> +	u32 loc_sts;
+> +	u8 reserved2[32];
+> +	u64 intf_id;
+> +	u64 ctrl_ext;
+> +} __packed;
+> +
+> +struct crb_regs_tail {
+> +	u32 ctrl_req;
+> +	u32 ctrl_sts;
+> +	u32 ctrl_cancel;
+> +	u32 ctrl_start;
+> +	u32 ctrl_int_enable;
+> +	u32 ctrl_int_sts;
+> +	u32 ctrl_cmd_size;
+> +	u32 ctrl_cmd_pa_low;
+> +	u32 ctrl_cmd_pa_high;
+> +	u32 ctrl_rsp_size;
+> +	u64 ctrl_rsp_pa;
+>  } __packed;
+>  
+>  enum crb_status {
+> @@ -78,7 +88,8 @@ enum crb_flags {
+>  struct crb_priv {
+>  	unsigned int flags;
+>  	void __iomem *iobase;
+> -	struct crb_control_area __iomem *cca;
+> +	struct crb_regs_head __iomem *regs_h;
+> +	struct crb_regs_tail __iomem *regs_t;
+>  	u8 __iomem *cmd;
+>  	u8 __iomem *rsp;
+>  	u32 cmd_size;
+> @@ -104,7 +115,7 @@ static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+>  	if (priv->flags & CRB_FL_ACPI_START)
+>  		return 0;
+>  
+> -	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->cca->req);
+> +	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
+>  	/* we don't really care when this settles */
+>  
+>  	return 0;
+> @@ -128,16 +139,18 @@ static int __maybe_unused crb_cmd_ready(struct device *dev,
+>  					struct crb_priv *priv)
+>  {
+>  	ktime_t stop, start;
+> +	u32 req;
+>  
+>  	if (priv->flags & CRB_FL_ACPI_START)
+>  		return 0;
+>  
+> -	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->cca->req);
+> +	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
+>  
+>  	start = ktime_get();
+>  	stop = ktime_add(start, ms_to_ktime(TPM2_TIMEOUT_C));
+>  	do {
+> -		if (!(ioread32(&priv->cca->req) & CRB_CTRL_REQ_CMD_READY)) {
+> +		req = ioread32(&priv->regs_t->ctrl_req);
+> +		if (!(req & CRB_CTRL_REQ_CMD_READY)) {
+>  			dev_dbg(dev, "cmdReady in %lld usecs\n",
+>  				ktime_to_us(ktime_sub(ktime_get(), start)));
+>  			return 0;
+> @@ -145,7 +158,7 @@ static int __maybe_unused crb_cmd_ready(struct device *dev,
+>  		usleep_range(50, 100);
+>  	} while (ktime_before(ktime_get(), stop));
+>  
+> -	if (ioread32(&priv->cca->req) & CRB_CTRL_REQ_CMD_READY) {
+> +	if (ioread32(&priv->regs_t->ctrl_req) & CRB_CTRL_REQ_CMD_READY) {
+>  		dev_warn(dev, "cmdReady timed out\n");
+>  		return -ETIME;
+>  	}
+> @@ -158,7 +171,7 @@ static u8 crb_status(struct tpm_chip *chip)
+>  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+>  	u8 sts = 0;
+>  
+> -	if ((ioread32(&priv->cca->start) & CRB_START_INVOKE) !=
+> +	if ((ioread32(&priv->regs_t->ctrl_start) & CRB_START_INVOKE) !=
+>  	    CRB_START_INVOKE)
+>  		sts |= CRB_DRV_STS_COMPLETE;
+>  
+> @@ -174,7 +187,7 @@ static int crb_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+>  	if (count < 6)
+>  		return -EIO;
+>  
+> -	if (ioread32(&priv->cca->sts) & CRB_CTRL_STS_ERROR)
+> +	if (ioread32(&priv->regs_t->ctrl_sts) & CRB_CTRL_STS_ERROR)
+>  		return -EIO;
+>  
+>  	memcpy_fromio(buf, priv->rsp, 6);
+> @@ -213,7 +226,7 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+>  	/* Zero the cancel register so that the next command will not get
+>  	 * canceled.
+>  	 */
+> -	iowrite32(0, &priv->cca->cancel);
+> +	iowrite32(0, &priv->regs_t->ctrl_cancel);
+>  
+>  	if (len > priv->cmd_size) {
+>  		dev_err(&chip->dev, "invalid command count value %zd %d\n",
+> @@ -227,7 +240,7 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+>  	wmb();
+>  
+>  	if (priv->flags & CRB_FL_CRB_START)
+> -		iowrite32(CRB_START_INVOKE, &priv->cca->start);
+> +		iowrite32(CRB_START_INVOKE, &priv->regs_t->ctrl_start);
+>  
+>  	if (priv->flags & CRB_FL_ACPI_START)
+>  		rc = crb_do_acpi_start(chip);
+> @@ -239,7 +252,7 @@ static void crb_cancel(struct tpm_chip *chip)
+>  {
+>  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+>  
+> -	iowrite32(CRB_CANCEL_INVOKE, &priv->cca->cancel);
+> +	iowrite32(CRB_CANCEL_INVOKE, &priv->regs_t->ctrl_cancel);
+>  
+>  	if ((priv->flags & CRB_FL_ACPI_START) && crb_do_acpi_start(chip))
+>  		dev_err(&chip->dev, "ACPI Start failed\n");
+> @@ -248,7 +261,7 @@ static void crb_cancel(struct tpm_chip *chip)
+>  static bool crb_req_canceled(struct tpm_chip *chip, u8 status)
+>  {
+>  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+> -	u32 cancel = ioread32(&priv->cca->cancel);
+> +	u32 cancel = ioread32(&priv->regs_t->ctrl_cancel);
+>  
+>  	return (cancel & CRB_CANCEL_INVOKE) == CRB_CANCEL_INVOKE;
+>  }
+> @@ -290,6 +303,8 @@ static void __iomem *crb_map_res(struct device *dev, struct crb_priv *priv,
+>  	if (start != new_res.start)
+>  		return (void __iomem *) ERR_PTR(-EINVAL);
+>  
+> +	dev_dbg(dev, "%pr %pr", io_res, &new_res);
+> +
+>  	if (!resource_contains(io_res, &new_res))
+>  		return devm_ioremap_resource(dev, &new_res);
+>  
+> @@ -325,10 +340,17 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+>  	if (IS_ERR(priv->iobase))
+>  		return PTR_ERR(priv->iobase);
+>  
+> -	priv->cca = crb_map_res(dev, priv, &io_res, buf->control_address,
+> -				sizeof(struct crb_control_area));
+> -	if (IS_ERR(priv->cca))
+> -		return PTR_ERR(priv->cca);
+> +	if (priv->flags & CRB_FL_CRB_START) {
 
-It's not needed.
+Oops. Should be check for CRB_FL_ACPI_START.
 
-> >+	tpm_bios_log_teardown(chip);
-> >+	return -EIO;
-> >  }
-> >
-> >-void tpm_bios_log_teardown(struct dentry **lst)
-> >+void tpm_bios_log_teardown(struct tpm_chip *chip)
-> >  {
-> >  	int i;
-> >
-> >-	for (i = 0; i < 3; i++)
-> >-		securityfs_remove(lst[i]);
-> >+	for (i = (TPM_NUM_EVENT_LOG_FILES - 1); i >= 0; i--) {
-> >+		if (chip->bios_dir[i])
-> 
-> Probably, this check is not required because securityfs_remove() takes care
-> of checking both NULL and err dentry.
-
-Thanks. I did the adjustments to the eventlog branch. Please use these
-three patches as "head" for your series. I'll apply the rest of patches
-to this branch when you post the next version of the series.
-
-Please also include these three patches to the next version when you
-post even if they are applied there. The topic branch is there to make
-the testing easier.
-
-> Thanks & Regards,
->    - Nayna
+Because we anyway *always* set CRB_FL_CRB_START for everything
+how about ripping of CRB_FL_CRB_START flag completely in order
+to not cause mistakes like this in future?
 
 /Jarkko
+
+> +		priv->regs_h = crb_map_res(dev, priv, &io_res, io_res.start,
+> +					   sizeof(struct crb_regs_head));
+> +		if (IS_ERR(priv->regs_h))
+> +			return PTR_ERR(priv->regs_h);
+> +	}
+> +
+> +	priv->regs_t = crb_map_res(dev, priv, &io_res, buf->control_address,
+> +				   sizeof(struct crb_regs_tail));
+> +	if (IS_ERR(priv->regs_t))
+> +		return PTR_ERR(priv->regs_t);
+
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
