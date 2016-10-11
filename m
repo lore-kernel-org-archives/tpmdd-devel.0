@@ -1,20 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH RESEND 2/3] tpm: replace dynamically
- allocated bios_dir with a static array
-Date: Tue, 11 Oct 2016 21:12:11 +0300
-Message-ID: <20161011181211.GB6900@intel.com>
-References: <1475349926-476-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<1475349926-476-3-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<57FBE39B.2030301@linux.vnet.ibm.com>
-	<20161011112315.GB21688@intel.com>
-	<20161011165355.GB6881@obsidianresearch.com>
-	<57FD1F3C.6070705@linux.vnet.ibm.com>
+Subject: Re: [PATCH 1/3] tpm_crb: map locality registers
+Date: Tue, 11 Oct 2016 21:21:00 +0300
+Message-ID: <20161011182100.GC6900@intel.com>
+References: <1476177787-15003-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<1476177787-15003-3-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<20161011170143.GC6881@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <57FD1F3C.6070705-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <20161011170143.GC6881-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,50 +19,63 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, g@intel.com
 Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Oct 11, 2016 at 10:49:56PM +0530, Nayna wrote:
+On Tue, Oct 11, 2016 at 11:01:43AM -0600, Jason Gunthorpe wrote:
+> On Tue, Oct 11, 2016 at 12:23:04PM +0300, Jarkko Sakkinen wrote:
+> > In order to provide access to locality registers, this commits adds
+> > mapping of the head of the CRB registers, which are located right
+> > before the control area.
 > 
+> I think you should squash this into the prior patch, no sense in
+> changing all these lines twice
 > 
-> On 10/11/2016 10:23 PM, Jason Gunthorpe wrote:
-> >On Tue, Oct 11, 2016 at 02:23:15PM +0300, Jarkko Sakkinen wrote:
-> >>>>+	chip->bios_dir[cnt] =
-> >>>>  	    securityfs_create_file("ascii_bios_measurements",
-> >>>>-				   S_IRUSR | S_IRGRP, tpm_dir,
-> >>>>+				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
-> >>>>  				   (void *)&tpm_ascii_b_measurments_seqops,
-> >>>>  				   &tpm_bios_measurements_ops);
-> >
-> >>>>+	if (is_bad(chip->bios_dir[cnt]))
-> >>>>+		goto err;
-> >
-> >>>>+err:
-> >>>>+	chip->bios_dir[cnt] = NULL;
-> >>>
-> >>>The updated patch looks fine.
-> >>>Just, I am not sure if NULL assignment is needed.
-> >>
-> >>It's not needed.
-> >
-> >It is required to switch an ERR_PTR to NULL, see is_bad()
-> 
-> My understanding is that securityfs_remove() takes care of both NULL and
-> ERR_PTR().
-> 
-> From securityfs_remove():
-> 
->  if (!dentry || IS_ERR(dentry))
->                 return;
+> But looks better to me.
 
-Right. I just checked from LXR. Seems weird that they have that kind of
-special handling for IS_ERR. Checking for NULL is more usual.  I think I
-keep setting NULL anyway if nothing else for robustness.  Anyway, thanks
-for pointing this out.
+So... do you suggest to squash with request/reliquish locality stuff?
+Just checking because this is 1/3 :)
 
-> Thanks & Regards,
->   - Nayna
+> > -	priv->cca = crb_map_res(dev, priv, &io_res, buf->control_address,
+> > -				sizeof(struct crb_control_area));
+> > -	if (IS_ERR(priv->cca))
+> > -		return PTR_ERR(priv->cca);
+> > +	if (priv->flags & CRB_FL_CRB_START) {
+> > +		priv->regs_h = crb_map_res(dev, priv, &io_res, io_res.start,
+> > +					   sizeof(struct crb_regs_head));
+> > +		if (IS_ERR(priv->regs_h))
+> > +			return PTR_ERR(priv->regs_h);
+> > +	}
+> > +
+> > +	priv->regs_t = crb_map_res(dev, priv, &io_res, buf->control_address,
+> > +				   sizeof(struct crb_regs_tail));
+> > +	if (IS_ERR(priv->regs_t))
+> > +		return PTR_ERR(priv->regs_t);
+> 
+> So.. The ACPI IO region starts at the head area and continues to
+> include the control area, as one nice sane region - except for some
+> older stuff that puts the control area outside the ACPI IO region?
+
+Yes. The old hardware triggered SMM to do a DMA transfer (those that
+so called ACPI start). As a workaround for some of the hardware the
+driver always sets the CRB start flag also in the control area.
+
+That's why I also propose that we replace them with a single flag.
+
+> That makes a lot more sense..
+> 
+> Maybe chuck in a
+> 
+>    if (priv->flags & CRB_FL_CRB_START) {
+>       if (buf->control_address != io_res.start + sizeof(struct
+>           crb_regs_head))
+>           dev_warn(dev, FIRMWARE_BUG "Bad ACPI memory layout")
+> 
+> Jason
+
+As a sanity check this would probably make sense.
+
 
 /Jarkko
 
