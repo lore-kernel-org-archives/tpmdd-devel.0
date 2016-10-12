@@ -1,24 +1,17 @@
-From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v4 3/8] tpm: validate event log access
- before tpm_bios_log_setup
-Date: Wed, 12 Oct 2016 10:46:22 +0530
-Message-ID: <57FDC726.8010008@linux.vnet.ibm.com>
-References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1475051682-23060-4-git-send-email-nayna@linux.vnet.ibm.com>
-	<20161003171419.GE6801@obsidianresearch.com>
-	<57F9C4C4.2070508@linux.vnet.ibm.com>
-	<20161009232544.GC24139@obsidianresearch.com>
-	<57FAF49D.7040009@linux.vnet.ibm.com>
-	<20161010032113.GA26363@obsidianresearch.com>
-	<57FB1551.9000806@linux.vnet.ibm.com>
-	<20161011165143.GA6881@obsidianresearch.com>
-	<57FD3949.9050302@linux.vnet.ibm.com>
-	<20161011201558.GB21656@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] char/tpm: Check return code of
+	wait_for_tpm_stat
+Date: Wed, 12 Oct 2016 15:16:06 +0300
+Message-ID: <20161012121606.GA11604@intel.com>
+References: <1476187261-29027-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<20161011171313.GD6881@obsidianresearch.com>
+	<9174B547-9CD1-4F1B-A2A7-38B9A6AA3B33@gmx.de>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20161011201558.GB21656-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <9174B547-9CD1-4F1B-A2A7-38B9A6AA3B33-Mmb7MZpHnFY@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -27,79 +20,38 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Tue, Oct 11, 2016 at 08:01:09PM +0200, Peter Huewe wrote:
+> 
+> 
+> Hi
+> Am 11. Oktober 2016 19:13:13 MESZ, schrieb Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>:
+> >On Tue, Oct 11, 2016 at 03:01:01PM +0300, Jarkko Sakkinen wrote:
+> >> From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+> >> 
+> >> In some weird cases it might be possible that the TPM does not set
+> >> STS.VALID within the given timeout time (or ever) but sets STS.EXPECT
+> >> (STS=0x0C) In this case the driver gets stuck in the while loop of
+> >> tpm_tis_send_data and loops endlessly.
+> >
+> >Doesn't that exchange mean the TPM has lost synchronization with the
+> >driver? Or maybe it crashed executing a command or something..
+> 
+> I saw that in the field on quite a few (similar) systems with our lpc tpms - so it affects end users.
+> Yes it is caused by some desynchronization or something similar.
+> 
+> If you manually send a commandReady by mmaping the memory region you can un-stuck the driver and the situation was never seen again on that system.
+> 
+> The exact reason how this happens is yet unknown, but the driver should definitely not be stuck in an endless loop (which zombies the application too) in that case but bail out as defined in the TIS protocol. The next access sends the cr which cures the unsynchronization.
 
+Even as a sanity check return codes should be checked so in
+any case I leaned towards applying this patch. It makes the
+driver more robust.
 
-On 10/12/2016 01:45 AM, Jason Gunthorpe wrote:
-> On Wed, Oct 12, 2016 at 12:41:05AM +0530, Nayna wrote:
->
->> Yeah, I actually tried this today.
->> And on call of securityfs_remove(), release() gets called for the
->> opened
->
-> Are you saying securityfs_remove somehow causes a synchronous call to
-> release? How does that come about?
->
->> There are actually two private data:
->> inode->private
->> seq->private
->>
->> I understand inode->private is where we pass sfs_data has both chip and
->> seqops. This is the one being used in open(), release() and defined as NULL
->> in teardown().
->
->> But seq->private is used by seq_ops. And I am still not sure how passing
->> seq->private as chip can help.
->
->> I might be missing something basic, so can you please help me to understand
->> that.
->
-> open does:
->
->   struct tpm_chip *chip = inode->i_private
->   get_device(&chip->dev);
->   seq = file->private_data;
->   seq->private = chip;
-
-Yeah, I realized later that I overlooked file->private_data.
-In total, there are three private actually.
-
->
-> release does:
->
->   struct seq_file *seq = file->private_data;
->   struct tpm_chip *chip = seq->private;
->   put_device(&chip->dev);
->
-> seqops like tpm_bios_measurements_start do:
->
->   struct tpm_chip *chip = m->private;
->   struct tpm_bios_log *log = &chip->log;
->
-> [locking, error handling, and other stuff elided]
->
-> open is the only thing that ever looks a inode->i_private.
->
-> open krefs's chip and stores it in seq->private
->
-> seqop accessors use seq->private->log to access the log, the memory of
-> which is guared by the kref.
->
-> release drops the kref on chip and does not use inode->i_private
-
-Thanks for the detailed explanation.
-
-Thanks & Regards,
-    - Nayna
-
-
->
-> Jason
->
-
+/Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
