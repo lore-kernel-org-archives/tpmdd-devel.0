@@ -1,17 +1,16 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] char/tpm: Check return code of
-	wait_for_tpm_stat
-Date: Wed, 12 Oct 2016 15:16:06 +0300
-Message-ID: <20161012121606.GA11604@intel.com>
-References: <1476187261-29027-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<20161011171313.GD6881@obsidianresearch.com>
-	<9174B547-9CD1-4F1B-A2A7-38B9A6AA3B33@gmx.de>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH v4 6/8] tpm: remove printk error messages
+Date: Wed, 12 Oct 2016 18:25:23 +0530
+Message-ID: <57FE32BB.2060901@linux.vnet.ibm.com>
+References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1475051682-23060-7-git-send-email-nayna@linux.vnet.ibm.com>
+	<57F9A392.7050302@linux.vnet.ibm.com>
+	<20161009232208.GB24139@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <9174B547-9CD1-4F1B-A2A7-38B9A6AA3B33-Mmb7MZpHnFY@public.gmane.org>
+In-Reply-To: <20161009232208.GB24139-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,38 +19,54 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Oct 11, 2016 at 08:01:09PM +0200, Peter Huewe wrote:
-> 
-> 
-> Hi
-> Am 11. Oktober 2016 19:13:13 MESZ, schrieb Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>:
-> >On Tue, Oct 11, 2016 at 03:01:01PM +0300, Jarkko Sakkinen wrote:
-> >> From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-> >> 
-> >> In some weird cases it might be possible that the TPM does not set
-> >> STS.VALID within the given timeout time (or ever) but sets STS.EXPECT
-> >> (STS=0x0C) In this case the driver gets stuck in the while loop of
-> >> tpm_tis_send_data and loops endlessly.
-> >
-> >Doesn't that exchange mean the TPM has lost synchronization with the
-> >driver? Or maybe it crashed executing a command or something..
-> 
-> I saw that in the field on quite a few (similar) systems with our lpc tpms - so it affects end users.
-> Yes it is caused by some desynchronization or something similar.
-> 
-> If you manually send a commandReady by mmaping the memory region you can un-stuck the driver and the situation was never seen again on that system.
-> 
-> The exact reason how this happens is yet unknown, but the driver should definitely not be stuck in an endless loop (which zombies the application too) in that case but bail out as defined in the TIS protocol. The next access sends the cr which cures the unsynchronization.
 
-Even as a sanity check return codes should be checked so in
-any case I leaned towards applying this patch. It makes the
-driver more robust.
 
-/Jarkko
+On 10/10/2016 04:52 AM, Jason Gunthorpe wrote:
+> On Sun, Oct 09, 2016 at 07:25:30AM +0530, Nayna wrote:
+>
+>>> diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
+>>> index 22b8f81..1464cae 100644
+>>> +++ b/drivers/char/tpm/tpm_of.c
+>>> @@ -31,40 +31,34 @@ int read_log_of(struct tpm_chip *chip)
+>>>   	log = &chip->log;
+>>>   	if (chip->dev.parent->of_node)
+>>>   		np = chip->dev.parent->of_node;
+>>> -	if (!np) {
+>>> -		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
+>>> +	if (!np)
+>>>   		return -ENODEV;
+>>> -	}
+>
+>
+>>>   	sizep = of_get_property(np, "linux,sml-size", NULL);
+>>>   	if (sizep == NULL) {
+>>> -		pr_err("%s: ERROR - SML size not found\n", __func__);
+>>> -		goto cleanup_eio;
+>>> +		dev_dbg(&chip->dev, "%s: ERROR - SML size not found\n",
+>>> +			__func__);
+>>> +		return -EIO;
+>>>   	}
+>
+> The properties are optional (eg my DT bound TPMs on ARM do not have
+> them) so I'm not sure the debug is appropriate either...
+
+Hmm.. does that imply that do we even need a msg ?. or probably if 
+dev_info(..) looks appropriate, this can give the indication that the 
+platform does not support eventlog, and that is ok.
+
+Thanks & Regards,
+   - Nayna
+
+>
+> Everything else looks OK to me.
+>
+> Jason
+>
+
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
