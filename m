@@ -1,18 +1,16 @@
-From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: Re: [PATCH 2/2] tpm: enhance TPM 2.0 PCR extend to
- support multiple banks
-Date: Wed, 12 Oct 2016 19:02:55 +0000
-Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B542F8CFF@hasmsx108.ger.corp.intel.com>
-References: <1475979357-1167-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1475979357-1167-3-git-send-email-nayna@linux.vnet.ibm.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B542F6C75@hasmsx108.ger.corp.intel.com>
-	<57FE69D9.4070304@linux.vnet.ibm.com>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH v4 3/8] tpm: validate event log access
+ before tpm_bios_log_setup
+Date: Fri, 14 Oct 2016 00:21:11 +0530
+Message-ID: <57FFD79F.7080405@linux.vnet.ibm.com>
+References: <1475051682-23060-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1475051682-23060-4-git-send-email-nayna@linux.vnet.ibm.com>
+	<20161001120125.GC8664@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <57FE69D9.4070304-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Content-Language: en-US
+In-Reply-To: <20161001120125.GC8664-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,89 +19,283 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-> 
-> 
-> On 10/09/2016 11:58 AM, Winkler, Tomas wrote:
-> >> Like TPM 1.2, the current device driver for TPM 2.0 supports
-> >> extending only to the SHA1 PCR bank. But the TPM 2.0 supports
-> >> multiple PCR banks and the specification recommends extending to all
-> >> active PCR banks, this patch enhances the existing device driver
-> >> support for TPM 2.0 extend function and its in-kernel interface to extend to
-> all active PCR banks.
-> >>
-> >> The existing in-kernel interface expects only a SHA1 digest.
-> >> Hence, to extend all active PCR banks with differing digest sizes for
-> >> TPM 2.0, the SHA1 digest is padded with trailing 0's as needed.
-> >>
-> >> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> >> ---
-> >>   drivers/char/tpm/tpm-interface.c | 17 ++++++++--
-> >>   drivers/char/tpm/tpm2-cmd.c      | 71 ++++++++++++++++++++++++++-------
-> -----
-> >> --
-> >>   drivers/char/tpm/tpm2.h          | 18 ++++++++++
-> >>   3 files changed, 79 insertions(+), 27 deletions(-)
-> >>
-> >> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-
-> >> interface.c index 7743e8a..5dd5005 100644
-> >> --- a/drivers/char/tpm/tpm-interface.c
-> >> +++ b/drivers/char/tpm/tpm-interface.c
-> >> @@ -7,6 +7,7 @@
-> >>    * Dave Safford <safford-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
-> >>    * Reiner Sailer <sailer-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
-> >>    * Kylene Hall <kjhall-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-> >> + * Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> >>    *
-> >>    * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-> >>    *
-> >> @@ -32,6 +33,7 @@
-> >>   #include <linux/pm_runtime.h>
-> >>
-> >>   #include "tpm.h"
-> >> +#include "tpm2.h"
-> >>   #include "tpm_eventlog.h"
-> >>
-> >>   #define TPM_MAX_ORDINAL 243
-> >> @@ -752,7 +754,7 @@ static const struct tpm_input_header
-> >> pcrextend_header = {  int tpm_pcr_extend(u32 chip_num, int pcr_idx,
-> >> const u8
-> >> *hash)  {
-> >>   	struct tpm_cmd_t cmd;
-> >> -	int rc;
-> >> +	int i, rc;
-> >>   	struct tpm_chip *chip;
-> >>
-> >>   	chip = tpm_chip_find_get(chip_num); @@ -760,7 +762,18 @@ int
-> >> tpm_pcr_extend(u32 chip_num, int pcr_idx, const
-> >> u8 *hash)
-> >>   		return -ENODEV;
-> >>
-> >>   	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
-> >> -		rc = tpm2_pcr_extend(chip, pcr_idx, hash);
-> >> +		struct tpml_digest_values d_values;
-> >> +
-> >> +		memset(&d_values, 0, sizeof(d_values));
-> >> +
-> >> +		for (i = 0; i < chip->no_of_active_banks; i++) {
-> >> +			d_values.digests[i].alg_id =
-> >> +				chip->active_banks[i];
-> >> +			memcpy(d_values.digests[i].digest, hash,
-> >> +			       TPM_DIGEST_SIZE);
-> >> +			d_values.count++;
-> >> +		}
-> >
-> > This is tpm2 only feature so  I suggest to create a function inside tpm2-chip.c
-> instead of  open coding  it here.
-> > This will probably also prevent all this code movement.
-> 
-> Thanks Tomas for reviewing, will look at this.
-> And I think you meant inside tpm2-cmd.c ?
 
-Right.
-Tomas 
+
+On 10/01/2016 05:31 PM, Jarkko Sakkinen wrote:
+> On Wed, Sep 28, 2016 at 04:34:37AM -0400, Nayna Jain wrote:
+>> Currently, the securityfs pseudo files for obtaining the firmware
+>> event log are created whether the event log properties exist or not.
+>> This patch creates ascii and bios measurements pseudo files
+>> only if read_log() is successful.
+>
+> Re-reviewing this. The commit message should mention about preventing
+> a race condition.
+>
+> I think Jason was right. It makes code much more manageable with a
+> small price of memory consumption.
+>
+>> Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+>> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+>> ---
+>>   drivers/char/tpm/tpm.h          |  6 +++++
+>>   drivers/char/tpm/tpm_acpi.c     | 12 +++++++---
+>>   drivers/char/tpm/tpm_eventlog.c | 53 +++++++++++++++++++----------------------
+>>   drivers/char/tpm/tpm_eventlog.h |  7 +++++-
+>>   drivers/char/tpm/tpm_of.c       |  4 +++-
+>>   5 files changed, 48 insertions(+), 34 deletions(-)
+>>
+>> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+>> index b5866bb..68630cd 100644
+>> --- a/drivers/char/tpm/tpm.h
+>> +++ b/drivers/char/tpm/tpm.h
+>> @@ -35,6 +35,8 @@
+>>   #include <linux/cdev.h>
+>>   #include <linux/highmem.h>
+>>
+>> +#include "tpm_eventlog.h"
+>> +
+>>   enum tpm_const {
+>>   	TPM_MINOR = 224,	/* officially assigned */
+>>   	TPM_BUFSIZE = 4096,
+>> @@ -156,6 +158,10 @@ struct tpm_chip {
+>>   	struct rw_semaphore ops_sem;
+>>   	const struct tpm_class_ops *ops;
+>>
+>> +	struct tpm_bios_log log;
+>
+> struct tpm_bios_log should be renamed as struct tpm_event_log in some
+> commit of this patch set as tpm_bios_log is a misleading name.
+
+My understanding is that other event log functions are also named in 
+consistent with tpm_bios_log naming.. for eg.. 
+tpm_bios_log_setup(/teardown), tpm_bios_measurements_open,etc. So, 
+wanted to understand if idea is only to change the struct name to 
+tpm_event_log ?
+
+Thanks & Regards,
+   - Nayna
+
+>
+>> +	struct tpm_securityfs_data bin_sfs_data;
+>> +	struct tpm_securityfs_data ascii_sfs_data;
+>
+> I think this is otherwise right but the struct name is very clunky.
+> First of all it doesn't own the data and IMHO now it kind of implies
+> of owning.
+>
+> Maybe something like tpm_event_log_fd would a better name. It's a
+> description of the event log file essentially.
+>
+>> +
+>>   	unsigned int flags;
+>>
+>>   	int dev_num;		/* /dev/tpm# */
+>> diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
+>> index 565a947..4d6c2d7 100644
+>> --- a/drivers/char/tpm/tpm_acpi.c
+>> +++ b/drivers/char/tpm/tpm_acpi.c
+>> @@ -45,13 +45,15 @@ struct acpi_tcpa {
+>>   };
+>>
+>>   /* read binary bios log */
+>> -int read_log(struct tpm_bios_log *log)
+>> +int read_log(struct tpm_chip *chip)
+>>   {
+>>   	struct acpi_tcpa *buff;
+>>   	acpi_status status;
+>>   	void __iomem *virt;
+>>   	u64 len, start;
+>> +	struct tpm_bios_log *log;
+>>
+>> +	log = &chip->log;
+>>   	if (log->bios_event_log != NULL) {
+>>   		printk(KERN_ERR
+>>   		       "%s: ERROR - Eventlog already initialized\n",
+>> @@ -97,13 +99,17 @@ int read_log(struct tpm_bios_log *log)
+>>
+>>   	virt = acpi_os_map_iomem(start, len);
+>>   	if (!virt) {
+>> -		kfree(log->bios_event_log);
+>>   		printk("%s: ERROR - Unable to map memory\n", __func__);
+>> -		return -EIO;
+>> +		goto err;
+>>   	}
+>>
+>>   	memcpy_fromio(log->bios_event_log, virt, len);
+>>
+>>   	acpi_os_unmap_iomem(virt, len);
+>>   	return 0;
+>> +
+>> +err:
+>> +	kfree(log->bios_event_log);
+>> +	return -EIO;
+>> +
+>>   }
+>> diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+>> index f1df782..a8cd4a1 100644
+>> --- a/drivers/char/tpm/tpm_eventlog.c
+>> +++ b/drivers/char/tpm/tpm_eventlog.c
+>> @@ -261,14 +261,6 @@ static int tpm_binary_bios_measurements_show(struct seq_file *m, void *v)
+>>   static int tpm_bios_measurements_release(struct inode *inode,
+>>   					 struct file *file)
+>>   {
+>> -	struct seq_file *seq = file->private_data;
+>> -	struct tpm_bios_log *log = seq->private;
+>> -
+>> -	if (log) {
+>> -		kfree(log->bios_event_log);
+>> -		kfree(log);
+>> -	}
+>> -
+>>   	return seq_release(inode, file);
+>>   }
+>>
+>> @@ -323,34 +315,19 @@ static int tpm_bios_measurements_open(struct inode *inode,
+>>   					    struct file *file)
+>>   {
+>>   	int err;
+>> -	struct tpm_bios_log *log;
+>>   	struct seq_file *seq;
+>> -	const struct seq_operations *seqops =
+>> -		(const struct seq_operations *)inode->i_private;
+>> -
+>> -	log = kzalloc(sizeof(struct tpm_bios_log), GFP_KERNEL);
+>> -	if (!log)
+>> -		return -ENOMEM;
+>> -
+>> -	err = read_log(log);
+>> -	if (err)
+>> -		goto out_free;
+>> +	const struct tpm_securityfs_data *sfs_data =
+>> +		(const struct tpm_securityfs_data *)inode->i_private;
+>> +	const struct seq_operations *seqops = sfs_data->seqops;
+>>
+>>   	/* now register seq file */
+>>   	err = seq_open(file, seqops);
+>>   	if (!err) {
+>>   		seq = file->private_data;
+>> -		seq->private = log;
+>> -	} else {
+>> -		goto out_free;
+>> +		seq->private = sfs_data->log;
+>>   	}
+>>
+>> -out:
+>>   	return err;
+>> -out_free:
+>> -	kfree(log->bios_event_log);
+>> -	kfree(log);
+>> -	goto out;
+>>   }
+>>
+>>   static const struct file_operations tpm_bios_measurements_ops = {
+>> @@ -372,6 +349,18 @@ static int is_bad(void *p)
+>>   int tpm_bios_log_setup(struct tpm_chip *chip)
+>>   {
+>>   	const char *name = dev_name(&chip->dev);
+>> +	int rc = 0;
+>> +
+>> +	rc = read_log(chip);
+>> +	/*
+>> +	 * read_log failure means event log is not supported except for ENOMEM
+>> +	 */
+>> +	if (rc < 0) {
+>> +		if (rc == -ENOMEM)
+>> +			return rc;
+>> +		else
+>> +			return 0;
+>> +	}
+>>
+>>   	chip->bios_dir_count = 0;
+>>   	chip->bios_dir[chip->bios_dir_count] =
+>> @@ -380,19 +369,24 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+>>   		goto err;
+>>   	chip->bios_dir_count++;
+>>
+>> +	chip->bin_sfs_data.log = &chip->log;
+>> +	chip->bin_sfs_data.seqops = &tpm_binary_b_measurments_seqops;
+>> +
+>>   	chip->bios_dir[chip->bios_dir_count] =
+>>   	    securityfs_create_file("binary_bios_measurements",
+>>   				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
+>> -				   (void *)&tpm_binary_b_measurments_seqops,
+>> +				   (void *)&chip->bin_sfs_data,
+>>   				   &tpm_bios_measurements_ops);
+>>   	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
+>>   		goto err;
+>>   	chip->bios_dir_count++;
+>>
+>> +	chip->ascii_sfs_data.log = &chip->log;
+>> +	chip->ascii_sfs_data.seqops =  &tpm_ascii_b_measurments_seqops;
+>>   	chip->bios_dir[chip->bios_dir_count] =
+>>   	    securityfs_create_file("ascii_bios_measurements",
+>>   				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
+>> -				   (void *)&tpm_ascii_b_measurments_seqops,
+>> +				   (void *)&chip->ascii_sfs_data,
+>>   				   &tpm_bios_measurements_ops);
+>>   	if (is_bad(chip->bios_dir[chip->bios_dir_count]))
+>>   		goto err;
+>> @@ -413,4 +407,5 @@ void tpm_bios_log_teardown(struct tpm_chip *chip)
+>>   		securityfs_remove(chip->bios_dir[i-1]);
+>>   	chip->bios_dir_count = i;
+>>
+>> +	kfree(chip->log.bios_event_log);
+>>   }
+>> diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
+>> index fd3357e..7ea066c 100644
+>> --- a/drivers/char/tpm/tpm_eventlog.h
+>> +++ b/drivers/char/tpm/tpm_eventlog.h
+>> @@ -22,6 +22,11 @@ struct tpm_bios_log {
+>>   	void *bios_event_log_end;
+>>   };
+>>
+>> +struct tpm_securityfs_data {
+>> +	struct tpm_bios_log *log;
+>> +	const struct seq_operations *seqops;
+>> +};
+>> +
+>>   struct tcpa_event {
+>>   	u32 pcr_index;
+>>   	u32 event_type;
+>> @@ -73,7 +78,7 @@ enum tcpa_pc_event_ids {
+>>   	HOST_TABLE_OF_DEVICES,
+>>   };
+>>
+>> -int read_log(struct tpm_bios_log *log);
+>> +int read_log(struct tpm_chip *chip);
+>>
+>>   #if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
+>>   	defined(CONFIG_ACPI)
+>> diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
+>> index 570f30c..68d891a 100644
+>> --- a/drivers/char/tpm/tpm_of.c
+>> +++ b/drivers/char/tpm/tpm_of.c
+>> @@ -20,12 +20,14 @@
+>>   #include "tpm.h"
+>>   #include "tpm_eventlog.h"
+>>
+>> -int read_log(struct tpm_bios_log *log)
+>> +int read_log(struct tpm_chip *chip)
+>>   {
+>>   	struct device_node *np;
+>>   	const u32 *sizep;
+>>   	const u64 *basep;
+>> +	struct tpm_bios_log *log;
+>>
+>> +	log = &chip->log;
+>>   	if (log->bios_event_log != NULL) {
+>>   		pr_err("%s: ERROR - Eventlog already initialized\n", __func__);
+>>   		return -EFAULT;
+>> --
+>> 2.5.0
+>>
+>
+> /Jarkko
+>
 
 
 ------------------------------------------------------------------------------
