@@ -1,8 +1,8 @@
 From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v5 7/7] tpm: replace or remove printk error
-	messages
-Date: Tue, 18 Oct 2016 20:49:45 -0400
-Message-ID: <1476838185-24007-8-git-send-email-nayna@linux.vnet.ibm.com>
+Subject: [PATCH v5 5/7] tpm: redefine read_log() to handle
+	ACPI/OF at runtime
+Date: Tue, 18 Oct 2016 20:49:43 -0400
+Message-ID: <1476838185-24007-6-git-send-email-nayna@linux.vnet.ibm.com>
 References: <1476838185-24007-1-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,119 +20,185 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This patch removes the unnecessary error messages on failing to
-allocate memory and replaces pr_err/printk with dev_dbg/dev_info
-as applicable.
+Currently, read_log() has two implementations: one for ACPI platforms
+and the other for device tree(OF) based platforms. The proper one is
+selected at compile time using Kconfig and #ifdef in the Makefile,
+which is not the recommended approach.
+
+This patch removes the #ifdef in the Makefile by defining a single
+read_log() method, which checks for ACPI/OF event log properties at
+runtime.
 
 Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 ---
- drivers/char/tpm/tpm_acpi.c | 17 +++++------------
- drivers/char/tpm/tpm_of.c   | 30 ++++++++++--------------------
- 2 files changed, 15 insertions(+), 32 deletions(-)
+ drivers/char/tpm/Makefile       | 14 ++++----------
+ drivers/char/tpm/tpm_acpi.c     |  9 ++-------
+ drivers/char/tpm/tpm_eventlog.c | 18 ++++++++++++++++++
+ drivers/char/tpm/tpm_eventlog.h | 22 +++++++++++++---------
+ drivers/char/tpm/tpm_of.c       |  8 ++------
+ 5 files changed, 39 insertions(+), 32 deletions(-)
 
+diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
+index a385fb8..a05b1eb 100644
+--- a/drivers/char/tpm/Makefile
++++ b/drivers/char/tpm/Makefile
+@@ -2,16 +2,10 @@
+ # Makefile for the kernel tpm device drivers.
+ #
+ obj-$(CONFIG_TCG_TPM) += tpm.o
+-tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o
+-tpm-$(CONFIG_ACPI) += tpm_ppi.o
+-
+-ifdef CONFIG_ACPI
+-	tpm-y += tpm_eventlog.o tpm_acpi.o
+-else
+-ifdef CONFIG_TCG_IBMVTPM
+-	tpm-y += tpm_eventlog.o tpm_of.o
+-endif
+-endif
++tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o \
++		tpm_eventlog.o
++tpm-$(CONFIG_ACPI) += tpm_ppi.o tpm_acpi.o
++tpm-$(CONFIG_OF) += tpm_of.o
+ obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
+ obj-$(CONFIG_TCG_TIS) += tpm_tis.o
+ obj-$(CONFIG_TCG_TIS_SPI) += tpm_tis_spi.o
 diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
-index 859bdba..22e42da 100644
+index 4d6c2d7..859bdba 100644
 --- a/drivers/char/tpm/tpm_acpi.c
 +++ b/drivers/char/tpm/tpm_acpi.c
-@@ -60,11 +60,8 @@ int read_log_acpi(struct tpm_chip *chip)
- 	status = acpi_get_table(ACPI_SIG_TCPA, 1,
- 				(struct acpi_table_header **)&buff);
+@@ -6,6 +6,7 @@
+  *	Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+  *	Reiner Sailer <sailer-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
+  *	Kylene Hall <kjhall-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
++ *	Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+  *
+  * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+  *
+@@ -45,7 +46,7 @@ struct acpi_tcpa {
+ };
  
--	if (ACPI_FAILURE(status)) {
--		printk(KERN_ERR "%s: ERROR - Could not get TCPA table\n",
+ /* read binary bios log */
+-int read_log(struct tpm_chip *chip)
++int read_log_acpi(struct tpm_chip *chip)
+ {
+ 	struct acpi_tcpa *buff;
+ 	acpi_status status;
+@@ -54,12 +55,6 @@ int read_log(struct tpm_chip *chip)
+ 	struct tpm_bios_log *log;
+ 
+ 	log = &chip->log;
+-	if (log->bios_event_log != NULL) {
+-		printk(KERN_ERR
+-		       "%s: ERROR - Eventlog already initialized\n",
 -		       __func__);
-+	if (ACPI_FAILURE(status))
- 		return -EIO;
+-		return -EFAULT;
 -	}
  
- 	switch(buff->platform_class) {
- 	case BIOS_SERVER:
-@@ -78,25 +75,21 @@ int read_log_acpi(struct tpm_chip *chip)
- 		break;
- 	}
- 	if (!len) {
--		printk(KERN_ERR "%s: ERROR - TCPA log area empty\n", __func__);
-+		dev_dbg(&chip->dev, "%s: ERROR - TCPA log area empty\n",
+ 	/* Find TCPA entry in RSDT (ACPI_LOGICAL_ADDRESSING) */
+ 	status = acpi_get_table(ACPI_SIG_TCPA, 1,
+diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+index bb142f2..b60c028 100644
+--- a/drivers/char/tpm/tpm_eventlog.c
++++ b/drivers/char/tpm/tpm_eventlog.c
+@@ -365,6 +365,24 @@ static int is_bad(void *p)
+ 	return 0;
+ }
+ 
++int read_log(struct tpm_chip *chip)
++{
++	int rc;
++
++	if (chip->log.bios_event_log != NULL) {
++		dev_dbg(&chip->dev, "%s: ERROR - Eventlog already initialized\n",
 +			__func__);
- 		return -EIO;
- 	}
++		return -EFAULT;
++	}
++
++	rc = read_log_acpi(chip);
++	if ((rc == 0) || (rc == -ENOMEM))
++		return rc;
++	rc = read_log_of(chip);
++	return rc;
++
++}
++
+ int tpm_bios_log_setup(struct tpm_chip *chip)
+ {
+ 	const char *name = dev_name(&chip->dev);
+diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
+index 6df2f8e..be529ad 100644
+--- a/drivers/char/tpm/tpm_eventlog.h
++++ b/drivers/char/tpm/tpm_eventlog.h
+@@ -73,20 +73,24 @@ enum tcpa_pc_event_ids {
+ 	HOST_TABLE_OF_DEVICES,
+ };
  
- 	/* malloc EventLog space */
- 	log->bios_event_log = kmalloc(len, GFP_KERNEL);
--	if (!log->bios_event_log) {
--		printk("%s: ERROR - Not enough  Memory for BIOS measurements\n",
--			__func__);
-+	if (!log->bios_event_log)
- 		return -ENOMEM;
--	}
+-int read_log(struct tpm_chip *chip);
+-
+-#if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
+-	defined(CONFIG_ACPI)
+-extern int tpm_bios_log_setup(struct tpm_chip *chip);
+-extern void tpm_bios_log_teardown(struct tpm_chip *chip);
++#if defined(CONFIG_ACPI)
++int read_log_acpi(struct tpm_chip *chip);
+ #else
+-static inline int tpm_bios_log_setup(struct tpm_chip *chip)
++static inline int read_log_acpi(struct tpm_chip *chip)
+ {
+-	return 0;
++	return -ENODEV;
+ }
+-static inline void tpm_bios_log_teardown(struct tpm_chip *chip)
++#endif
++#if defined(CONFIG_OF)
++int read_log_of(struct tpm_chip *chip);
++#else
++static inline int read_log_of(struct tpm_chip *chip)
+ {
++	return -ENODEV;
+ }
+ #endif
  
- 	log->bios_event_log_end = log->bios_event_log + len;
- 
- 	virt = acpi_os_map_iomem(start, len);
--	if (!virt) {
--		printk("%s: ERROR - Unable to map memory\n", __func__);
-+	if (!virt)
- 		goto err;
--	}
- 
- 	memcpy_fromio(log->bios_event_log, virt, len);
- 
++int tpm_bios_log_setup(struct tpm_chip *chip);
++void tpm_bios_log_teardown(struct tpm_chip *chip);
++
+ #endif
 diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
-index 22b8f81..8b7e677 100644
+index 68d891a..7c30752 100644
 --- a/drivers/char/tpm/tpm_of.c
 +++ b/drivers/char/tpm/tpm_of.c
-@@ -31,40 +31,30 @@ int read_log_of(struct tpm_chip *chip)
+@@ -2,6 +2,7 @@
+  * Copyright 2012 IBM Corporation
+  *
+  * Author: Ashley Lai <ashleydlai-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
++ *         Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+  *
+  * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+  *
+@@ -20,7 +21,7 @@
+ #include "tpm.h"
+ #include "tpm_eventlog.h"
+ 
+-int read_log(struct tpm_chip *chip)
++int read_log_of(struct tpm_chip *chip)
+ {
+ 	struct device_node *np;
+ 	const u32 *sizep;
+@@ -28,11 +29,6 @@ int read_log(struct tpm_chip *chip)
+ 	struct tpm_bios_log *log;
+ 
  	log = &chip->log;
- 	if (chip->dev.parent->of_node)
- 		np = chip->dev.parent->of_node;
--	if (!np) {
--		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
-+	if (!np)
- 		return -ENODEV;
+-	if (log->bios_event_log != NULL) {
+-		pr_err("%s: ERROR - Eventlog already initialized\n", __func__);
+-		return -EFAULT;
 -	}
- 
- 	sizep = of_get_property(np, "linux,sml-size", NULL);
--	if (sizep == NULL) {
--		pr_err("%s: ERROR - SML size not found\n", __func__);
--		goto cleanup_eio;
--	}
-+	if (sizep == NULL)
-+		return -EIO;
-+
- 	if (*sizep == 0) {
--		pr_err("%s: ERROR - event log area empty\n", __func__);
--		goto cleanup_eio;
-+		dev_info(&chip->dev, "%s: ERROR - event log area empty\n",
-+			__func__);
-+		return -EIO;
- 	}
- 
- 	basep = of_get_property(np, "linux,sml-base", NULL);
--	if (basep == NULL) {
--		pr_err("%s: ERROR - SML not found\n", __func__);
--		goto cleanup_eio;
--	}
-+	if (basep == NULL)
-+		return -EIO;
- 
- 	log->bios_event_log = kmalloc(*sizep, GFP_KERNEL);
--	if (!log->bios_event_log) {
--		pr_err("%s: ERROR - Not enough memory for BIOS measurements\n",
--		       __func__);
-+	if (!log->bios_event_log)
- 		return -ENOMEM;
--	}
- 
- 	log->bios_event_log_end = log->bios_event_log + *sizep;
- 
- 	memcpy(log->bios_event_log, __va(*basep), *sizep);
- 
- 	return 0;
 -
--cleanup_eio:
--	return -EIO;
- }
+ 	np = of_find_node_by_name(NULL, "vtpm");
+ 	if (!np) {
+ 		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
 -- 
 2.5.0
 
