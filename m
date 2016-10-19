@@ -1,8 +1,8 @@
 From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v5 1/7] tpm: define a generic open() method
-	for ascii & bios measurements
-Date: Tue, 18 Oct 2016 20:49:39 -0400
-Message-ID: <1476838185-24007-2-git-send-email-nayna@linux.vnet.ibm.com>
+Subject: [PATCH v5 2/7] tpm: replace dynamically allocated
+	bios_dir with a static array
+Date: Tue, 18 Oct 2016 20:49:40 -0400
+Message-ID: <1476838185-24007-3-git-send-email-nayna@linux.vnet.ibm.com>
 References: <1476838185-24007-1-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,127 +20,185 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-open() method for event log ascii and binary bios measurements file
-operations are very similar. This patch refactors the code into a
-single open() call by passing seq_operations as i_node->private data.
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+
+This commit is based on a commit by Nayna Jain. Replaced dynamically
+allocated bios_dir with a static array as the size is always constant.
 
 Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm_eventlog.c | 59 +++++++++--------------------------------
- 1 file changed, 13 insertions(+), 46 deletions(-)
+ drivers/char/tpm/tpm-chip.c     |  9 ++++---
+ drivers/char/tpm/tpm.h          |  3 ++-
+ drivers/char/tpm/tpm_eventlog.c | 60 +++++++++++++++++++----------------------
+ drivers/char/tpm/tpm_eventlog.h | 10 +++----
+ 4 files changed, 39 insertions(+), 43 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-index e722886..75e6644 100644
---- a/drivers/char/tpm/tpm_eventlog.c
-+++ b/drivers/char/tpm/tpm_eventlog.c
-@@ -7,6 +7,7 @@
-  *	Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-  *	Reiner Sailer <sailer-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
-  *	Kylene Hall <kjhall-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-+ *	Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-  *
-  * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-  *
-@@ -318,12 +319,14 @@ static const struct seq_operations tpm_binary_b_measurments_seqops = {
- 	.show = tpm_binary_bios_measurements_show,
- };
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index e595013..a56b609 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -278,14 +278,16 @@ static void tpm_del_char_device(struct tpm_chip *chip)
  
--static int tpm_ascii_bios_measurements_open(struct inode *inode,
-+static int tpm_bios_measurements_open(struct inode *inode,
- 					    struct file *file)
+ static int tpm1_chip_register(struct tpm_chip *chip)
  {
- 	int err;
- 	struct tpm_bios_log *log;
- 	struct seq_file *seq;
-+	const struct seq_operations *seqops =
-+		(const struct seq_operations *)inode->i_private;
++	int rc;
++
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+ 		return 0;
  
- 	log = kzalloc(sizeof(struct tpm_bios_log), GFP_KERNEL);
- 	if (!log)
-@@ -333,7 +336,7 @@ static int tpm_ascii_bios_measurements_open(struct inode *inode,
- 		goto out_free;
+ 	tpm_sysfs_add_device(chip);
  
- 	/* now register seq file */
--	err = seq_open(file, &tpm_ascii_b_measurments_seqops);
-+	err = seq_open(file, seqops);
- 	if (!err) {
- 		seq = file->private_data;
- 		seq->private = log;
-@@ -349,46 +352,8 @@ out_free:
- 	goto out;
+-	chip->bios_dir = tpm_bios_log_setup(dev_name(&chip->dev));
++	rc = tpm_bios_log_setup(chip);
+ 
+-	return 0;
++	return rc;
  }
  
--static const struct file_operations tpm_ascii_bios_measurements_ops = {
--	.open = tpm_ascii_bios_measurements_open,
--	.read = seq_read,
--	.llseek = seq_lseek,
--	.release = tpm_bios_measurements_release,
--};
--
--static int tpm_binary_bios_measurements_open(struct inode *inode,
--					     struct file *file)
--{
--	int err;
--	struct tpm_bios_log *log;
--	struct seq_file *seq;
--
--	log = kzalloc(sizeof(struct tpm_bios_log), GFP_KERNEL);
--	if (!log)
--		return -ENOMEM;
--
--	if ((err = read_log(log)))
--		goto out_free;
--
--	/* now register seq file */
--	err = seq_open(file, &tpm_binary_b_measurments_seqops);
--	if (!err) {
--		seq = file->private_data;
--		seq->private = log;
--	} else {
--		goto out_free;
--	}
--
--out:
--	return err;
--out_free:
--	kfree(log->bios_event_log);
--	kfree(log);
--	goto out;
--}
--
--static const struct file_operations tpm_binary_bios_measurements_ops = {
--	.open = tpm_binary_bios_measurements_open,
-+static const struct file_operations tpm_bios_measurements_ops = {
-+	.open = tpm_bios_measurements_open,
- 	.read = seq_read,
- 	.llseek = seq_lseek,
- 	.release = tpm_bios_measurements_release,
-@@ -413,15 +378,17 @@ struct dentry **tpm_bios_log_setup(const char *name)
+ static void tpm1_chip_unregister(struct tpm_chip *chip)
+@@ -293,8 +295,7 @@ static void tpm1_chip_unregister(struct tpm_chip *chip)
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+ 		return;
  
- 	bin_file =
+-	if (chip->bios_dir)
+-		tpm_bios_log_teardown(chip->bios_dir);
++	tpm_bios_log_teardown(chip);
+ }
+ 
+ static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 4d183c9..4c118a4 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -40,6 +40,7 @@ enum tpm_const {
+ 	TPM_BUFSIZE = 4096,
+ 	TPM_NUM_DEVICES = 65536,
+ 	TPM_RETRY = 50,		/* 5 seconds */
++	TPM_NUM_EVENT_LOG_FILES = 3,
+ };
+ 
+ enum tpm_timeout {
+@@ -171,7 +172,7 @@ struct tpm_chip {
+ 	unsigned long duration[3]; /* jiffies */
+ 	bool duration_adjusted;
+ 
+-	struct dentry **bios_dir;
++	struct dentry *bios_dir[TPM_NUM_EVENT_LOG_FILES];
+ 
+ 	const struct attribute_group *groups[3];
+ 	unsigned int groups_cnt;
+diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+index 75e6644..c1c92d9 100644
+--- a/drivers/char/tpm/tpm_eventlog.c
++++ b/drivers/char/tpm/tpm_eventlog.c
+@@ -368,54 +368,48 @@ static int is_bad(void *p)
+ 	return 0;
+ }
+ 
+-struct dentry **tpm_bios_log_setup(const char *name)
++int tpm_bios_log_setup(struct tpm_chip *chip)
+ {
+-	struct dentry **ret = NULL, *tpm_dir, *bin_file, *ascii_file;
++	const char *name = dev_name(&chip->dev);
++	unsigned int cnt;
+ 
+-	tpm_dir = securityfs_create_dir(name, NULL);
+-	if (is_bad(tpm_dir))
+-		goto out;
++	cnt = 0;
++	chip->bios_dir[cnt] =
++		securityfs_create_dir(name, NULL);
++	if (is_bad(chip->bios_dir[cnt]))
++		goto err;
++	cnt++;
+ 
+-	bin_file =
++	chip->bios_dir[cnt] =
  	    securityfs_create_file("binary_bios_measurements",
--				   S_IRUSR | S_IRGRP, tpm_dir, NULL,
--				   &tpm_binary_bios_measurements_ops);
-+				   S_IRUSR | S_IRGRP, tpm_dir,
-+				   (void *)&tpm_binary_b_measurments_seqops,
-+				   &tpm_bios_measurements_ops);
- 	if (is_bad(bin_file))
- 		goto out_tpm;
+-				   S_IRUSR | S_IRGRP, tpm_dir,
++				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
+ 				   (void *)&tpm_binary_b_measurments_seqops,
+ 				   &tpm_bios_measurements_ops);
+-	if (is_bad(bin_file))
+-		goto out_tpm;
++	if (is_bad(chip->bios_dir[cnt]))
++		goto err;
++	cnt++;
  
- 	ascii_file =
+-	ascii_file =
++	chip->bios_dir[cnt] =
  	    securityfs_create_file("ascii_bios_measurements",
--				   S_IRUSR | S_IRGRP, tpm_dir, NULL,
--				   &tpm_ascii_bios_measurements_ops);
-+				   S_IRUSR | S_IRGRP, tpm_dir,
-+				   (void *)&tpm_ascii_b_measurments_seqops,
-+				   &tpm_bios_measurements_ops);
- 	if (is_bad(ascii_file))
- 		goto out_bin;
+-				   S_IRUSR | S_IRGRP, tpm_dir,
++				   S_IRUSR | S_IRGRP, chip->bios_dir[0],
+ 				   (void *)&tpm_ascii_b_measurments_seqops,
+ 				   &tpm_bios_measurements_ops);
+-	if (is_bad(ascii_file))
+-		goto out_bin;
++	if (is_bad(chip->bios_dir[cnt]))
++		goto err;
++	cnt++;
  
+-	ret = kmalloc(3 * sizeof(struct dentry *), GFP_KERNEL);
+-	if (!ret)
+-		goto out_ascii;
+-
+-	ret[0] = ascii_file;
+-	ret[1] = bin_file;
+-	ret[2] = tpm_dir;
+-
+-	return ret;
++	return 0;
+ 
+-out_ascii:
+-	securityfs_remove(ascii_file);
+-out_bin:
+-	securityfs_remove(bin_file);
+-out_tpm:
+-	securityfs_remove(tpm_dir);
+-out:
+-	return NULL;
++err:
++	chip->bios_dir[cnt] = NULL;
++	tpm_bios_log_teardown(chip);
++	return -EIO;
+ }
+ 
+-void tpm_bios_log_teardown(struct dentry **lst)
++void tpm_bios_log_teardown(struct tpm_chip *chip)
+ {
+ 	int i;
+ 
+-	for (i = 0; i < 3; i++)
+-		securityfs_remove(lst[i]);
++	for (i = (TPM_NUM_EVENT_LOG_FILES - 1); i >= 0; i--)
++		securityfs_remove(chip->bios_dir[i]);
+ }
+diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
+index 8de62b0..fd3357e 100644
+--- a/drivers/char/tpm/tpm_eventlog.h
++++ b/drivers/char/tpm/tpm_eventlog.h
+@@ -77,14 +77,14 @@ int read_log(struct tpm_bios_log *log);
+ 
+ #if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
+ 	defined(CONFIG_ACPI)
+-extern struct dentry **tpm_bios_log_setup(const char *);
+-extern void tpm_bios_log_teardown(struct dentry **);
++extern int tpm_bios_log_setup(struct tpm_chip *chip);
++extern void tpm_bios_log_teardown(struct tpm_chip *chip);
+ #else
+-static inline struct dentry **tpm_bios_log_setup(const char *name)
++static inline int tpm_bios_log_setup(struct tpm_chip *chip)
+ {
+-	return NULL;
++	return 0;
+ }
+-static inline void tpm_bios_log_teardown(struct dentry **dir)
++static inline void tpm_bios_log_teardown(struct tpm_chip *chip)
+ {
+ }
+ #endif
 -- 
 2.5.0
 
