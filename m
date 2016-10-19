@@ -1,14 +1,12 @@
 From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v5 3/7] tpm: drop
-	tpm1_chip_register(/unregister)
-Date: Tue, 18 Oct 2016 20:49:41 -0400
-Message-ID: <1476838185-24007-4-git-send-email-nayna@linux.vnet.ibm.com>
-References: <1476838185-24007-1-git-send-email-nayna@linux.vnet.ibm.com>
+Subject: [PATCH v5 0/7] tpm: cleanup/fixes in existing event
+	log support
+Date: Tue, 18 Oct 2016 20:49:38 -0400
+Message-ID: <1476838185-24007-1-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1476838185-24007-1-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,112 +18,102 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+This patch set includes the cleanup and bug fixes patches, previously
+part of the "tpm: add the securityfs pseudo files support for TPM 2.0
+firmware event log" patch set, in order to upstream them more quickly.
 
-Check for TPM2 chip in tpm_sysfs_add_device, tpm_bios_log_setup and
-tpm_bios_log_teardown in order to make code flow cleaner and to enable
-to implement TPM 2.0 support later on. This is partially derived from
-the commit by Nayna Jain with the extension that also tpm1_chip_register
-is dropped.
+Changelog History
 
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
----
- drivers/char/tpm/tpm-chip.c     | 31 +++++--------------------------
- drivers/char/tpm/tpm-sysfs.c    |  3 +++
- drivers/char/tpm/tpm_eventlog.c |  3 +++
- 3 files changed, 11 insertions(+), 26 deletions(-)
+v5:
 
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index a56b609..eac1f10 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -276,28 +276,6 @@ static void tpm_del_char_device(struct tpm_chip *chip)
- 	up_write(&chip->ops_sem);
- }
- 
--static int tpm1_chip_register(struct tpm_chip *chip)
--{
--	int rc;
--
--	if (chip->flags & TPM_CHIP_FLAG_TPM2)
--		return 0;
--
--	tpm_sysfs_add_device(chip);
--
--	rc = tpm_bios_log_setup(chip);
--
--	return rc;
--}
--
--static void tpm1_chip_unregister(struct tpm_chip *chip)
--{
--	if (chip->flags & TPM_CHIP_FLAG_TPM2)
--		return;
--
--	tpm_bios_log_teardown(chip);
--}
--
- static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
- {
- 	struct attribute **i;
-@@ -364,7 +342,9 @@ int tpm_chip_register(struct tpm_chip *chip)
- 			return rc;
- 	}
- 
--	rc = tpm1_chip_register(chip);
-+	tpm_sysfs_add_device(chip);
-+
-+	rc = tpm_bios_log_setup(chip);
- 	if (rc)
- 		return rc;
- 
-@@ -372,7 +352,7 @@ int tpm_chip_register(struct tpm_chip *chip)
- 
- 	rc = tpm_add_char_device(chip);
- 	if (rc) {
--		tpm1_chip_unregister(chip);
-+		tpm_bios_log_teardown(chip);
- 		return rc;
- 	}
- 
-@@ -407,8 +387,7 @@ void tpm_chip_unregister(struct tpm_chip *chip)
- 		return;
- 
- 	tpm_del_legacy_sysfs(chip);
--
--	tpm1_chip_unregister(chip);
-+	tpm_bios_log_teardown(chip);
- 	tpm_del_char_device(chip);
- }
- EXPORT_SYMBOL_GPL(tpm_chip_unregister);
-diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
-index a76ab4a..1eca5ec 100644
---- a/drivers/char/tpm/tpm-sysfs.c
-+++ b/drivers/char/tpm/tpm-sysfs.c
-@@ -284,6 +284,9 @@ static const struct attribute_group tpm_dev_group = {
- 
- void tpm_sysfs_add_device(struct tpm_chip *chip)
- {
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+		return;
-+
- 	/* The sysfs routines rely on an implicit tpm_try_get_ops, device_del
- 	 * is called before ops is null'd and the sysfs core synchronizes this
- 	 * removal so that no callbacks are running or can run again
-diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-index c1c92d9..753e92d 100644
---- a/drivers/char/tpm/tpm_eventlog.c
-+++ b/drivers/char/tpm/tpm_eventlog.c
-@@ -373,6 +373,9 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
- 	const char *name = dev_name(&chip->dev);
- 	unsigned int cnt;
- 
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+		return 0;
-+
- 	cnt = 0;
- 	chip->bios_dir[cnt] =
- 		securityfs_create_dir(name, NULL);
+- Moved cleanup/fixes patches into this patch set.
+- Patch "fix the race condition between event log access and chip
+getting unregistered"
+  - updated subject line and commit description.
+  - modified fops code to use chip kref.
+  - modified fops to lock inode before accessing inode private data.
+  - renamed tpm_securityfs_data to tpm_chip_seqops, as it no more
+    holds bios log, but associates seqops with respective chip. For
+    the same reason, moved it to tpm.h
+- Patch "replace or remove printk error messages"
+  - cleaned up dev_dbg and used dev_info as applicable.
+
+v4:
+
+- Includes feedbacks from Jarkko and Jason.
+- Patch "tpm: define a generic open() method for ascii & bios
+measurements".
+  - Fix indentation issue.
+- Patch "tpm: replace the dynamically allocated bios_dir as
+struct dentry array".
+  - Continue to use bios_dir_count variable to use is_bad() checks and
+    to maintain correct order for securityfs_remove() during teardown.
+  - Reset chip->bios_dir_count in teardown() function.
+- Patch "tpm: validate the event log access before tpm_bios_log_setup".
+  - Retain TPM2 check which was removed in previous patch.
+  - Add tpm_bios_log_setup failure handling.
+  - Remove use of private data from v3 version of patch. Add a new
+  member to struct tpm_chip to achieve the same purpose.
+- Patch "tpm: redefine the read_log method to check for ACPI/OF 
+properties sequentially".
+  - Move replacement of CONFIG_TCG_IBMVTPM with CONFIG_OF to
+  this patch from patch 3.
+  - Replace -1 error code with -ENODEV.
+- Patch "tpm: replace the of_find_node_by_name() with dev of_node
+property".
+  - Uses chip->dev.parent->of_node.
+  - Created separate patch for cleanup of pr_err 
+  messages.
+- Patch "tpm: remove printk error messages".
+  - New Patch.
+- Patch "tpm: add the securityfs file support for TPM 2.0 event log".
+  - Parses event digests using event alg_id rather than event log header
+    alg_id.
+  - Uses of_property_match_string to differentiate tpm/vtpm compatible
+    property.
+  - Adds the comment for difference in tpm/vtpm endianness.
+
+v3:
+
+- Includes the review feedbacks as suggested by Jason.
+- Split of patches into one patch per idea.
+- Generic open() method for ascii/bios measurements.
+- Replacement of of **bios_dir with *bios_dir[3].
+- Verifying readlog() is successful before creating securityfs entries.
+- Generic readlog() to check for ACPI/OF in sequence.
+- read_log_of() method now uses of_node propertry rather than
+  calling find_device_by_name.
+- read_log differentiates vtpm/tpm using its compatible property.
+- Cleans pr_err with dev_dbg.
+- Commit msgs subject line prefixed with tpm.
+
+v2:
+
+- Fixes issues as given in feedback by Jason.
+- Adds documentation for device tree.
+
+Jarkko Sakkinen (2):
+  tpm: replace dynamically allocated bios_dir with a static array
+  tpm: drop tpm1_chip_register(/unregister)
+
+Nayna Jain (5):
+  tpm: define a generic open() method for ascii & bios measurements
+  tpm: fix the race condition between event log access and chip getting
+    unregistered
+  tpm: redefine read_log() to handle ACPI/OF at runtime
+  tpm: replace of_find_node_by_name() with dev of_node property
+  tpm: replace or remove printk error messages
+
+ drivers/char/tpm/Makefile       |  14 +--
+ drivers/char/tpm/tpm-chip.c     |  31 ++----
+ drivers/char/tpm/tpm-sysfs.c    |   3 +
+ drivers/char/tpm/tpm.h          |  14 ++-
+ drivers/char/tpm/tpm_acpi.c     |  36 +++----
+ drivers/char/tpm/tpm_eventlog.c | 208 ++++++++++++++++++++--------------------
+ drivers/char/tpm/tpm_eventlog.h |  22 +++--
+ drivers/char/tpm/tpm_of.c       |  46 ++++-----
+ 8 files changed, 176 insertions(+), 198 deletions(-)
+
 -- 
 2.5.0
 
