@@ -1,19 +1,18 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v5 7/7] tpm: replace or remove printk
- error messages
-Date: Thu, 20 Oct 2016 16:43:21 +0300
-Message-ID: <20161020134321.gne3an3alok2pubb@intel.com>
-References: <1476838185-24007-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1476838185-24007-8-git-send-email-nayna@linux.vnet.ibm.com>
-	<20161019161854.iuzgacimusfcivvf@intel.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B5430045A@hasmsx108.ger.corp.intel.com>
-	<5808C747.4040709@linux.vnet.ibm.com>
+Subject: Re: [PATCH] tpm,
+ tpm_crb: remove redundant CRB_FL_CRB_START flag
+Date: Thu, 20 Oct 2016 16:59:06 +0300
+Message-ID: <20161020135906.ah4rjympz3wq6g3t@intel.com>
+References: <20161017204224.27163-1-jarkko.sakkinen@linux.intel.com>
+	<20161017225113.qnghq5vroxlmsurc@intel.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B542FF8FC@hasmsx108.ger.corp.intel.com>
+	<20161019160928.n5fswy25t2ppdh73@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <5808C747.4040709-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <20161019160928.n5fswy25t2ppdh73-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,81 +21,97 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+To: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Oct 20, 2016 at 07:01:51PM +0530, Nayna wrote:
-> 
-> 
-> On 10/20/2016 01:04 PM, Winkler, Tomas wrote:
-> > > On Tue, Oct 18, 2016 at 08:49:45PM -0400, Nayna Jain wrote:
-> > > > This patch removes the unnecessary error messages on failing to
-> > > > allocate memory and replaces pr_err/printk with dev_dbg/dev_info as
-> > > > applicable.
-> > > > 
-> > > > Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> > > > Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> > > 
-> > > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> > > 
-> > > /Jarkko
-> > > 
-> > > > ---
-> > > >   drivers/char/tpm/tpm_acpi.c | 17 +++++------------
-> > > >   drivers/char/tpm/tpm_of.c   | 30 ++++++++++--------------------
-> > > >   2 files changed, 15 insertions(+), 32 deletions(-)
-> > > > 
-> > > > diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
-> > > > index 859bdba..22e42da 100644
-> > > > --- a/drivers/char/tpm/tpm_acpi.c
-> > > > +++ b/drivers/char/tpm/tpm_acpi.c
-> > > > @@ -60,11 +60,8 @@ int read_log_acpi(struct tpm_chip *chip)
-> > > >   	status = acpi_get_table(ACPI_SIG_TCPA, 1,
-> > > >   				(struct acpi_table_header **)&buff);
-> > > > 
-> > > > -	if (ACPI_FAILURE(status)) {
-> > > > -		printk(KERN_ERR "%s: ERROR - Could not get TCPA table\n",
-> > > > -		       __func__);
-> > > > +	if (ACPI_FAILURE(status))
-> > > >   		return -EIO;
-> > > > -	}
-> > > > 
-> > > >   	switch(buff->platform_class) {
-> > > >   	case BIOS_SERVER:
-> > > > @@ -78,25 +75,21 @@ int read_log_acpi(struct tpm_chip *chip)
-> > > >   		break;
-> > > >   	}
-> > > >   	if (!len) {
-> > > > -		printk(KERN_ERR "%s: ERROR - TCPA log area empty\n",
-> > > __func__);
-> > > > +		dev_dbg(&chip->dev, "%s: ERROR - TCPA log area empty\n",
-> > > > +			__func__);
-> > 
-> > 
-> > Why to keep __func__ here, dev_dbg already does it for you.
-> 
-> I tried to trace through dev_dbg
-> - http://lxr.free-electrons.com/source/include/linux/device.h#L1195
-> which further calls dev_printk from
-> http://lxr.free-electrons.com/source/drivers/base/core.c#L2199
-> 
-> I couldn't find it printing __func__ anywhere.. I just see it printing
-> "driver" and "dev" as tpm : tpm0.
-> 
-> Please let me know if I am missing something
-> 
-> Thanks & Regards,
-> - Nayna
-
-Sorry I mixed up in my last response. You can filter in dynamic
-debug with a function name but doesn't print function name.
-
-Anyway I would recommend to change this to dev_err in a way that
-I explained in my response.
-
-/Jarkko
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most 
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+T24gV2VkLCBPY3QgMTksIDIwMTYgYXQgMDc6MDk6MjhQTSArMDMwMCwgSmFya2tvIFNha2tpbmVu
+IHdyb3RlOgo+IE9uIFdlZCwgT2N0IDE5LCAyMDE2IGF0IDEwOjI4OjI5QU0gKzAwMDAsIFdpbmts
+ZXIsIFRvbWFzIHdyb3RlOgo+ID4gCj4gPiAKPiA+ID4gCj4gPiA+IE9uIE1vbiwgT2N0IDE3LCAy
+MDE2IGF0IDExOjQyOjI0UE0gKzAzMDAsIEphcmtrbyBTYWtraW5lbiB3cm90ZToKPiA+ID4gPiBC
+ZWNhdXNlIGFsbCB0aGUgZXhpc3RpbmcgaGFyZHdhcmUgaGF2ZSBISUQgTVNGVDAxMDEgd2UgZW5k
+IHVwIGFsd2F5cwo+ID4gPiA+IHNldHRpbmcgQ1JCX0ZMX0NSQl9TVEFSVCBmbGFnIGFzIGEgd29y
+a2Fyb3VuZCBmb3IgNHRoIEdlbiBDb3JlIENQVXMuCj4gPiA+ID4gRXZlbiBpZiBBQ1BJIHN0YXJ0
+IGlzIHVzZWQsIHRoZSBkcml2ZXIgd2lsbCBhbHdheXMgaXNzdWUgYWxzbyBDUkIgc3RhcnQuCj4g
+PiAKPiA+IERvIHlvdSBoYXZlIHNvbWUgbW9yZSBoaXN0b3JpY2FsIGRhdGEgYWJvdXQgdGhpcyBm
+aXgsIEkgd2FzIHdvbmRlcmluZwo+ID4gYWJvdXQgdGhpcyBxdWlyayBiZWZvcmUsIHdoZW4gcmVz
+dHJ1Y3R1cmluZyB0aGUgc3RhcnQgbWV0aG9kIHBhcnNpbmcuCj4gPiBUaGUgZGVzY3JpcHRpb24g
+aXMgJyBpbiBwcmFjdGljZSBzZWVtcyB0byByZXF1aXJlIGJvdGgnICBzb3VuZHMgbm90Cj4gPiBj
+ZXJ0YWluIGFib3V0IHRoZSByb290IGNhdXNlIG9mIHRoaXMuCj4gCj4gSSBoYXZlIGEgNHRoIEdl
+biBDb3JlIE5VQyB3aGVyZSBJIGV4cGVyaWVuY2VkIHRoaXMgaXNzdWUuIEl0IHJlcG9ydGVkCj4g
+cmVxdWlyaW5nIG9ubHkgQUNQSSBzdGFydCBidXQgYWN0dWFsbHkgcmVxdWlyZWQgQUNQSSArIENS
+QiBzdGFydC4gVGhlCj4gY29tbWVudCBjb3VsZCBoYXZlIGJlZW4gYmV0dGVyLgoKV2l0aCB0aGUg
+bGF0ZXN0IG1hc3RlciBicmFuY2ggaWYgSSByZW1vdmUgdGhlIHdvcmthcm91bmQ6CgpbICAzOTUu
+MTYxMTU1XSB0cG1fY3JiOiBtb2R1bGUgdmVyaWZpY2F0aW9uIGZhaWxlZDogc2lnbmF0dXJlIGFu
+ZC9vciByZXF1aXJlZCBrZXkgbWlzc2luZyAtIHRhaW50aW5nIGtlcm5lbApbICA0ODAuMDg3MTM2
+XSB0cG0gdHBtMDogQSBUUE0gZXJyb3IgKDMyMykgb2NjdXJyZWQgY29udGludWUgc2VsZnRlc3QK
+WyAgNDgwLjA4NzE0MV0gdHBtIHRwbTA6IFRQTSBzZWxmIHRlc3QgZmFpbGVkCgpqc2Fra2luZSBh
+dCBqc2Fra2luZS10cG0xIGluIH4vZGV2ZWwvbGludXgtdHBtZGQgKG1hc3RlcuKXj+KXjykgCiQg
+Z2l0IC0tbm8tcGFnZXIgZGlmZgpkaWZmIC0tZ2l0IGEvZHJpdmVycy9jaGFyL3RwbS90cG1fY3Ji
+LmMgYi9kcml2ZXJzL2NoYXIvdHBtL3RwbV9jcmIuYwppbmRleCA2NTA0MGQ3Li41YjE4NmUwIDEw
+MDY0NAotLS0gYS9kcml2ZXJzL2NoYXIvdHBtL3RwbV9jcmIuYworKysgYi9kcml2ZXJzL2NoYXIv
+dHBtL3RwbV9jcmIuYwpAQCAtNDA3LDE0ICs0MDcsNiBAQCBzdGF0aWMgaW50IGNyYl9hY3BpX2Fk
+ZChzdHJ1Y3QgYWNwaV9kZXZpY2UgKmRldmljZSkKIAlpZiAoIXByaXYpCiAJCXJldHVybiAtRU5P
+TUVNOwogCi0JLyogVGhlIHJlYXNvbiBmb3IgdGhlIGV4dHJhIHF1aXJrIGlzIHRoYXQgdGhlIFBU
+VCBpbiA0dGggR2VuIENvcmUgQ1BVcwotCSAqIHJlcG9ydCBvbmx5IEFDUEkgc3RhcnQgYnV0IGlu
+IHByYWN0aWNlIHNlZW1zIHRvIHJlcXVpcmUgYm90aAotCSAqIEFDUEkgc3RhcnQgYW5kIENSQiBz
+dGFydC4KLQkgKi8KLQlpZiAoc20gPT0gQUNQSV9UUE0yX0NPTU1BTkRfQlVGRkVSIHx8IHNtID09
+IEFDUElfVFBNMl9NRU1PUllfTUFQUEVEIHx8Ci0JICAgICFzdHJjbXAoYWNwaV9kZXZpY2VfaGlk
+KGRldmljZSksICJNU0ZUMDEwMSIpKQotCQlwcml2LT5mbGFncyB8PSBDUkJfRkxfQ1JCX1NUQVJU
+OwotCiAJaWYgKHNtID09IEFDUElfVFBNMl9TVEFSVF9NRVRIT0QgfHwKIAkgICAgc20gPT0gQUNQ
+SV9UUE0yX0NPTU1BTkRfQlVGRkVSX1dJVEhfU1RBUlRfTUVUSE9EKQogCQlwcml2LT5mbGFncyB8
+PSBDUkJfRkxfQUNQSV9TVEFSVDsKCmpzYWtraW5lIGF0IGpzYWtraW5lLXRwbTEgaW4gfi9kZXZl
+bC9saW51eC10cG1kZCAobWFzdGVy4peP4pePKSAKJCBzdWRvIGRtaWRlY29kZSAtdCBiaW9zIC1x
+CkJJT1MgSW5mb3JtYXRpb24KCVZlbmRvcjogSW50ZWwgQ29ycC4KCVZlcnNpb246IFdZTFBUMTBI
+Ljg2QS4wMDMzLjIwMTQuMTIwMS4wOTQwCglSZWxlYXNlIERhdGU6IDEyLzAxLzIwMTQKCUFkZHJl
+c3M6IDB4RjAwMDAKCVJ1bnRpbWUgU2l6ZTogNjQga0IKCVJPTSBTaXplOiA2NjU2IGtCCglDaGFy
+YWN0ZXJpc3RpY3M6CgkJUENJIGlzIHN1cHBvcnRlZAoJCUJJT1MgaXMgdXBncmFkZWFibGUKCQlC
+SU9TIHNoYWRvd2luZyBpcyBhbGxvd2VkCgkJQm9vdCBmcm9tIENEIGlzIHN1cHBvcnRlZAoJCVNl
+bGVjdGFibGUgYm9vdCBpcyBzdXBwb3J0ZWQKCQlCSU9TIFJPTSBpcyBzb2NrZXRlZAoJCUVERCBp
+cyBzdXBwb3J0ZWQKCQk1LjI1Ii8xLjIgTUIgZmxvcHB5IHNlcnZpY2VzIGFyZSBzdXBwb3J0ZWQg
+KGludCAxM2gpCgkJMy41Ii83MjAga0IgZmxvcHB5IHNlcnZpY2VzIGFyZSBzdXBwb3J0ZWQgKGlu
+dCAxM2gpCgkJMy41Ii8yLjg4IE1CIGZsb3BweSBzZXJ2aWNlcyBhcmUgc3VwcG9ydGVkIChpbnQg
+MTNoKQoJCVByaW50IHNjcmVlbiBzZXJ2aWNlIGlzIHN1cHBvcnRlZCAoaW50IDVoKQoJCVNlcmlh
+bCBzZXJ2aWNlcyBhcmUgc3VwcG9ydGVkIChpbnQgMTRoKQoJCVByaW50ZXIgc2VydmljZXMgYXJl
+IHN1cHBvcnRlZCAoaW50IDE3aCkKCQlBQ1BJIGlzIHN1cHBvcnRlZAoJCVVTQiBsZWdhY3kgaXMg
+c3VwcG9ydGVkCgkJQklPUyBib290IHNwZWNpZmljYXRpb24gaXMgc3VwcG9ydGVkCgkJVGFyZ2V0
+ZWQgY29udGVudCBkaXN0cmlidXRpb24gaXMgc3VwcG9ydGVkCgkJVUVGSSBpcyBzdXBwb3J0ZWQK
+CUJJT1MgUmV2aXNpb246IDQuNgoKQklPUyBMYW5ndWFnZSBJbmZvcm1hdGlvbgoJTGFuZ3VhZ2Ug
+RGVzY3JpcHRpb24gRm9ybWF0OiBMb25nCglJbnN0YWxsYWJsZSBMYW5ndWFnZXM6IDEKCQllbnxV
+U3xpc284ODU5LTEKCUN1cnJlbnRseSBJbnN0YWxsZWQgTGFuZ3VhZ2U6IGVufFVTfGlzbzg4NTkt
+MQoKanNha2tpbmUgYXQganNha2tpbmUtdHBtMSBpbiB+L3RtcCAobWFzdGVyKSAKJCBjYXQgfi90
+bXAvdHBtMi5kc2wgCi8qCiAqIEludGVsIEFDUEkgQ29tcG9uZW50IEFyY2hpdGVjdHVyZQogKiBB
+TUwgRGlzYXNzZW1ibGVyIHZlcnNpb24gMjAxNDAyMTQtNjQgW01hciAyOSAyMDE0XQogKiBDb3B5
+cmlnaHQgKGMpIDIwMDAgLSAyMDE0IEludGVsIENvcnBvcmF0aW9uCiAqIAogKiBEaXNhc3NlbWJs
+eSBvZiB0cG0yLmRhdCwgV2VkIEp1biAgMSAxNjoyNjo0OSAyMDE2CiAqCiAqIEFDUEkgRGF0YSBU
+YWJsZSBbVFBNMl0KICoKICogRm9ybWF0OiBbSGV4T2Zmc2V0IERlY2ltYWxPZmZzZXQgQnl0ZUxl
+bmd0aF0gIEZpZWxkTmFtZSA6IEZpZWxkVmFsdWUKICovCgpbMDAwaCAwMDAwICAgNF0gICAgICAg
+ICAgICAgICAgICAgIFNpZ25hdHVyZSA6ICJUUE0yIiAgICBbVHJ1c3RlZCBQbGF0Zm9ybSBNb2R1
+bGUgaGFyZHdhcmUgaW50ZXJmYWNlIHRhYmxlXQpbMDA0aCAwMDA0ICAgNF0gICAgICAgICAgICAg
+ICAgIFRhYmxlIExlbmd0aCA6IDAwMDAwMDM0ClswMDhoIDAwMDggICAxXSAgICAgICAgICAgICAg
+ICAgICAgIFJldmlzaW9uIDogMDMKWzAwOWggMDAwOSAgIDFdICAgICAgICAgICAgICAgICAgICAg
+Q2hlY2tzdW0gOiAzMQpbMDBBaCAwMDEwICAgNl0gICAgICAgICAgICAgICAgICAgICAgIE9lbSBJ
+RCA6ICJJTlRFTCAiClswMTBoIDAwMTYgICA4XSAgICAgICAgICAgICAgICAgT2VtIFRhYmxlIElE
+IDogIkQzNDAxMFdZIgpbMDE4aCAwMDI0ICAgNF0gICAgICAgICAgICAgICAgIE9lbSBSZXZpc2lv
+biA6IDAwMDAwMDIxClswMUNoIDAwMjggICA0XSAgICAgICAgICAgICAgQXNsIENvbXBpbGVyIElE
+IDogIiIKWzAyMGggMDAzMiAgIDRdICAgICAgICBBc2wgQ29tcGlsZXIgUmV2aXNpb24gOiAwMDAw
+MDAwMAoKWzAyNGggMDAzNiAgIDRdICAgICAgICAgICAgICAgICAgICAgICAgRmxhZ3MgOiAwMDAw
+MDAwMApbMDI4aCAwMDQwICAgOF0gICAgICAgICAgICAgIENvbnRyb2wgQWRkcmVzcyA6IDAwMDAw
+MDAwREJGRkYwMDAKWzAzMGggMDA0OCAgIDRdICAgICAgICAgICAgICAgICBTdGFydCBNZXRob2Qg
+OiAwMDAwMDAwMgoKUmF3IFRhYmxlIERhdGE6IExlbmd0aCA1MiAoMHgzNCkKCiAgMDAwMDogNTQg
+NTAgNEQgMzIgMzQgMDAgMDAgMDAgMDMgMzEgNDkgNEUgNTQgNDUgNEMgMjAgIFRQTTI0Li4uLjFJ
+TlRFTCAKICAwMDEwOiA0NCAzMyAzNCAzMCAzMSAzMCA1NyA1OSAyMSAwMCAwMCAwMCAwMCAwMCAw
+MCAwMCAgRDM0MDEwV1khLi4uLi4uLgogIDAwMjA6IDAwIDAwIDAwIDAwIDAwIDAwIDAwIDAwIDAw
+IEYwIEZGIERCIDAwIDAwIDAwIDAwICAuLi4uLi4uLi4uLi4uLi4uCiAgMDAzMDogMDIgMDAgMDAg
+MDAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4uLi4KCk9idmlvdXNseSBJ
+J20gZ29pbmcgdG8ga2VlcCB0aGUgd29yayBhcm91bmQgYmVjYXVzZSBJIGRvbid0IHdhbnQgdG8g
+cmlzawpicmVha2luZyBtYWNoaW5lcyBpbiB0aGUgZmllbGQuIEJlY2F1c2UgYXMgYSBzaWRlIGVm
+ZmVjdCBmb3IgYW55IG1hY2hpbmUKdGhlIGRyaXZlciBhbHdheXMgaW52b2tlcyBDUkIgc3RhcnQg
+SSB3aWxsIGRlZmluaXRlbHkgd2FudCB0byBzaW1wbGlmeQp0aGUgc3RhdGUgb2YgdGhlIGRyaXZl
+ci4KCi9KYXJra28KCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpDaGVjayBvdXQgdGhlIHZpYnJhbnQg
+dGVjaCBjb21tdW5pdHkgb24gb25lIG9mIHRoZSB3b3JsZCdzIG1vc3QgCmVuZ2FnaW5nIHRlY2gg
+c2l0ZXMsIFNsYXNoRG90Lm9yZyEgaHR0cDovL3NkbS5saW5rL3NsYXNoZG90Cl9fX19fX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fCnRwbWRkLWRldmVsIG1haWxpbmcg
+bGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9saXN0cy5zb3Vy
+Y2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwK
