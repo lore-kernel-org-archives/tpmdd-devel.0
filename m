@@ -1,54 +1,75 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3 2/2] Documentation: tpm: add the Physical TPM device
- tree binding documentation
-Date: Fri, 4 Nov 2016 01:32:31 -0600
-Message-ID: <20161104073231.jgkii6yhp4udity6@intel.com>
-References: <1477473705-12746-1-git-send-email-nayna@linux.vnet.ibm.com>
- <1477473705-12746-2-git-send-email-nayna@linux.vnet.ibm.com>
- <20161031040245.cwnt4kelrm7liaga@rob-hp-laptop>
+From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Subject: [PATCH] Check for error return values from
+	get_burstcount.
+Date: Thu, 20 Oct 2016 17:21:29 -0700
+Message-ID: <20161021002129.GA9464@google.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20161031040245.cwnt4kelrm7liaga@rob-hp-laptop>
-Sender: devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-To: Rob Herring <robh-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
-Cc: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org, pawel.moll-5wv7dgnIgG8@public.gmane.org, mark.rutland-5wv7dgnIgG8@public.gmane.org, ijc+devicetree-KcIKpvwj1kUDXYZnReoRVg@public.gmane.org, galak-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org, linux-i2c-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, peterhuewe-Mmb7MZpHnFY@public.gmane.org, tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org, jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org, hellerda-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org, ltcgcw-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, cclaudio-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org, honclo-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Oct 30, 2016 at 11:02:45PM -0500, Rob Herring wrote:
-> On Wed, Oct 26, 2016 at 05:21:45AM -0400, Nayna Jain wrote:
-> > Newly added support of TPM 2.0 eventlog securityfs pseudo files in tpm
-> > device driver consumes device tree bindings representing I2C based
-> > Physical TPM. This patch adds the documentation for corresponding device
-> > tree bindings of I2C based Physical TPM. These bindings are similar to
-> > vtpm device tree bindings being used on IBM Power7+ and Power8 Systems
-> > running PowerVM.
-> > 
-> > Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> > Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> > ---
-> > Changelog v3:
-> >  - Added documentation for "label" property.
-> > 
-> > Changelog v2:
-> > 
-> > - Include review feedbacks.
-> >   - Move the doc within bindings/security/tpm.
-> >   - Add example for compatible property in description.
-> >   - Delete implicit properties like status, label from description.
-> >   - Redefine linux,sml-base description.
-> > 
-> >  .../devicetree/bindings/security/tpm/tpm-i2c.txt    | 21 +++++++++++++++++++++
-> >  1 file changed, 21 insertions(+)
-> >  create mode 100644 Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
-> 
-> Acked-by: Rob Herring <robh-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
+If the TPM we're connecting to uses a static burst count, it will report
+a burst count of zero throughout the response read. However, get_burstcount
+assumes that a response of zero indicates that the TPM is not ready to
+receive more data. In this case, it returns a negative error code, which
+is passed on to tpm_tis_{write,read}_bytes as a u16, causing
+them to read/write far too many bytes.
 
-Applied.
+This patch checks for negative return codes and bails out from recv_data
+and tpm_tis_send_data.
+---
+ drivers/char/tpm/tpm_tis_core.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
 
-/Jarkko
---
-To unsubscribe from this list: send the line "unsubscribe devicetree" in
-the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-More majordomo info at  http://vger.kernel.org/majordomo-info.html
+diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+index e3bf31b..d0301dc 100644
+--- a/drivers/char/tpm/tpm_tis_core.c
++++ b/drivers/char/tpm/tpm_tis_core.c
+@@ -186,6 +186,12 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
+ 				 chip->timeout_c,
+ 				 &priv->read_queue, true) == 0) {
+ 		burstcnt = min_t(int, get_burstcount(chip), count - size);
++		if (burstcnt < 0) {
++			dev_err(&chip->dev,
++				"Unable to read burstcount in %s:%d (%s)\n",
++				__FILE__, __LINE__, __func__);
++			return rc;
++		}
+ 
+ 		rc = tpm_tis_read_bytes(priv, TPM_DATA_FIFO(priv->locality),
+ 					burstcnt, buf + size);
+@@ -272,6 +278,13 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ 
+ 	while (count < len - 1) {
+ 		burstcnt = min_t(int, get_burstcount(chip), len - count - 1);
++		if (burstcnt < 0) {
++			dev_err(&chip->dev,
++				"Unable to read burstcount in %s:%d (%s)\n",
++				__FILE__, __LINE__, __func__);
++			rc = burstcnt;
++			goto out_err;
++		}
+ 		rc = tpm_tis_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
+ 					 burstcnt, buf + count);
+ 		if (rc < 0)
+-- 
+2.8.0.rc3.226.g39d4020
+
+
+------------------------------------------------------------------------------
+Developer Access Program for Intel Xeon Phi Processors
+Access to Intel Xeon Phi processor-based developer platforms.
+With one year of Intel Parallel Studio XE.
+Training and support from Colfax.
+Order your platform today. http://sdm.link/xeonphi
