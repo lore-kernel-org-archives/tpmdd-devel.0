@@ -1,37 +1,49 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH] tpm, tpm_crb: remove redundant
- CRB_FL_CRB_START flag
-Date: Fri, 21 Oct 2016 18:11:41 +0300
-Message-ID: <20161021151141.oyxtjkfgn26nznty@intel.com>
-References: <20161017204224.27163-1-jarkko.sakkinen@linux.intel.com>
- <20161017225113.qnghq5vroxlmsurc@intel.com>
- <5B8DA87D05A7694D9FA63FD143655C1B542FF8FC@hasmsx108.ger.corp.intel.com>
- <20161019160928.n5fswy25t2ppdh73@intel.com>
- <20161020135906.ah4rjympz3wq6g3t@intel.com>
- <20161020140011.s5mu3atjjwnwqda4@intel.com>
- <20161020202421.GA13459@obsidianresearch.com>
+Subject: Re: [PATCH] char/tpm: Check return code of wait_for_tpm_stat
+Date: Fri, 21 Oct 2016 18:35:48 +0300
+Message-ID: <20161021153548.rfdcbetqxg7srdgs@intel.com>
+References: <1476187261-29027-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+ <20161011171313.GD6881@obsidianresearch.com>
+ <9174B547-9CD1-4F1B-A2A7-38B9A6AA3B33@gmx.de>
+ <20161012121606.GA11604@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20161020202421.GA13459@obsidianresearch.com>
+In-Reply-To: <20161012121606.GA11604@intel.com>
 Sender: linux-kernel-owner@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: "Winkler, Tomas" <tomas.winkler@intel.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+To: Peter Huewe <peterhuewe@gmx.de>
+Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, Marcel Selhorst <tpmdd@selhorst.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Oct 20, 2016 at 02:24:21PM -0600, Jason Gunthorpe wrote:
-> On Thu, Oct 20, 2016 at 05:00:11PM +0300, Jarkko Sakkinen wrote:
+On Wed, Oct 12, 2016 at 03:16:06PM +0300, Jarkko Sakkinen wrote:
+> On Tue, Oct 11, 2016 at 08:01:09PM +0200, Peter Huewe wrote:
+> > 
+> > 
+> > Hi
+> > Am 11. Oktober 2016 19:13:13 MESZ, schrieb Jason Gunthorpe <jgunthorpe@obsidianresearch.com>:
+> > >On Tue, Oct 11, 2016 at 03:01:01PM +0300, Jarkko Sakkinen wrote:
+> > >> From: Peter Huewe <peterhuewe@gmx.de>
+> > >> 
+> > >> In some weird cases it might be possible that the TPM does not set
+> > >> STS.VALID within the given timeout time (or ever) but sets STS.EXPECT
+> > >> (STS=0x0C) In this case the driver gets stuck in the while loop of
+> > >> tpm_tis_send_data and loops endlessly.
+> > >
+> > >Doesn't that exchange mean the TPM has lost synchronization with the
+> > >driver? Or maybe it crashed executing a command or something..
+> > 
+> > I saw that in the field on quite a few (similar) systems with our lpc tpms - so it affects end users.
+> > Yes it is caused by some desynchronization or something similar.
+> > 
+> > If you manually send a commandReady by mmaping the memory region you can un-stuck the driver and the situation was never seen again on that system.
+> > 
+> > The exact reason how this happens is yet unknown, but the driver should definitely not be stuck in an endless loop (which zombies the application too) in that case but bail out as defined in the TIS protocol. The next access sends the cr which cures the unsynchronization.
 > 
-> > > > I have a 4th Gen Core NUC where I experienced this issue. It reported
-> > > > requiring only ACPI start but actually required ACPI + CRB start. The
-> > > > comment could have been better.
-> 
-> Shouldn't bios work arounds be keyed on something? What happens if a
-> system rolls around that cannot do ACPI + CRB start? How does this
-> system work in windows?
+> Even as a sanity check return codes should be checked so in
+> any case I leaned towards applying this patch. It makes the
+> driver more robust.
 
-I didn't find anything better to key it on at the time and it has been
-working for two years now without any problems.
+I applied this.
 
 /Jarkko
