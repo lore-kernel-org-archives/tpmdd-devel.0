@@ -1,11 +1,15 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH] tpm: sanitize constant expressions
-Date: Sat, 22 Oct 2016 00:39:27 +0300
-Message-ID: <20161021213928.14810-1-jarkko.sakkinen@linux.intel.com>
+From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Subject: Re: [PATCH] Check for error return values from
+	get_burstcount.
+Date: Fri, 21 Oct 2016 16:01:13 -0700
+Message-ID: <CAHSjozCvzDWXFcW5TTqknFy8NEMh11xkJbx=CS_31jMU4AFhmQ@mail.gmail.com>
+References: <20161021002129.GA9464@google.com>
+	<20161021161334.e7hwhqj5ow5v47dg@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20161021161334.e7hwhqj5ow5v47dg-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -14,133 +18,81 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Use cpu_to_b32 at the time it is needed in enum tpm_capabilities and
-enum tpm_sub_capabilities in order to be consistent with the other
-enums in drivats/char/tpm/tpm.h.
+On Fri, Oct 21, 2016 at 9:13 AM, Jarkko Sakkinen
+<jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
+> On Thu, Oct 20, 2016 at 05:21:29PM -0700, Josh Zimmerman wrote:
+>> If the TPM we're connecting to uses a static burst count, it will report
+>> a burst count of zero throughout the response read. However, get_burstcount
+>> assumes that a response of zero indicates that the TPM is not ready to
+>> receive more data. In this case, it returns a negative error code, which
+>> is passed on to tpm_tis_{write,read}_bytes as a u16, causing
+>> them to read/write far too many bytes.
+>>
+>> This patch checks for negative return codes and bails out from recv_data
+>> and tpm_tis_send_data.
+>
+> I guess this would need a "Fixes:" tag, wouldn't it?
+Ah, yes. Good point.
 
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
----
-v2: parameter type of subcap_id to u32
- drivers/char/tpm/tpm-interface.c | 15 +++++++++------
- drivers/char/tpm/tpm-sysfs.c     |  4 ++--
- drivers/char/tpm/tpm.h           | 25 ++++++++++++-------------
- 3 files changed, 23 insertions(+), 21 deletions(-)
+>  I would also add
+>
+> Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Will do when I mail the updated patch.
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index acf89e8..fa97520 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -442,26 +442,29 @@ static const struct tpm_input_header tpm_getcap_header = {
- 	.ordinal = TPM_ORD_GET_CAP
- };
- 
--ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
-+ssize_t tpm_getcap(struct tpm_chip *chip, u32 subcap_id, cap_t *cap,
- 		   const char *desc)
- {
- 	struct tpm_cmd_t tpm_cmd;
- 	int rc;
- 
- 	tpm_cmd.header.in = tpm_getcap_header;
--	if (subcap_id == CAP_VERSION_1_1 || subcap_id == CAP_VERSION_1_2) {
--		tpm_cmd.params.getcap_in.cap = subcap_id;
-+	if (subcap_id == TPM_CAP_VERSION_1_1 ||
-+	    subcap_id == TPM_CAP_VERSION_1_2) {
-+		tpm_cmd.params.getcap_in.cap = cpu_to_be32(subcap_id);
- 		/*subcap field not necessary */
- 		tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(0);
- 		tpm_cmd.header.in.length -= cpu_to_be32(sizeof(__be32));
- 	} else {
- 		if (subcap_id == TPM_CAP_FLAG_PERM ||
- 		    subcap_id == TPM_CAP_FLAG_VOL)
--			tpm_cmd.params.getcap_in.cap = TPM_CAP_FLAG;
-+			tpm_cmd.params.getcap_in.cap =
-+				cpu_to_be32(TPM_CAP_FLAG);
- 		else
--			tpm_cmd.params.getcap_in.cap = TPM_CAP_PROP;
-+			tpm_cmd.params.getcap_in.cap =
-+				cpu_to_be32(TPM_CAP_PROP);
- 		tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(4);
--		tpm_cmd.params.getcap_in.subcap = subcap_id;
-+		tpm_cmd.params.getcap_in.subcap = cpu_to_be32(subcap_id);
- 	}
- 	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, 0,
- 			      desc);
-diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
-index a76ab4a..59a1ead 100644
---- a/drivers/char/tpm/tpm-sysfs.c
-+++ b/drivers/char/tpm/tpm-sysfs.c
-@@ -193,7 +193,7 @@ static ssize_t caps_show(struct device *dev, struct device_attribute *attr,
- 		       be32_to_cpu(cap.manufacturer_id));
- 
- 	/* Try to get a TPM version 1.2 TPM_CAP_VERSION_INFO */
--	rc = tpm_getcap(chip, CAP_VERSION_1_2, &cap,
-+	rc = tpm_getcap(chip, TPM_CAP_VERSION_1_2, &cap,
- 			"attempting to determine the 1.2 version");
- 	if (!rc) {
- 		str += sprintf(str,
-@@ -204,7 +204,7 @@ static ssize_t caps_show(struct device *dev, struct device_attribute *attr,
- 			       cap.tpm_version_1_2.revMinor);
- 	} else {
- 		/* Otherwise just use TPM_STRUCT_VER */
--		rc = tpm_getcap(chip, CAP_VERSION_1_1, &cap,
-+		rc = tpm_getcap(chip, TPM_CAP_VERSION_1_1, &cap,
- 				"attempting to determine the 1.1 version");
- 		if (rc)
- 			return 0;
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 4d183c9..1864932 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -282,21 +282,20 @@ typedef union {
- } cap_t;
- 
- enum tpm_capabilities {
--	TPM_CAP_FLAG = cpu_to_be32(4),
--	TPM_CAP_PROP = cpu_to_be32(5),
--	CAP_VERSION_1_1 = cpu_to_be32(0x06),
--	CAP_VERSION_1_2 = cpu_to_be32(0x1A)
-+	TPM_CAP_FLAG = 4,
-+	TPM_CAP_PROP = 5,
-+	TPM_CAP_VERSION_1_1 = 0x06,
-+	TPM_CAP_VERSION_1_2 = 0x1A,
- };
- 
- enum tpm_sub_capabilities {
--	TPM_CAP_PROP_PCR = cpu_to_be32(0x101),
--	TPM_CAP_PROP_MANUFACTURER = cpu_to_be32(0x103),
--	TPM_CAP_FLAG_PERM = cpu_to_be32(0x108),
--	TPM_CAP_FLAG_VOL = cpu_to_be32(0x109),
--	TPM_CAP_PROP_OWNER = cpu_to_be32(0x111),
--	TPM_CAP_PROP_TIS_TIMEOUT = cpu_to_be32(0x115),
--	TPM_CAP_PROP_TIS_DURATION = cpu_to_be32(0x120),
--
-+	TPM_CAP_PROP_PCR = 0x101,
-+	TPM_CAP_PROP_MANUFACTURER = 0x103,
-+	TPM_CAP_FLAG_PERM = 0x108,
-+	TPM_CAP_FLAG_VOL = 0x109,
-+	TPM_CAP_PROP_OWNER = 0x111,
-+	TPM_CAP_PROP_TIS_TIMEOUT = 0x115,
-+	TPM_CAP_PROP_TIS_DURATION = 0x120,
- };
- 
- struct	tpm_getcap_params_in {
-@@ -484,7 +483,7 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
- 		     unsigned int flags);
- ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd, int len,
- 			 unsigned int flags, const char *desc);
--ssize_t tpm_getcap(struct tpm_chip *chip, __be32 subcap_id, cap_t *cap,
-+ssize_t tpm_getcap(struct tpm_chip *chip, u32 subcap_id, cap_t *cap,
- 		   const char *desc);
- int tpm_get_timeouts(struct tpm_chip *);
- int tpm1_auto_startup(struct tpm_chip *chip);
--- 
-2.9.3
+>> ---
+>>  drivers/char/tpm/tpm_tis_core.c | 13 +++++++++++++
+>>  1 file changed, 13 insertions(+)
+>>
+>> diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+>> index e3bf31b..d0301dc 100644
+>> --- a/drivers/char/tpm/tpm_tis_core.c
+>> +++ b/drivers/char/tpm/tpm_tis_core.c
+>> @@ -186,6 +186,12 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
+>>                                chip->timeout_c,
+>>                                &priv->read_queue, true) == 0) {
+>>               burstcnt = min_t(int, get_burstcount(chip), count - size);
+>> +             if (burstcnt < 0) {
+>> +                     dev_err(&chip->dev,
+>> +                             "Unable to read burstcount in %s:%d (%s)\n",
+>> +                             __FILE__, __LINE__, __func__);
+>> +                     return rc;
+>> +             }
+>
+> "return burstcnt;"
+Done, thanks!
 
+> I guess __func__ would be enough to deduce the call site?
+It is not; would you suggest removing it since it's redundant with
+__LINE__ and __FILE__? Or is there some other macro you know of that
+could be useful for determining the call site? (I had included it
+initially for the sake of ease of log reading, but that's perhaps not
+very compelling.)
+
+>
+>>               rc = tpm_tis_read_bytes(priv, TPM_DATA_FIFO(priv->locality),
+>>                                       burstcnt, buf + size);
+>> @@ -272,6 +278,13 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+>>
+>>       while (count < len - 1) {
+>>               burstcnt = min_t(int, get_burstcount(chip), len - count - 1);
+>> +             if (burstcnt < 0) {
+>> +                     dev_err(&chip->dev,
+>> +                             "Unable to read burstcount in %s:%d (%s)\n",
+>> +                             __FILE__, __LINE__, __func__);
+>> +                     rc = burstcnt;
+>> +                     goto out_err;
+>> +             }
+>>               rc = tpm_tis_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
+>>                                        burstcnt, buf + count);
+>>               if (rc < 0)
+>> --
+>> 2.8.0.rc3.226.g39d4020
+>
+> /Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
