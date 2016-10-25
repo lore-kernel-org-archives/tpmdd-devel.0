@@ -1,62 +1,43 @@
-From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH v2] tpm_tis: Check return values from
-	get_burstcount.
-Date: Mon, 24 Oct 2016 10:43:09 -0700
-Message-ID: <CAHSjozBWANwwaMD7ddqpdNSALFr2E0F2hxHZnxa4ShTsHRMVxA@mail.gmail.com>
-References: <20161024155439.GA27123@google.com>
-	<20161024173207.GA11533@kroah.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [PATCH] tpm, tpm_crb: remove redundant
+ CRB_FL_CRB_START flag
+Date: Tue, 25 Oct 2016 23:31:52 +0300
+Message-ID: <20161025203152.o4p3gmxeare6idpz@intel.com>
+References: <20161017204224.27163-1-jarkko.sakkinen@linux.intel.com>
+ <20161017225113.qnghq5vroxlmsurc@intel.com>
+ <5B8DA87D05A7694D9FA63FD143655C1B542FF8FC@hasmsx108.ger.corp.intel.com>
+ <20161019160928.n5fswy25t2ppdh73@intel.com>
+ <20161020135906.ah4rjympz3wq6g3t@intel.com>
+ <20161020140011.s5mu3atjjwnwqda4@intel.com>
+ <20161020202421.GA13459@obsidianresearch.com>
+ <20161021151141.oyxtjkfgn26nznty@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20161024173207.GA11533-U8xfFu+wG4EAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Greg KH <greg-U8xfFu+wG4EAvxtiuMwx3w@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20161021151141.oyxtjkfgn26nznty@intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: "Winkler, Tomas" <tomas.winkler@intel.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Oct 24, 2016 at 10:32 AM, Greg KH <greg-U8xfFu+wG4EAvxtiuMwx3w@public.gmane.org> wrote:
-> On Mon, Oct 24, 2016 at 08:54:39AM -0700, Josh Zimmerman wrote:
->> If the TPM we're connecting to uses a static burst count, it will report
->> a burst count of zero throughout the response read. However, get_burstcount
->> assumes that a response of zero indicates that the TPM is not ready to
->> receive more data. In this case, it returns a negative error code, which
->> is passed on to tpm_tis_{write,read}_bytes as a u16, causing
->> them to read/write far too many bytes.
->>
->> This patch checks for negative return codes and bails out from recv_data
->> and tpm_tis_send_data.
->>
->> Fixes: 1107d065fdf1
->
-> huh?
->
-> No signed off?
->
-> <formletter>
->
-> This is not the correct way to submit patches for inclusion in the
-> stable kernel tree.  Please read Documentation/stable_kernel_rules.txt
-> for how to do this properly.
->
-> </formletter>
+On Fri, Oct 21, 2016 at 06:11:41PM +0300, Jarkko Sakkinen wrote:
+> On Thu, Oct 20, 2016 at 02:24:21PM -0600, Jason Gunthorpe wrote:
+> > On Thu, Oct 20, 2016 at 05:00:11PM +0300, Jarkko Sakkinen wrote:
+> > 
+> > > > > I have a 4th Gen Core NUC where I experienced this issue. It reported
+> > > > > requiring only ACPI start but actually required ACPI + CRB start. The
+> > > > > comment could have been better.
+> > 
+> > Shouldn't bios work arounds be keyed on something? What happens if a
+> > system rolls around that cannot do ACPI + CRB start? How does this
+> > system work in windows?
+> 
+> I didn't find anything better to key it on at the time and it has been
+> working for two years now without any problems.
 
-Oh, I apologize. I was unfamiliar with the stable@ list, and was asked
-in v1 of my patch to add it to CCs. I was unaware that there were
-further prerequisites to doing so.  From reading
-stable_kernel_rules.txt's requirements, it doesn't seem like this is
-yet ready to be sent here, and perhaps it doesn't belong on the
-stable@ list at all. Moving stable@ to BCC.
+I've though about this and came to conclusion that maybe I won't apply
+this patch because it is good to keep this robustness in for now. I
+think your point is valid.
 
-Josh
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most 
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+/Jarkko
