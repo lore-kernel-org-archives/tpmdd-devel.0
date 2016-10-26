@@ -1,22 +1,15 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v5 7/7] tpm: replace or remove printk
- error messages
-Date: Wed, 26 Oct 2016 13:56:49 +0300
-Message-ID: <20161026105649.kgav732btjfv4pfw@intel.com>
-References: <1476838185-24007-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1476838185-24007-8-git-send-email-nayna@linux.vnet.ibm.com>
-	<20161019161854.iuzgacimusfcivvf@intel.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B5430045A@hasmsx108.ger.corp.intel.com>
-	<20161020112400.75pwp5ttk3yxuinq@intel.com>
-	<580989E6.3060103@linux.vnet.ibm.com>
-	<20161021150250.24dyyi427rbnkpba@intel.com>
-	<5810137D.2010002@linux.vnet.ibm.com>
+From: Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>
+Subject: Re: [PATCH] tpm_tis: Allow tpm_tis to be bound using
+	DT
+Date: Wed, 26 Oct 2016 12:25:51 +0100
+Message-ID: <20161026112351.GH19965@leverpostej>
+References: <20161025232331.GA20339@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <5810137D.2010002-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <20161025232331.GA20339-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -25,84 +18,130 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Oct 26, 2016 at 07:52:53AM +0530, Nayna wrote:
+On Tue, Oct 25, 2016 at 05:23:31PM -0600, Jason Gunthorpe wrote:
+> This provides an open firwmare driver binding for tpm_tis. OF
+> is useful on arches where ACPI/PNP is not used.
 > 
+> The tcg,tpm_tis-mmio register map interface is specified by the TCG.
 > 
-> On 10/21/2016 08:32 PM, Jarkko Sakkinen wrote:
-> > On Fri, Oct 21, 2016 at 08:52:14AM +0530, Nayna wrote:
-> > > 
-> > > 
-> > > On 10/20/2016 04:54 PM, Jarkko Sakkinen wrote:
-> > > > On Thu, Oct 20, 2016 at 07:34:37AM +0000, Winkler, Tomas wrote:
-> > > > > > On Tue, Oct 18, 2016 at 08:49:45PM -0400, Nayna Jain wrote:
-> > > > > > > This patch removes the unnecessary error messages on failing to
-> > > > > > > allocate memory and replaces pr_err/printk with dev_dbg/dev_info as
-> > > > > > > applicable.
-> > > > > > > 
-> > > > > > > Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> > > > > > > Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> > > > > > 
-> > > > > > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> > > > > > 
-> > > > > > /Jarkko
-> > > > > > 
-> > > > > > > ---
-> > > > > > >    drivers/char/tpm/tpm_acpi.c | 17 +++++------------
-> > > > > > >    drivers/char/tpm/tpm_of.c   | 30 ++++++++++--------------------
-> > > > > > >    2 files changed, 15 insertions(+), 32 deletions(-)
-> > > > > > > 
-> > > > > > > diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
-> > > > > > > index 859bdba..22e42da 100644
-> > > > > > > --- a/drivers/char/tpm/tpm_acpi.c
-> > > > > > > +++ b/drivers/char/tpm/tpm_acpi.c
-> > > > > > > @@ -60,11 +60,8 @@ int read_log_acpi(struct tpm_chip *chip)
-> > > > > > >    	status = acpi_get_table(ACPI_SIG_TCPA, 1,
-> > > > > > >    				(struct acpi_table_header **)&buff);
-> > > > > > > 
-> > > > > > > -	if (ACPI_FAILURE(status)) {
-> > > > > > > -		printk(KERN_ERR "%s: ERROR - Could not get TCPA table\n",
-> > > > > > > -		       __func__);
-> > > > > > > +	if (ACPI_FAILURE(status))
-> > > > > > >    		return -EIO;
-> > > > > > > -	}
-> > > > > > > 
-> > > > > > >    	switch(buff->platform_class) {
-> > > > > > >    	case BIOS_SERVER:
-> > > > > > > @@ -78,25 +75,21 @@ int read_log_acpi(struct tpm_chip *chip)
-> > > > > > >    		break;
-> > > > > > >    	}
-> > > > > > >    	if (!len) {
-> > > > > > > -		printk(KERN_ERR "%s: ERROR - TCPA log area empty\n",
-> > > > > > __func__);
-> > > > > > > +		dev_dbg(&chip->dev, "%s: ERROR - TCPA log area empty\n",
-> > > > > > > +			__func__);
-> > > > > 
-> > > > > 
-> > > > > Why to keep __func__ here, dev_dbg already does it for you.
-> > > > 
-> > > > Good catch. I would actually consider also changing this to
-> > > > 
-> > > > dev_err(dev, FW_BUG "TCPA log area empty\n");
-> > > > 
-> > > > If TCPA exists but it's empty, that's most likely a FW bug.
-> > > 
-> > > If it can be possibly a FW bug, should it fail the probe also just like
-> > > -ENOMEM error ?
-> > 
-> > I think so but I hold for second opinion on this. I mean wouldn't
-> > it seem like a bit broken situation where TCPA tabe would exist but
-> > would also be empty?
+> Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> ---
+>  .../bindings/security/tpm/tpm_tis_mmio.txt         | 22 ++++++++++++++++++++++
+>  drivers/char/tpm/Kconfig                           |  2 +-
+>  drivers/char/tpm/tpm_tis.c                         | 11 +++++++++++
+>  3 files changed, 34 insertions(+), 1 deletion(-)
+>  create mode 100644 Documentation/devicetree/bindings/security/tpm/tpm_tis_mmio.txt
 > 
-> Hmm, is it possible for this to be firmware implementation dependent ?
+> A bunch of work was done previously on how the tis driver probes and
+> binds, so DT enablement is now trivial.
+> 
+> diff --git a/Documentation/devicetree/bindings/security/tpm/tpm_tis_mmio.txt b/Documentation/devicetree/bindings/security/tpm/tpm_tis_mmio.txt
+> new file mode 100644
+> index 000000000000..67661f6a27cd
+> --- /dev/null
+> +++ b/Documentation/devicetree/bindings/security/tpm/tpm_tis_mmio.txt
+> @@ -0,0 +1,22 @@
+> +Trusted Computing Group MMIO Trusted Platform Module
+> +
+> +The TCG defines multi vendor standard for accessing a TPM chip, this
+> +is the standard protocol defined to access the TPM via MMIO. Typically
+> +this interface will be implemented over Intel's LPC bus.
+> +
+> +Refer to the 'TCG PC Client Specific TPM Interface Specification (TIS)' TCG
+> +publication for the specification.
+> +
+> +Required properties:
+> +
+> +- compatible: should specify the actual hardware chip followed by the
+> +  generic interface name "tcg,tpm_tis-spi";
 
-Let me put it this way. Why would anyone expose TCPA to the user space
-that is empty? What would be the point?
+Please use '-' in comaptible strings rather than '_'.
 
-/Jarkko
+Please also describe chip strings, even if those aren't use by the
+driver, e.g.
+
+compatible: should contain a string below for the chip, followed by
+"tcg,tpm-tis-spi". Valid chip strings are:
+* "atmel,at97sc3204"
+
+> +- reg: The location of the MMIO registers, should be at least 0x5000 bytes
+> +- interrupt: An optional interrupt indicating command completion.
+> +
+> +Example:
+> +
+> +	tpm_tis@90000 {
+> +				compatible = "atmel,at97sc3204", "tcg,tpm_tis-mmio";
+
+As above, that first compatible string should be listed, if it's
+intended to be valid.
+
+Otherwise, this looks fine to me.
+
+Thanks,
+Mark.
+
+> +				reg = <0x90000 0x5000>;
+> +			};
+> diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
+> index 9faa0b1e7766..277186d3b668 100644
+> --- a/drivers/char/tpm/Kconfig
+> +++ b/drivers/char/tpm/Kconfig
+> @@ -32,7 +32,7 @@ config TCG_TIS_CORE
+>  
+>  config TCG_TIS
+>  	tristate "TPM Interface Specification 1.2 Interface / TPM 2.0 FIFO Interface"
+> -	depends on X86
+> +	depends on X86 || OF
+>  	select TCG_TIS_CORE
+>  	---help---
+>  	  If you have a TPM security chip that is compliant with the
+> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+> index eaf5730d79eb..5a63fafaca69 100644
+> --- a/drivers/char/tpm/tpm_tis.c
+> +++ b/drivers/char/tpm/tpm_tis.c
+> @@ -28,6 +28,8 @@
+>  #include <linux/wait.h>
+>  #include <linux/acpi.h>
+>  #include <linux/freezer.h>
+> +#include <linux/of.h>
+> +#include <linux/of_device.h>
+>  #include "tpm.h"
+>  #include "tpm_tis_core.h"
+>  
+> @@ -354,12 +356,21 @@ static int tpm_tis_plat_remove(struct platform_device *pdev)
+>  	return 0;
+>  }
+>  
+> +#ifdef CONFIG_OF
+> +static const struct of_device_id tis_of_platform_match[] = {
+> +	{.compatible = "tcg,tpm_tis-mmio"},
+> +	{},
+> +};
+> +MODULE_DEVICE_TABLE(of, tis_of_platform_match);
+> +#endif
+> +
+>  static struct platform_driver tis_drv = {
+>  	.probe = tpm_tis_plat_probe,
+>  	.remove = tpm_tis_plat_remove,
+>  	.driver = {
+>  		.name		= "tpm_tis",
+>  		.pm		= &tpm_tis_pm,
+> +		.of_match_table = of_match_ptr(tis_of_platform_match),
+>  	},
+>  };
+>  
+> -- 
+> 2.1.4
+> 
+> --
+> To unsubscribe from this list: send the line "unsubscribe devicetree" in
+> the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+> More majordomo info at  http://vger.kernel.org/majordomo-info.html
+> 
 
 ------------------------------------------------------------------------------
 The Command Line: Reinvented for Modern Developers
