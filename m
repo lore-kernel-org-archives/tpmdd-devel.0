@@ -1,22 +1,12 @@
-From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v5 7/7] tpm: replace or remove printk
- error messages
-Date: Wed, 26 Oct 2016 23:01:00 +0530
-Message-ID: <5810E854.3070905@linux.vnet.ibm.com>
-References: <1476838185-24007-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1476838185-24007-8-git-send-email-nayna@linux.vnet.ibm.com>
-	<20161019161854.iuzgacimusfcivvf@intel.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B5430045A@hasmsx108.ger.corp.intel.com>
-	<20161020112400.75pwp5ttk3yxuinq@intel.com>
-	<580989E6.3060103@linux.vnet.ibm.com>
-	<20161021150250.24dyyi427rbnkpba@intel.com>
-	<5810137D.2010002@linux.vnet.ibm.com>
-	<20161026105649.kgav732btjfv4pfw@intel.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: [PATCH 1/3] tpm tis: Do not print timeout messages
+	twice
+Date: Wed, 26 Oct 2016 16:28:44 -0600
+Message-ID: <1477520926-32594-1-git-send-email-jgunthorpe@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20161026105649.kgav732btjfv4pfw-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -26,98 +16,106 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+The tis driver does a tpm_get_timeouts out side of tpm_chip_register,
+and tpm_get_timeouts can print a message, resulting in two prints, eg:
 
+ tpm tpm0: [Hardware Error]: Adjusting reported timeouts: A 10000->750000us B 10000->2000000us C 10000->750000us D 10000->750000us
 
-On 10/26/2016 04:26 PM, Jarkko Sakkinen wrote:
-> On Wed, Oct 26, 2016 at 07:52:53AM +0530, Nayna wrote:
->>
->>
->> On 10/21/2016 08:32 PM, Jarkko Sakkinen wrote:
->>> On Fri, Oct 21, 2016 at 08:52:14AM +0530, Nayna wrote:
->>>>
->>>>
->>>> On 10/20/2016 04:54 PM, Jarkko Sakkinen wrote:
->>>>> On Thu, Oct 20, 2016 at 07:34:37AM +0000, Winkler, Tomas wrote:
->>>>>>> On Tue, Oct 18, 2016 at 08:49:45PM -0400, Nayna Jain wrote:
->>>>>>>> This patch removes the unnecessary error messages on failing to
->>>>>>>> allocate memory and replaces pr_err/printk with dev_dbg/dev_info as
->>>>>>>> applicable.
->>>>>>>>
->>>>>>>> Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
->>>>>>>> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
->>>>>>>
->>>>>>> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
->>>>>>>
->>>>>>> /Jarkko
->>>>>>>
->>>>>>>> ---
->>>>>>>>     drivers/char/tpm/tpm_acpi.c | 17 +++++------------
->>>>>>>>     drivers/char/tpm/tpm_of.c   | 30 ++++++++++--------------------
->>>>>>>>     2 files changed, 15 insertions(+), 32 deletions(-)
->>>>>>>>
->>>>>>>> diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
->>>>>>>> index 859bdba..22e42da 100644
->>>>>>>> --- a/drivers/char/tpm/tpm_acpi.c
->>>>>>>> +++ b/drivers/char/tpm/tpm_acpi.c
->>>>>>>> @@ -60,11 +60,8 @@ int read_log_acpi(struct tpm_chip *chip)
->>>>>>>>     	status = acpi_get_table(ACPI_SIG_TCPA, 1,
->>>>>>>>     				(struct acpi_table_header **)&buff);
->>>>>>>>
->>>>>>>> -	if (ACPI_FAILURE(status)) {
->>>>>>>> -		printk(KERN_ERR "%s: ERROR - Could not get TCPA table\n",
->>>>>>>> -		       __func__);
->>>>>>>> +	if (ACPI_FAILURE(status))
->>>>>>>>     		return -EIO;
->>>>>>>> -	}
->>>>>>>>
->>>>>>>>     	switch(buff->platform_class) {
->>>>>>>>     	case BIOS_SERVER:
->>>>>>>> @@ -78,25 +75,21 @@ int read_log_acpi(struct tpm_chip *chip)
->>>>>>>>     		break;
->>>>>>>>     	}
->>>>>>>>     	if (!len) {
->>>>>>>> -		printk(KERN_ERR "%s: ERROR - TCPA log area empty\n",
->>>>>>> __func__);
->>>>>>>> +		dev_dbg(&chip->dev, "%s: ERROR - TCPA log area empty\n",
->>>>>>>> +			__func__);
->>>>>>
->>>>>>
->>>>>> Why to keep __func__ here, dev_dbg already does it for you.
->>>>>
->>>>> Good catch. I would actually consider also changing this to
->>>>>
->>>>> dev_err(dev, FW_BUG "TCPA log area empty\n");
->>>>>
->>>>> If TCPA exists but it's empty, that's most likely a FW bug.
->>>>
->>>> If it can be possibly a FW bug, should it fail the probe also just like
->>>> -ENOMEM error ?
->>>
->>> I think so but I hold for second opinion on this. I mean wouldn't
->>> it seem like a bit broken situation where TCPA tabe would exist but
->>> would also be empty?
->>
->> Hmm, is it possible for this to be firmware implementation dependent ?
->
-> Let me put it this way. Why would anyone expose TCPA to the user space
-> that is empty? What would be the point?
+Keep track and prevent tpm_get_timeouts from running a second time, and
+clarify the purpose of the call in tpm_tis_core to only be connected to
+irq testing.
 
-If I understand correctly,  the reserved memory for event log would be 
-allocated much earlier and firmware would directly write to this 
-allocated memory. So, if there is a firmware bug, and events are not 
-recorded, it will get exposed to userspace as empty event log and this 
-might also help applications to know that it is broken.  Is there any 
-wrong assumption here ?
+Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+---
+ drivers/char/tpm/tpm-interface.c |  7 +++++++
+ drivers/char/tpm/tpm.h           |  1 +
+ drivers/char/tpm/tpm_tis_core.c  | 20 ++++++++++----------
+ 3 files changed, 18 insertions(+), 10 deletions(-)
 
-Thanks & Regards,
-- Nayna
-
->
-> /Jarkko
->
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index aef20ee2331a..d0285faa4f1b 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -505,6 +505,9 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+ 	struct duration_t *duration_cap;
+ 	ssize_t rc;
+ 
++	if (chip->flags & TPM_CHIP_FLAG_HAVE_TIMEOUTS)
++		return 0;
++
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+ 		/* Fixed timeouts for TPM2 */
+ 		chip->timeout_a = msecs_to_jiffies(TPM2_TIMEOUT_A);
+@@ -517,6 +520,8 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+ 		    msecs_to_jiffies(TPM2_DURATION_MEDIUM);
+ 		chip->duration[TPM_LONG] =
+ 		    msecs_to_jiffies(TPM2_DURATION_LONG);
++
++		chip->flags |= TPM_CHIP_FLAG_HAVE_TIMEOUTS;
+ 		return 0;
+ 	}
+ 
+@@ -630,6 +635,8 @@ duration:
+ 		chip->duration_adjusted = true;
+ 		dev_info(&chip->dev, "Adjusting TPM timeout parameters.");
+ 	}
++
++	chip->flags |= TPM_CHIP_FLAG_HAVE_TIMEOUTS;
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(tpm_get_timeouts);
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index b0585e99da49..2611459271e5 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -143,6 +143,7 @@ enum tpm_chip_flags {
+ 	TPM_CHIP_FLAG_TPM2		= BIT(1),
+ 	TPM_CHIP_FLAG_IRQ		= BIT(2),
+ 	TPM_CHIP_FLAG_VIRTUAL		= BIT(3),
++	TPM_CHIP_FLAG_HAVE_TIMEOUTS	= BIT(4),
+ };
+ 
+ struct tpm_chip {
+diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+index d66f51b3648e..193bee4d70e0 100644
+--- a/drivers/char/tpm/tpm_tis_core.c
++++ b/drivers/char/tpm/tpm_tis_core.c
+@@ -749,20 +749,20 @@ int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
+ 	if (intfcaps & TPM_INTF_DATA_AVAIL_INT)
+ 		dev_dbg(dev, "\tData Avail Int Support\n");
+ 
+-	/* Very early on issue a command to the TPM in polling mode to make
+-	 * sure it works. May as well use that command to set the proper
+-	 *  timeouts for the driver.
+-	 */
+-	if (tpm_get_timeouts(chip)) {
+-		dev_err(dev, "Could not get TPM timeouts and durations\n");
+-		rc = -ENODEV;
+-		goto out_err;
+-	}
+-
+ 	/* INTERRUPT Setup */
+ 	init_waitqueue_head(&priv->read_queue);
+ 	init_waitqueue_head(&priv->int_queue);
+ 	if (irq != -1) {
++		/* Before doing irq testing issue a command to the TPM in polling mode
++		 * to make sure it works. May as well use that command to set the
++		 * proper timeouts for the driver.
++		 */
++		if (tpm_get_timeouts(chip)) {
++			dev_err(dev, "Could not get TPM timeouts and durations\n");
++			rc = -ENODEV;
++			goto out_err;
++		}
++
+ 		if (irq) {
+ 			tpm_tis_probe_irq_single(chip, intmask, IRQF_SHARED,
+ 						 irq);
+-- 
+2.1.4
 
 
 ------------------------------------------------------------------------------
