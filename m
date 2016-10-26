@@ -1,52 +1,85 @@
-From: Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>
-Subject: Re: [PATCH] tpm_tis: Allow tpm_tis to be bound using DT
-Date: Wed, 26 Oct 2016 17:16:04 +0100
-Message-ID: <20161026161604.GB23322@leverpostej>
-References: <20161025232331.GA20339@obsidianresearch.com>
- <20161026105527.cd6hcn37vmboshue@intel.com>
- <20161026160505.GC24898@obsidianresearch.com>
+From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Subject: [PATCH v3] tpm_tis: Check return values from
+	get_burstcount.
+Date: Wed, 26 Oct 2016 09:33:41 -0700
+Message-ID: <20161026163341.GA19855@google.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20161026160505.GC24898-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Sender: devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Oct 26, 2016 at 10:05:05AM -0600, Jason Gunthorpe wrote:
-> On Wed, Oct 26, 2016 at 01:55:27PM +0300, Jarkko Sakkinen wrote:
-> > On Tue, Oct 25, 2016 at 05:23:31PM -0600, Jason Gunthorpe wrote:
-> > > This provides an open firwmare driver binding for tpm_tis. OF
-> > > is useful on arches where ACPI/PNP is not used.
-> > > 
-> > > The tcg,tpm_tis-mmio register map interface is specified by the TCG.
-> > > 
-> > > Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> > >  .../bindings/security/tpm/tpm_tis_mmio.txt         | 22 ++++++++++++++++++++++
-> > 
-> > I'll do a proper review later on but should this change be a separate
-> > commit or not?
-> 
-> I've understood it is OK for tiny source patches, large ones should be
-> split. In either case they both go through your tree together. The DT
-> mailing list just does not want to be spammed...
+If the TPM we're connecting to uses a static burst count, it will report
+a burst count of zero throughout the response read. However, get_burstcount
+assumes that a response of zero indicates that the TPM is not ready to
+receive more data. In this case, it returns a negative error code, which
+is passed on to tpm_tis_{write,read}_bytes as a u16, causing
+them to read/write far too many bytes.
 
-In general we ask that binding modifications are in a separate patch,
-earlier in the series (see [1]), but in cases where the additions are
-small, we're not too bothered.
+This patch checks for negative return codes and bails out from recv_data
+and tpm_tis_send_data.
 
-As for why, it's about making it easier to spot the parts we need to act
-on. We still would like to see the entire series (and ask that we're
-cc'd [1]), as this can be useful context for review, and there are often
-mismatches between the documented binding and code that we may spot.
+Fixes: 1107d065fdf1
+Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 
-Thanks,
-Mark.
+---
+Changelog v3:
+ - Add signed-off-by.
+Changelog v2:
+ - Fix typo (rc->burstcnt)
 
-[1] Documentation/devicetree/bindings/submitting-patches.txt
---
-To unsubscribe from this list: send the line "unsubscribe devicetree" in
-the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-More majordomo info at  http://vger.kernel.org/majordomo-info.html
+---
+ drivers/char/tpm/tpm_tis_core.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+index e3bf31b..aed92b3 100644
+--- a/drivers/char/tpm/tpm_tis_core.c
++++ b/drivers/char/tpm/tpm_tis_core.c
+@@ -186,6 +186,12 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
+ 				 chip->timeout_c,
+ 				 &priv->read_queue, true) == 0) {
+ 		burstcnt = min_t(int, get_burstcount(chip), count - size);
++		if (burstcnt < 0) {
++			dev_err(&chip->dev,
++				"Unable to read burstcount in %s:%d (%s)\n",
++				__FILE__, __LINE__, __func__);
++			return burstcnt;
++		}
+ 
+ 		rc = tpm_tis_read_bytes(priv, TPM_DATA_FIFO(priv->locality),
+ 					burstcnt, buf + size);
+@@ -272,6 +278,13 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ 
+ 	while (count < len - 1) {
+ 		burstcnt = min_t(int, get_burstcount(chip), len - count - 1);
++		if (burstcnt < 0) {
++			dev_err(&chip->dev,
++				"Unable to read burstcount in %s:%d (%s)\n",
++				__FILE__, __LINE__, __func__);
++			rc = burstcnt;
++			goto out_err;
++		}
+ 		rc = tpm_tis_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
+ 					 burstcnt, buf + count);
+ 		if (rc < 0)
+-- 
+2.8.0.rc3.226.g39d4020
+
+
+------------------------------------------------------------------------------
+The Command Line: Reinvented for Modern Developers
+Did the resurgence of CLI tooling catch you by surprise?
+Reconnect with the command line and become more productive. 
+Learn the new .NET and ASP.NET CLI. Get your free copy!
+http://sdm.link/telerik
