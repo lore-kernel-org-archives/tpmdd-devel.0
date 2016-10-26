@@ -1,20 +1,12 @@
-From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v5 7/7] tpm: replace or remove printk
- error messages
-Date: Wed, 26 Oct 2016 07:52:53 +0530
-Message-ID: <5810137D.2010002@linux.vnet.ibm.com>
-References: <1476838185-24007-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1476838185-24007-8-git-send-email-nayna@linux.vnet.ibm.com>
-	<20161019161854.iuzgacimusfcivvf@intel.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B5430045A@hasmsx108.ger.corp.intel.com>
-	<20161020112400.75pwp5ttk3yxuinq@intel.com>
-	<580989E6.3060103@linux.vnet.ibm.com>
-	<20161021150250.24dyyi427rbnkpba@intel.com>
+From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH v3 1/2] Documentation: tpm: add the IBM
+	Virtual TPM device tree binding documentation
+Date: Wed, 26 Oct 2016 05:21:44 -0400
+Message-ID: <1477473705-12746-1-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20161021150250.24dyyi427rbnkpba-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,84 +15,79 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+To: devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: mark.rutland-5wv7dgnIgG8@public.gmane.org, robh-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org, pawel.moll-5wv7dgnIgG8@public.gmane.org, ijc+devicetree-KcIKpvwj1kUDXYZnReoRVg@public.gmane.org, wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org, honclo-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org, linux-i2c-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, galak-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org, cclaudio-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+Virtual TPM, which is being used on IBM POWER7+ and POWER8 systems running
+POWERVM, is currently supported by tpm device driver but lacks the
+documentation. This patch adds the missing documentation for the existing
+support.
 
+Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+---
+Changelog v3:
 
-On 10/21/2016 08:32 PM, Jarkko Sakkinen wrote:
-> On Fri, Oct 21, 2016 at 08:52:14AM +0530, Nayna wrote:
->>
->>
->> On 10/20/2016 04:54 PM, Jarkko Sakkinen wrote:
->>> On Thu, Oct 20, 2016 at 07:34:37AM +0000, Winkler, Tomas wrote:
->>>>> On Tue, Oct 18, 2016 at 08:49:45PM -0400, Nayna Jain wrote:
->>>>>> This patch removes the unnecessary error messages on failing to
->>>>>> allocate memory and replaces pr_err/printk with dev_dbg/dev_info as
->>>>>> applicable.
->>>>>>
->>>>>> Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
->>>>>> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
->>>>>
->>>>> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
->>>>>
->>>>> /Jarkko
->>>>>
->>>>>> ---
->>>>>>    drivers/char/tpm/tpm_acpi.c | 17 +++++------------
->>>>>>    drivers/char/tpm/tpm_of.c   | 30 ++++++++++--------------------
->>>>>>    2 files changed, 15 insertions(+), 32 deletions(-)
->>>>>>
->>>>>> diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
->>>>>> index 859bdba..22e42da 100644
->>>>>> --- a/drivers/char/tpm/tpm_acpi.c
->>>>>> +++ b/drivers/char/tpm/tpm_acpi.c
->>>>>> @@ -60,11 +60,8 @@ int read_log_acpi(struct tpm_chip *chip)
->>>>>>    	status = acpi_get_table(ACPI_SIG_TCPA, 1,
->>>>>>    				(struct acpi_table_header **)&buff);
->>>>>>
->>>>>> -	if (ACPI_FAILURE(status)) {
->>>>>> -		printk(KERN_ERR "%s: ERROR - Could not get TCPA table\n",
->>>>>> -		       __func__);
->>>>>> +	if (ACPI_FAILURE(status))
->>>>>>    		return -EIO;
->>>>>> -	}
->>>>>>
->>>>>>    	switch(buff->platform_class) {
->>>>>>    	case BIOS_SERVER:
->>>>>> @@ -78,25 +75,21 @@ int read_log_acpi(struct tpm_chip *chip)
->>>>>>    		break;
->>>>>>    	}
->>>>>>    	if (!len) {
->>>>>> -		printk(KERN_ERR "%s: ERROR - TCPA log area empty\n",
->>>>> __func__);
->>>>>> +		dev_dbg(&chip->dev, "%s: ERROR - TCPA log area empty\n",
->>>>>> +			__func__);
->>>>
->>>>
->>>> Why to keep __func__ here, dev_dbg already does it for you.
->>>
->>> Good catch. I would actually consider also changing this to
->>>
->>> dev_err(dev, FW_BUG "TCPA log area empty\n");
->>>
->>> If TCPA exists but it's empty, that's most likely a FW bug.
->>
->> If it can be possibly a FW bug, should it fail the probe also just like
->> -ENOMEM error ?
->
-> I think so but I hold for second opinion on this. I mean wouldn't
-> it seem like a bit broken situation where TCPA tabe would exist but
-> would also be empty?
+- No changes done.
 
-Hmm, is it possible for this to be firmware implementation dependent ?
+Changelog v2:
 
-Thanks & Regards,
-    - Nayna
->
-> /Jarkko
->
+- New Patch.
+
+ .../devicetree/bindings/security/tpm/ibmvtpm.txt   | 41 ++++++++++++++++++++++
+ 1 file changed, 41 insertions(+)
+ create mode 100644 Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt
+
+diff --git a/Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt b/Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt
+new file mode 100644
+index 0000000..d89f999
+--- /dev/null
++++ b/Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt
+@@ -0,0 +1,41 @@
++* Device Tree Bindings for IBM Virtual Trusted Platform Module(vtpm)
++
++Required properties:
++
++- compatible            : property name that conveys the platform architecture
++                          identifiers, as 'IBM,vtpm'
++- device_type           : specifies type of virtual device
++- interrupts            : property specifying the interrupt source number and
++                          sense code associated with this virtual I/O Adapters
++- ibm,my-drc-index      : integer index for the connector between the device
++                          and its parent - present only if Dynamic
++                          Reconfiguration(DR) Connector is enabled
++- ibm,#dma-address-cells: specifies the number of cells that are used to
++                          encode the physical address field of dma-window
++                          properties
++- ibm,#dma-size-cells   : specifies the number of cells that are used to
++                          encode the size field of dma-window properties
++- ibm,my-dma-window     : specifies DMA window associated with this virtual
++                          IOA
++- ibm,loc-code          : specifies the unique and persistent location code
++                          associated with this virtual I/O Adapters
++- linux,sml-base        : 64-bit base address of the reserved memory allocated
++                          for the firmware event log
++- linux,sml-size        : size of the memory allocated for the firmware event log
++
++Example (IBM Virtual Trusted Platform Module)
++---------------------------------------------
++
++                vtpm@30000003 {
++                        ibm,#dma-size-cells = <0x2>;
++                        compatible = "IBM,vtpm";
++                        device_type = "IBM,vtpm";
++                        ibm,my-drc-index = <0x30000003>;
++                        ibm,#dma-address-cells = <0x2>;
++                        linux,sml-base = <0xc60e 0x0>;
++                        interrupts = <0xa0003 0x0>;
++                        ibm,my-dma-window = <0x10000003 0x0 0x0 0x0 0x10000000>;
++                        ibm,loc-code = "U8286.41A.10082DV-V3-C3";
++                        reg = <0x30000003>;
++                        linux,sml-size = <0xbce10200>;
++                };
+-- 
+2.5.0
 
 
 ------------------------------------------------------------------------------
