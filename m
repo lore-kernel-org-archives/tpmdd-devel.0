@@ -1,15 +1,16 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v5] tpm_tis: Check return values from
-	get_burstcount.
-Date: Fri, 28 Oct 2016 19:28:15 +0300
-Message-ID: <20161028162815.e2ssrzwq62i5rorn@intel.com>
-References: <20161027215009.GA12733@google.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: tpm_tis regression in 4.9?
+Date: Fri, 28 Oct 2016 11:10:43 -0600
+Message-ID: <20161028171043.GA18206@obsidianresearch.com>
+References: <CALCETrXjWaky05iMXZBGJT8xyQbtbkcL=G9J0vAzEWRHWtMuCg@mail.gmail.com>
+	<20161028030916.GA29851@obsidianresearch.com>
+	<20161028143745.3iaevn4sunbmuiln@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20161027215009.GA12733-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+In-Reply-To: <20161028143745.3iaevn4sunbmuiln-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,81 +19,23 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, Andy Lutomirski <luto-kltTT9wpgjJwATOyAt5JVQ@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Oct 27, 2016 at 02:50:09PM -0700, Josh Zimmerman wrote:
-> If the TPM we're connecting to uses a static burst count, it will report
-> a burst count of zero throughout the response read. However, get_burstcount
-> assumes that a response of zero indicates that the TPM is not ready to
-> receive more data. In this case, it returns a negative error code, which
-> is passed on to tpm_tis_{write,read}_bytes as a u16, causing
-> them to read/write far too many bytes.
-> 
-> This patch checks for negative return codes and bails out from recv_data
-> and tpm_tis_send_data.
-> 
-> Fixes: 1107d065fdf1 (tpm_tis: Introduce intermediate layer for TPM access)
-> Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-> 
-> ---
-> Changelog v5:
->  - Move burstcnt < 0 check to before the min_t() call for enhanced readability.
-> Changelog v4:
->  - Add short description to Fixes tag line.
->  - Remove some unnecessary information in dev_err statements.
-> Changelog v3:
->  - Add signed-off-by.
-> Changelog v2:
->  - Fix typo (rc->burstcnt)
-> 
-> ---
->  drivers/char/tpm/tpm_tis_core.c | 15 +++++++++++++--
->  1 file changed, 13 insertions(+), 2 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-> index e3bf31b..a1ce060 100644
-> --- a/drivers/char/tpm/tpm_tis_core.c
-> +++ b/drivers/char/tpm/tpm_tis_core.c
-> @@ -185,7 +185,12 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
->  				 TPM_STS_DATA_AVAIL | TPM_STS_VALID,
->  				 chip->timeout_c,
->  				 &priv->read_queue, true) == 0) {
-> -		burstcnt = min_t(int, get_burstcount(chip), count - size);
-> +		burstcnt = get_burstcount(chip);
-> +		if (burstcnt < 0) {
-> +			dev_err(&chip->dev, "Unable to read burstcount\n");
-> +			return burstcnt;
-> +		}
-> +		burstcnt = min_t(int, burstcnt, count - size);
->  
->  		rc = tpm_tis_read_bytes(priv, TPM_DATA_FIFO(priv->locality),
->  					burstcnt, buf + size);
-> @@ -271,7 +276,13 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
->  	}
->  
->  	while (count < len - 1) {
-> -		burstcnt = min_t(int, get_burstcount(chip), len - count - 1);
-> +		burstcnt = get_burstcount(chip);
-> +		if (burstcnt < 0) {
-> +			dev_err(&chip->dev, "Unable to read burstcount\n");
-> +			rc = burstcnt;
-> +			goto out_err;
-> +		}
-> +		burstcnt = min_t(int, burstcnt, len - count - 1);
->  		rc = tpm_tis_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
->  					 burstcnt, buf + count);
->  		if (rc < 0)
-> -- 
-> 2.8.0.rc3.226.g39d4020
-> 
+On Fri, Oct 28, 2016 at 05:37:45PM +0300, Jarkko Sakkinen wrote:
 
-LGTM
+> > I think this patch from Jarkko's next is the fix:
+> > 
+> > http://git.infradead.org/users/jjs/linux-tpmdd.git/commit/65da72b7ddcdd8990e4783d09c7e86d90ccb4121
+> > 
+> > Jarkko? Can you hurry that along to go in for -rc?
+> 
+> Do you think I should resend the pull request?
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+That or a ping. This patch needs to land right away since it is breaking 4.9.
 
-/Jarkko
+Jason
 
 ------------------------------------------------------------------------------
 The Command Line: Reinvented for Modern Developers
