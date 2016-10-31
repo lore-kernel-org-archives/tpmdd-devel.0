@@ -1,35 +1,38 @@
-From: David Miller <davem@davemloft.net>
-Subject: Re: [PATCH 00/12] xen: add common function for reading
- optional value
-Date: Mon, 31 Oct 2016 13:08:31 -0400 (EDT)
-Message-ID: <20161031.130831.2006896157400677867.davem@davemloft.net>
-References: <1477932510-28594-1-git-send-email-jgross@suse.com>
+From: "Winkler, Tomas" <tomas.winkler@intel.com>
+Subject: RE: [tpmdd-devel] tpm_tis regression in 4.9?
+Date: Mon, 31 Oct 2016 20:16:59 +0000
+Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B54312DCD@hasmsx108.ger.corp.intel.com>
+References: <CALCETrXjWaky05iMXZBGJT8xyQbtbkcL=G9J0vAzEWRHWtMuCg@mail.gmail.com>
+        <20161028030916.GA29851@obsidianresearch.com>
+        <20161028143745.3iaevn4sunbmuiln@intel.com>
+ <20161028171043.GA18206@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <xen-devel-bounces@lists.xen.org>
-In-Reply-To: <1477932510-28594-1-git-send-email-jgross@suse.com>
-List-Unsubscribe: <https://lists.xen.org/cgi-bin/mailman/options/xen-devel>,
- <mailto:xen-devel-request@lists.xen.org?subject=unsubscribe>
-List-Post: <mailto:xen-devel@lists.xen.org>
-List-Help: <mailto:xen-devel-request@lists.xen.org?subject=help>
-List-Subscribe: <https://lists.xen.org/cgi-bin/mailman/listinfo/xen-devel>,
- <mailto:xen-devel-request@lists.xen.org?subject=subscribe>
-Errors-To: xen-devel-bounces@lists.xen.org
-Sender: "Xen-devel" <xen-devel-bounces@lists.xen.org>
-To: jgross@suse.com
-Cc: linux-fbdev@vger.kernel.org, wei.liu2@citrix.com, linux-pci@vger.kernel.org, netdev@vger.kernel.org, tomi.valkeinen@ti.com, dmitry.torokhov@gmail.com, tpmdd@selhorst.net, linux-kernel@vger.kernel.org, jarkko.sakkinen@linux.intel.com, xen-devel@lists.xen.org, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, david.vrabel@citrix.com, linux-input@vger.kernel.org, bhelgaas@google.com, boris.ostrovsky@oracle.com, peterhuewe@gmx.de, paul.durrant@citrix.com, roger.pau@citrix.com
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 8BIT
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20161028171043.GA18206@obsidianresearch.com>
+Content-Language: en-US
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-RnJvbTogSnVlcmdlbiBHcm9zcyA8amdyb3NzQHN1c2UuY29tPgpEYXRlOiBNb24sIDMxIE9jdCAy
-MDE2IDE3OjQ4OjE4ICswMTAwCgo+IFRoZXJlIGFyZSBtdWx0aXBsZSBpbnN0YW5jZXMgb2YgY29k
-ZSByZWFkaW5nIGFuIG9wdGlvbmFsIHVuc2lnbmVkCj4gcGFyYW1ldGVyIGZyb20gWGVuc3RvcmUg
-dmlhIHhlbmJ1c19zY2FuZigpLiBJbnN0ZWFkIG9mIHJlcGVhdGluZyB0aGUKPiBzYW1lIGNvZGUg
-b3ZlciBhbmQgb3ZlciBhZGQgYSBzZXJ2aWNlIGZ1bmN0aW9uIGRvaW5nIHRoZSBqb2IgYW5kCj4g
-cmVwbGFjZSB0aGUgY2FsbCBvZiB4ZW5idXNfc2NhbmYoKSB3aXRoIHRoZSBjYWxsIG9mIHRoZSBu
-ZXcgZnVuY3Rpb24KPiB3aGVyZSBhcHByb3ByaWF0ZS4KCkFzIHRoaXMgc2VlbXMgdG8gYmUgYSBz
-ZXJpZXMgdGhhdCB3aWxsIGdvIHRocm91Z2ggc29tZSB0cmVlIG90aGVyCnRoYW4gbWluZSwgSSBh
-c3N1bWUgdGhlIG5ldHdvcmtpbmcgYml0cyB3aWxsIGJlIHRha2VuIGNhcmUgb2YgdGhhdAp3YXku
-CgpfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwpYZW4tZGV2
-ZWwgbWFpbGluZyBsaXN0Clhlbi1kZXZlbEBsaXN0cy54ZW4ub3JnCmh0dHBzOi8vbGlzdHMueGVu
-Lm9yZy94ZW4tZGV2ZWwK
+> 
+> On Fri, Oct 28, 2016 at 05:37:45PM +0300, Jarkko Sakkinen wrote:
+> 
+> > > I think this patch from Jarkko's next is the fix:
+> > >
+> > > http://git.infradead.org/users/jjs/linux-tpmdd.git/commit/65da72b7dd
+> > > cdd8990e4783d09c7e86d90ccb4121
+> > >
+> > > Jarkko? Can you hurry that along to go in for -rc?
+> >
+> > Do you think I should resend the pull request?
+> 
+> That or a ping. This patch needs to land right away since it is breaking 4.9.
+> 
+> Jason
+
+Jarrko, why we didn't request pull for fix Intel PTT patches, as well for 4.9? 
+Thanks
+Tomas
