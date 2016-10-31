@@ -1,63 +1,49 @@
 From: Juergen Gross <jgross@suse.com>
-Subject: [PATCH 00/12] xen: add common function for reading optional value
-Date: Mon, 31 Oct 2016 17:48:18 +0100
-Message-ID: <1477932510-28594-1-git-send-email-jgross@suse.com>
-Return-path: <linux-pci-owner@vger.kernel.org>
-Sender: linux-pci-owner@vger.kernel.org
+Subject: [PATCH 04/12] xen: make use of xenbus_read_unsigned()
+	in xen-tpmfront
+Date: Mon, 31 Oct 2016 17:48:22 +0100
+Message-ID: <1477932510-28594-5-git-send-email-jgross@suse.com>
+References: <1477932510-28594-1-git-send-email-jgross@suse.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <xen-devel-bounces@lists.xen.org>
+In-Reply-To: <1477932510-28594-1-git-send-email-jgross@suse.com>
+List-Unsubscribe: <https://lists.xen.org/cgi-bin/mailman/options/xen-devel>,
+ <mailto:xen-devel-request@lists.xen.org?subject=unsubscribe>
+List-Post: <mailto:xen-devel@lists.xen.org>
+List-Help: <mailto:xen-devel-request@lists.xen.org?subject=help>
+List-Subscribe: <https://lists.xen.org/cgi-bin/mailman/listinfo/xen-devel>,
+ <mailto:xen-devel-request@lists.xen.org?subject=subscribe>
+Errors-To: xen-devel-bounces@lists.xen.org
+Sender: "Xen-devel" <xen-devel-bounces@lists.xen.org>
 To: linux-kernel@vger.kernel.org, xen-devel@lists.xen.org
-Cc: david.vrabel@citrix.com, boris.ostrovsky@oracle.com, Juergen Gross <jgross@suse.com>, konrad.wilk@oracle.com, roger.pau@citrix.com, peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, dmitry.torokhov@gmail.com, linux-input@vger.kernel.org, wei.liu2@citrix.com, paul.durrant@citrix.com, netdev@vger.kernel.org, bhelgaas@google.com, linux-pci@vger.kernel.org, tomi.valkeinen@ti.com, linux-fbdev@vger.kernel.org
+Cc: Juergen Gross <jgross@suse.com>, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, david.vrabel@citrix.com, boris.ostrovsky@oracle.com, peterhuewe@gmx.de
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-There are multiple instances of code reading an optional unsigned
-parameter from Xenstore via xenbus_scanf(). Instead of repeating the
-same code over and over add a service function doing the job and
-replace the call of xenbus_scanf() with the call of the new function
-where appropriate.
-
-Juergen Gross (12):
-  xen: introduce xenbus_read_unsigned()
-  xen: make use of xenbus_read_unsigned() in xen-blkback
-  xen: make use of xenbus_read_unsigned() in xen-blkfront
-  xen: make use of xenbus_read_unsigned() in xen-tpmfront
-  xen: make use of xenbus_read_unsigned() in xen-kbdfront
-  xen: make use of xenbus_read_unsigned() in xen-netback
-  xen: make use of xenbus_read_unsigned() in xen-netfront
-  xen: make use of xenbus_read_unsigned() in xen-pcifront
-  xen: make use of xenbus_read_unsigned() in xen-scsifront
-  xen: make use of xenbus_read_unsigned() in xen-fbfront
-  xen: make use of xenbus_read_unsigned() in xen-pciback
-  xen: make use of xenbus_read_unsigned() in xenbus
-
- drivers/block/xen-blkback/xenbus.c        | 36 ++++++--------
- drivers/block/xen-blkfront.c              | 81 ++++++++++---------------------
- drivers/char/tpm/xen-tpmfront.c           |  8 +--
- drivers/input/misc/xen-kbdfront.c         | 13 ++---
- drivers/net/xen-netback/xenbus.c          | 50 ++++++-------------
- drivers/net/xen-netfront.c                | 67 +++++++------------------
- drivers/pci/xen-pcifront.c                |  6 +--
- drivers/scsi/xen-scsifront.c              |  6 +--
- drivers/video/fbdev/xen-fbfront.c         | 13 ++---
- drivers/xen/xen-pciback/xenbus.c          |  8 ++-
- drivers/xen/xenbus/xenbus_probe_backend.c |  8 +--
- drivers/xen/xenbus/xenbus_xs.c            | 22 +++++++--
- include/xen/xenbus.h                      |  4 ++
- 13 files changed, 112 insertions(+), 210 deletions(-)
-
-Cc: konrad.wilk@oracle.com
-Cc: roger.pau@citrix.com
-Cc: peterhuewe@gmx.de
-Cc: tpmdd@selhorst.net
-Cc: jarkko.sakkinen@linux.intel.com
-Cc: jgunthorpe@obsidianresearch.com
-Cc: tpmdd-devel@lists.sourceforge.net
-Cc: dmitry.torokhov@gmail.com
-Cc: linux-input@vger.kernel.org
-Cc: wei.liu2@citrix.com
-Cc: paul.durrant@citrix.com
-Cc: netdev@vger.kernel.org
-Cc: bhelgaas@google.com
-Cc: linux-pci@vger.kernel.org
-Cc: tomi.valkeinen@ti.com
-Cc: linux-fbdev@vger.kernel.org
--- 
-2.6.6
+VXNlIHhlbmJ1c19yZWFkX3Vuc2lnbmVkKCkgaW5zdGVhZCBvZiB4ZW5idXNfc2NhbmYoKSB3aGVu
+IHBvc3NpYmxlLgpUaGlzIHJlcXVpcmVzIHRvIGNoYW5nZSB0aGUgdHlwZSBvZiBvbmUgcmVhZCBm
+cm9tIGludCB0byB1bnNpZ25lZCwKYnV0IHRoaXMgY2FzZSBoYXMgYmVlbiB3cm9uZyBiZWZvcmU6
+IG5lZ2F0aXZlIHZhbHVlcyBhcmUgbm90IGFsbG93ZWQKZm9yIHRoZSBtb2RpZmllZCBjYXNlLgoK
+Q2M6IHBldGVyaHVld2VAZ214LmRlCkNjOiB0cG1kZEBzZWxob3JzdC5uZXQKQ2M6IGphcmtrby5z
+YWtraW5lbkBsaW51eC5pbnRlbC5jb20KQ2M6IGpndW50aG9ycGVAb2JzaWRpYW5yZXNlYXJjaC5j
+b20KQ2M6IHRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldAoKU2lnbmVkLW9mZi1ieTog
+SnVlcmdlbiBHcm9zcyA8amdyb3NzQHN1c2UuY29tPgotLS0KIGRyaXZlcnMvY2hhci90cG0veGVu
+LXRwbWZyb250LmMgfCA4ICsrLS0tLS0tCiAxIGZpbGUgY2hhbmdlZCwgMiBpbnNlcnRpb25zKCsp
+LCA2IGRlbGV0aW9ucygtKQoKZGlmZiAtLWdpdCBhL2RyaXZlcnMvY2hhci90cG0veGVuLXRwbWZy
+b250LmMgYi9kcml2ZXJzL2NoYXIvdHBtL3hlbi10cG1mcm9udC5jCmluZGV4IDYyMDI4ZjQuLjUw
+MDcyY2MgMTAwNjQ0Ci0tLSBhL2RyaXZlcnMvY2hhci90cG0veGVuLXRwbWZyb250LmMKKysrIGIv
+ZHJpdmVycy9jaGFyL3RwbS94ZW4tdHBtZnJvbnQuYwpAQCAtMzM3LDE4ICszMzcsMTQgQEAgc3Rh
+dGljIGludCB0cG1mcm9udF9yZXN1bWUoc3RydWN0IHhlbmJ1c19kZXZpY2UgKmRldikKIHN0YXRp
+YyB2b2lkIGJhY2tlbmRfY2hhbmdlZChzdHJ1Y3QgeGVuYnVzX2RldmljZSAqZGV2LAogCQllbnVt
+IHhlbmJ1c19zdGF0ZSBiYWNrZW5kX3N0YXRlKQogewotCWludCB2YWw7Ci0KIAlzd2l0Y2ggKGJh
+Y2tlbmRfc3RhdGUpIHsKIAljYXNlIFhlbmJ1c1N0YXRlSW5pdGlhbGlzZWQ6CiAJY2FzZSBYZW5i
+dXNTdGF0ZUNvbm5lY3RlZDoKIAkJaWYgKGRldi0+c3RhdGUgPT0gWGVuYnVzU3RhdGVDb25uZWN0
+ZWQpCiAJCQlicmVhazsKIAotCQlpZiAoeGVuYnVzX3NjYW5mKFhCVF9OSUwsIGRldi0+b3RoZXJl
+bmQsCi0JCQkJImZlYXR1cmUtcHJvdG9jb2wtdjIiLCAiJWQiLCAmdmFsKSA8IDApCi0JCQl2YWwg
+PSAwOwotCQlpZiAoIXZhbCkgeworCQlpZiAoIXhlbmJ1c19yZWFkX3Vuc2lnbmVkKGRldi0+b3Ro
+ZXJlbmQsICJmZWF0dXJlLXByb3RvY29sLXYyIiwKKwkJCQkJICAwKSkgewogCQkJeGVuYnVzX2Rl
+dl9mYXRhbChkZXYsIC1FSU5WQUwsCiAJCQkJCSJ2VFBNIHByb3RvY29sIDIgcmVxdWlyZWQiKTsK
+IAkJCXJldHVybjsKLS0gCjIuNi42CgoKX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
+X19fX19fX19fX19fX18KWGVuLWRldmVsIG1haWxpbmcgbGlzdApYZW4tZGV2ZWxAbGlzdHMueGVu
+Lm9yZwpodHRwczovL2xpc3RzLnhlbi5vcmcveGVuLWRldmVsCg==
