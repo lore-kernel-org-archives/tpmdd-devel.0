@@ -1,35 +1,41 @@
-From: Juergen Gross <jgross@suse.com>
-Subject: Re: [PATCH 00/12] xen: add common function for reading optional value
-Date: Tue, 1 Nov 2016 05:33:01 +0100
-Message-ID: <76a0c445-c345-fdf4-12b1-974491f6a77e@suse.com>
-References: <1477932510-28594-1-git-send-email-jgross@suse.com>
- <20161031.130831.2006896157400677867.davem@davemloft.net>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] tpm_tis regression in 4.9?
+Date: Tue, 1 Nov 2016 06:26:27 -0600
+Message-ID: <20161101122627.covzsouqcooudk3j@intel.com>
+References: <CALCETrXjWaky05iMXZBGJT8xyQbtbkcL=G9J0vAzEWRHWtMuCg@mail.gmail.com>
+ <20161028030916.GA29851@obsidianresearch.com>
+ <20161028143745.3iaevn4sunbmuiln@intel.com>
+ <20161028171043.GA18206@obsidianresearch.com>
+ <5B8DA87D05A7694D9FA63FD143655C1B54312DCD@hasmsx108.ger.corp.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
-Return-path: <linux-pci-owner@vger.kernel.org>
-In-Reply-To: <20161031.130831.2006896157400677867.davem@davemloft.net>
-Sender: linux-pci-owner@vger.kernel.org
-To: David Miller <davem@davemloft.net>
-Cc: linux-kernel@vger.kernel.org, xen-devel@lists.xen.org, david.vrabel@citrix.com, boris.ostrovsky@oracle.com, konrad.wilk@oracle.com, roger.pau@citrix.com, peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, dmitry.torokhov@gmail.com, linux-input@vger.kernel.org, wei.liu2@citrix.com, paul.durrant@citrix.com, netdev@vger.kernel.org, bhelgaas@google.com, linux-pci@vger.kernel.org, tomi.valkeinen@ti.com, linux-fbdev@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B54312DCD@hasmsx108.ger.corp.intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: "Winkler, Tomas" <tomas.winkler@intel.com>
+Cc: "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 31/10/16 18:08, David Miller wrote:
-> From: Juergen Gross <jgross@suse.com>
-> Date: Mon, 31 Oct 2016 17:48:18 +0100
+On Mon, Oct 31, 2016 at 08:16:59PM +0000, Winkler, Tomas wrote:
+> > 
+> > On Fri, Oct 28, 2016 at 05:37:45PM +0300, Jarkko Sakkinen wrote:
+> > 
+> > > > I think this patch from Jarkko's next is the fix:
+> > > >
+> > > > http://git.infradead.org/users/jjs/linux-tpmdd.git/commit/65da72b7dd
+> > > > cdd8990e4783d09c7e86d90ccb4121
+> > > >
+> > > > Jarkko? Can you hurry that along to go in for -rc?
+> > >
+> > > Do you think I should resend the pull request?
+> > 
+> > That or a ping. This patch needs to land right away since it is breaking 4.9.
+> > 
+> > Jason
 > 
->> There are multiple instances of code reading an optional unsigned
->> parameter from Xenstore via xenbus_scanf(). Instead of repeating the
->> same code over and over add a service function doing the job and
->> replace the call of xenbus_scanf() with the call of the new function
->> where appropriate.
-> 
-> As this seems to be a series that will go through some tree other
-> than mine, I assume the networking bits will be taken care of that
-> way.
-> 
+> Jarrko, why we didn't request pull for fix Intel PTT patches, as well for 4.9? 
 
-If accepted I expect this series to go through the Xen tree.
+Which patches are you talking about?
 
-
-Juergen
+/Jarkko
