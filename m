@@ -1,75 +1,35 @@
-From: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH 1/2] tpm/tpm-interface: place kdoc just above
-	tpm_pcr_extend
-Date: Tue,  1 Nov 2016 03:05:13 +0200
-Message-ID: <1477962314-26763-2-git-send-email-tomas.winkler@intel.com>
-References: <1477962314-26763-1-git-send-email-tomas.winkler@intel.com>
+From: Juergen Gross <jgross@suse.com>
+Subject: Re: [PATCH 00/12] xen: add common function for reading optional value
+Date: Tue, 1 Nov 2016 05:33:01 +0100
+Message-ID: <76a0c445-c345-fdf4-12b1-974491f6a77e@suse.com>
+References: <1477932510-28594-1-git-send-email-jgross@suse.com>
+ <20161031.130831.2006896157400677867.davem@davemloft.net>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset=windows-1252
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1477962314-26763-1-git-send-email-tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Return-path: <linux-pci-owner@vger.kernel.org>
+In-Reply-To: <20161031.130831.2006896157400677867.davem@davemloft.net>
+Sender: linux-pci-owner@vger.kernel.org
+To: David Miller <davem@davemloft.net>
+Cc: linux-kernel@vger.kernel.org, xen-devel@lists.xen.org, david.vrabel@citrix.com, boris.ostrovsky@oracle.com, konrad.wilk@oracle.com, roger.pau@citrix.com, peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, dmitry.torokhov@gmail.com, linux-input@vger.kernel.org, wei.liu2@citrix.com, paul.durrant@citrix.com, netdev@vger.kernel.org, bhelgaas@google.com, linux-pci@vger.kernel.org, tomi.valkeinen@ti.com, linux-fbdev@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Place kdoc just above tpm_pcr_extend so it can be parsed
-correctly.
+On 31/10/16 18:08, David Miller wrote:
+> From: Juergen Gross <jgross@suse.com>
+> Date: Mon, 31 Oct 2016 17:48:18 +0100
+> 
+>> There are multiple instances of code reading an optional unsigned
+>> parameter from Xenstore via xenbus_scanf(). Instead of repeating the
+>> same code over and over add a service function doing the job and
+>> replace the call of xenbus_scanf() with the call of the new function
+>> where appropriate.
+> 
+> As this seems to be a series that will go through some tree other
+> than mine, I assume the networking bits will be taken care of that
+> way.
+> 
 
-Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
----
- drivers/char/tpm/tpm-interface.c | 16 ++++++++--------
- 1 file changed, 8 insertions(+), 8 deletions(-)
-
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index cb0e57ee053d..d496a6b26a45 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -731,6 +731,14 @@ int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf)
- }
- EXPORT_SYMBOL_GPL(tpm_pcr_read);
- 
-+#define TPM_ORD_PCR_EXTEND cpu_to_be32(20)
-+#define EXTEND_PCR_RESULT_SIZE 34
-+static const struct tpm_input_header pcrextend_header = {
-+	.tag = TPM_TAG_RQU_COMMAND,
-+	.length = cpu_to_be32(34),
-+	.ordinal = TPM_ORD_PCR_EXTEND
-+};
-+
- /**
-  * tpm_pcr_extend - extend pcr value with hash
-  * @chip_num:	tpm idx # or AN&
-@@ -741,14 +749,6 @@ EXPORT_SYMBOL_GPL(tpm_pcr_read);
-  * isn't, protect against the chip disappearing, by incrementing
-  * the module usage count.
-  */
--#define TPM_ORD_PCR_EXTEND cpu_to_be32(20)
--#define EXTEND_PCR_RESULT_SIZE 34
--static const struct tpm_input_header pcrextend_header = {
--	.tag = TPM_TAG_RQU_COMMAND,
--	.length = cpu_to_be32(34),
--	.ordinal = TPM_ORD_PCR_EXTEND
--};
--
- int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
- {
- 	struct tpm_cmd_t cmd;
--- 
-2.7.4
+If accepted I expect this series to go through the Xen tree.
 
 
-------------------------------------------------------------------------------
-Developer Access Program for Intel Xeon Phi Processors
-Access to Intel Xeon Phi processor-based developer platforms.
-With one year of Intel Parallel Studio XE.
-Training and support from Colfax.
-Order your platform today. http://sdm.link/xeonphi
+Juergen
