@@ -1,16 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 3/3] tpm: Get rid of
-	TPM_CHIP_FLAG_REGISTERED
-Date: Wed, 2 Nov 2016 04:33:03 -0600
-Message-ID: <20161102103303.tgodrsbo3ptzwkki@intel.com>
-References: <1477520926-32594-1-git-send-email-jgunthorpe@obsidianresearch.com>
-	<1477520926-32594-3-git-send-email-jgunthorpe@obsidianresearch.com>
+Subject: Re: [PATCH 04/12] xen: make use of
+ xenbus_read_unsigned() in xen-tpmfront
+Date: Wed, 2 Nov 2016 04:34:16 -0600
+Message-ID: <20161102103416.ruo6qatr2gwblubp@intel.com>
+References: <1477932510-28594-1-git-send-email-jgross@suse.com>
+	<1477932510-28594-5-git-send-email-jgross@suse.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1477520926-32594-3-git-send-email-jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <1477932510-28594-5-git-send-email-jgross-IBi9RG/b67k@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,62 +19,59 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Juergen Gross <jgross-IBi9RG/b67k@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, xen-devel-GuqFBffKawuEi8DpZVb4nw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, david.vrabel-Sxgqhf6Nn4DQT0dZR+AlfA@public.gmane.org, boris.ostrovsky-QHcLZuEGTsvQT0dZR+AlfA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Oct 26, 2016 at 04:28:46PM -0600, Jason Gunthorpe wrote:
-> This is no longer necessary, all calls to tpm_chip_unregister happen
-> in remove() callbacks.
+On Mon, Oct 31, 2016 at 05:48:22PM +0100, Juergen Gross wrote:
+> Use xenbus_read_unsigned() instead of xenbus_scanf() when possible.
+> This requires to change the type of one read from int to unsigned,
+> but this case has been wrong before: negative values are not allowed
+> for the modified case.
 > 
-> Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> Cc: peterhuewe-Mmb7MZpHnFY@public.gmane.org
+> Cc: tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org
+> Cc: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
+> Cc: jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org
+> Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+> 
+> Signed-off-by: Juergen Gross <jgross-IBi9RG/b67k@public.gmane.org>
 
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
 /Jarkko
 
 > ---
->  drivers/char/tpm/tpm-chip.c | 5 -----
->  drivers/char/tpm/tpm.h      | 1 -
->  2 files changed, 6 deletions(-)
+>  drivers/char/tpm/xen-tpmfront.c | 8 ++------
+>  1 file changed, 2 insertions(+), 6 deletions(-)
 > 
-> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> index e5950131bd90..836f056f7d27 100644
-> --- a/drivers/char/tpm/tpm-chip.c
-> +++ b/drivers/char/tpm/tpm-chip.c
-> @@ -375,8 +375,6 @@ int tpm_chip_register(struct tpm_chip *chip)
->  		return rc;
->  	}
->  
-> -	chip->flags |= TPM_CHIP_FLAG_REGISTERED;
-> -
->  	rc = tpm_add_legacy_sysfs(chip);
->  	if (rc) {
->  		tpm_chip_unregister(chip);
-> @@ -402,9 +400,6 @@ EXPORT_SYMBOL_GPL(tpm_chip_register);
->   */
->  void tpm_chip_unregister(struct tpm_chip *chip)
+> diff --git a/drivers/char/tpm/xen-tpmfront.c b/drivers/char/tpm/xen-tpmfront.c
+> index 62028f4..50072cc 100644
+> --- a/drivers/char/tpm/xen-tpmfront.c
+> +++ b/drivers/char/tpm/xen-tpmfront.c
+> @@ -337,18 +337,14 @@ static int tpmfront_resume(struct xenbus_device *dev)
+>  static void backend_changed(struct xenbus_device *dev,
+>  		enum xenbus_state backend_state)
 >  {
-> -	if (!(chip->flags & TPM_CHIP_FLAG_REGISTERED))
-> -		return;
+> -	int val;
 > -
->  	tpm_del_legacy_sysfs(chip);
+>  	switch (backend_state) {
+>  	case XenbusStateInitialised:
+>  	case XenbusStateConnected:
+>  		if (dev->state == XenbusStateConnected)
+>  			break;
 >  
->  	tpm1_chip_unregister(chip);
-> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> index 2611459271e5..79ce937ec557 100644
-> --- a/drivers/char/tpm/tpm.h
-> +++ b/drivers/char/tpm/tpm.h
-> @@ -139,7 +139,6 @@ enum tpm2_startup_types {
->  #define TPM_PPI_VERSION_LEN		3
->  
->  enum tpm_chip_flags {
-> -	TPM_CHIP_FLAG_REGISTERED	= BIT(0),
->  	TPM_CHIP_FLAG_TPM2		= BIT(1),
->  	TPM_CHIP_FLAG_IRQ		= BIT(2),
->  	TPM_CHIP_FLAG_VIRTUAL		= BIT(3),
+> -		if (xenbus_scanf(XBT_NIL, dev->otherend,
+> -				"feature-protocol-v2", "%d", &val) < 0)
+> -			val = 0;
+> -		if (!val) {
+> +		if (!xenbus_read_unsigned(dev->otherend, "feature-protocol-v2",
+> +					  0)) {
+>  			xenbus_dev_fatal(dev, -EINVAL,
+>  					"vTPM protocol 2 required");
+>  			return;
 > -- 
-> 2.1.4
+> 2.6.6
 > 
 
 ------------------------------------------------------------------------------
