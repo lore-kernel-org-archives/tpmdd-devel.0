@@ -1,108 +1,296 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v5] tpm_tis: Check return values from
-	get_burstcount.
-Date: Wed, 2 Nov 2016 04:40:06 -0600
-Message-ID: <20161102104006.ob5s7bidpafo6b6b@intel.com>
-References: <20161027215009.GA12733@google.com>
-	<20161028162815.e2ssrzwq62i5rorn@intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20161028162815.e2ssrzwq62i5rorn-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH] tpm: transition tpm_vtpm_proxy documentation to the Sphinx
+Date: Wed,  2 Nov 2016 12:01:56 -0600
+Message-ID: <20161102180207.16583-1-jarkko.sakkinen@linux.intel.com>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net
+Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Stefan Berger <stefanb@linux.vnet.ibm.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Oct 28, 2016 at 07:28:15PM +0300, Jarkko Sakkinen wrote:
-> On Thu, Oct 27, 2016 at 02:50:09PM -0700, Josh Zimmerman wrote:
-> > If the TPM we're connecting to uses a static burst count, it will report
-> > a burst count of zero throughout the response read. However, get_burstcount
-> > assumes that a response of zero indicates that the TPM is not ready to
-> > receive more data. In this case, it returns a negative error code, which
-> > is passed on to tpm_tis_{write,read}_bytes as a u16, causing
-> > them to read/write far too many bytes.
-> > 
-> > This patch checks for negative return codes and bails out from recv_data
-> > and tpm_tis_send_data.
-> > 
-> > Fixes: 1107d065fdf1 (tpm_tis: Introduce intermediate layer for TPM access)
-> > Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-> > 
-> > ---
-> > Changelog v5:
-> >  - Move burstcnt < 0 check to before the min_t() call for enhanced readability.
-> > Changelog v4:
-> >  - Add short description to Fixes tag line.
-> >  - Remove some unnecessary information in dev_err statements.
-> > Changelog v3:
-> >  - Add signed-off-by.
-> > Changelog v2:
-> >  - Fix typo (rc->burstcnt)
-> > 
-> > ---
-> >  drivers/char/tpm/tpm_tis_core.c | 15 +++++++++++++--
-> >  1 file changed, 13 insertions(+), 2 deletions(-)
-> > 
-> > diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-> > index e3bf31b..a1ce060 100644
-> > --- a/drivers/char/tpm/tpm_tis_core.c
-> > +++ b/drivers/char/tpm/tpm_tis_core.c
-> > @@ -185,7 +185,12 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
-> >  				 TPM_STS_DATA_AVAIL | TPM_STS_VALID,
-> >  				 chip->timeout_c,
-> >  				 &priv->read_queue, true) == 0) {
-> > -		burstcnt = min_t(int, get_burstcount(chip), count - size);
-> > +		burstcnt = get_burstcount(chip);
-> > +		if (burstcnt < 0) {
-> > +			dev_err(&chip->dev, "Unable to read burstcount\n");
-> > +			return burstcnt;
-> > +		}
-> > +		burstcnt = min_t(int, burstcnt, count - size);
-> >  
-> >  		rc = tpm_tis_read_bytes(priv, TPM_DATA_FIFO(priv->locality),
-> >  					burstcnt, buf + size);
-> > @@ -271,7 +276,13 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
-> >  	}
-> >  
-> >  	while (count < len - 1) {
-> > -		burstcnt = min_t(int, get_burstcount(chip), len - count - 1);
-> > +		burstcnt = get_burstcount(chip);
-> > +		if (burstcnt < 0) {
-> > +			dev_err(&chip->dev, "Unable to read burstcount\n");
-> > +			rc = burstcnt;
-> > +			goto out_err;
-> > +		}
-> > +		burstcnt = min_t(int, burstcnt, len - count - 1);
-> >  		rc = tpm_tis_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
-> >  					 burstcnt, buf + count);
-> >  		if (rc < 0)
-> > -- 
-> > 2.8.0.rc3.226.g39d4020
-> > 
-> 
-> LGTM
-> 
-> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Transitioned the tpm_vtpm_proxy documentation to the Sphinx
+infrastructure and removed parts from the documentation that are easier
+to pull from the sources. Restructured vtpm_proxy.h and tpm_vtpm_proxy.c
+to be compatible with this approach and wrote associated documentation
+comments.
 
-I'm sorry for the delay with testing but I cannot test this during this
-week. The network connection is terrible at the Linux Plumbers
-Conference and also at the hotel. I can barely read my email and LWN.
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+---
+ Documentation/index.rst                            |  1 +
+ Documentation/tpm/index.rst                        |  7 +++
+ .../tpm/{tpm_vtpm_proxy.txt => tpm_vtpm_proxy.rst} | 53 +++++-----------
+ drivers/char/tpm/tpm_vtpm_proxy.c                  | 72 ++++++++++++++--------
+ include/uapi/linux/vtpm_proxy.h                    | 23 +++++--
+ 5 files changed, 89 insertions(+), 67 deletions(-)
+ create mode 100644 Documentation/tpm/index.rst
+ rename Documentation/tpm/{tpm_vtpm_proxy.txt => tpm_vtpm_proxy.rst} (56%)
 
-/Jarkko
-
-------------------------------------------------------------------------------
-Developer Access Program for Intel Xeon Phi Processors
-Access to Intel Xeon Phi processor-based developer platforms.
-With one year of Intel Parallel Studio XE.
-Training and support from Colfax.
-Order your platform today. http://sdm.link/xeonphi
+diff --git a/Documentation/index.rst b/Documentation/index.rst
+index e0fc729..0058b65 100644
+--- a/Documentation/index.rst
++++ b/Documentation/index.rst
+@@ -19,6 +19,7 @@ Contents:
+    media/dvb-drivers/index
+    media/v4l-drivers/index
+    gpu/index
++   tpm/index
+ 
+ Indices and tables
+ ==================
+diff --git a/Documentation/tpm/index.rst b/Documentation/tpm/index.rst
+new file mode 100644
+index 0000000..316cdbb
+--- /dev/null
++++ b/Documentation/tpm/index.rst
+@@ -0,0 +1,7 @@
++=================
++TPM documentation
++=================
++
++.. toctree::
++
++   tpm_vtpm_proxy
+diff --git a/Documentation/tpm/tpm_vtpm_proxy.txt b/Documentation/tpm/tpm_vtpm_proxy.rst
+similarity index 56%
+rename from Documentation/tpm/tpm_vtpm_proxy.txt
+rename to Documentation/tpm/tpm_vtpm_proxy.rst
+index 30d1902..f991aff 100644
+--- a/Documentation/tpm/tpm_vtpm_proxy.txt
++++ b/Documentation/tpm/tpm_vtpm_proxy.rst
+@@ -1,71 +1,50 @@
++=============================================
+ Virtual TPM Proxy Driver for Linux Containers
++=============================================
+ 
+-Authors: Stefan Berger (IBM)
++| Authors:
++| Stefan Berger <stefanb@linux.vnet.ibm.com>
+ 
+ This document describes the virtual Trusted Platform Module (vTPM)
+ proxy device driver for Linux containers.
+ 
+-INTRODUCTION
+-------------
++Introduction
++============
+ 
+ The goal of this work is to provide TPM functionality to each Linux
+ container. This allows programs to interact with a TPM in a container
+ the same way they interact with a TPM on the physical system. Each
+ container gets its own unique, emulated, software TPM.
+ 
+-
+-DESIGN
+-------
++Design
++======
+ 
+ To make an emulated software TPM available to each container, the container
+ management stack needs to create a device pair consisting of a client TPM
+-character device /dev/tpmX (with X=0,1,2...) and a 'server side' file
++character device ``/dev/tpmX`` (with X=0,1,2...) and a 'server side' file
+ descriptor. The former is moved into the container by creating a character
+ device with the appropriate major and minor numbers while the file descriptor
+ is passed to the TPM emulator. Software inside the container can then send
+ TPM commands using the character device and the emulator will receive the
+ commands via the file descriptor and use it for sending back responses.
+ 
+-To support this, the virtual TPM proxy driver provides a device /dev/vtpmx
++To support this, the virtual TPM proxy driver provides a device ``/dev/vtpmx``
+ that is used to create device pairs using an ioctl. The ioctl takes as
+ an input flags for configuring the device. The flags  for example indicate
+ whether TPM 1.2 or TPM 2 functionality is supported by the TPM emulator.
+ The result of the ioctl are the file descriptor for the 'server side'
+ as well as the major and minor numbers of the character device that was created.
+ Besides that the number of the TPM character device is return. If for
+-example /dev/tpm10 was created, the number (dev_num) 10 is returned.
+-
+-The following is the data structure of the TPM_PROXY_IOC_NEW_DEV ioctl:
+-
+-struct vtpm_proxy_new_dev {
+-	__u32 flags;         /* input */
+-	__u32 tpm_num;       /* output */
+-	__u32 fd;            /* output */
+-	__u32 major;         /* output */
+-	__u32 minor;         /* output */
+-};
+-
+-Note that if unsupported flags are passed to the device driver, the ioctl will
+-fail and errno will be set to EOPNOTSUPP. Similarly, if an unsupported ioctl is
+-called on the device driver, the ioctl will fail and errno will be set to
+-ENOTTY.
+-
+-See /usr/include/linux/vtpm_proxy.h for definitions related to the public interface
+-of this vTPM device driver.
++example ``/dev/tpm10`` was created, the number (``dev_num``) 10 is returned.
+ 
+ Once the device has been created, the driver will immediately try to talk
+ to the TPM. All commands from the driver can be read from the file descriptor
+ returned by the ioctl. The commands should be responded to immediately.
+ 
+-Depending on the version of TPM the following commands will be sent by the
+-driver:
++UAPI
++====
+ 
+-- TPM 1.2:
+-  - the driver will send a TPM_Startup command to the TPM emulator
+-  - the driver will send commands to read the command durations and
+-    interface timeouts from the TPM emulator
+-- TPM 2:
+-  - the driver will send a TPM2_Startup command to the TPM emulator
++.. kernel-doc:: include/uapi/linux/vtpm_proxy.h
+ 
+-The TPM device /dev/tpmX will only appear if all of the relevant commands
+-were responded to properly.
++.. kernel-doc:: drivers/char/tpm/tpm_vtpm_proxy.c
++   :functions: vtpmx_ioc_new_dev
+diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
+index 9a94033..a85d258 100644
+--- a/drivers/char/tpm/tpm_vtpm_proxy.c
++++ b/drivers/char/tpm/tpm_vtpm_proxy.c
+@@ -1,5 +1,6 @@
+ /*
+  * Copyright (C) 2015, 2016 IBM Corporation
++ * Copyright (C) 2016 Intel Corporation
+  *
+  * Author: Stefan Berger <stefanb@us.ibm.com>
+  *
+@@ -524,6 +525,50 @@ static void vtpm_proxy_delete_device(struct proxy_dev *proxy_dev)
+  * Code related to the control device /dev/vtpmx
+  */
+ 
++/**
++ * sgx_ioc_new_dev - handler for the %SGX_IOC_NEW_DEV ioctl
++ * @file:	/dev/vtpmx
++ * @ioctl:	the ioctl number
++ * @arg:	pointer to the struct vtpmx_proxy_new_dev
++ *
++ * Creates an anonymous file that is used by the process acting as a TPM to
++ * communicate with the client processes. The function will also add a new TPM
++ * device through which data is proxied to this TPM acting process. The caller
++ * will be provided with a file descriptor to communicate with the clients and
++ * major and minor numbers for the TPM device.
++ */
++static long vtpmx_ioc_new_dev(struct file *file, unsigned int ioctl,
++			      unsigned long arg)
++{
++	void __user *argp = (void __user *)arg;
++	struct vtpm_proxy_new_dev __user *vtpm_new_dev_p;
++	struct vtpm_proxy_new_dev vtpm_new_dev;
++	struct file *vtpm_file;
++
++	if (!capable(CAP_SYS_ADMIN))
++		return -EPERM;
++
++	vtpm_new_dev_p = argp;
++
++	if (copy_from_user(&vtpm_new_dev, vtpm_new_dev_p,
++			   sizeof(vtpm_new_dev)))
++		return -EFAULT;
++
++	vtpm_file = vtpm_proxy_create_device(&vtpm_new_dev);
++	if (IS_ERR(vtpm_file))
++		return PTR_ERR(vtpm_file);
++
++	if (copy_to_user(vtpm_new_dev_p, &vtpm_new_dev,
++			 sizeof(vtpm_new_dev))) {
++		put_unused_fd(vtpm_new_dev.fd);
++		fput(vtpm_file);
++		return -EFAULT;
++	}
++
++	fd_install(vtpm_new_dev.fd, vtpm_file);
++	return 0;
++}
++
+ /*
+  * vtpmx_fops_ioctl: ioctl on /dev/vtpmx
+  *
+@@ -531,34 +576,11 @@ static void vtpm_proxy_delete_device(struct proxy_dev *proxy_dev)
+  *      Returns 0 on success, a negative error code otherwise.
+  */
+ static long vtpmx_fops_ioctl(struct file *f, unsigned int ioctl,
+-				   unsigned long arg)
++			     unsigned long arg)
+ {
+-	void __user *argp = (void __user *)arg;
+-	struct vtpm_proxy_new_dev __user *vtpm_new_dev_p;
+-	struct vtpm_proxy_new_dev vtpm_new_dev;
+-	struct file *file;
+-
+ 	switch (ioctl) {
+ 	case VTPM_PROXY_IOC_NEW_DEV:
+-		if (!capable(CAP_SYS_ADMIN))
+-			return -EPERM;
+-		vtpm_new_dev_p = argp;
+-		if (copy_from_user(&vtpm_new_dev, vtpm_new_dev_p,
+-				   sizeof(vtpm_new_dev)))
+-			return -EFAULT;
+-		file = vtpm_proxy_create_device(&vtpm_new_dev);
+-		if (IS_ERR(file))
+-			return PTR_ERR(file);
+-		if (copy_to_user(vtpm_new_dev_p, &vtpm_new_dev,
+-				 sizeof(vtpm_new_dev))) {
+-			put_unused_fd(vtpm_new_dev.fd);
+-			fput(file);
+-			return -EFAULT;
+-		}
+-
+-		fd_install(vtpm_new_dev.fd, file);
+-		return 0;
+-
++		return vtpmx_ioc_new_dev(f, ioctl, arg);
+ 	default:
+ 		return -ENOIOCTLCMD;
+ 	}
+diff --git a/include/uapi/linux/vtpm_proxy.h b/include/uapi/linux/vtpm_proxy.h
+index 41e8e22..84c1e0a 100644
+--- a/include/uapi/linux/vtpm_proxy.h
++++ b/include/uapi/linux/vtpm_proxy.h
+@@ -1,6 +1,7 @@
+ /*
+  * Definitions for the VTPM proxy driver
+  * Copyright (c) 2015, 2016, IBM Corporation
++ * Copyright (C) 2016 Intel Corporation
+  *
+  * This program is free software; you can redistribute it and/or modify it
+  * under the terms and conditions of the GNU General Public License,
+@@ -18,8 +19,23 @@
+ #include <linux/types.h>
+ #include <linux/ioctl.h>
+ 
+-/* ioctls */
++/**
++ * enum mipi_dsi_dcs_tear_mode - flags for the proxy TPM
++ * @VTPM_PROXY_FLAG_TPM2:	the proxy TPM uses TPM 2.0 protocol
++ */
++enum vtpm_proxy_flags {
++	VTPM_PROXY_FLAG_TPM2	= 1,
++};
+ 
++/**
++ * struct vtpm_proxy_new_dev - parameter structure for the
++ *                             %VTPM_PROXY_IOC_NEW_DEV ioctl
++ * @flags:	flags for the proxy TPM
++ * @tpm_num:	index of the TPM device
++ * @fd:		the file descriptor used by the proxy TPM
++ * @major:	the major number of the TPM device
++ * @minor:	the minor number of the TPM device
++ */
+ struct vtpm_proxy_new_dev {
+ 	__u32 flags;         /* input */
+ 	__u32 tpm_num;       /* output */
+@@ -28,9 +44,6 @@ struct vtpm_proxy_new_dev {
+ 	__u32 minor;         /* output */
+ };
+ 
+-/* above flags */
+-#define VTPM_PROXY_FLAG_TPM2  1  /* emulator is TPM 2 */
+-
+-#define VTPM_PROXY_IOC_NEW_DEV   _IOWR(0xa1, 0x00, struct vtpm_proxy_new_dev)
++#define VTPM_PROXY_IOC_NEW_DEV	_IOWR(0xa1, 0x00, struct vtpm_proxy_new_dev)
+ 
+ #endif /* _UAPI_LINUX_VTPM_PROXY_H */
+-- 
+2.9.3
