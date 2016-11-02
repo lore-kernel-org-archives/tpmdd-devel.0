@@ -1,50 +1,68 @@
-From: "Winkler, Tomas" <tomas.winkler@intel.com>
-Subject: RE: [tpmdd-devel] tpm_tis regression in 4.9?
-Date: Tue, 1 Nov 2016 20:56:47 +0000
-Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B5431396E@hasmsx108.ger.corp.intel.com>
-References: <CALCETrXjWaky05iMXZBGJT8xyQbtbkcL=G9J0vAzEWRHWtMuCg@mail.gmail.com>
- <20161028030916.GA29851@obsidianresearch.com>
- <20161028143745.3iaevn4sunbmuiln@intel.com>
- <20161028171043.GA18206@obsidianresearch.com>
- <5B8DA87D05A7694D9FA63FD143655C1B54312DCD@hasmsx108.ger.corp.intel.com>
- <20161101122627.covzsouqcooudk3j@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH 1/2] tpm/tpm-interface: place kdoc just above
+ tpm_pcr_extend
+Date: Wed, 2 Nov 2016 04:02:20 -0600
+Message-ID: <20161102100220.v2nlbf767sticcp7@intel.com>
+References: <1477962314-26763-1-git-send-email-tomas.winkler@intel.com>
+ <1477962314-26763-2-git-send-email-tomas.winkler@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 8BIT
+Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <20161101122627.covzsouqcooudk3j@intel.com>
-Content-Language: en-US
+Content-Disposition: inline
+In-Reply-To: <1477962314-26763-2-git-send-email-tomas.winkler@intel.com>
 Sender: linux-kernel-owner@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+To: Tomas Winkler <tomas.winkler@intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Tue, Nov 01, 2016 at 03:05:13AM +0200, Tomas Winkler wrote:
+> Place kdoc just above tpm_pcr_extend so it can be parsed
+> correctly.
 > 
-> On Mon, Oct 31, 2016 at 08:16:59PM +0000, Winkler, Tomas wrote:
-> > >
-> > > On Fri, Oct 28, 2016 at 05:37:45PM +0300, Jarkko Sakkinen wrote:
-> > >
-> > > > > I think this patch from Jarkko's next is the fix:
-> > > > >
-> > > > > http://git.infradead.org/users/jjs/linux-tpmdd.git/commit/65da72b7dd
-> > > > > cdd8990e4783d09c7e86d90ccb4121
-> > > > >
-> > > > > Jarkko? Can you hurry that along to go in for -rc?
-> > > >
-> > > > Do you think I should resend the pull request?
-> > >
-> > > That or a ping. This patch needs to land right away since it is breaking 4.9.
-> > >
-> > > Jason
-> >
-> > Jarrko, why we didn't request pull for fix Intel PTT patches, as well for 4.9?
+> Signed-off-by: Tomas Winkler <tomas.winkler@intel.com>
+
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+
+/Jarkko
+
+> ---
+>  drivers/char/tpm/tpm-interface.c | 16 ++++++++--------
+>  1 file changed, 8 insertions(+), 8 deletions(-)
 > 
-> Which patches are you talking about?
-
-213ebc81ac3f tmp/tpm_crb: implement runtime pm for tpm_crb
-a0cb67590dff tpm/tpm_crb: open code the crb_init into acpi_add
-4d73afd9c0fd tmp/tpm_crb: fix Intel PTT hw bug during idle state
-34483fbffd83 tpm/tpm_crb: implement tpm crb idle state
-
-Thanks
-Tomas 
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index cb0e57ee053d..d496a6b26a45 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -731,6 +731,14 @@ int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf)
+>  }
+>  EXPORT_SYMBOL_GPL(tpm_pcr_read);
+>  
+> +#define TPM_ORD_PCR_EXTEND cpu_to_be32(20)
+> +#define EXTEND_PCR_RESULT_SIZE 34
+> +static const struct tpm_input_header pcrextend_header = {
+> +	.tag = TPM_TAG_RQU_COMMAND,
+> +	.length = cpu_to_be32(34),
+> +	.ordinal = TPM_ORD_PCR_EXTEND
+> +};
+> +
+>  /**
+>   * tpm_pcr_extend - extend pcr value with hash
+>   * @chip_num:	tpm idx # or AN&
+> @@ -741,14 +749,6 @@ EXPORT_SYMBOL_GPL(tpm_pcr_read);
+>   * isn't, protect against the chip disappearing, by incrementing
+>   * the module usage count.
+>   */
+> -#define TPM_ORD_PCR_EXTEND cpu_to_be32(20)
+> -#define EXTEND_PCR_RESULT_SIZE 34
+> -static const struct tpm_input_header pcrextend_header = {
+> -	.tag = TPM_TAG_RQU_COMMAND,
+> -	.length = cpu_to_be32(34),
+> -	.ordinal = TPM_ORD_PCR_EXTEND
+> -};
+> -
+>  int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
+>  {
+>  	struct tpm_cmd_t cmd;
+> -- 
+> 2.7.4
+> 
