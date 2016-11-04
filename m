@@ -1,34 +1,27 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH 1/3] tpm tis: Do not print timeout messages
- twice
-Date: Fri, 4 Nov 2016 01:21:23 -0600
-Message-ID: <20161104072123.yyibcyrpt43vc4bw@intel.com>
+Subject: Re: [tpmdd-devel] [PATCH 3/3] tpm: Get rid of
+ TPM_CHIP_FLAG_REGISTERED
+Date: Fri, 4 Nov 2016 01:22:30 -0600
+Message-ID: <20161104072230.bcqwafv2a55k3cni@intel.com>
 References: <1477520926-32594-1-git-send-email-jgunthorpe@obsidianresearch.com>
- <20161102102617.sxobs4madzsusgmt@intel.com>
+ <1477520926-32594-3-git-send-email-jgunthorpe@obsidianresearch.com>
+ <20161102103303.tgodrsbo3ptzwkki@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20161102102617.sxobs4madzsusgmt@intel.com>
+In-Reply-To: <20161102103303.tgodrsbo3ptzwkki@intel.com>
 Sender: owner-linux-security-module@vger.kernel.org
 To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Nov 02, 2016 at 04:26:17AM -0600, Jarkko Sakkinen wrote:
-> On Wed, Oct 26, 2016 at 04:28:44PM -0600, Jason Gunthorpe wrote:
-> > The tis driver does a tpm_get_timeouts out side of tpm_chip_register,
-> > and tpm_get_timeouts can print a message, resulting in two prints, eg:
-> > 
-> >  tpm tpm0: [Hardware Error]: Adjusting reported timeouts: A 10000->750000us B 10000->2000000us C 10000->750000us D 10000->750000us
-> > 
-> > Keep track and prevent tpm_get_timeouts from running a second time, and
-> > clarify the purpose of the call in tpm_tis_core to only be connected to
-> > irq testing.
+On Wed, Nov 02, 2016 at 04:33:03AM -0600, Jarkko Sakkinen wrote:
+> On Wed, Oct 26, 2016 at 04:28:46PM -0600, Jason Gunthorpe wrote:
+> > This is no longer necessary, all calls to tpm_chip_unregister happen
+> > in remove() callbacks.
 > > 
 > > Signed-off-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-> 
-> Thanks for improving the comment. It makes a lot more sense now.
 > 
 > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 > 
@@ -40,90 +33,45 @@ Applied.
 
 > 
 > > ---
-> >  drivers/char/tpm/tpm-interface.c |  7 +++++++
-> >  drivers/char/tpm/tpm.h           |  1 +
-> >  drivers/char/tpm/tpm_tis_core.c  | 20 ++++++++++----------
-> >  3 files changed, 18 insertions(+), 10 deletions(-)
+> >  drivers/char/tpm/tpm-chip.c | 5 -----
+> >  drivers/char/tpm/tpm.h      | 1 -
+> >  2 files changed, 6 deletions(-)
 > > 
-> > diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> > index aef20ee2331a..d0285faa4f1b 100644
-> > --- a/drivers/char/tpm/tpm-interface.c
-> > +++ b/drivers/char/tpm/tpm-interface.c
-> > @@ -505,6 +505,9 @@ int tpm_get_timeouts(struct tpm_chip *chip)
-> >  	struct duration_t *duration_cap;
-> >  	ssize_t rc;
-> >  
-> > +	if (chip->flags & TPM_CHIP_FLAG_HAVE_TIMEOUTS)
-> > +		return 0;
-> > +
-> >  	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
-> >  		/* Fixed timeouts for TPM2 */
-> >  		chip->timeout_a = msecs_to_jiffies(TPM2_TIMEOUT_A);
-> > @@ -517,6 +520,8 @@ int tpm_get_timeouts(struct tpm_chip *chip)
-> >  		    msecs_to_jiffies(TPM2_DURATION_MEDIUM);
-> >  		chip->duration[TPM_LONG] =
-> >  		    msecs_to_jiffies(TPM2_DURATION_LONG);
-> > +
-> > +		chip->flags |= TPM_CHIP_FLAG_HAVE_TIMEOUTS;
-> >  		return 0;
+> > diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> > index e5950131bd90..836f056f7d27 100644
+> > --- a/drivers/char/tpm/tpm-chip.c
+> > +++ b/drivers/char/tpm/tpm-chip.c
+> > @@ -375,8 +375,6 @@ int tpm_chip_register(struct tpm_chip *chip)
+> >  		return rc;
 > >  	}
 > >  
-> > @@ -630,6 +635,8 @@ duration:
-> >  		chip->duration_adjusted = true;
-> >  		dev_info(&chip->dev, "Adjusting TPM timeout parameters.");
-> >  	}
-> > +
-> > +	chip->flags |= TPM_CHIP_FLAG_HAVE_TIMEOUTS;
-> >  	return 0;
-> >  }
-> >  EXPORT_SYMBOL_GPL(tpm_get_timeouts);
+> > -	chip->flags |= TPM_CHIP_FLAG_REGISTERED;
+> > -
+> >  	rc = tpm_add_legacy_sysfs(chip);
+> >  	if (rc) {
+> >  		tpm_chip_unregister(chip);
+> > @@ -402,9 +400,6 @@ EXPORT_SYMBOL_GPL(tpm_chip_register);
+> >   */
+> >  void tpm_chip_unregister(struct tpm_chip *chip)
+> >  {
+> > -	if (!(chip->flags & TPM_CHIP_FLAG_REGISTERED))
+> > -		return;
+> > -
+> >  	tpm_del_legacy_sysfs(chip);
+> >  
+> >  	tpm1_chip_unregister(chip);
 > > diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> > index b0585e99da49..2611459271e5 100644
+> > index 2611459271e5..79ce937ec557 100644
 > > --- a/drivers/char/tpm/tpm.h
 > > +++ b/drivers/char/tpm/tpm.h
-> > @@ -143,6 +143,7 @@ enum tpm_chip_flags {
+> > @@ -139,7 +139,6 @@ enum tpm2_startup_types {
+> >  #define TPM_PPI_VERSION_LEN		3
+> >  
+> >  enum tpm_chip_flags {
+> > -	TPM_CHIP_FLAG_REGISTERED	= BIT(0),
 > >  	TPM_CHIP_FLAG_TPM2		= BIT(1),
 > >  	TPM_CHIP_FLAG_IRQ		= BIT(2),
 > >  	TPM_CHIP_FLAG_VIRTUAL		= BIT(3),
-> > +	TPM_CHIP_FLAG_HAVE_TIMEOUTS	= BIT(4),
-> >  };
-> >  
-> >  struct tpm_chip {
-> > diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-> > index d66f51b3648e..193bee4d70e0 100644
-> > --- a/drivers/char/tpm/tpm_tis_core.c
-> > +++ b/drivers/char/tpm/tpm_tis_core.c
-> > @@ -749,20 +749,20 @@ int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
-> >  	if (intfcaps & TPM_INTF_DATA_AVAIL_INT)
-> >  		dev_dbg(dev, "\tData Avail Int Support\n");
-> >  
-> > -	/* Very early on issue a command to the TPM in polling mode to make
-> > -	 * sure it works. May as well use that command to set the proper
-> > -	 *  timeouts for the driver.
-> > -	 */
-> > -	if (tpm_get_timeouts(chip)) {
-> > -		dev_err(dev, "Could not get TPM timeouts and durations\n");
-> > -		rc = -ENODEV;
-> > -		goto out_err;
-> > -	}
-> > -
-> >  	/* INTERRUPT Setup */
-> >  	init_waitqueue_head(&priv->read_queue);
-> >  	init_waitqueue_head(&priv->int_queue);
-> >  	if (irq != -1) {
-> > +		/* Before doing irq testing issue a command to the TPM in polling mode
-> > +		 * to make sure it works. May as well use that command to set the
-> > +		 * proper timeouts for the driver.
-> > +		 */
-> > +		if (tpm_get_timeouts(chip)) {
-> > +			dev_err(dev, "Could not get TPM timeouts and durations\n");
-> > +			rc = -ENODEV;
-> > +			goto out_err;
-> > +		}
-> > +
-> >  		if (irq) {
-> >  			tpm_tis_probe_irq_single(chip, intmask, IRQF_SHARED,
-> >  						 irq);
 > > -- 
 > > 2.1.4
 > > 
