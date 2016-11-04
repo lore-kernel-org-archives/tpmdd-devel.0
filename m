@@ -1,15 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 2/2] tpm/tpm2-chip: fix kdoc errors
-Date: Thu, 3 Nov 2016 22:25:59 -0600
-Message-ID: <20161104042559.b2pp3sn4xdy7yvuc@intel.com>
-References: <1477962314-26763-1-git-send-email-tomas.winkler@intel.com>
-	<1477962314-26763-3-git-send-email-tomas.winkler@intel.com>
+Subject: Re: [PATCH 04/12] xen: make use of
+ xenbus_read_unsigned() in xen-tpmfront
+Date: Thu, 3 Nov 2016 22:26:31 -0600
+Message-ID: <20161104042631.zl22dssdusxqw7fi@intel.com>
+References: <1477932510-28594-1-git-send-email-jgross@suse.com>
+	<1477932510-28594-5-git-send-email-jgross@suse.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1477962314-26763-3-git-send-email-tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <1477932510-28594-5-git-send-email-jgross-IBi9RG/b67k@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,62 +19,60 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Juergen Gross <jgross-IBi9RG/b67k@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, xen-devel-GuqFBffKawuEi8DpZVb4nw@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, david.vrabel-Sxgqhf6Nn4DQT0dZR+AlfA@public.gmane.org, boris.ostrovsky-QHcLZuEGTsvQT0dZR+AlfA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Nov 01, 2016 at 03:05:14AM +0200, Tomas Winkler wrote:
-> Use correct kdoc format, describe correct parameters and return values.
+On Mon, Oct 31, 2016 at 05:48:22PM +0100, Juergen Gross wrote:
+> Use xenbus_read_unsigned() instead of xenbus_scanf() when possible.
+> This requires to change the type of one read from int to unsigned,
+> but this case has been wrong before: negative values are not allowed
+> for the modified case.
 > 
-> Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-> ---
->  drivers/char/tpm/tpm2-cmd.c | 107 +++++++++++++++++++++++++++-----------------
->  1 file changed, 66 insertions(+), 41 deletions(-)
+> Cc: peterhuewe-Mmb7MZpHnFY@public.gmane.org
+> Cc: tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org
+> Cc: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
+> Cc: jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org
+> Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 > 
-> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-> index 7df55d58c939..a7a519c87bee 100644
-> --- a/drivers/char/tpm/tpm2-cmd.c
-> +++ b/drivers/char/tpm/tpm2-cmd.c
-> @@ -258,11 +258,13 @@ static const struct tpm_input_header tpm2_pcrread_header = {
->   * tpm2_pcr_read() - read a PCR value
->   * @chip:	TPM chip to use.
->   * @pcr_idx:	index of the PCR to read.
-> - * @ref_buf:	buffer to store the resulting hash,
-> + * @res_buf:	buffer to store the resulting hash,
->   *
-> - * 0 is returned when the operation is successful. If a negative number is
-> - * returned it remarks a POSIX error code. If a positive number is returned
-> - * it remarks a TPM error.
-> + *
-> + * Return:
-> + *     0 when the operation is successful
-> + *     A negative number for system errors (errno)
-> + *     A positive number for a TPM error.
->   */
->  int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
->  {
-> @@ -304,13 +306,15 @@ static const struct tpm_input_header tpm2_pcrextend_header = {
->  
->  /**
->   * tpm2_pcr_extend() - extend a PCR value
-> + *
->   * @chip:	TPM chip to use.
->   * @pcr_idx:	index of the PCR.
->   * @hash:	hash value to use for the extend operation.
->   *
-> - * 0 is returned when the operation is successful. If a negative number is
-> - * returned it remarks a POSIX error code. If a positive number is returned
-> - * it remarks a TPM error.
-> + * Return:
-> + *     0 when the operation is successful
-> + *     A negative number for system errors (errno)
-> + *     A positive number for a TPM error.
+> Signed-off-by: Juergen Gross <jgross-IBi9RG/b67k@public.gmane.org>
 
-Put this to tpm_transmit_cmd only and refer to that from other functions
-with "same as with tpm_transmit_cmd()" with parenthesis because that
-marks in rst a link to that function.
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
 /Jarkko
+
+> ---
+>  drivers/char/tpm/xen-tpmfront.c | 8 ++------
+>  1 file changed, 2 insertions(+), 6 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/xen-tpmfront.c b/drivers/char/tpm/xen-tpmfront.c
+> index 62028f4..50072cc 100644
+> --- a/drivers/char/tpm/xen-tpmfront.c
+> +++ b/drivers/char/tpm/xen-tpmfront.c
+> @@ -337,18 +337,14 @@ static int tpmfront_resume(struct xenbus_device *dev)
+>  static void backend_changed(struct xenbus_device *dev,
+>  		enum xenbus_state backend_state)
+>  {
+> -	int val;
+> -
+>  	switch (backend_state) {
+>  	case XenbusStateInitialised:
+>  	case XenbusStateConnected:
+>  		if (dev->state == XenbusStateConnected)
+>  			break;
+>  
+> -		if (xenbus_scanf(XBT_NIL, dev->otherend,
+> -				"feature-protocol-v2", "%d", &val) < 0)
+> -			val = 0;
+> -		if (!val) {
+> +		if (!xenbus_read_unsigned(dev->otherend, "feature-protocol-v2",
+> +					  0)) {
+>  			xenbus_dev_fatal(dev, -EINVAL,
+>  					"vTPM protocol 2 required");
+>  			return;
+> -- 
+> 2.6.6
+> 
 
 ------------------------------------------------------------------------------
 Developer Access Program for Intel Xeon Phi Processors
