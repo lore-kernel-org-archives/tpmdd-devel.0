@@ -1,97 +1,140 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH v5] tpm_tis: Check return values from
- get_burstcount.
-Date: Fri, 4 Nov 2016 01:15:40 -0600
-Message-ID: <20161104071539.nrwfdwcgixo56s7w@intel.com>
-References: <20161027215009.GA12733@google.com>
- <20161028162815.e2ssrzwq62i5rorn@intel.com>
- <20161102104006.ob5s7bidpafo6b6b@intel.com>
+Subject: Re: [tpmdd-devel] [PATCH 1/3] tpm tis: Do not print timeout messages
+ twice
+Date: Fri, 4 Nov 2016 01:21:23 -0600
+Message-ID: <20161104072123.yyibcyrpt43vc4bw@intel.com>
+References: <1477520926-32594-1-git-send-email-jgunthorpe@obsidianresearch.com>
+ <20161102102617.sxobs4madzsusgmt@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20161102104006.ob5s7bidpafo6b6b@intel.com>
+In-Reply-To: <20161102102617.sxobs4madzsusgmt@intel.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: Josh Zimmerman <joshz@google.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Nov 02, 2016 at 04:40:06AM -0600, Jarkko Sakkinen wrote:
-> On Fri, Oct 28, 2016 at 07:28:15PM +0300, Jarkko Sakkinen wrote:
-> > On Thu, Oct 27, 2016 at 02:50:09PM -0700, Josh Zimmerman wrote:
-> > > If the TPM we're connecting to uses a static burst count, it will report
-> > > a burst count of zero throughout the response read. However, get_burstcount
-> > > assumes that a response of zero indicates that the TPM is not ready to
-> > > receive more data. In this case, it returns a negative error code, which
-> > > is passed on to tpm_tis_{write,read}_bytes as a u16, causing
-> > > them to read/write far too many bytes.
-> > > 
-> > > This patch checks for negative return codes and bails out from recv_data
-> > > and tpm_tis_send_data.
-> > > 
-> > > Fixes: 1107d065fdf1 (tpm_tis: Introduce intermediate layer for TPM access)
-> > > Signed-off-by: Josh Zimmerman <joshz@google.com>
-> > > 
-> > > ---
-> > > Changelog v5:
-> > >  - Move burstcnt < 0 check to before the min_t() call for enhanced readability.
-> > > Changelog v4:
-> > >  - Add short description to Fixes tag line.
-> > >  - Remove some unnecessary information in dev_err statements.
-> > > Changelog v3:
-> > >  - Add signed-off-by.
-> > > Changelog v2:
-> > >  - Fix typo (rc->burstcnt)
-> > > 
-> > > ---
-> > >  drivers/char/tpm/tpm_tis_core.c | 15 +++++++++++++--
-> > >  1 file changed, 13 insertions(+), 2 deletions(-)
-> > > 
-> > > diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-> > > index e3bf31b..a1ce060 100644
-> > > --- a/drivers/char/tpm/tpm_tis_core.c
-> > > +++ b/drivers/char/tpm/tpm_tis_core.c
-> > > @@ -185,7 +185,12 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
-> > >  				 TPM_STS_DATA_AVAIL | TPM_STS_VALID,
-> > >  				 chip->timeout_c,
-> > >  				 &priv->read_queue, true) == 0) {
-> > > -		burstcnt = min_t(int, get_burstcount(chip), count - size);
-> > > +		burstcnt = get_burstcount(chip);
-> > > +		if (burstcnt < 0) {
-> > > +			dev_err(&chip->dev, "Unable to read burstcount\n");
-> > > +			return burstcnt;
-> > > +		}
-> > > +		burstcnt = min_t(int, burstcnt, count - size);
-> > >  
-> > >  		rc = tpm_tis_read_bytes(priv, TPM_DATA_FIFO(priv->locality),
-> > >  					burstcnt, buf + size);
-> > > @@ -271,7 +276,13 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
-> > >  	}
-> > >  
-> > >  	while (count < len - 1) {
-> > > -		burstcnt = min_t(int, get_burstcount(chip), len - count - 1);
-> > > +		burstcnt = get_burstcount(chip);
-> > > +		if (burstcnt < 0) {
-> > > +			dev_err(&chip->dev, "Unable to read burstcount\n");
-> > > +			rc = burstcnt;
-> > > +			goto out_err;
-> > > +		}
-> > > +		burstcnt = min_t(int, burstcnt, len - count - 1);
-> > >  		rc = tpm_tis_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
-> > >  					 burstcnt, buf + count);
-> > >  		if (rc < 0)
-> > > -- 
-> > > 2.8.0.rc3.226.g39d4020
-> > > 
+On Wed, Nov 02, 2016 at 04:26:17AM -0600, Jarkko Sakkinen wrote:
+> On Wed, Oct 26, 2016 at 04:28:44PM -0600, Jason Gunthorpe wrote:
+> > The tis driver does a tpm_get_timeouts out side of tpm_chip_register,
+> > and tpm_get_timeouts can print a message, resulting in two prints, eg:
 > > 
-> > LGTM
+> >  tpm tpm0: [Hardware Error]: Adjusting reported timeouts: A 10000->750000us B 10000->2000000us C 10000->750000us D 10000->750000us
 > > 
-> > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> > Keep track and prevent tpm_get_timeouts from running a second time, and
+> > clarify the purpose of the call in tpm_tis_core to only be connected to
+> > irq testing.
+> > 
+> > Signed-off-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 > 
-> I'm sorry for the delay with testing but I cannot test this during this
-> week. The network connection is terrible at the Linux Plumbers
-> Conference and also at the hotel. I can barely read my email and LWN.
+> Thanks for improving the comment. It makes a lot more sense now.
+> 
+> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> 
+> /Jarkko
 
 Applied.
 
 /Jarkko
+
+> 
+> > ---
+> >  drivers/char/tpm/tpm-interface.c |  7 +++++++
+> >  drivers/char/tpm/tpm.h           |  1 +
+> >  drivers/char/tpm/tpm_tis_core.c  | 20 ++++++++++----------
+> >  3 files changed, 18 insertions(+), 10 deletions(-)
+> > 
+> > diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> > index aef20ee2331a..d0285faa4f1b 100644
+> > --- a/drivers/char/tpm/tpm-interface.c
+> > +++ b/drivers/char/tpm/tpm-interface.c
+> > @@ -505,6 +505,9 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+> >  	struct duration_t *duration_cap;
+> >  	ssize_t rc;
+> >  
+> > +	if (chip->flags & TPM_CHIP_FLAG_HAVE_TIMEOUTS)
+> > +		return 0;
+> > +
+> >  	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+> >  		/* Fixed timeouts for TPM2 */
+> >  		chip->timeout_a = msecs_to_jiffies(TPM2_TIMEOUT_A);
+> > @@ -517,6 +520,8 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+> >  		    msecs_to_jiffies(TPM2_DURATION_MEDIUM);
+> >  		chip->duration[TPM_LONG] =
+> >  		    msecs_to_jiffies(TPM2_DURATION_LONG);
+> > +
+> > +		chip->flags |= TPM_CHIP_FLAG_HAVE_TIMEOUTS;
+> >  		return 0;
+> >  	}
+> >  
+> > @@ -630,6 +635,8 @@ duration:
+> >  		chip->duration_adjusted = true;
+> >  		dev_info(&chip->dev, "Adjusting TPM timeout parameters.");
+> >  	}
+> > +
+> > +	chip->flags |= TPM_CHIP_FLAG_HAVE_TIMEOUTS;
+> >  	return 0;
+> >  }
+> >  EXPORT_SYMBOL_GPL(tpm_get_timeouts);
+> > diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> > index b0585e99da49..2611459271e5 100644
+> > --- a/drivers/char/tpm/tpm.h
+> > +++ b/drivers/char/tpm/tpm.h
+> > @@ -143,6 +143,7 @@ enum tpm_chip_flags {
+> >  	TPM_CHIP_FLAG_TPM2		= BIT(1),
+> >  	TPM_CHIP_FLAG_IRQ		= BIT(2),
+> >  	TPM_CHIP_FLAG_VIRTUAL		= BIT(3),
+> > +	TPM_CHIP_FLAG_HAVE_TIMEOUTS	= BIT(4),
+> >  };
+> >  
+> >  struct tpm_chip {
+> > diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+> > index d66f51b3648e..193bee4d70e0 100644
+> > --- a/drivers/char/tpm/tpm_tis_core.c
+> > +++ b/drivers/char/tpm/tpm_tis_core.c
+> > @@ -749,20 +749,20 @@ int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
+> >  	if (intfcaps & TPM_INTF_DATA_AVAIL_INT)
+> >  		dev_dbg(dev, "\tData Avail Int Support\n");
+> >  
+> > -	/* Very early on issue a command to the TPM in polling mode to make
+> > -	 * sure it works. May as well use that command to set the proper
+> > -	 *  timeouts for the driver.
+> > -	 */
+> > -	if (tpm_get_timeouts(chip)) {
+> > -		dev_err(dev, "Could not get TPM timeouts and durations\n");
+> > -		rc = -ENODEV;
+> > -		goto out_err;
+> > -	}
+> > -
+> >  	/* INTERRUPT Setup */
+> >  	init_waitqueue_head(&priv->read_queue);
+> >  	init_waitqueue_head(&priv->int_queue);
+> >  	if (irq != -1) {
+> > +		/* Before doing irq testing issue a command to the TPM in polling mode
+> > +		 * to make sure it works. May as well use that command to set the
+> > +		 * proper timeouts for the driver.
+> > +		 */
+> > +		if (tpm_get_timeouts(chip)) {
+> > +			dev_err(dev, "Could not get TPM timeouts and durations\n");
+> > +			rc = -ENODEV;
+> > +			goto out_err;
+> > +		}
+> > +
+> >  		if (irq) {
+> >  			tpm_tis_probe_irq_single(chip, intmask, IRQF_SHARED,
+> >  						 irq);
+> > -- 
+> > 2.1.4
+> > 
+> 
+> ------------------------------------------------------------------------------
+> Developer Access Program for Intel Xeon Phi Processors
+> Access to Intel Xeon Phi processor-based developer platforms.
+> With one year of Intel Parallel Studio XE.
+> Training and support from Colfax.
+> Order your platform today. http://sdm.link/xeonphi
+> _______________________________________________
+> tpmdd-devel mailing list
+> tpmdd-devel@lists.sourceforge.net
+> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
