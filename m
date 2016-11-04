@@ -1,91 +1,144 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH 3/3] tpm: move documentation under Documentation/security
-Date: Fri, 4 Nov 2016 07:01:02 -0600
-Message-ID: <20161104130102.pm4ggspfbyemrx6u@intel.com>
-References: <20161103235752.19256-1-jarkko.sakkinen@linux.intel.com>
- <20161103235752.19256-4-jarkko.sakkinen@linux.intel.com>
- <8760o3ih5j.fsf@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v5 0/7] tpm: cleanup/fixes in existing
+	event log support
+Date: Fri, 4 Nov 2016 07:08:28 -0600
+Message-ID: <20161104130828.uzxtcoiyn4hzyyrg@intel.com>
+References: <1476838185-24007-1-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <8760o3ih5j.fsf@intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jani Nikula <jani.nikula@linux.intel.com>
-Cc: tpmdd-devel@lists.sourceforge.net, Jonathan Corbet <corbet@lwn.net>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, James Morris <jmorris@namei.org>
+In-Reply-To: <1476838185-24007-1-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Nov 04, 2016 at 02:06:00PM +0200, Jani Nikula wrote:
-> On Fri, 04 Nov 2016, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> wrote:
-> > In order too make Documentation root directory cleaner move the tpm
-> > directory under Documentation/security.
-> 
-> FWIW I like this.
+On Tue, Oct 18, 2016 at 08:49:38PM -0400, Nayna Jain wrote:
+> This patch set includes the cleanup and bug fixes patches, previously
+> part of the "tpm: add the securityfs pseudo files support for TPM 2.0
+> firmware event log" patch set, in order to upstream them more quickly.
 
-Thx. I just realized that I should have CC'd to linux-security-module
-to get say from James as this makes path for the whole security tree.
+I realized something that is obviously wrong in this patch set. You
+should CC this to linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org and probably also
+linux-security-module-u79uwXL29TaiAVqoAR/hOA@public.gmane.org It's only sent to this mailing
+list. It works for minor changes and RFC but not for this. Do this
+for the next version.
 
-James, sorry about that. Can you share your opinion?
+Include all seven patches, or more, because it really seems that 4/7
+needs to be split into multiple patches.
 
-> BR,
-> Jani.
+I have to drop the first patch too because of this reason.
 
 /Jarkko
 
+> Changelog History
 > 
+> v5:
 > 
-> >
-> > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-> > ---
-> >  Documentation/index.rst                             | 2 +-
-> >  Documentation/security/index.rst                    | 7 +++++++
-> >  Documentation/{ => security}/tpm/index.rst          | 0
-> >  Documentation/{ => security}/tpm/tpm_vtpm_proxy.rst | 0
-> >  Documentation/{ => security}/tpm/xen-tpmfront.txt   | 0
-> >  5 files changed, 8 insertions(+), 1 deletion(-)
-> >  create mode 100644 Documentation/security/index.rst
-> >  rename Documentation/{ => security}/tpm/index.rst (100%)
-> >  rename Documentation/{ => security}/tpm/tpm_vtpm_proxy.rst (100%)
-> >  rename Documentation/{ => security}/tpm/xen-tpmfront.txt (100%)
-> >
-> > diff --git a/Documentation/index.rst b/Documentation/index.rst
-> > index 0058b65..b4c3034 100644
-> > --- a/Documentation/index.rst
-> > +++ b/Documentation/index.rst
-> > @@ -19,7 +19,7 @@ Contents:
-> >     media/dvb-drivers/index
-> >     media/v4l-drivers/index
-> >     gpu/index
-> > -   tpm/index
-> > +   security/index
-> >  
-> >  Indices and tables
-> >  ==================
-> > diff --git a/Documentation/security/index.rst b/Documentation/security/index.rst
-> > new file mode 100644
-> > index 0000000..9bae6bb
-> > --- /dev/null
-> > +++ b/Documentation/security/index.rst
-> > @@ -0,0 +1,7 @@
-> > +======================
-> > +Security documentation
-> > +======================
-> > +
-> > +.. toctree::
-> > +
-> > +   tpm/index
-> > diff --git a/Documentation/tpm/index.rst b/Documentation/security/tpm/index.rst
-> > similarity index 100%
-> > rename from Documentation/tpm/index.rst
-> > rename to Documentation/security/tpm/index.rst
-> > diff --git a/Documentation/tpm/tpm_vtpm_proxy.rst b/Documentation/security/tpm/tpm_vtpm_proxy.rst
-> > similarity index 100%
-> > rename from Documentation/tpm/tpm_vtpm_proxy.rst
-> > rename to Documentation/security/tpm/tpm_vtpm_proxy.rst
-> > diff --git a/Documentation/tpm/xen-tpmfront.txt b/Documentation/security/tpm/xen-tpmfront.txt
-> > similarity index 100%
-> > rename from Documentation/tpm/xen-tpmfront.txt
-> > rename to Documentation/security/tpm/xen-tpmfront.txt
+> - Moved cleanup/fixes patches into this patch set.
+> - Patch "fix the race condition between event log access and chip
+> getting unregistered"
+>   - updated subject line and commit description.
+>   - modified fops code to use chip kref.
+>   - modified fops to lock inode before accessing inode private data.
+>   - renamed tpm_securityfs_data to tpm_chip_seqops, as it no more
+>     holds bios log, but associates seqops with respective chip. For
+>     the same reason, moved it to tpm.h
+> - Patch "replace or remove printk error messages"
+>   - cleaned up dev_dbg and used dev_info as applicable.
+> 
+> v4:
+> 
+> - Includes feedbacks from Jarkko and Jason.
+> - Patch "tpm: define a generic open() method for ascii & bios
+> measurements".
+>   - Fix indentation issue.
+> - Patch "tpm: replace the dynamically allocated bios_dir as
+> struct dentry array".
+>   - Continue to use bios_dir_count variable to use is_bad() checks and
+>     to maintain correct order for securityfs_remove() during teardown.
+>   - Reset chip->bios_dir_count in teardown() function.
+> - Patch "tpm: validate the event log access before tpm_bios_log_setup".
+>   - Retain TPM2 check which was removed in previous patch.
+>   - Add tpm_bios_log_setup failure handling.
+>   - Remove use of private data from v3 version of patch. Add a new
+>   member to struct tpm_chip to achieve the same purpose.
+> - Patch "tpm: redefine the read_log method to check for ACPI/OF 
+> properties sequentially".
+>   - Move replacement of CONFIG_TCG_IBMVTPM with CONFIG_OF to
+>   this patch from patch 3.
+>   - Replace -1 error code with -ENODEV.
+> - Patch "tpm: replace the of_find_node_by_name() with dev of_node
+> property".
+>   - Uses chip->dev.parent->of_node.
+>   - Created separate patch for cleanup of pr_err 
+>   messages.
+> - Patch "tpm: remove printk error messages".
+>   - New Patch.
+> - Patch "tpm: add the securityfs file support for TPM 2.0 event log".
+>   - Parses event digests using event alg_id rather than event log header
+>     alg_id.
+>   - Uses of_property_match_string to differentiate tpm/vtpm compatible
+>     property.
+>   - Adds the comment for difference in tpm/vtpm endianness.
+> 
+> v3:
+> 
+> - Includes the review feedbacks as suggested by Jason.
+> - Split of patches into one patch per idea.
+> - Generic open() method for ascii/bios measurements.
+> - Replacement of of **bios_dir with *bios_dir[3].
+> - Verifying readlog() is successful before creating securityfs entries.
+> - Generic readlog() to check for ACPI/OF in sequence.
+> - read_log_of() method now uses of_node propertry rather than
+>   calling find_device_by_name.
+> - read_log differentiates vtpm/tpm using its compatible property.
+> - Cleans pr_err with dev_dbg.
+> - Commit msgs subject line prefixed with tpm.
+> 
+> v2:
+> 
+> - Fixes issues as given in feedback by Jason.
+> - Adds documentation for device tree.
+> 
+> Jarkko Sakkinen (2):
+>   tpm: replace dynamically allocated bios_dir with a static array
+>   tpm: drop tpm1_chip_register(/unregister)
+> 
+> Nayna Jain (5):
+>   tpm: define a generic open() method for ascii & bios measurements
+>   tpm: fix the race condition between event log access and chip getting
+>     unregistered
+>   tpm: redefine read_log() to handle ACPI/OF at runtime
+>   tpm: replace of_find_node_by_name() with dev of_node property
+>   tpm: replace or remove printk error messages
+> 
+>  drivers/char/tpm/Makefile       |  14 +--
+>  drivers/char/tpm/tpm-chip.c     |  31 ++----
+>  drivers/char/tpm/tpm-sysfs.c    |   3 +
+>  drivers/char/tpm/tpm.h          |  14 ++-
+>  drivers/char/tpm/tpm_acpi.c     |  36 +++----
+>  drivers/char/tpm/tpm_eventlog.c | 208 ++++++++++++++++++++--------------------
+>  drivers/char/tpm/tpm_eventlog.h |  22 +++--
+>  drivers/char/tpm/tpm_of.c       |  46 ++++-----
+>  8 files changed, 176 insertions(+), 198 deletions(-)
 > 
 > -- 
-> Jani Nikula, Intel Open Source Technology Center
+> 2.5.0
+> 
+
+------------------------------------------------------------------------------
+Developer Access Program for Intel Xeon Phi Processors
+Access to Intel Xeon Phi processor-based developer platforms.
+With one year of Intel Parallel Studio XE.
+Training and support from Colfax.
+Order your platform today. http://sdm.link/xeonphi
