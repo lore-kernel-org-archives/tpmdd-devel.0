@@ -1,16 +1,17 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v5 7/7] tpm: replace or remove printk
-	error messages
-Date: Thu, 3 Nov 2016 23:18:46 -0600
-Message-ID: <20161104051845.4sy7nckeytxx6wkx@intel.com>
-References: <1476838185-24007-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1476838185-24007-8-git-send-email-nayna@linux.vnet.ibm.com>
+Subject: Re: [PATCH 1/2] tpm/tpm-interface: place kdoc just
+ above tpm_pcr_extend
+Date: Thu, 3 Nov 2016 23:22:31 -0600
+Message-ID: <20161104052231.kwclspdmpyml7alt@intel.com>
+References: <1477962314-26763-1-git-send-email-tomas.winkler@intel.com>
+	<1477962314-26763-2-git-send-email-tomas.winkler@intel.com>
+	<20161102100220.v2nlbf767sticcp7@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1476838185-24007-8-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <20161102100220.v2nlbf767sticcp7-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,134 +20,68 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Oct 18, 2016 at 08:49:45PM -0400, Nayna Jain wrote:
-> This patch removes the unnecessary error messages on failing to
-> allocate memory and replaces pr_err/printk with dev_dbg/dev_info
-> as applicable.
+On Wed, Nov 02, 2016 at 04:02:20AM -0600, Jarkko Sakkinen wrote:
+> On Tue, Nov 01, 2016 at 03:05:13AM +0200, Tomas Winkler wrote:
+> > Place kdoc just above tpm_pcr_extend so it can be parsed
+> > correctly.
+> > 
+> > Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 > 
-> Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
-Why subject line is "replace or remove"? What does that mean?
-If you have both, maybe using the phrase "clean up" would be
-better.
+I applied this although I edited the short description (stripped
+away "/tpm-interface".
 
 /Jarkko
 
-> ---
->  drivers/char/tpm/tpm_acpi.c | 17 +++++------------
->  drivers/char/tpm/tpm_of.c   | 30 ++++++++++--------------------
->  2 files changed, 15 insertions(+), 32 deletions(-)
 > 
-> diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
-> index 859bdba..22e42da 100644
-> --- a/drivers/char/tpm/tpm_acpi.c
-> +++ b/drivers/char/tpm/tpm_acpi.c
-> @@ -60,11 +60,8 @@ int read_log_acpi(struct tpm_chip *chip)
->  	status = acpi_get_table(ACPI_SIG_TCPA, 1,
->  				(struct acpi_table_header **)&buff);
->  
-> -	if (ACPI_FAILURE(status)) {
-> -		printk(KERN_ERR "%s: ERROR - Could not get TCPA table\n",
-> -		       __func__);
-> +	if (ACPI_FAILURE(status))
->  		return -EIO;
-> -	}
->  
->  	switch(buff->platform_class) {
->  	case BIOS_SERVER:
-> @@ -78,25 +75,21 @@ int read_log_acpi(struct tpm_chip *chip)
->  		break;
->  	}
->  	if (!len) {
-> -		printk(KERN_ERR "%s: ERROR - TCPA log area empty\n", __func__);
-> +		dev_dbg(&chip->dev, "%s: ERROR - TCPA log area empty\n",
-> +			__func__);
->  		return -EIO;
->  	}
->  
->  	/* malloc EventLog space */
->  	log->bios_event_log = kmalloc(len, GFP_KERNEL);
-> -	if (!log->bios_event_log) {
-> -		printk("%s: ERROR - Not enough  Memory for BIOS measurements\n",
-> -			__func__);
-> +	if (!log->bios_event_log)
->  		return -ENOMEM;
-> -	}
->  
->  	log->bios_event_log_end = log->bios_event_log + len;
->  
->  	virt = acpi_os_map_iomem(start, len);
-> -	if (!virt) {
-> -		printk("%s: ERROR - Unable to map memory\n", __func__);
-> +	if (!virt)
->  		goto err;
-> -	}
->  
->  	memcpy_fromio(log->bios_event_log, virt, len);
->  
-> diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
-> index 22b8f81..8b7e677 100644
-> --- a/drivers/char/tpm/tpm_of.c
-> +++ b/drivers/char/tpm/tpm_of.c
-> @@ -31,40 +31,30 @@ int read_log_of(struct tpm_chip *chip)
->  	log = &chip->log;
->  	if (chip->dev.parent->of_node)
->  		np = chip->dev.parent->of_node;
-> -	if (!np) {
-> -		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
-> +	if (!np)
->  		return -ENODEV;
-> -	}
->  
->  	sizep = of_get_property(np, "linux,sml-size", NULL);
-> -	if (sizep == NULL) {
-> -		pr_err("%s: ERROR - SML size not found\n", __func__);
-> -		goto cleanup_eio;
-> -	}
-> +	if (sizep == NULL)
-> +		return -EIO;
-> +
->  	if (*sizep == 0) {
-> -		pr_err("%s: ERROR - event log area empty\n", __func__);
-> -		goto cleanup_eio;
-> +		dev_info(&chip->dev, "%s: ERROR - event log area empty\n",
-> +			__func__);
-> +		return -EIO;
->  	}
->  
->  	basep = of_get_property(np, "linux,sml-base", NULL);
-> -	if (basep == NULL) {
-> -		pr_err("%s: ERROR - SML not found\n", __func__);
-> -		goto cleanup_eio;
-> -	}
-> +	if (basep == NULL)
-> +		return -EIO;
->  
->  	log->bios_event_log = kmalloc(*sizep, GFP_KERNEL);
-> -	if (!log->bios_event_log) {
-> -		pr_err("%s: ERROR - Not enough memory for BIOS measurements\n",
-> -		       __func__);
-> +	if (!log->bios_event_log)
->  		return -ENOMEM;
-> -	}
->  
->  	log->bios_event_log_end = log->bios_event_log + *sizep;
->  
->  	memcpy(log->bios_event_log, __va(*basep), *sizep);
->  
->  	return 0;
-> -
-> -cleanup_eio:
-> -	return -EIO;
->  }
-> -- 
-> 2.5.0
+> /Jarkko
 > 
+> > ---
+> >  drivers/char/tpm/tpm-interface.c | 16 ++++++++--------
+> >  1 file changed, 8 insertions(+), 8 deletions(-)
+> > 
+> > diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> > index cb0e57ee053d..d496a6b26a45 100644
+> > --- a/drivers/char/tpm/tpm-interface.c
+> > +++ b/drivers/char/tpm/tpm-interface.c
+> > @@ -731,6 +731,14 @@ int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf)
+> >  }
+> >  EXPORT_SYMBOL_GPL(tpm_pcr_read);
+> >  
+> > +#define TPM_ORD_PCR_EXTEND cpu_to_be32(20)
+> > +#define EXTEND_PCR_RESULT_SIZE 34
+> > +static const struct tpm_input_header pcrextend_header = {
+> > +	.tag = TPM_TAG_RQU_COMMAND,
+> > +	.length = cpu_to_be32(34),
+> > +	.ordinal = TPM_ORD_PCR_EXTEND
+> > +};
+> > +
+> >  /**
+> >   * tpm_pcr_extend - extend pcr value with hash
+> >   * @chip_num:	tpm idx # or AN&
+> > @@ -741,14 +749,6 @@ EXPORT_SYMBOL_GPL(tpm_pcr_read);
+> >   * isn't, protect against the chip disappearing, by incrementing
+> >   * the module usage count.
+> >   */
+> > -#define TPM_ORD_PCR_EXTEND cpu_to_be32(20)
+> > -#define EXTEND_PCR_RESULT_SIZE 34
+> > -static const struct tpm_input_header pcrextend_header = {
+> > -	.tag = TPM_TAG_RQU_COMMAND,
+> > -	.length = cpu_to_be32(34),
+> > -	.ordinal = TPM_ORD_PCR_EXTEND
+> > -};
+> > -
+> >  int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
+> >  {
+> >  	struct tpm_cmd_t cmd;
+> > -- 
+> > 2.7.4
+> > 
 
 ------------------------------------------------------------------------------
 Developer Access Program for Intel Xeon Phi Processors
