@@ -1,13 +1,15 @@
-From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Subject: [PATCH] Check for error return values from
-	get_burstcount.
-Date: Thu, 20 Oct 2016 17:21:29 -0700
-Message-ID: <20161021002129.GA9464@google.com>
+From: Jani Nikula <jani.nikula-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH 3/3] tpm: move documentation under
+	Documentation/security
+Date: Fri, 04 Nov 2016 14:06:00 +0200
+Message-ID: <8760o3ih5j.fsf@intel.com>
+References: <20161103235752.19256-1-jarkko.sakkinen@linux.intel.com>
+	<20161103235752.19256-4-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
+In-Reply-To: <20161103235752.19256-4-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -16,56 +18,75 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: "open list:DOCUMENTATION" <linux-doc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, Jonathan Corbet <corbet-T1hC0tSOHrs@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-If the TPM we're connecting to uses a static burst count, it will report
-a burst count of zero throughout the response read. However, get_burstcount
-assumes that a response of zero indicates that the TPM is not ready to
-receive more data. In this case, it returns a negative error code, which
-is passed on to tpm_tis_{write,read}_bytes as a u16, causing
-them to read/write far too many bytes.
+On Fri, 04 Nov 2016, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
+> In order too make Documentation root directory cleaner move the tpm
+> directory under Documentation/security.
 
-This patch checks for negative return codes and bails out from recv_data
-and tpm_tis_send_data.
----
- drivers/char/tpm/tpm_tis_core.c | 13 +++++++++++++
- 1 file changed, 13 insertions(+)
+FWIW I like this.
 
-diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-index e3bf31b..d0301dc 100644
---- a/drivers/char/tpm/tpm_tis_core.c
-+++ b/drivers/char/tpm/tpm_tis_core.c
-@@ -186,6 +186,12 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
- 				 chip->timeout_c,
- 				 &priv->read_queue, true) == 0) {
- 		burstcnt = min_t(int, get_burstcount(chip), count - size);
-+		if (burstcnt < 0) {
-+			dev_err(&chip->dev,
-+				"Unable to read burstcount in %s:%d (%s)\n",
-+				__FILE__, __LINE__, __func__);
-+			return rc;
-+		}
- 
- 		rc = tpm_tis_read_bytes(priv, TPM_DATA_FIFO(priv->locality),
- 					burstcnt, buf + size);
-@@ -272,6 +278,13 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 
- 	while (count < len - 1) {
- 		burstcnt = min_t(int, get_burstcount(chip), len - count - 1);
-+		if (burstcnt < 0) {
-+			dev_err(&chip->dev,
-+				"Unable to read burstcount in %s:%d (%s)\n",
-+				__FILE__, __LINE__, __func__);
-+			rc = burstcnt;
-+			goto out_err;
-+		}
- 		rc = tpm_tis_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
- 					 burstcnt, buf + count);
- 		if (rc < 0)
+BR,
+Jani.
+
+
+>
+> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> ---
+>  Documentation/index.rst                             | 2 +-
+>  Documentation/security/index.rst                    | 7 +++++++
+>  Documentation/{ => security}/tpm/index.rst          | 0
+>  Documentation/{ => security}/tpm/tpm_vtpm_proxy.rst | 0
+>  Documentation/{ => security}/tpm/xen-tpmfront.txt   | 0
+>  5 files changed, 8 insertions(+), 1 deletion(-)
+>  create mode 100644 Documentation/security/index.rst
+>  rename Documentation/{ => security}/tpm/index.rst (100%)
+>  rename Documentation/{ => security}/tpm/tpm_vtpm_proxy.rst (100%)
+>  rename Documentation/{ => security}/tpm/xen-tpmfront.txt (100%)
+>
+> diff --git a/Documentation/index.rst b/Documentation/index.rst
+> index 0058b65..b4c3034 100644
+> --- a/Documentation/index.rst
+> +++ b/Documentation/index.rst
+> @@ -19,7 +19,7 @@ Contents:
+>     media/dvb-drivers/index
+>     media/v4l-drivers/index
+>     gpu/index
+> -   tpm/index
+> +   security/index
+>  
+>  Indices and tables
+>  ==================
+> diff --git a/Documentation/security/index.rst b/Documentation/security/index.rst
+> new file mode 100644
+> index 0000000..9bae6bb
+> --- /dev/null
+> +++ b/Documentation/security/index.rst
+> @@ -0,0 +1,7 @@
+> +======================
+> +Security documentation
+> +======================
+> +
+> +.. toctree::
+> +
+> +   tpm/index
+> diff --git a/Documentation/tpm/index.rst b/Documentation/security/tpm/index.rst
+> similarity index 100%
+> rename from Documentation/tpm/index.rst
+> rename to Documentation/security/tpm/index.rst
+> diff --git a/Documentation/tpm/tpm_vtpm_proxy.rst b/Documentation/security/tpm/tpm_vtpm_proxy.rst
+> similarity index 100%
+> rename from Documentation/tpm/tpm_vtpm_proxy.rst
+> rename to Documentation/security/tpm/tpm_vtpm_proxy.rst
+> diff --git a/Documentation/tpm/xen-tpmfront.txt b/Documentation/security/tpm/xen-tpmfront.txt
+> similarity index 100%
+> rename from Documentation/tpm/xen-tpmfront.txt
+> rename to Documentation/security/tpm/xen-tpmfront.txt
+
 -- 
-2.8.0.rc3.226.g39d4020
-
+Jani Nikula, Intel Open Source Technology Center
 
 ------------------------------------------------------------------------------
 Developer Access Program for Intel Xeon Phi Processors
