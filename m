@@ -1,46 +1,44 @@
-From: Colin King <colin.king@canonical.com>
-Subject: [PATCH] tpm: return -ENODEV if np is not set
-Date: Tue, 15 Nov 2016 13:27:22 +0000
-Message-ID: <20161115132722.6963-1-colin.king@canonical.com>
+From: Baruch Siach <baruch-NswTu9S1W3P6gbPvEgmw2w@public.gmane.org>
+Subject: [PATCH] char: tpm: fix kerneldoc tpm2_unseal_trusted
+	name typo
+Date: Sun,  6 Nov 2016 11:02:45 +0200
+Message-ID: <4585554250d1c81c6c259dceb489f9270292cd38.1478422965.git.baruch@tkos.co.il>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 8bit
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net
-Cc: linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: Baruch Siach <baruch-NswTu9S1W3P6gbPvEgmw2w@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Colin Ian King <colin.king@canonical.com>
-
-device_node np contains a garbage value from the stack and it
-is only set if chip->dev.parent->of_node is not null.  Thus the
-check for a null np won't spot a garbage value of np from the
-stack if chip->dev.parent->of_node is null and if np contains
-an garbage non-null value.
-
-I believe the correct fix is to return -ENODEV if and only if
-chip->dev.parent->of_node is null.
-
-Found with static analysis by CoverityScan, CID 1377755
-
-Signed-off-by: Colin Ian King <colin.king@canonical.com>
+Signed-off-by: Baruch Siach <baruch-NswTu9S1W3P6gbPvEgmw2w@public.gmane.org>
 ---
- drivers/char/tpm/tpm_of.c | 2 +-
+ drivers/char/tpm/tpm2-cmd.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
-index 3af829f..1426590 100644
---- a/drivers/char/tpm/tpm_of.c
-+++ b/drivers/char/tpm/tpm_of.c
-@@ -31,7 +31,7 @@ int read_log_of(struct tpm_chip *chip)
- 	log = &chip->log;
- 	if (chip->dev.parent->of_node)
- 		np = chip->dev.parent->of_node;
--	if (!np)
-+	else
- 		return -ENODEV;
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index 7df55d58c939..da5b782a9731 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -680,7 +680,7 @@ static int tpm2_unseal_cmd(struct tpm_chip *chip,
+ }
  
- 	sizep = of_get_property(np, "linux,sml-size", NULL);
+ /**
+- * tpm_unseal_trusted() - unseal the payload of a trusted key
++ * tpm2_unseal_trusted() - unseal the payload of a trusted key
+  * @chip_num: TPM chip to use
+  * @payload: the key data in clear and encrypted form
+  * @options: authentication values and other options
 -- 
 2.10.2
+
+
+------------------------------------------------------------------------------
