@@ -1,27 +1,63 @@
-From: David Vrabel <david.vrabel@citrix.com>
-Subject: Re: [PATCH 00/12] xen: add common function for reading optional value
-Date: Mon, 7 Nov 2016 11:08:09 +0000
-Message-ID: <8d314b86-4a28-5628-2a79-842a2fafc4c1@citrix.com>
-References: <1477932510-28594-1-git-send-email-jgross@suse.com>
+From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH] tpm: Only call pm_runtime_get_sync if device
+	has a parent
+Date: Mon,  7 Nov 2016 07:14:33 -0500
+Message-ID: <1478520873-30564-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="windows-1252"
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-input-owner@vger.kernel.org>
-In-Reply-To: <1477932510-28594-1-git-send-email-jgross@suse.com>
-Sender: linux-input-owner@vger.kernel.org
-To: Juergen Gross <jgross@suse.com>, linux-kernel@vger.kernel.org, xen-devel@lists.xen.org
-Cc: boris.ostrovsky@oracle.com, konrad.wilk@oracle.com, roger.pau@citrix.com, peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, dmitry.torokhov@gmail.com, linux-input@vger.kernel.org, wei.liu2@citrix.com, paul.durrant@citrix.com, netdev@vger.kernel.org, bhelgaas@google.com, linux-pci@vger.kernel.org, tomi.valkeinen@ti.com, linux-fbdev@vger.kernel.org
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 31/10/16 16:48, Juergen Gross wrote:
-> There are multiple instances of code reading an optional unsigned
-> parameter from Xenstore via xenbus_scanf(). Instead of repeating the
-> same code over and over add a service function doing the job and
-> replace the call of xenbus_scanf() with the call of the new function
-> where appropriate.
+Only call pm_runtime_get_sync if the device has a parent. This
+change fixes a crash in the tpm_vtpm_proxy driver since that
+driver does not have a parent device.
 
-Acked-by: David Vrabel <david.vrabel@citrix.com>
+Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+---
+ drivers/char/tpm/tpm-interface.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
 
-Please queue for the next release.
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index ef0fcdb..a2688ac 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -357,7 +357,8 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
+ 	if (!(flags & TPM_TRANSMIT_UNLOCKED))
+ 		mutex_lock(&chip->tpm_mutex);
+ 
+-	pm_runtime_get_sync(chip->dev.parent);
++	if (chip->dev.parent)
++		pm_runtime_get_sync(chip->dev.parent);
+ 
+ 	rc = chip->ops->send(chip, (u8 *) buf, count);
+ 	if (rc < 0) {
+@@ -400,7 +401,8 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
+ 		dev_err(&chip->dev,
+ 			"tpm_transmit: tpm_recv: error %zd\n", rc);
+ out:
+-	pm_runtime_put_sync(chip->dev.parent);
++	if (chip->dev.parent)
++		pm_runtime_put_sync(chip->dev.parent);
+ 
+ 	if (!(flags & TPM_TRANSMIT_UNLOCKED))
+ 		mutex_unlock(&chip->tpm_mutex);
+-- 
+2.4.3
 
-David
+
+------------------------------------------------------------------------------
+Developer Access Program for Intel Xeon Phi Processors
+Access to Intel Xeon Phi processor-based developer platforms.
+With one year of Intel Parallel Studio XE.
+Training and support from Colfax.
+Order your platform today. http://sdm.link/xeonphi
