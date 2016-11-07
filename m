@@ -1,8 +1,8 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH] tpm: Only call pm_runtime_get_sync if
 	device has a parent
-Date: Mon, 7 Nov 2016 08:36:52 -0800
-Message-ID: <20161107163652.ztlbjtgpoaz4llp2@intel.com>
+Date: Mon, 7 Nov 2016 09:04:16 -0800
+Message-ID: <20161107170416.y5xaolj4b2qswgzd@intel.com>
 References: <1478520873-30564-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -29,7 +29,7 @@ On Mon, Nov 07, 2016 at 07:14:33AM -0500, Stefan Berger wrote:
 > 
 > Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Applied.
 
 /Jarkko
 
