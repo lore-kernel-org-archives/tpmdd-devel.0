@@ -1,59 +1,34 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: tpmdd to vger.kernel.org
-Date: Mon, 7 Nov 2016 09:43:54 -0800
-Message-ID: <20161107174354.vj5vbxbuep5z2n5n@intel.com>
-References: <20161107171714.2s62tzmdapvpkxfv@intel.com>
-	<20161107172516.GC8780@obsidianresearch.com>
+From: Jonathan Corbet <corbet@lwn.net>
+Subject: Re: [PATCH 3/3] tpm: move documentation under
+ Documentation/security
+Date: Mon, 7 Nov 2016 15:37:52 -0700
+Message-ID: <20161107153752.3ddb0f52@lwn.net>
+References: <20161103235752.19256-1-jarkko.sakkinen@linux.intel.com>
+        <20161103235752.19256-4-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20161107172516.GC8780-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 8bit
+Return-path: <linux-doc-owner@vger.kernel.org>
+In-Reply-To: <20161103235752.19256-4-jarkko.sakkinen@linux.intel.com>
+Sender: linux-doc-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Nov 07, 2016 at 10:25:16AM -0700, Jason Gunthorpe wrote:
-> On Mon, Nov 07, 2016 at 09:17:14AM -0800, Jarkko Sakkinen wrote:
-> > Hi
-> > 
-> > At LPC I remember some discussions about moving the ML to vger.kernel.org.
-> > Do you think we should do that or not? Frankly, I do not have opinion on
-> > this but I can do it if it makes sense.
-> 
-> I dislike sourceforge because I haven't found a good web archive for
-> it..
-> 
-> > Developer Access Program for Intel Xeon Phi Processors
-> > Access to Intel Xeon Phi processor-based developer platforms.
-> > With one year of Intel Parallel Studio XE.
-> > Training and support from Colfax.
-> > Order your platform today. http://sdm.link/xeonphi
-> > _______________________________________________
-> > tpmdd-devel mailing list
-> > tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-> > https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-> 
-> And the advertising of course.
+On Thu,  3 Nov 2016 17:57:52 -0600
+Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> wrote:
 
-The advertisement that you quoted looks legit to me ;-)
+> In order too make Documentation root directory cleaner move the tpm
+> directory under Documentation/security.
 
-> Jason
+So I'll happily apply these to the docs tree, but...
 
-/Jarkko
+1) It won't apply to current docs-next.  I guess I can manage the merge
+   there easily enough, but also,
 
-------------------------------------------------------------------------------
-Developer Access Program for Intel Xeon Phi Processors
-Access to Intel Xeon Phi processor-based developer platforms.
-With one year of Intel Parallel Studio XE.
-Training and support from Colfax.
-Order your platform today. http://sdm.link/xeonphi
+2) Part 1 of the series (which wasn't sent to me anyway) is not something I
+   an apply, so somebody else should pick that one up.
+
+Thanks,
+
+jon
