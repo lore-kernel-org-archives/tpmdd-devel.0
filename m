@@ -1,8 +1,8 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH v5 4/7] tpm: fix the race condition
  between event log access and chip getting unregistered
-Date: Mon, 7 Nov 2016 17:29:43 -0700
-Message-ID: <20161108002943.GB13959@obsidianresearch.com>
+Date: Mon, 7 Nov 2016 16:34:11 -0800
+Message-ID: <20161108003411.6unyxj2vsbulqpo7@intel.com>
 References: <1476838185-24007-1-git-send-email-nayna@linux.vnet.ibm.com>
 	<1476838185-24007-5-git-send-email-nayna@linux.vnet.ibm.com>
 	<20161104051410.iqxb5k6fwizv7inc@intel.com>
@@ -22,11 +22,11 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Nov 07, 2016 at 04:26:43PM -0800, Jarkko Sakkinen wrote:
+On Mon, Nov 07, 2016 at 04:26:42PM -0800, Jarkko Sakkinen wrote:
 > On Mon, Nov 07, 2016 at 04:48:39PM -0700, Jason Gunthorpe wrote:
 > > On Thu, Nov 03, 2016 at 11:14:10PM -0600, Jarkko Sakkinen wrote:
 > > > On Tue, Oct 18, 2016 at 08:49:42PM -0400, Nayna Jain wrote:
@@ -80,10 +80,17 @@ On Mon, Nov 07, 2016 at 04:26:43PM -0800, Jarkko Sakkinen wrote:
 > 
 > No need for resend.
 
-The missing null still needs to be fixed, and the inode lock needs to
-be held only over get_device in open()
+There actually *is* need for one more resend because the patces were not
+CC'd to linux-security-module. I discussed about this at LPC with James
+Morris and his take was that *major* changes should be CC'd to
+linux-security-module. This is such a major set of changes.
 
-Jason
+If this series is sent one more time with CC to linux-kernel and
+linux-security-module and the commit message is changed for this
+commit from my part it is ready for to be applied. You can add my
+Reviewed-by to this patch.
+
+/Jarkko
 
 ------------------------------------------------------------------------------
 Developer Access Program for Intel Xeon Phi Processors
