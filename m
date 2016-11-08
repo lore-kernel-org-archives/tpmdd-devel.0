@@ -1,20 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v5 4/7] tpm: fix the race condition
- between event log access and chip getting unregistered
-Date: Mon, 7 Nov 2016 16:48:29 -0800
-Message-ID: <20161108004828.cmbkxm6bfldijnzr@intel.com>
-References: <1476838185-24007-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1476838185-24007-5-git-send-email-nayna@linux.vnet.ibm.com>
-	<20161104051410.iqxb5k6fwizv7inc@intel.com>
-	<20161107234839.GC7002@obsidianresearch.com>
-	<20161108002642.4pvvubjcz57m4nov@intel.com>
-	<20161108002943.GB13959@obsidianresearch.com>
+Subject: Re: [PATCH] char: tpm: fix kerneldoc
+	tpm2_unseal_trusted name typo
+Date: Mon, 7 Nov 2016 19:02:45 -0800
+Message-ID: <20161108025432.sp3wavwllfsnkitq@intel.com>
+References: <4585554250d1c81c6c259dceb489f9270292cd38.1478422965.git.baruch@tkos.co.il>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20161108002943.GB13959-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <4585554250d1c81c6c259dceb489f9270292cd38.1478422965.git.baruch-NswTu9S1W3P6gbPvEgmw2w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,71 +18,37 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+To: Baruch Siach <baruch-NswTu9S1W3P6gbPvEgmw2w@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Nov 07, 2016 at 05:29:43PM -0700, Jason Gunthorpe wrote:
-> On Mon, Nov 07, 2016 at 04:26:43PM -0800, Jarkko Sakkinen wrote:
-> > On Mon, Nov 07, 2016 at 04:48:39PM -0700, Jason Gunthorpe wrote:
-> > > On Thu, Nov 03, 2016 at 11:14:10PM -0600, Jarkko Sakkinen wrote:
-> > > > On Tue, Oct 18, 2016 at 08:49:42PM -0400, Nayna Jain wrote:
-> > > > > Currently, the event log file operations are not serialized with
-> > > > > tpm_chip_unregister(), which can possibly cause a race condition.
-> > > > > 
-> > > > > This patch fixes the race condition by:
-> > > > >  - moving read_log() from fops to chip register.
-> > > > 
-> > > > What is "chip register"? Please use exact names.
-> > > > 
-> > > > >  - disallowing event log file operations when chip unregister is in
-> > > > >    progress.
-> > > > 
-> > > > Could you elaborate this sentence?
-> > > > 
-> > > > >  - guarding event log memory using chip krefs.
-> > > > 
-> > > > Could you elaborate this sentence?
-> > > > 
-> > > > Please describe how the race condition could happen and provide the
-> > > > "Fixes:" line for the commit ID that caused it. Otherwise, your commit
-> > > > message won't make any sense. I cannot apply this commit with this
-> > > > commit message.
-> > > > 
-> > > > The commit message does not make much sense...
-> > > 
-> > > Lets get this moving along, it is hard to keep everything straight
-> > > over months..
-> > > 
-> > > Nayna: This commit message should work:
-> > > 
-> > > tpm: Have eventlog use the tpm_chip
-> > > 
-> > > Move the backing memory for the eventlog into tpm_chip and push
-> > > the tpm_chip into read_log. This optimizes read_log processing by
-> > > only doing it once and prepares things for the next patches in the
-> > > series which require the tpm_chip to locate the event log via
-> > > ACPI and OF handles instead of searching.
-> > > 
-> > > This is straightfoward except for the issue of passing a kref through
-> > > i_private with securityfs. Since securityfs_remove does not have any
-> > > removal fencing like sysfs we use the inode lock to safely get a
-> > > kref on the tpm_chip.
-> > 
-> > Perfect. Thank you.
-> > 
-> > With this
-> > 
-> > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> > 
-> > No need for resend.
-> 
-> The missing null still needs to be fixed, and the inode lock needs to
-> be held only over get_device in open()
+On Sun, Nov 06, 2016 at 11:02:45AM +0200, Baruch Siach wrote:
+> Signed-off-by: Baruch Siach <baruch-NswTu9S1W3P6gbPvEgmw2w@public.gmane.org>
 
-Right, I'm sorry I forgot that... Another reason for one more resend.
+applied
 
 /Jarkko
+
+> ---
+>  drivers/char/tpm/tpm2-cmd.c | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
+> 
+> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+> index 7df55d58c939..da5b782a9731 100644
+> --- a/drivers/char/tpm/tpm2-cmd.c
+> +++ b/drivers/char/tpm/tpm2-cmd.c
+> @@ -680,7 +680,7 @@ static int tpm2_unseal_cmd(struct tpm_chip *chip,
+>  }
+>  
+>  /**
+> - * tpm_unseal_trusted() - unseal the payload of a trusted key
+> + * tpm2_unseal_trusted() - unseal the payload of a trusted key
+>   * @chip_num: TPM chip to use
+>   * @payload: the key data in clear and encrypted form
+>   * @options: authentication values and other options
+> -- 
+> 2.10.2
+> 
 
 ------------------------------------------------------------------------------
 Developer Access Program for Intel Xeon Phi Processors
