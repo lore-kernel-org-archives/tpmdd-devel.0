@@ -1,8 +1,8 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH v6 2/9] tpm: replace symbolic permission
  with octal for securityfs files
-Date: Mon, 14 Nov 2016 14:18:40 -0800
-Message-ID: <20161114221840.cddivqovydg36og5@intel.com>
+Date: Mon, 14 Nov 2016 14:21:14 -0800
+Message-ID: <20161114222114.wtk2nypib2o4zfvk@intel.com>
 References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
 	<1479117656-12403-3-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
