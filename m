@@ -1,8 +1,8 @@
 From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v6 7/9] tpm: redefine read_log() to handle
-	ACPI/OF at runtime
-Date: Mon, 14 Nov 2016 05:00:54 -0500
-Message-ID: <1479117656-12403-8-git-send-email-nayna@linux.vnet.ibm.com>
+Subject: [PATCH v6 4/9] tpm: drop
+	tpm1_chip_register(/unregister)
+Date: Mon, 14 Nov 2016 05:00:51 -0500
+Message-ID: <1479117656-12403-5-git-send-email-nayna@linux.vnet.ibm.com>
 References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,188 +21,110 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Currently, read_log() has two implementations: one for ACPI platforms
-and the other for device tree(OF) based platforms. The proper one is
-selected at compile time using Kconfig and #ifdef in the Makefile,
-which is not the recommended approach.
+Check for TPM2 chip in tpm_sysfs_add_device, tpm_bios_log_setup and
+tpm_bios_log_teardown in order to make code flow cleaner and to enable
+to implement TPM 2.0 support later on. This is partially derived from
+the commit by Nayna Jain with the extension that also tpm1_chip_register
+is dropped.
 
-This patch removes the #ifdef in the Makefile by defining a single
-read_log() method, which checks for ACPI/OF event log properties at
-runtime.
-
-Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/Makefile       | 14 ++++----------
- drivers/char/tpm/tpm_acpi.c     |  9 ++-------
- drivers/char/tpm/tpm_eventlog.c | 20 ++++++++++++++++++++
- drivers/char/tpm/tpm_eventlog.h | 22 +++++++++++++---------
- drivers/char/tpm/tpm_of.c       |  8 ++------
- 5 files changed, 41 insertions(+), 32 deletions(-)
+ drivers/char/tpm/tpm-chip.c     | 31 +++++--------------------------
+ drivers/char/tpm/tpm-sysfs.c    |  3 +++
+ drivers/char/tpm/tpm_eventlog.c |  3 +++
+ 3 files changed, 11 insertions(+), 26 deletions(-)
 
-diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
-index a385fb8..a05b1eb 100644
---- a/drivers/char/tpm/Makefile
-+++ b/drivers/char/tpm/Makefile
-@@ -2,16 +2,10 @@
- # Makefile for the kernel tpm device drivers.
- #
- obj-$(CONFIG_TCG_TPM) += tpm.o
--tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o
--tpm-$(CONFIG_ACPI) += tpm_ppi.o
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index d0c1872..250a651 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -276,28 +276,6 @@ static void tpm_del_char_device(struct tpm_chip *chip)
+ 	up_write(&chip->ops_sem);
+ }
+ 
+-static int tpm1_chip_register(struct tpm_chip *chip)
+-{
+-	int rc;
 -
--ifdef CONFIG_ACPI
--	tpm-y += tpm_eventlog.o tpm_acpi.o
--else
--ifdef CONFIG_TCG_IBMVTPM
--	tpm-y += tpm_eventlog.o tpm_of.o
--endif
--endif
-+tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o \
-+		tpm_eventlog.o
-+tpm-$(CONFIG_ACPI) += tpm_ppi.o tpm_acpi.o
-+tpm-$(CONFIG_OF) += tpm_of.o
- obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
- obj-$(CONFIG_TCG_TIS) += tpm_tis.o
- obj-$(CONFIG_TCG_TIS_SPI) += tpm_tis_spi.o
-diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
-index 01dfb35..fa30c969 100644
---- a/drivers/char/tpm/tpm_acpi.c
-+++ b/drivers/char/tpm/tpm_acpi.c
-@@ -6,6 +6,7 @@
-  *	Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-  *	Reiner Sailer <sailer-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
-  *	Kylene Hall <kjhall-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-+ *	Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-  *
-  * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-  *
-@@ -45,7 +46,7 @@ struct acpi_tcpa {
- };
- 
- /* read binary bios log */
--int read_log(struct tpm_chip *chip)
-+int read_log_acpi(struct tpm_chip *chip)
+-	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+-		return 0;
+-
+-	tpm_sysfs_add_device(chip);
+-
+-	rc = tpm_bios_log_setup(chip);
+-
+-	return rc;
+-}
+-
+-static void tpm1_chip_unregister(struct tpm_chip *chip)
+-{
+-	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+-		return;
+-
+-	tpm_bios_log_teardown(chip);
+-}
+-
+ static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
  {
- 	struct acpi_tcpa *buff;
- 	acpi_status status;
-@@ -54,12 +55,6 @@ int read_log(struct tpm_chip *chip)
- 	struct tpm_bios_log *log;
+ 	struct attribute **i;
+@@ -364,7 +342,9 @@ int tpm_chip_register(struct tpm_chip *chip)
+ 			return rc;
+ 	}
  
- 	log = &chip->log;
--	if (log->bios_event_log != NULL) {
--		printk(KERN_ERR
--		       "%s: ERROR - Eventlog already initialized\n",
--		       __func__);
--		return -EFAULT;
--	}
+-	rc = tpm1_chip_register(chip);
++	tpm_sysfs_add_device(chip);
++
++	rc = tpm_bios_log_setup(chip);
+ 	if (rc)
+ 		return rc;
  
- 	/* Find TCPA entry in RSDT (ACPI_LOGICAL_ADDRESSING) */
- 	status = acpi_get_table(ACPI_SIG_TCPA, 1,
+@@ -372,7 +352,7 @@ int tpm_chip_register(struct tpm_chip *chip)
+ 
+ 	rc = tpm_add_char_device(chip);
+ 	if (rc) {
+-		tpm1_chip_unregister(chip);
++		tpm_bios_log_teardown(chip);
+ 		return rc;
+ 	}
+ 
+@@ -402,8 +382,7 @@ EXPORT_SYMBOL_GPL(tpm_chip_register);
+ void tpm_chip_unregister(struct tpm_chip *chip)
+ {
+ 	tpm_del_legacy_sysfs(chip);
+-
+-	tpm1_chip_unregister(chip);
++	tpm_bios_log_teardown(chip);
+ 	tpm_del_char_device(chip);
+ }
+ EXPORT_SYMBOL_GPL(tpm_chip_unregister);
+diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+index 59a1ead..848ad65 100644
+--- a/drivers/char/tpm/tpm-sysfs.c
++++ b/drivers/char/tpm/tpm-sysfs.c
+@@ -284,6 +284,9 @@ static const struct attribute_group tpm_dev_group = {
+ 
+ void tpm_sysfs_add_device(struct tpm_chip *chip)
+ {
++	if (chip->flags & TPM_CHIP_FLAG_TPM2)
++		return;
++
+ 	/* The sysfs routines rely on an implicit tpm_try_get_ops, device_del
+ 	 * is called before ops is null'd and the sysfs core synchronizes this
+ 	 * removal so that no callbacks are running or can run again
 diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-index 5575ffc..cce679b 100644
+index 62e9da6..57ac862 100644
 --- a/drivers/char/tpm/tpm_eventlog.c
 +++ b/drivers/char/tpm/tpm_eventlog.c
-@@ -365,6 +365,26 @@ static int is_bad(void *p)
- 	return 0;
- }
- 
-+int read_log(struct tpm_chip *chip)
-+{
-+	int rc;
-+
-+	if (chip->log.bios_event_log != NULL) {
-+		dev_dbg(&chip->dev,
-+			"%s: ERROR - event log already initialized\n",
-+			__func__);
-+		return -EFAULT;
-+	}
-+
-+	rc = read_log_acpi(chip);
-+	if ((rc == 0) || (rc == -ENOMEM))
-+		return rc;
-+
-+	rc = read_log_of(chip);
-+
-+	return rc;
-+}
-+
- int tpm_bios_log_setup(struct tpm_chip *chip)
- {
+@@ -373,6 +373,9 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
  	const char *name = dev_name(&chip->dev);
-diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
-index 6df2f8e..be529ad 100644
---- a/drivers/char/tpm/tpm_eventlog.h
-+++ b/drivers/char/tpm/tpm_eventlog.h
-@@ -73,20 +73,24 @@ enum tcpa_pc_event_ids {
- 	HOST_TABLE_OF_DEVICES,
- };
+ 	unsigned int cnt;
  
--int read_log(struct tpm_chip *chip);
--
--#if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
--	defined(CONFIG_ACPI)
--extern int tpm_bios_log_setup(struct tpm_chip *chip);
--extern void tpm_bios_log_teardown(struct tpm_chip *chip);
-+#if defined(CONFIG_ACPI)
-+int read_log_acpi(struct tpm_chip *chip);
- #else
--static inline int tpm_bios_log_setup(struct tpm_chip *chip)
-+static inline int read_log_acpi(struct tpm_chip *chip)
- {
--	return 0;
-+	return -ENODEV;
- }
--static inline void tpm_bios_log_teardown(struct tpm_chip *chip)
-+#endif
-+#if defined(CONFIG_OF)
-+int read_log_of(struct tpm_chip *chip);
-+#else
-+static inline int read_log_of(struct tpm_chip *chip)
- {
-+	return -ENODEV;
- }
- #endif
- 
-+int tpm_bios_log_setup(struct tpm_chip *chip);
-+void tpm_bios_log_teardown(struct tpm_chip *chip);
++	if (chip->flags & TPM_CHIP_FLAG_TPM2)
++		return 0;
 +
- #endif
-diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
-index 68d891a..7c30752 100644
---- a/drivers/char/tpm/tpm_of.c
-+++ b/drivers/char/tpm/tpm_of.c
-@@ -2,6 +2,7 @@
-  * Copyright 2012 IBM Corporation
-  *
-  * Author: Ashley Lai <ashleydlai-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-+ *         Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-  *
-  * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-  *
-@@ -20,7 +21,7 @@
- #include "tpm.h"
- #include "tpm_eventlog.h"
- 
--int read_log(struct tpm_chip *chip)
-+int read_log_of(struct tpm_chip *chip)
- {
- 	struct device_node *np;
- 	const u32 *sizep;
-@@ -28,11 +29,6 @@ int read_log(struct tpm_chip *chip)
- 	struct tpm_bios_log *log;
- 
- 	log = &chip->log;
--	if (log->bios_event_log != NULL) {
--		pr_err("%s: ERROR - Eventlog already initialized\n", __func__);
--		return -EFAULT;
--	}
--
- 	np = of_find_node_by_name(NULL, "vtpm");
- 	if (!np) {
- 		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
+ 	cnt = 0;
+ 	chip->bios_dir[cnt] = securityfs_create_dir(name, NULL);
+ 	if (is_bad(chip->bios_dir[cnt]))
 -- 
 2.5.0
 
