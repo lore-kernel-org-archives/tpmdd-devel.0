@@ -1,153 +1,359 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v6 0/9] tpm: cleanup/fixes in existing
-	event log support
-Date: Mon, 14 Nov 2016 14:33:23 -0800
-Message-ID: <20161114223322.5uzdc7sob2vukwrq@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v6 5/9] tpm: have event log use the tpm_chip
+Date: Mon, 14 Nov 2016 15:44:02 -0800
+Message-ID: <20161114234401.dkffb5gcvols4sgb@intel.com>
 References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
+ <1479117656-12403-6-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1479117656-12403-1-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <1479117656-12403-6-git-send-email-nayna@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Nayna Jain <nayna@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Nov 14, 2016 at 05:00:47AM -0500, Nayna Jain wrote:
-> This patch set includes the cleanup and bug fixes patches, previously
-> part of the "tpm: add the securityfs pseudo files support for TPM 2.0
-> firmware event log" patch set, in order to upstream them more quickly.
+On Mon, Nov 14, 2016 at 05:00:52AM -0500, Nayna Jain wrote:
+> Move the backing memory for the event log into tpm_chip and push
+> the tpm_chip into read_log. This optimizes read_log processing by
+> only doing it once and prepares things for the next patches in the
+> series which require the tpm_chip to locate the event log via
+> ACPI and OF handles instead of searching.
+> 
+> This is straightfoward except for the issue of passing a kref through
+> i_private with securityfs. Since securityfs_remove does not have any
+> removal fencing like sysfs we use the inode lock to safely get a
+> kref on the tpm_chip.
+> 
+> Suggested-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+> Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
 
-I applied the patches. I'm not yet sure whether these are part of the
-4.10 pull request or whether I postpone to 4.11 (my preference would be
-4.10 but I do not want to close that right now). I'll do testing next
-week before doing pull request.
-
-I hope that the commits gets some reviews and testing now that they are
-easily testable in my master branch.
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
 /Jarkko
 
+> ---
+>  drivers/char/tpm/tpm-chip.c     |  3 +-
+>  drivers/char/tpm/tpm.h          | 11 ++++++
+>  drivers/char/tpm/tpm_acpi.c     | 15 +++++--
+>  drivers/char/tpm/tpm_eventlog.c | 88 ++++++++++++++++++++++++++---------------
+>  drivers/char/tpm/tpm_eventlog.h |  2 +-
+>  drivers/char/tpm/tpm_of.c       |  4 +-
+>  6 files changed, 85 insertions(+), 38 deletions(-)
 > 
-> Changelog History:
-> 
-> v6:
-> 
-> - Patch "tpm: replace symbolic permission with octal for securityfs files"
->   - New Patch.
-> - Patch "tpm: have event log use the tpm_chip"
->   - Changed commit description as per Jason's suggestion.
->   - Fixed bug related to kfree() for bios_event_log.
->   - Moved inode_unlock() just after get_device() in open().
->   - Returned -ENODEV for read_log() ENOMEM error and other errors as it is.
->   - Added comment in tpm_bios_log_teardown() to explain inode_lock()/unlock
->     reasoning.
->   - Splitted .owner into different patch.
-> - Patch "tpm: fix the missing .owner in tpm_bios_measurements_ops"
->   - New Patch.
-> - Patch "tpm: cleanup of printk error messages"
->   - Replaced dev_info() with dev_warn().
->   - Updated commit description subject line.
-> 
-> v5:
-> 
-> - Moved cleanup/fixes patches into this patch set.
-> - Patch "fix the race condition between event log access and chip
-> getting unregistered"
->   - updated subject line and commit description.
->   - modified fops code to use chip kref.
->   - modified fops to lock inode before accessing inode private data.
->   - renamed tpm_securityfs_data to tpm_chip_seqops, as it no more
->   holds bios log, but associates seqops with respective chip. For
->   the same reason, moved it to tpm.h
-> - Patch "replace or remove printk error messages"
->   - cleaned up dev_dbg and used dev_info as applicable.
-> 
-> v4:
-> 
-> - Includes feedbacks from Jarkko and Jason.
-> - Patch "tpm: define a generic open() method for ascii & bios
-> measurements".
->   - Fix indentation issue.
-> - Patch "tpm: replace the dynamically allocated bios_dir as
->   struct dentry array". 
->   - Continue to use bios_dir_count variable to use is_bad() checks and
->   to maintain correct order for securityfs_remove() during teardown.
->   - Reset chip->bios_dir_count in teardown() function.
-> - Patch "tpm: validate the event log access before tpm_bios_log_setup".
->   - Retain TPM2 check which was removed in previous patch.
->   - Add tpm_bios_log_setup failure handling.
->   - Remove use of private data from v3 version of patch. Add a new
->   member to struct tpm_chip to achieve the same purpose.
-> - Patch "tpm: redefine the read_log method to check for ACPI/OF 
-> properties sequentially".
->   - Move replacement of CONFIG_TCG_IBMVTPM with CONFIG_OF to
->   this patch from patch 3.
->   - Replace -1 error code with -ENODEV.
-> - Patch "tpm: replace the of_find_node_by_name() with dev of_node
-> property".
->  - Uses chip->dev.parent->of_node.
->  - Created separate patch for cleanup of pr_err messages.
-> - Patch "tpm: remove printk error messages".
->  - New Patch.
-> - Patch "tpm: add the securityfs file support for TPM 2.0 event log".
->  - Parses event digests using event alg_id rather than event log header
->  alg_id.
->  - Uses of_property_match_string to differentiate tpm/vtpm compatible
->  property.
->  - Adds the comment for difference in tpm/vtpm endianness.
-> 
-> v3:
-> 
-> - Includes the review feedbacks as suggested by Jason.
-> - Split of patches into one patch per idea.
-> - Generic open() method for ascii/bios measurements.
-> - Replacement of of **bios_dir with *bios_dir[3].
-> - Verifying readlog() is successful before creating securityfs entries.
-> - Generic readlog() to check for ACPI/OF in sequence.
-> - read_log_of() method now uses of_node propertry rather than
-> calling find_device_by_name.
-> - read_log differentiates vtpm/tpm using its compatible property.
-> - Cleans pr_err with dev_dbg.
-> - Commit msgs subject line prefixed with tpm.
-> 
-> v2:
-> 
-> - Fixes issues as given in feedback by Jason.
-> - Adds documentation for device tree.
-> 
-> Nayna Jain (9):
->   tpm: define a generic open() method for ascii & bios measurements
->   tpm: replace symbolic permission with octal for securityfs files
->   tpm: replace dynamically allocated bios_dir with a static array
->   tpm: drop tpm1_chip_register(/unregister)
->   tpm: have event log use the tpm_chip
->   tpm: fix the missing .owner in tpm_bios_measurements_ops
->   tpm: redefine read_log() to handle ACPI/OF at runtime
->   tpm: replace of_find_node_by_name() with dev of_node property
->   tpm: cleanup of printk error messages
-> 
->  drivers/char/tpm/Makefile       |  14 +--
->  drivers/char/tpm/tpm-chip.c     |  33 ++----
->  drivers/char/tpm/tpm-sysfs.c    |   3 +
->  drivers/char/tpm/tpm.h          |  14 ++-
->  drivers/char/tpm/tpm_acpi.c     |  38 +++----
->  drivers/char/tpm/tpm_eventlog.c | 222 +++++++++++++++++++++-------------------
->  drivers/char/tpm/tpm_eventlog.h |  22 ++--
->  drivers/char/tpm/tpm_of.c       |  45 +++-----
->  8 files changed, 187 insertions(+), 204 deletions(-)
-> 
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index 250a651..3f27753 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -127,6 +127,7 @@ static void tpm_dev_release(struct device *dev)
+>  	idr_remove(&dev_nums_idr, chip->dev_num);
+>  	mutex_unlock(&idr_lock);
+>  
+> +	kfree(chip->log.bios_event_log);
+>  	kfree(chip);
+>  }
+>  
+> @@ -345,7 +346,7 @@ int tpm_chip_register(struct tpm_chip *chip)
+>  	tpm_sysfs_add_device(chip);
+>  
+>  	rc = tpm_bios_log_setup(chip);
+> -	if (rc)
+> +	if (rc == -ENODEV)
+>  		return rc;
+>  
+>  	tpm_add_ppi(chip);
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 9d69580..1ae9768 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -35,6 +35,8 @@
+>  #include <linux/cdev.h>
+>  #include <linux/highmem.h>
+>  
+> +#include "tpm_eventlog.h"
+> +
+>  enum tpm_const {
+>  	TPM_MINOR = 224,	/* officially assigned */
+>  	TPM_BUFSIZE = 4096,
+> @@ -146,6 +148,11 @@ enum tpm_chip_flags {
+>  	TPM_CHIP_FLAG_HAVE_TIMEOUTS	= BIT(4),
+>  };
+>  
+> +struct tpm_chip_seqops {
+> +	struct tpm_chip *chip;
+> +	const struct seq_operations *seqops;
+> +};
+> +
+>  struct tpm_chip {
+>  	struct device dev;
+>  	struct cdev cdev;
+> @@ -157,6 +164,10 @@ struct tpm_chip {
+>  	struct rw_semaphore ops_sem;
+>  	const struct tpm_class_ops *ops;
+>  
+> +	struct tpm_bios_log log;
+> +	struct tpm_chip_seqops bin_log_seqops;
+> +	struct tpm_chip_seqops ascii_log_seqops;
+> +
+>  	unsigned int flags;
+>  
+>  	int dev_num;		/* /dev/tpm# */
+> diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
+> index 565a947..01dfb35 100644
+> --- a/drivers/char/tpm/tpm_acpi.c
+> +++ b/drivers/char/tpm/tpm_acpi.c
+> @@ -9,7 +9,7 @@
+>   *
+>   * Maintained by: <tpmdd-devel@lists.sourceforge.net>
+>   *
+> - * Access to the eventlog extended by the TCG BIOS of PC platform
+> + * Access to the event log extended by the TCG BIOS of PC platform
+>   *
+>   * This program is free software; you can redistribute it and/or
+>   * modify it under the terms of the GNU General Public License
+> @@ -45,13 +45,15 @@ struct acpi_tcpa {
+>  };
+>  
+>  /* read binary bios log */
+> -int read_log(struct tpm_bios_log *log)
+> +int read_log(struct tpm_chip *chip)
+>  {
+>  	struct acpi_tcpa *buff;
+>  	acpi_status status;
+>  	void __iomem *virt;
+>  	u64 len, start;
+> +	struct tpm_bios_log *log;
+>  
+> +	log = &chip->log;
+>  	if (log->bios_event_log != NULL) {
+>  		printk(KERN_ERR
+>  		       "%s: ERROR - Eventlog already initialized\n",
+> @@ -97,13 +99,18 @@ int read_log(struct tpm_bios_log *log)
+>  
+>  	virt = acpi_os_map_iomem(start, len);
+>  	if (!virt) {
+> -		kfree(log->bios_event_log);
+>  		printk("%s: ERROR - Unable to map memory\n", __func__);
+> -		return -EIO;
+> +		goto err;
+>  	}
+>  
+>  	memcpy_fromio(log->bios_event_log, virt, len);
+>  
+>  	acpi_os_unmap_iomem(virt, len);
+>  	return 0;
+> +
+> +err:
+> +	kfree(log->bios_event_log);
+> +	log->bios_event_log = NULL;
+> +	return -EIO;
+> +
+>  }
+> diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+> index 57ac862..f8c42fe 100644
+> --- a/drivers/char/tpm/tpm_eventlog.c
+> +++ b/drivers/char/tpm/tpm_eventlog.c
+> @@ -11,7 +11,7 @@
+>   *
+>   * Maintained by: <tpmdd-devel@lists.sourceforge.net>
+>   *
+> - * Access to the eventlog created by a system's firmware / BIOS
+> + * Access to the event log created by a system's firmware / BIOS
+>   *
+>   * This program is free software; you can redistribute it and/or
+>   * modify it under the terms of the GNU General Public License
+> @@ -73,7 +73,8 @@ static const char* tcpa_pc_event_id_strings[] = {
+>  static void *tpm_bios_measurements_start(struct seq_file *m, loff_t *pos)
+>  {
+>  	loff_t i;
+> -	struct tpm_bios_log *log = m->private;
+> +	struct tpm_chip *chip = m->private;
+> +	struct tpm_bios_log *log = &chip->log;
+>  	void *addr = log->bios_event_log;
+>  	void *limit = log->bios_event_log_end;
+>  	struct tcpa_event *event;
+> @@ -120,7 +121,8 @@ static void *tpm_bios_measurements_next(struct seq_file *m, void *v,
+>  					loff_t *pos)
+>  {
+>  	struct tcpa_event *event = v;
+> -	struct tpm_bios_log *log = m->private;
+> +	struct tpm_chip *chip = m->private;
+> +	struct tpm_bios_log *log = &chip->log;
+>  	void *limit = log->bios_event_log_end;
+>  	u32 converted_event_size;
+>  	u32 converted_event_type;
+> @@ -261,13 +263,10 @@ static int tpm_binary_bios_measurements_show(struct seq_file *m, void *v)
+>  static int tpm_bios_measurements_release(struct inode *inode,
+>  					 struct file *file)
+>  {
+> -	struct seq_file *seq = file->private_data;
+> -	struct tpm_bios_log *log = seq->private;
+> +	struct seq_file *seq = (struct seq_file *)file->private_data;
+> +	struct tpm_chip *chip = (struct tpm_chip *)seq->private;
+>  
+> -	if (log) {
+> -		kfree(log->bios_event_log);
+> -		kfree(log);
+> -	}
+> +	put_device(&chip->dev);
+>  
+>  	return seq_release(inode, file);
+>  }
+> @@ -323,33 +322,30 @@ static int tpm_bios_measurements_open(struct inode *inode,
+>  					    struct file *file)
+>  {
+>  	int err;
+> -	struct tpm_bios_log *log;
+>  	struct seq_file *seq;
+> -	const struct seq_operations *seqops =
+> -		(const struct seq_operations *)inode->i_private;
+> -
+> -	log = kzalloc(sizeof(struct tpm_bios_log), GFP_KERNEL);
+> -	if (!log)
+> -		return -ENOMEM;
+> -
+> -	if ((err = read_log(log)))
+> -		goto out_free;
+> +	struct tpm_chip_seqops *chip_seqops;
+> +	const struct seq_operations *seqops;
+> +	struct tpm_chip *chip;
+> +
+> +	inode_lock(inode);
+> +	if (!inode->i_private) {
+> +		inode_unlock(inode);
+> +		return -ENODEV;
+> +	}
+> +	chip_seqops = (struct tpm_chip_seqops *)inode->i_private;
+> +	seqops = chip_seqops->seqops;
+> +	chip = chip_seqops->chip;
+> +	get_device(&chip->dev);
+> +	inode_unlock(inode);
+>  
+>  	/* now register seq file */
+>  	err = seq_open(file, seqops);
+>  	if (!err) {
+>  		seq = file->private_data;
+> -		seq->private = log;
+> -	} else {
+> -		goto out_free;
+> +		seq->private = chip;
+>  	}
+>  
+> -out:
+>  	return err;
+> -out_free:
+> -	kfree(log->bios_event_log);
+> -	kfree(log);
+> -	goto out;
+>  }
+>  
+>  static const struct file_operations tpm_bios_measurements_ops = {
+> @@ -372,29 +368,47 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+>  {
+>  	const char *name = dev_name(&chip->dev);
+>  	unsigned int cnt;
+> +	int rc = 0;
+>  
+>  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+>  		return 0;
+>  
+> +	rc = read_log(chip);
+> +	/*
+> +	 * read_log failure means event log is not supported except for ENOMEM.
+> +	 */
+> +	if (rc < 0) {
+> +		if (rc == -ENOMEM)
+> +			return -ENODEV;
+> +		else
+> +			return rc;
+> +	}
+> +
+>  	cnt = 0;
+>  	chip->bios_dir[cnt] = securityfs_create_dir(name, NULL);
+>  	if (is_bad(chip->bios_dir[cnt]))
+>  		goto err;
+>  	cnt++;
+>  
+> +	chip->bin_log_seqops.chip = chip;
+> +	chip->bin_log_seqops.seqops = &tpm_binary_b_measurements_seqops;
+> +
+>  	chip->bios_dir[cnt] =
+>  	    securityfs_create_file("binary_bios_measurements",
+>  				   0440, chip->bios_dir[0],
+> -				   (void *)&tpm_binary_b_measurements_seqops,
+> +				   (void *)&chip->bin_log_seqops,
+>  				   &tpm_bios_measurements_ops);
+>  	if (is_bad(chip->bios_dir[cnt]))
+>  		goto err;
+>  	cnt++;
+>  
+> +	chip->ascii_log_seqops.chip = chip;
+> +	chip->ascii_log_seqops.seqops = &tpm_ascii_b_measurements_seqops;
+> +
+>  	chip->bios_dir[cnt] =
+>  	    securityfs_create_file("ascii_bios_measurements",
+>  				   0440, chip->bios_dir[0],
+> -				   (void *)&tpm_ascii_b_measurements_seqops,
+> +				   (void *)&chip->ascii_log_seqops,
+>  				   &tpm_bios_measurements_ops);
+>  	if (is_bad(chip->bios_dir[cnt]))
+>  		goto err;
+> @@ -411,7 +425,19 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+>  void tpm_bios_log_teardown(struct tpm_chip *chip)
+>  {
+>  	int i;
+> -
+> -	for (i = (TPM_NUM_EVENT_LOG_FILES - 1); i >= 0; i--)
+> +	struct inode *inode;
+> +
+> +	/* securityfs_remove currently doesn't take care of handling sync
+> +	 * between removal and opening of pseudo files. To handle this, a
+> +	 * workaround is added by making i_private = NULL here during removal
+> +	 * and to check it during open(), both within inode_lock()/unlock().
+> +	 * This design ensures that open() either safely gets kref or fails.
+> +	 */
+> +	for (i = (TPM_NUM_EVENT_LOG_FILES - 1); i >= 0; i--) {
+> +		inode = d_inode(chip->bios_dir[i]);
+> +		inode_lock(inode);
+> +		inode->i_private = NULL;
+> +		inode_unlock(inode);
+>  		securityfs_remove(chip->bios_dir[i]);
+> +	}
+>  }
+> diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
+> index fd3357e..6df2f8e 100644
+> --- a/drivers/char/tpm/tpm_eventlog.h
+> +++ b/drivers/char/tpm/tpm_eventlog.h
+> @@ -73,7 +73,7 @@ enum tcpa_pc_event_ids {
+>  	HOST_TABLE_OF_DEVICES,
+>  };
+>  
+> -int read_log(struct tpm_bios_log *log);
+> +int read_log(struct tpm_chip *chip);
+>  
+>  #if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
+>  	defined(CONFIG_ACPI)
+> diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
+> index 570f30c..68d891a 100644
+> --- a/drivers/char/tpm/tpm_of.c
+> +++ b/drivers/char/tpm/tpm_of.c
+> @@ -20,12 +20,14 @@
+>  #include "tpm.h"
+>  #include "tpm_eventlog.h"
+>  
+> -int read_log(struct tpm_bios_log *log)
+> +int read_log(struct tpm_chip *chip)
+>  {
+>  	struct device_node *np;
+>  	const u32 *sizep;
+>  	const u64 *basep;
+> +	struct tpm_bios_log *log;
+>  
+> +	log = &chip->log;
+>  	if (log->bios_event_log != NULL) {
+>  		pr_err("%s: ERROR - Eventlog already initialized\n", __func__);
+>  		return -EFAULT;
 > -- 
 > 2.5.0
 > 
-
-------------------------------------------------------------------------------
