@@ -1,160 +1,124 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC 2/2] tpm: refactor tpm2_get_tpm_pt to
- tpm2_getcap_cmd
-Date: Fri, 11 Nov 2016 16:02:43 -0800
-Message-ID: <20161112000242.63hgv5ujmkr7hy6a@intel.com>
-References: <1476008057-2395-1-git-send-email-jarkko.sakkinen@linux.intel.com>
- <1476008057-2395-3-git-send-email-jarkko.sakkinen@linux.intel.com>
- <58254759.80406@linux.vnet.ibm.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+From: Nayna Jain <nayna@linux.vnet.ibm.com>
+Subject: [PATCH v6 0/9] tpm: cleanup/fixes in existing event log support
+Date: Mon, 14 Nov 2016 05:00:47 -0500
+Message-ID: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
 Return-path: <linux-kernel-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <58254759.80406@linux.vnet.ibm.com>
 Sender: linux-kernel-owner@vger.kernel.org
-To: Nayna <nayna@linux.vnet.ibm.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+To: tpmdd-devel@lists.sourceforge.net
+Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, Nayna Jain <nayna@linux.vnet.ibm.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Nov 11, 2016 at 09:51:45AM +0530, Nayna wrote:
-> 
-> 
-> On 10/09/2016 03:44 PM, Jarkko Sakkinen wrote:
-> > Refactored tpm2_get_tpm_pt to tpm2_getcap_cmd, which means that it also
-> > takes capability ID as input. This is required to access
-> > TPM_CAP_HANDLES, which contains metadata needed for swapping transient
-> > data.
-> > 
-> > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-> > ---
-> >   drivers/char/tpm/tpm.h          |  6 +++-
-> >   drivers/char/tpm/tpm2-cmd.c     | 64 ++++++++++++++++++++---------------------
-> >   drivers/char/tpm/tpm_tis_core.c |  3 +-
-> >   3 files changed, 38 insertions(+), 35 deletions(-)
-> > 
-> > diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> > index 0fab6d5..8176f42 100644
-> > --- a/drivers/char/tpm/tpm.h
-> > +++ b/drivers/char/tpm/tpm.h
-> > @@ -85,6 +85,10 @@ enum tpm2_capabilities {
-> >   	TPM2_CAP_TPM_PROPERTIES = 6,
-> >   };
-> > 
-> > +enum tpm2_properties {
-> > +	TPM2_PT_FAMILY_INDICATOR	= 0x100,
-> > +};
-> > +
-> >   enum tpm2_startup_types {
-> >   	TPM2_SU_CLEAR	= 0x0000,
-> >   	TPM2_SU_STATE	= 0x0001,
-> > @@ -485,7 +489,7 @@ int tpm2_seal_trusted(struct tpm_chip *chip,
-> >   int tpm2_unseal_trusted(struct tpm_chip *chip,
-> >   			struct trusted_key_payload *payload,
-> >   			struct trusted_key_options *options);
-> > -ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,
-> > +ssize_t tpm2_getcap_cmd(struct tpm_chip *chip, u32 cap_id, u32 property_id,
-> >   			u32 *value, const char *desc);
-> > 
-> >   int tpm2_auto_startup(struct tpm_chip *chip);
-> > diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-> > index 2900e18..fcf3d86 100644
-> > --- a/drivers/char/tpm/tpm2-cmd.c
-> > +++ b/drivers/char/tpm/tpm2-cmd.c
-> > @@ -111,13 +111,13 @@ struct tpm2_pcr_extend_in {
-> >   	u8				digest[TPM_DIGEST_SIZE];
-> >   } __packed;
-> > 
-> > -struct tpm2_get_tpm_pt_in {
-> > +struct tpm2_getcap_in {
-> >   	__be32	cap_id;
-> >   	__be32	property_id;
-> >   	__be32	property_cnt;
-> >   } __packed;
-> > 
-> > -struct tpm2_get_tpm_pt_out {
-> > +struct tpm2_getcap_out {
-> >   	u8	more_data;
-> >   	__be32	subcap_id;
-> >   	__be32	property_cnt;
-> > @@ -140,8 +140,8 @@ union tpm2_cmd_params {
-> >   	struct	tpm2_pcr_read_in	pcrread_in;
-> >   	struct	tpm2_pcr_read_out	pcrread_out;
-> >   	struct	tpm2_pcr_extend_in	pcrextend_in;
-> > -	struct	tpm2_get_tpm_pt_in	get_tpm_pt_in;
-> > -	struct	tpm2_get_tpm_pt_out	get_tpm_pt_out;
-> > +	struct	tpm2_getcap_in		getcap_in;
-> > +	struct	tpm2_getcap_out		getcap_out;
-> >   	struct	tpm2_get_random_in	getrandom_in;
-> >   	struct	tpm2_get_random_out	getrandom_out;
-> >   };
-> > @@ -435,16 +435,6 @@ int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max)
-> >   	return total ? total : -EIO;
-> >   }
-> > 
-> > -#define TPM2_GET_TPM_PT_IN_SIZE \
-> > -	(sizeof(struct tpm_input_header) + \
-> > -	 sizeof(struct tpm2_get_tpm_pt_in))
-> > -
-> > -static const struct tpm_input_header tpm2_get_tpm_pt_header = {
-> > -	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
-> > -	.length = cpu_to_be32(TPM2_GET_TPM_PT_IN_SIZE),
-> > -	.ordinal = cpu_to_be32(TPM2_CC_GET_CAPABILITY)
-> > -};
-> > -
-> >   /**
-> >    * Append TPMS_AUTH_COMMAND to the buffer. The buffer must be allocated with
-> >    * tpm_buf_alloc().
-> > @@ -750,35 +740,43 @@ out:
-> >   	return rc;
-> >   }
-> > 
-> > +#define TPM2_GETCAP_IN_SIZE \
-> > +	(sizeof(struct tpm_input_header) + sizeof(struct tpm2_getcap_in))
-> > +
-> > +static const struct tpm_input_header tpm2_getcap_header = {
-> > +	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
-> > +	.length = cpu_to_be32(TPM2_GETCAP_IN_SIZE),
-> > +	.ordinal = cpu_to_be32(TPM2_CC_GET_CAPABILITY)
-> > +};
-> > +
-> >   /**
-> > - * tpm2_get_tpm_pt() - get value of a TPM_CAP_TPM_PROPERTIES type property
-> > - * @chip:		TPM chip to use.
-> > - * @property_id:	property ID.
-> > - * @value:		output variable.
-> > + * tpm2_getcap_cmd() - execute a TPM2_GetCapability command
-> > + * @chip:		TPM chip to use
-> > + * @cap_id:		capability ID
-> > + * @property_id:	property ID
-> > + * @value:		value of the property
-> >    * @desc:		passed to tpm_transmit_cmd()
-> >    *
-> > - * 0 is returned when the operation is successful. If a negative number is
-> > - * returned it remarks a POSIX error code. If a positive number is returned
-> > - * it remarks a TPM error.
-> > + * Return: same as with tpm_transmit_cmd
-> >    */
-> > -ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,  u32 *value,
-> > -			const char *desc)
-> > +ssize_t tpm2_getcap_cmd(struct tpm_chip *chip, u32 cap_id, u32 property_id,
-> > +			u32 *value, const char *desc)
-> 
-> This function currently returns single value "u32 *value" as output data.
-> 
-> Some calling function expect list of values from capabilities output.
-> For eg., get_active_banks() use TPM_CAP_PCRS capability to retrieve list of
-> active banks. And this capability returns array of pcr selections(which is a
-> struct representing each active PCR bank)
-> 
-> I was thinking, can we define output parameter as struct of cap_id and union
-> of expected cap_data ?
+This patch set includes the cleanup and bug fixes patches, previously
+part of the "tpm: add the securityfs pseudo files support for TPM 2.0
+firmware event log" patch set, in order to upstream them more quickly.
 
-Unless you have major concerns about performance, which I think are not
-relevant here, calling this in a loop is perfectly adequate and a lot of
-simpler than having a generic version (with moreData handling and
-everything).
+Changelog History:
 
-I would rather see uses of struct cap_t to shrink than to expand. The
-same goes for other horrific unions that exist today in the driver.
+v6:
 
-/Jarkko
+- Patch "tpm: replace symbolic permission with octal for securityfs files"
+  - New Patch.
+- Patch "tpm: have event log use the tpm_chip"
+  - Changed commit description as per Jason's suggestion.
+  - Fixed bug related to kfree() for bios_event_log.
+  - Moved inode_unlock() just after get_device() in open().
+  - Returned -ENODEV for read_log() ENOMEM error and other errors as it is.
+  - Added comment in tpm_bios_log_teardown() to explain inode_lock()/unlock
+    reasoning.
+  - Splitted .owner into different patch.
+- Patch "tpm: fix the missing .owner in tpm_bios_measurements_ops"
+  - New Patch.
+- Patch "tpm: cleanup of printk error messages"
+  - Replaced dev_info() with dev_warn().
+  - Updated commit description subject line.
+
+v5:
+
+- Moved cleanup/fixes patches into this patch set.
+- Patch "fix the race condition between event log access and chip
+getting unregistered"
+  - updated subject line and commit description.
+  - modified fops code to use chip kref.
+  - modified fops to lock inode before accessing inode private data.
+  - renamed tpm_securityfs_data to tpm_chip_seqops, as it no more
+  holds bios log, but associates seqops with respective chip. For
+  the same reason, moved it to tpm.h
+- Patch "replace or remove printk error messages"
+  - cleaned up dev_dbg and used dev_info as applicable.
+
+v4:
+
+- Includes feedbacks from Jarkko and Jason.
+- Patch "tpm: define a generic open() method for ascii & bios
+measurements".
+  - Fix indentation issue.
+- Patch "tpm: replace the dynamically allocated bios_dir as
+  struct dentry array". 
+  - Continue to use bios_dir_count variable to use is_bad() checks and
+  to maintain correct order for securityfs_remove() during teardown.
+  - Reset chip->bios_dir_count in teardown() function.
+- Patch "tpm: validate the event log access before tpm_bios_log_setup".
+  - Retain TPM2 check which was removed in previous patch.
+  - Add tpm_bios_log_setup failure handling.
+  - Remove use of private data from v3 version of patch. Add a new
+  member to struct tpm_chip to achieve the same purpose.
+- Patch "tpm: redefine the read_log method to check for ACPI/OF 
+properties sequentially".
+  - Move replacement of CONFIG_TCG_IBMVTPM with CONFIG_OF to
+  this patch from patch 3.
+  - Replace -1 error code with -ENODEV.
+- Patch "tpm: replace the of_find_node_by_name() with dev of_node
+property".
+ - Uses chip->dev.parent->of_node.
+ - Created separate patch for cleanup of pr_err messages.
+- Patch "tpm: remove printk error messages".
+ - New Patch.
+- Patch "tpm: add the securityfs file support for TPM 2.0 event log".
+ - Parses event digests using event alg_id rather than event log header
+ alg_id.
+ - Uses of_property_match_string to differentiate tpm/vtpm compatible
+ property.
+ - Adds the comment for difference in tpm/vtpm endianness.
+
+v3:
+
+- Includes the review feedbacks as suggested by Jason.
+- Split of patches into one patch per idea.
+- Generic open() method for ascii/bios measurements.
+- Replacement of of **bios_dir with *bios_dir[3].
+- Verifying readlog() is successful before creating securityfs entries.
+- Generic readlog() to check for ACPI/OF in sequence.
+- read_log_of() method now uses of_node propertry rather than
+calling find_device_by_name.
+- read_log differentiates vtpm/tpm using its compatible property.
+- Cleans pr_err with dev_dbg.
+- Commit msgs subject line prefixed with tpm.
+
+v2:
+
+- Fixes issues as given in feedback by Jason.
+- Adds documentation for device tree.
+
+Nayna Jain (9):
+  tpm: define a generic open() method for ascii & bios measurements
+  tpm: replace symbolic permission with octal for securityfs files
+  tpm: replace dynamically allocated bios_dir with a static array
+  tpm: drop tpm1_chip_register(/unregister)
+  tpm: have event log use the tpm_chip
+  tpm: fix the missing .owner in tpm_bios_measurements_ops
+  tpm: redefine read_log() to handle ACPI/OF at runtime
+  tpm: replace of_find_node_by_name() with dev of_node property
+  tpm: cleanup of printk error messages
+
+ drivers/char/tpm/Makefile       |  14 +--
+ drivers/char/tpm/tpm-chip.c     |  33 ++----
+ drivers/char/tpm/tpm-sysfs.c    |   3 +
+ drivers/char/tpm/tpm.h          |  14 ++-
+ drivers/char/tpm/tpm_acpi.c     |  38 +++----
+ drivers/char/tpm/tpm_eventlog.c | 222 +++++++++++++++++++++-------------------
+ drivers/char/tpm/tpm_eventlog.h |  22 ++--
+ drivers/char/tpm/tpm_of.c       |  45 +++-----
+ 8 files changed, 187 insertions(+), 204 deletions(-)
+
+-- 
+2.5.0
