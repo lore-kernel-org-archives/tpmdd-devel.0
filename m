@@ -1,69 +1,47 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v6 2/9] tpm: replace symbolic permission
- with octal for securityfs files
-Date: Mon, 14 Nov 2016 14:21:14 -0800
-Message-ID: <20161114222114.wtk2nypib2o4zfvk@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v6 6/9] tpm: fix the missing .owner in
+ tpm_bios_measurements_ops
+Date: Mon, 14 Nov 2016 14:22:09 -0800
+Message-ID: <20161114222209.aa4msezaumvifvwh@intel.com>
 References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1479117656-12403-3-git-send-email-nayna@linux.vnet.ibm.com>
+ <1479117656-12403-7-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1479117656-12403-3-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <1479117656-12403-7-git-send-email-nayna@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Nayna Jain <nayna@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Nov 14, 2016 at 05:00:49AM -0500, Nayna Jain wrote:
-> checkpatch.pl flags warning for symbolic permissions and suggests
-> to replace with octal value.
+On Mon, Nov 14, 2016 at 05:00:53AM -0500, Nayna Jain wrote:
+> This patch fixes the missing .owner field in
+> tpm_bios_measurements_ops definition.
 > 
-> This patch changes securityfs pseudo files permission
-> to octal values in tpm_bios_log_setup().
-> 
-> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> Suggested-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+> Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
 /Jarkko
 
 > ---
->  drivers/char/tpm/tpm_eventlog.c | 4 ++--
->  1 file changed, 2 insertions(+), 2 deletions(-)
+>  drivers/char/tpm/tpm_eventlog.c | 1 +
+>  1 file changed, 1 insertion(+)
 > 
 > diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-> index 42b49c4..9467e31 100644
+> index f8c42fe..5575ffc 100644
 > --- a/drivers/char/tpm/tpm_eventlog.c
 > +++ b/drivers/char/tpm/tpm_eventlog.c
-> @@ -378,7 +378,7 @@ struct dentry **tpm_bios_log_setup(const char *name)
+> @@ -349,6 +349,7 @@ static int tpm_bios_measurements_open(struct inode *inode,
+>  }
 >  
->  	bin_file =
->  	    securityfs_create_file("binary_bios_measurements",
-> -				   S_IRUSR | S_IRGRP, tpm_dir,
-> +				   0440, tpm_dir,
->  				   (void *)&tpm_binary_b_measurements_seqops,
->  				   &tpm_bios_measurements_ops);
->  	if (is_bad(bin_file))
-> @@ -386,7 +386,7 @@ struct dentry **tpm_bios_log_setup(const char *name)
->  
->  	ascii_file =
->  	    securityfs_create_file("ascii_bios_measurements",
-> -				   S_IRUSR | S_IRGRP, tpm_dir,
-> +				   0440, tpm_dir,
->  				   (void *)&tpm_ascii_b_measurements_seqops,
->  				   &tpm_bios_measurements_ops);
->  	if (is_bad(ascii_file))
+>  static const struct file_operations tpm_bios_measurements_ops = {
+> +	.owner = THIS_MODULE,
+>  	.open = tpm_bios_measurements_open,
+>  	.read = seq_read,
+>  	.llseek = seq_lseek,
 > -- 
 > 2.5.0
 > 
-
-------------------------------------------------------------------------------
