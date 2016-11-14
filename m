@@ -1,16 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v6 9/9] tpm: cleanup of printk error
-	messages
-Date: Mon, 14 Nov 2016 14:24:06 -0800
-Message-ID: <20161114222406.vupiibtylesbota7@intel.com>
+Subject: Re: [PATCH v6 0/9] tpm: cleanup/fixes in existing
+	event log support
+Date: Mon, 14 Nov 2016 14:33:23 -0800
+Message-ID: <20161114223322.5uzdc7sob2vukwrq@intel.com>
 References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1479117656-12403-10-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1479117656-12403-10-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1479117656-12403-1-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,123 +22,130 @@ To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Nov 14, 2016 at 05:00:56AM -0500, Nayna Jain wrote:
-> This patch removes the unnecessary error messages on failing to
-> allocate memory and replaces pr_err/printk with dev_dbg/dev_info
-> as applicable.
-> 
-> Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+On Mon, Nov 14, 2016 at 05:00:47AM -0500, Nayna Jain wrote:
+> This patch set includes the cleanup and bug fixes patches, previously
+> part of the "tpm: add the securityfs pseudo files support for TPM 2.0
+> firmware event log" patch set, in order to upstream them more quickly.
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+I applied the patches. I'm not yet sure whether these are part of the
+4.10 pull request or whether I postpone to 4.11 (my preference would be
+4.10 but I do not want to close that right now). I'll do testing next
+week before doing pull request.
+
+I hope that the commits gets some reviews and testing now that they are
+easily testable in my master branch.
 
 /Jarkko
 
-> ---
->  drivers/char/tpm/tpm_acpi.c | 16 ++++------------
->  drivers/char/tpm/tpm_of.c   | 29 +++++++++--------------------
->  2 files changed, 13 insertions(+), 32 deletions(-)
 > 
-> diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
-> index fa30c969..ddbaef2 100644
-> --- a/drivers/char/tpm/tpm_acpi.c
-> +++ b/drivers/char/tpm/tpm_acpi.c
-> @@ -60,11 +60,8 @@ int read_log_acpi(struct tpm_chip *chip)
->  	status = acpi_get_table(ACPI_SIG_TCPA, 1,
->  				(struct acpi_table_header **)&buff);
->  
-> -	if (ACPI_FAILURE(status)) {
-> -		printk(KERN_ERR "%s: ERROR - Could not get TCPA table\n",
-> -		       __func__);
-> +	if (ACPI_FAILURE(status))
->  		return -EIO;
-> -	}
->  
->  	switch(buff->platform_class) {
->  	case BIOS_SERVER:
-> @@ -78,25 +75,20 @@ int read_log_acpi(struct tpm_chip *chip)
->  		break;
->  	}
->  	if (!len) {
-> -		printk(KERN_ERR "%s: ERROR - TCPA log area empty\n", __func__);
-> +		dev_warn(&chip->dev, "%s: TCPA log area empty\n", __func__);
->  		return -EIO;
->  	}
->  
->  	/* malloc EventLog space */
->  	log->bios_event_log = kmalloc(len, GFP_KERNEL);
-> -	if (!log->bios_event_log) {
-> -		printk("%s: ERROR - Not enough  Memory for BIOS measurements\n",
-> -			__func__);
-> +	if (!log->bios_event_log)
->  		return -ENOMEM;
-> -	}
->  
->  	log->bios_event_log_end = log->bios_event_log + len;
->  
->  	virt = acpi_os_map_iomem(start, len);
-> -	if (!virt) {
-> -		printk("%s: ERROR - Unable to map memory\n", __func__);
-> +	if (!virt)
->  		goto err;
-> -	}
->  
->  	memcpy_fromio(log->bios_event_log, virt, len);
->  
-> diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
-> index 22b8f81..3af829f 100644
-> --- a/drivers/char/tpm/tpm_of.c
-> +++ b/drivers/char/tpm/tpm_of.c
-> @@ -31,40 +31,29 @@ int read_log_of(struct tpm_chip *chip)
->  	log = &chip->log;
->  	if (chip->dev.parent->of_node)
->  		np = chip->dev.parent->of_node;
-> -	if (!np) {
-> -		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
-> +	if (!np)
->  		return -ENODEV;
-> -	}
->  
->  	sizep = of_get_property(np, "linux,sml-size", NULL);
-> -	if (sizep == NULL) {
-> -		pr_err("%s: ERROR - SML size not found\n", __func__);
-> -		goto cleanup_eio;
-> -	}
-> +	if (sizep == NULL)
-> +		return -EIO;
-> +
->  	if (*sizep == 0) {
-> -		pr_err("%s: ERROR - event log area empty\n", __func__);
-> -		goto cleanup_eio;
-> +		dev_warn(&chip->dev, "%s: Event log area empty\n", __func__);
-> +		return -EIO;
->  	}
->  
->  	basep = of_get_property(np, "linux,sml-base", NULL);
-> -	if (basep == NULL) {
-> -		pr_err("%s: ERROR - SML not found\n", __func__);
-> -		goto cleanup_eio;
-> -	}
-> +	if (basep == NULL)
-> +		return -EIO;
->  
->  	log->bios_event_log = kmalloc(*sizep, GFP_KERNEL);
-> -	if (!log->bios_event_log) {
-> -		pr_err("%s: ERROR - Not enough memory for BIOS measurements\n",
-> -		       __func__);
-> +	if (!log->bios_event_log)
->  		return -ENOMEM;
-> -	}
->  
->  	log->bios_event_log_end = log->bios_event_log + *sizep;
->  
->  	memcpy(log->bios_event_log, __va(*basep), *sizep);
->  
->  	return 0;
-> -
-> -cleanup_eio:
-> -	return -EIO;
->  }
+> Changelog History:
+> 
+> v6:
+> 
+> - Patch "tpm: replace symbolic permission with octal for securityfs files"
+>   - New Patch.
+> - Patch "tpm: have event log use the tpm_chip"
+>   - Changed commit description as per Jason's suggestion.
+>   - Fixed bug related to kfree() for bios_event_log.
+>   - Moved inode_unlock() just after get_device() in open().
+>   - Returned -ENODEV for read_log() ENOMEM error and other errors as it is.
+>   - Added comment in tpm_bios_log_teardown() to explain inode_lock()/unlock
+>     reasoning.
+>   - Splitted .owner into different patch.
+> - Patch "tpm: fix the missing .owner in tpm_bios_measurements_ops"
+>   - New Patch.
+> - Patch "tpm: cleanup of printk error messages"
+>   - Replaced dev_info() with dev_warn().
+>   - Updated commit description subject line.
+> 
+> v5:
+> 
+> - Moved cleanup/fixes patches into this patch set.
+> - Patch "fix the race condition between event log access and chip
+> getting unregistered"
+>   - updated subject line and commit description.
+>   - modified fops code to use chip kref.
+>   - modified fops to lock inode before accessing inode private data.
+>   - renamed tpm_securityfs_data to tpm_chip_seqops, as it no more
+>   holds bios log, but associates seqops with respective chip. For
+>   the same reason, moved it to tpm.h
+> - Patch "replace or remove printk error messages"
+>   - cleaned up dev_dbg and used dev_info as applicable.
+> 
+> v4:
+> 
+> - Includes feedbacks from Jarkko and Jason.
+> - Patch "tpm: define a generic open() method for ascii & bios
+> measurements".
+>   - Fix indentation issue.
+> - Patch "tpm: replace the dynamically allocated bios_dir as
+>   struct dentry array". 
+>   - Continue to use bios_dir_count variable to use is_bad() checks and
+>   to maintain correct order for securityfs_remove() during teardown.
+>   - Reset chip->bios_dir_count in teardown() function.
+> - Patch "tpm: validate the event log access before tpm_bios_log_setup".
+>   - Retain TPM2 check which was removed in previous patch.
+>   - Add tpm_bios_log_setup failure handling.
+>   - Remove use of private data from v3 version of patch. Add a new
+>   member to struct tpm_chip to achieve the same purpose.
+> - Patch "tpm: redefine the read_log method to check for ACPI/OF 
+> properties sequentially".
+>   - Move replacement of CONFIG_TCG_IBMVTPM with CONFIG_OF to
+>   this patch from patch 3.
+>   - Replace -1 error code with -ENODEV.
+> - Patch "tpm: replace the of_find_node_by_name() with dev of_node
+> property".
+>  - Uses chip->dev.parent->of_node.
+>  - Created separate patch for cleanup of pr_err messages.
+> - Patch "tpm: remove printk error messages".
+>  - New Patch.
+> - Patch "tpm: add the securityfs file support for TPM 2.0 event log".
+>  - Parses event digests using event alg_id rather than event log header
+>  alg_id.
+>  - Uses of_property_match_string to differentiate tpm/vtpm compatible
+>  property.
+>  - Adds the comment for difference in tpm/vtpm endianness.
+> 
+> v3:
+> 
+> - Includes the review feedbacks as suggested by Jason.
+> - Split of patches into one patch per idea.
+> - Generic open() method for ascii/bios measurements.
+> - Replacement of of **bios_dir with *bios_dir[3].
+> - Verifying readlog() is successful before creating securityfs entries.
+> - Generic readlog() to check for ACPI/OF in sequence.
+> - read_log_of() method now uses of_node propertry rather than
+> calling find_device_by_name.
+> - read_log differentiates vtpm/tpm using its compatible property.
+> - Cleans pr_err with dev_dbg.
+> - Commit msgs subject line prefixed with tpm.
+> 
+> v2:
+> 
+> - Fixes issues as given in feedback by Jason.
+> - Adds documentation for device tree.
+> 
+> Nayna Jain (9):
+>   tpm: define a generic open() method for ascii & bios measurements
+>   tpm: replace symbolic permission with octal for securityfs files
+>   tpm: replace dynamically allocated bios_dir with a static array
+>   tpm: drop tpm1_chip_register(/unregister)
+>   tpm: have event log use the tpm_chip
+>   tpm: fix the missing .owner in tpm_bios_measurements_ops
+>   tpm: redefine read_log() to handle ACPI/OF at runtime
+>   tpm: replace of_find_node_by_name() with dev of_node property
+>   tpm: cleanup of printk error messages
+> 
+>  drivers/char/tpm/Makefile       |  14 +--
+>  drivers/char/tpm/tpm-chip.c     |  33 ++----
+>  drivers/char/tpm/tpm-sysfs.c    |   3 +
+>  drivers/char/tpm/tpm.h          |  14 ++-
+>  drivers/char/tpm/tpm_acpi.c     |  38 +++----
+>  drivers/char/tpm/tpm_eventlog.c | 222 +++++++++++++++++++++-------------------
+>  drivers/char/tpm/tpm_eventlog.h |  22 ++--
+>  drivers/char/tpm/tpm_of.c       |  45 +++-----
+>  8 files changed, 187 insertions(+), 204 deletions(-)
+> 
 > -- 
 > 2.5.0
 > 
