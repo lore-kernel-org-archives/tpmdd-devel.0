@@ -1,7 +1,8 @@
 From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v6 9/9] tpm: cleanup of printk error messages
-Date: Mon, 14 Nov 2016 05:00:56 -0500
-Message-ID: <1479117656-12403-10-git-send-email-nayna@linux.vnet.ibm.com>
+Subject: [PATCH v6 8/9] tpm: replace of_find_node_by_name()
+	with dev of_node property
+Date: Mon, 14 Nov 2016 05:00:55 -0500
+Message-ID: <1479117656-12403-9-git-send-email-nayna@linux.vnet.ibm.com>
 References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,116 +21,48 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This patch removes the unnecessary error messages on failing to
-allocate memory and replaces pr_err/printk with dev_dbg/dev_info
-as applicable.
+Using the device of_node property is a better way to refer to the
+device tree node rather than of_find_node_by_name().
 
 Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm_acpi.c | 16 ++++------------
- drivers/char/tpm/tpm_of.c   | 29 +++++++++--------------------
- 2 files changed, 13 insertions(+), 32 deletions(-)
+ drivers/char/tpm/tpm_of.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
-index fa30c969..ddbaef2 100644
---- a/drivers/char/tpm/tpm_acpi.c
-+++ b/drivers/char/tpm/tpm_acpi.c
-@@ -60,11 +60,8 @@ int read_log_acpi(struct tpm_chip *chip)
- 	status = acpi_get_table(ACPI_SIG_TCPA, 1,
- 				(struct acpi_table_header **)&buff);
- 
--	if (ACPI_FAILURE(status)) {
--		printk(KERN_ERR "%s: ERROR - Could not get TCPA table\n",
--		       __func__);
-+	if (ACPI_FAILURE(status))
- 		return -EIO;
--	}
- 
- 	switch(buff->platform_class) {
- 	case BIOS_SERVER:
-@@ -78,25 +75,20 @@ int read_log_acpi(struct tpm_chip *chip)
- 		break;
- 	}
- 	if (!len) {
--		printk(KERN_ERR "%s: ERROR - TCPA log area empty\n", __func__);
-+		dev_warn(&chip->dev, "%s: TCPA log area empty\n", __func__);
- 		return -EIO;
- 	}
- 
- 	/* malloc EventLog space */
- 	log->bios_event_log = kmalloc(len, GFP_KERNEL);
--	if (!log->bios_event_log) {
--		printk("%s: ERROR - Not enough  Memory for BIOS measurements\n",
--			__func__);
-+	if (!log->bios_event_log)
- 		return -ENOMEM;
--	}
- 
- 	log->bios_event_log_end = log->bios_event_log + len;
- 
- 	virt = acpi_os_map_iomem(start, len);
--	if (!virt) {
--		printk("%s: ERROR - Unable to map memory\n", __func__);
-+	if (!virt)
- 		goto err;
--	}
- 
- 	memcpy_fromio(log->bios_event_log, virt, len);
- 
 diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
-index 22b8f81..3af829f 100644
+index 7c30752..22b8f81 100644
 --- a/drivers/char/tpm/tpm_of.c
 +++ b/drivers/char/tpm/tpm_of.c
-@@ -31,40 +31,29 @@ int read_log_of(struct tpm_chip *chip)
+@@ -29,7 +29,8 @@ int read_log_of(struct tpm_chip *chip)
+ 	struct tpm_bios_log *log;
+ 
  	log = &chip->log;
- 	if (chip->dev.parent->of_node)
- 		np = chip->dev.parent->of_node;
--	if (!np) {
--		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
-+	if (!np)
+-	np = of_find_node_by_name(NULL, "vtpm");
++	if (chip->dev.parent->of_node)
++		np = chip->dev.parent->of_node;
+ 	if (!np) {
+ 		pr_err("%s: ERROR - IBMVTPM not supported\n", __func__);
  		return -ENODEV;
--	}
- 
- 	sizep = of_get_property(np, "linux,sml-size", NULL);
--	if (sizep == NULL) {
--		pr_err("%s: ERROR - SML size not found\n", __func__);
--		goto cleanup_eio;
--	}
-+	if (sizep == NULL)
-+		return -EIO;
-+
- 	if (*sizep == 0) {
--		pr_err("%s: ERROR - event log area empty\n", __func__);
--		goto cleanup_eio;
-+		dev_warn(&chip->dev, "%s: Event log area empty\n", __func__);
-+		return -EIO;
- 	}
- 
- 	basep = of_get_property(np, "linux,sml-base", NULL);
--	if (basep == NULL) {
--		pr_err("%s: ERROR - SML not found\n", __func__);
--		goto cleanup_eio;
--	}
-+	if (basep == NULL)
-+		return -EIO;
- 
- 	log->bios_event_log = kmalloc(*sizep, GFP_KERNEL);
--	if (!log->bios_event_log) {
--		pr_err("%s: ERROR - Not enough memory for BIOS measurements\n",
--		       __func__);
-+	if (!log->bios_event_log)
+@@ -55,18 +56,15 @@ int read_log_of(struct tpm_chip *chip)
+ 	if (!log->bios_event_log) {
+ 		pr_err("%s: ERROR - Not enough memory for BIOS measurements\n",
+ 		       __func__);
+-		of_node_put(np);
  		return -ENOMEM;
--	}
+ 	}
  
  	log->bios_event_log_end = log->bios_event_log + *sizep;
  
  	memcpy(log->bios_event_log, __va(*basep), *sizep);
+-	of_node_put(np);
  
  	return 0;
--
--cleanup_eio:
--	return -EIO;
+ 
+ cleanup_eio:
+-	of_node_put(np);
+ 	return -EIO;
  }
 -- 
 2.5.0
