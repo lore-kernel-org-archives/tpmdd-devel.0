@@ -1,53 +1,57 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm: fix node pointer lookup
-Date: Tue, 15 Nov 2016 09:36:09 -0800
-Message-ID: <20161115173609.6d625ksyv7rppeci@intel.com>
-References: <20161115155736.599954-1-arnd@arndb.de>
+Subject: Re: [PATCH v6 0/9] tpm: cleanup/fixes in existing event log support
+Date: Tue, 15 Nov 2016 09:40:12 -0800
+Message-ID: <20161115174012.3pfxzz2ugrdglj4o@intel.com>
+References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
+ <20161114223322.5uzdc7sob2vukwrq@intel.com>
+ <20161115002514.qhweuyzg5mgebusq@intel.com>
+ <20161115021543.d4wgjqid7fut4y4c@intel.com>
+ <582A9EAE.5000505@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20161115155736.599954-1-arnd@arndb.de>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Arnd Bergmann <arnd@arndb.de>
-Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Nayna Jain <nayna@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+In-Reply-To: <582A9EAE.5000505@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Nayna <nayna@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Nov 15, 2016 at 04:57:11PM +0100, Arnd Bergmann wrote:
-> A rework left the node pointer uninitialized when the device tree
-> is not in use:
+On Tue, Nov 15, 2016 at 11:05:42AM +0530, Nayna wrote:
 > 
-> drivers/char/tpm/tpm_of.c: In function 'read_log_of':
-> drivers/char/tpm/tpm_of.c:37:8: error: 'np' may be used uninitialized in this function [-Werror=maybe-uninitialized]
 > 
-> This reverts the behavior to what it should be.
+> On 11/15/2016 07:45 AM, Jarkko Sakkinen wrote:
+> > On Mon, Nov 14, 2016 at 04:25:14PM -0800, Jarkko Sakkinen wrote:
+> > > On Mon, Nov 14, 2016 at 02:33:23PM -0800, Jarkko Sakkinen wrote:
+> > > > On Mon, Nov 14, 2016 at 05:00:47AM -0500, Nayna Jain wrote:
+> > > > > This patch set includes the cleanup and bug fixes patches, previously
+> > > > > part of the "tpm: add the securityfs pseudo files support for TPM 2.0
+> > > > > firmware event log" patch set, in order to upstream them more quickly.
+> > > > 
+> > > > I applied the patches. I'm not yet sure whether these are part of the
+> > > > 4.10 pull request or whether I postpone to 4.11 (my preference would be
+> > > > 4.10 but I do not want to close that right now). I'll do testing next
+> > > > week before doing pull request.
+> > > > 
+> > > > I hope that the commits gets some reviews and testing now that they are
+> > > > easily testable in my master branch.
+> > > 
+> > > Event log still works and they do not seem to break TPM 2.0 (tried both
+> > > machine with tpm_crb and tpm_tis).
+> > > 
+> > > Stefan: would you mind check that these do not break your TPM 1.2
+> > > environment? I already tried wih TPM 1.2 machine but probably would
+> > > make sense to peer test.
+> > 
+> > I'm dropping commits 8/9 and 9/9 from my tree and *will not* include
+> > them to my 4.10 pull request.
 > 
-> Fixes: 4a45d9669ac1 ("tpm: replace of_find_node_by_name() with dev of_node property")
-> Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+> Will fix this and resend the patch 8/9 and 9/9 again.
 
-Arnd, I got patch from Colin a moment earlier so I applied that.
-Thank you in any case!
+I applied fix from Colin. I for OF specific patches in this patch set
+I do not have means to test the code paths that exercise OF specific
+functionality. This is what worries me a bit. If I had tested-by from
+someone running a system that can exercise those code paths, I would
+be less worried.
 
 /Jarkko
-
-> ---
->  drivers/char/tpm/tpm_of.c | 3 +--
->  1 file changed, 1 insertion(+), 2 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
-> index 3af829f3ad59..24fa6afc2e55 100644
-> --- a/drivers/char/tpm/tpm_of.c
-> +++ b/drivers/char/tpm/tpm_of.c
-> @@ -29,8 +29,7 @@ int read_log_of(struct tpm_chip *chip)
->  	struct tpm_bios_log *log;
->  
->  	log = &chip->log;
-> -	if (chip->dev.parent->of_node)
-> -		np = chip->dev.parent->of_node;
-> +	np = chip->dev.parent->of_node;
->  	if (!np)
->  		return -ENODEV;
->  
-> -- 
-> 2.9.0
-> 
