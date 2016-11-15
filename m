@@ -1,16 +1,17 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: drop chip->is_open and
-	chip->duration_adjusted
-Date: Mon, 14 Nov 2016 21:11:54 -0800
-Message-ID: <20161115051106.u2xoduwf2kpcznv3@intel.com>
-References: <20161114234500.24839-1-jarkko.sakkinen@linux.intel.com>
-	<20161115043001.GA22482@obsidianresearch.com>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH v6 0/9] tpm: cleanup/fixes in existing
+	event log support
+Date: Tue, 15 Nov 2016 11:05:42 +0530
+Message-ID: <582A9EAE.5000505@linux.vnet.ibm.com>
+References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<20161114223322.5uzdc7sob2vukwrq@intel.com>
+	<20161115002514.qhweuyzg5mgebusq@intel.com>
+	<20161115021543.d4wgjqid7fut4y4c@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20161115043001.GA22482-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <20161115021543.d4wgjqid7fut4y4c-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,36 +20,46 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Nov 14, 2016 at 09:30:01PM -0700, Jason Gunthorpe wrote:
-> On Mon, Nov 14, 2016 at 03:44:58PM -0800, Jarkko Sakkinen wrote:
-> > Use atomic bitops for chip->flags so that we do not need chip->is_open
-> > and chip->duration_adjusted anymore.
-> 
-> I don't know if it s a really great idea to use atomic bit ops for
-> things that do not need to be atomic.. It makes the locking scheme
-> less clear. is open is genuinely different since it relies on the
-> atomic for correctness.
 
-The way I see it is one of the status flags bound to chip among the
-others. I do not see this cause too much harm for clarity. It eases
-debugging the driver a bit because you get more state out of 'flags'.
 
-It also makes code little a bit more robust as flags is independent of
-locks.
+On 11/15/2016 07:45 AM, Jarkko Sakkinen wrote:
+> On Mon, Nov 14, 2016 at 04:25:14PM -0800, Jarkko Sakkinen wrote:
+>> On Mon, Nov 14, 2016 at 02:33:23PM -0800, Jarkko Sakkinen wrote:
+>>> On Mon, Nov 14, 2016 at 05:00:47AM -0500, Nayna Jain wrote:
+>>>> This patch set includes the cleanup and bug fixes patches, previously
+>>>> part of the "tpm: add the securityfs pseudo files support for TPM 2.0
+>>>> firmware event log" patch set, in order to upstream them more quickly.
+>>>
+>>> I applied the patches. I'm not yet sure whether these are part of the
+>>> 4.10 pull request or whether I postpone to 4.11 (my preference would be
+>>> 4.10 but I do not want to close that right now). I'll do testing next
+>>> week before doing pull request.
+>>>
+>>> I hope that the commits gets some reviews and testing now that they are
+>>> easily testable in my master branch.
+>>
+>> Event log still works and they do not seem to break TPM 2.0 (tried both
+>> machine with tpm_crb and tpm_tis).
+>>
+>> Stefan: would you mind check that these do not break your TPM 1.2
+>> environment? I already tried wih TPM 1.2 machine but probably would
+>> make sense to peer test.
+>
+> I'm dropping commits 8/9 and 9/9 from my tree and *will not* include
+> them to my 4.10 pull request.
 
-How strong is your opposition here? I do not see any exceptional damage
-done but see some subtle but still significant benefits.
+Will fix this and resend the patch 8/9 and 9/9 again.
 
-> Merging is_duration makes lots of sense though
+Thanks & Regards,
+    - Nayna
 
-Also timeout_adjusted should be merged (for some reason missed it).
+>
+> /Jarkko
+>
 
-> Jason
-
-/Jarkko
 
 ------------------------------------------------------------------------------
