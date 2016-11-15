@@ -1,27 +1,18 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v6 0/9] tpm: cleanup/fixes in existing
-	event log support
-Date: Mon, 14 Nov 2016 16:30:41 -0800
-Message-ID: <20161115003041.j4nobc4olqhkqo7r@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v6 0/9] tpm: cleanup/fixes in existing event log support
+Date: Mon, 14 Nov 2016 18:15:43 -0800
+Message-ID: <20161115021543.d4wgjqid7fut4y4c@intel.com>
 References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<20161114223322.5uzdc7sob2vukwrq@intel.com>
-	<20161115002514.qhweuyzg5mgebusq@intel.com>
+ <20161114223322.5uzdc7sob2vukwrq@intel.com>
+ <20161115002514.qhweuyzg5mgebusq@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20161115002514.qhweuyzg5mgebusq-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <20161115002514.qhweuyzg5mgebusq@intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Nayna Jain <nayna@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
 On Mon, Nov 14, 2016 at 04:25:14PM -0800, Jarkko Sakkinen wrote:
@@ -46,9 +37,7 @@ On Mon, Nov 14, 2016 at 04:25:14PM -0800, Jarkko Sakkinen wrote:
 > environment? I already tried wih TPM 1.2 machine but probably would
 > make sense to peer test.
 
-They are now also in my next branch, which gets pulled to linux-next in
-order to get wider exposure.
+I'm dropping commits 8/9 and 9/9 from my tree and *will not* include
+them to my 4.10 pull request.
 
 /Jarkko
-
-------------------------------------------------------------------------------
