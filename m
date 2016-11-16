@@ -1,69 +1,39 @@
-From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH] tpm: Check the bios_dir entry for NULL
- before accessing it
-Date: Wed, 16 Nov 2016 20:28:30 +0530
-Message-ID: <582C7416.7090105@linux.vnet.ibm.com>
-References: <1479304573-13601-1-git-send-email-stefanb@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [patch] tpm: uninitialized variable in read_log_of()
+Date: Wed, 16 Nov 2016 07:36:31 -0800
+Message-ID: <20161116153631.vgsoz4o2pwlphfmo@intel.com>
+References: <20161116141221.GA28875@mwanda>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1479304573-13601-1-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <kernel-janitors-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20161116141221.GA28875@mwanda>
+Sender: kernel-janitors-owner@vger.kernel.org
+To: Dan Carpenter <dan.carpenter@oracle.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, Nayna Jain <nayna@linux.vnet.ibm.com>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, kernel-janitors@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Wed, Nov 16, 2016 at 05:12:21PM +0300, Dan Carpenter wrote:
+> "np" is supposed to be set to NULL at the start.
+> 
+> Fixes: 4a45d9669ac1 ("tpm: replace of_find_node_by_name() with dev of_node propert")
+> Signed-off-by: Dan Carpenter <dan.carpenter@oracle.com>
 
+Colid King submitted a patch to fix this a couple of days ago so
+applied that. Anyway, thank you for noting this.
 
-On 11/16/2016 07:26 PM, Stefan Berger wrote:
-> Check the bios_dir entry for NULL before accessing it. Currently
-> this crashes the driver when a TPM 2 is attached and the entries
-> are NULL.
+> diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
+> index 3af829f..904ed4a 100644
+> --- a/drivers/char/tpm/tpm_of.c
+> +++ b/drivers/char/tpm/tpm_of.c
+> @@ -23,7 +23,7 @@
+>  
+>  int read_log_of(struct tpm_chip *chip)
+>  {
+> -	struct device_node *np;
+> +	struct device_node *np = NULL;
+>  	const u32 *sizep;
+>  	const u64 *basep;
+>  	struct tpm_bios_log *log;
 
-Thanks Stefan !! I think it would be good to also add Fixes in commit 
-description here.
-
-Fixes: d660a91a1b9d (tpm: adds NULL check for securityfs pseudo files)
-
-Thanks & Regards,
-   - Nayna
-
->
-> Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> ---
->   drivers/char/tpm/tpm_eventlog.c | 12 +++++++-----
->   1 file changed, 7 insertions(+), 5 deletions(-)
->
-> diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-> index ebec4ac..fb603a7 100644
-> --- a/drivers/char/tpm/tpm_eventlog.c
-> +++ b/drivers/char/tpm/tpm_eventlog.c
-> @@ -455,10 +455,12 @@ void tpm_bios_log_teardown(struct tpm_chip *chip)
->   	 * This design ensures that open() either safely gets kref or fails.
->   	 */
->   	for (i = (TPM_NUM_EVENT_LOG_FILES - 1); i >= 0; i--) {
-> -		inode = d_inode(chip->bios_dir[i]);
-> -		inode_lock(inode);
-> -		inode->i_private = NULL;
-> -		inode_unlock(inode);
-> -		securityfs_remove(chip->bios_dir[i]);
-> +		if (chip->bios_dir[i]) {
-> +			inode = d_inode(chip->bios_dir[i]);
-> +			inode_lock(inode);
-> +			inode->i_private = NULL;
-> +			inode_unlock(inode);
-> +			securityfs_remove(chip->bios_dir[i]);
-> +		}
->   	}
->   }
->
-
-
-------------------------------------------------------------------------------
+/Jarkko
