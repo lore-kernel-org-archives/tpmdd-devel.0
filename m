@@ -1,7 +1,7 @@
 From: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH 2/4 v2] tpm/tpm2-chip: fix kdoc errors
-Date: Wed, 16 Nov 2016 19:03:39 +0200
-Message-ID: <1479315821-27349-2-git-send-email-tomas.winkler@intel.com>
+Subject: [PATCH 4/4] tpm/vtpm: fix kdoc warnings
+Date: Wed, 16 Nov 2016 19:03:41 +0200
+Message-ID: <1479315821-27349-4-git-send-email-tomas.winkler@intel.com>
 References: <1479315821-27349-1-git-send-email-tomas.winkler@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,268 +20,328 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Jason Gunthor
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Use correct kdoc format, describe correct parameters and return values.
+Use corret kdoc format for function description and eliminate warning
+of type:
+
+tpm_ibmvtpm.c:66: warning: No description found for parameter 'count'
 
 Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 ---
-V2: rework and rebase of tpm_transmit_cmd kdoc fix
+ drivers/char/tpm/tpm_ibmvtpm.c    | 51 +++++++++++++++++++--------------------
+ drivers/char/tpm/tpm_vtpm_proxy.c | 48 +++++++++++++++++++++++++++---------
+ 2 files changed, 61 insertions(+), 38 deletions(-)
 
- drivers/char/tpm/tpm2-cmd.c | 104 ++++++++++++++++++++++++--------------------
- 1 file changed, 57 insertions(+), 47 deletions(-)
-
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index da5b782a9731..6f9eea7eda7a 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -258,11 +258,9 @@ static const struct tpm_input_header tpm2_pcrread_header = {
-  * tpm2_pcr_read() - read a PCR value
-  * @chip:	TPM chip to use.
-  * @pcr_idx:	index of the PCR to read.
-- * @ref_buf:	buffer to store the resulting hash,
-+ * @res_buf:	buffer to store the resulting hash,
-  *
-- * 0 is returned when the operation is successful. If a negative number is
-- * returned it remarks a POSIX error code. If a positive number is returned
-- * it remarks a TPM error.
-+ * Return: same as with tpm_transmit_cmd
-  */
- int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
- {
-@@ -304,13 +302,12 @@ static const struct tpm_input_header tpm2_pcrextend_header = {
+diff --git a/drivers/char/tpm/tpm_ibmvtpm.c b/drivers/char/tpm/tpm_ibmvtpm.c
+index 946025a7413b..bd5da4beb012 100644
+--- a/drivers/char/tpm/tpm_ibmvtpm.c
++++ b/drivers/char/tpm/tpm_ibmvtpm.c
+@@ -40,11 +40,12 @@ MODULE_DEVICE_TABLE(vio, tpm_ibmvtpm_device_table);
  
  /**
-  * tpm2_pcr_extend() - extend a PCR value
+  * ibmvtpm_send_crq - Send a CRQ request
 + *
-  * @chip:	TPM chip to use.
-  * @pcr_idx:	index of the PCR.
-  * @hash:	hash value to use for the extend operation.
+  * @vdev:	vio device struct
+  * @w1:		first word
+  * @w2:		second word
   *
-- * 0 is returned when the operation is successful. If a negative number is
-- * returned it remarks a POSIX error code. If a positive number is returned
-- * it remarks a TPM error.
-+ * Return: same as with tpm_transmit_cmd
-  */
- int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash)
- {
-@@ -348,13 +345,14 @@ static const struct tpm_input_header tpm2_getrandom_header = {
- 
- /**
-  * tpm2_get_random() - get random bytes from the TPM RNG
-+ *
-  * @chip: TPM chip to use
-  * @out: destination buffer for the random bytes
-  * @max: the max number of bytes to write to @out
-  *
-- * 0 is returned when the operation is successful. If a negative number is
-- * returned it remarks a POSIX error code. If a positive number is returned
-- * it remarks a TPM error.
+- * Return value:
 + * Return:
-+ *    size of the output buffer;
-+ *    -EIO on error
+  *	0 -Sucess
+  *	Non-zero - Failure
   */
- int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max)
- {
-@@ -404,15 +402,16 @@ static const struct tpm_input_header tpm2_get_tpm_pt_header = {
- };
+@@ -55,11 +56,12 @@ static int ibmvtpm_send_crq(struct vio_dev *vdev, u64 w1, u64 w2)
  
  /**
-- * Append TPMS_AUTH_COMMAND to the buffer. The buffer must be allocated with
-- * tpm_buf_alloc().
+  * tpm_ibmvtpm_recv - Receive data after send
++ *
+  * @chip:	tpm chip struct
+  * @buf:	buffer to read
+- * count:	size of buffer
++ * @count:	size of buffer
+  *
+- * Return value:
++ * Return:
+  *	Number of bytes read
+  */
+ static int tpm_ibmvtpm_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+@@ -96,11 +98,12 @@ static int tpm_ibmvtpm_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+ 
+ /**
+  * tpm_ibmvtpm_send - Send tpm request
++ *
+  * @chip:	tpm chip struct
+  * @buf:	buffer contains data to send
+- * count:	size of buffer
++ * @count:	size of buffer
+  *
+- * Return value:
++ * Return:
+  *	Number of bytes sent
+  */
+ static int tpm_ibmvtpm_send(struct tpm_chip *chip, u8 *buf, size_t count)
+@@ -172,7 +175,7 @@ static u8 tpm_ibmvtpm_status(struct tpm_chip *chip)
+  * ibmvtpm_crq_get_rtce_size - Send a CRQ request to get rtce size
+  * @ibmvtpm:	vtpm device struct
+  *
+- * Return value:
++ * Return:
+  *	0 - Success
+  *	Non-zero - Failure
+  */
+@@ -199,7 +202,7 @@ static int ibmvtpm_crq_get_rtce_size(struct ibmvtpm_dev *ibmvtpm)
+  *			   - Note that this is vtpm version and not tpm version
+  * @ibmvtpm:	vtpm device struct
+  *
+- * Return value:
++ * Return:
+  *	0 - Success
+  *	Non-zero - Failure
+  */
+@@ -225,7 +228,7 @@ static int ibmvtpm_crq_get_version(struct ibmvtpm_dev *ibmvtpm)
+  * ibmvtpm_crq_send_init_complete - Send a CRQ initialize complete message
+  * @ibmvtpm:	vtpm device struct
+  *
+- * Return value:
++ * Return:
+  *	0 - Success
+  *	Non-zero - Failure
+  */
+@@ -245,7 +248,7 @@ static int ibmvtpm_crq_send_init_complete(struct ibmvtpm_dev *ibmvtpm)
+  * ibmvtpm_crq_send_init - Send a CRQ initialize message
+  * @ibmvtpm:	vtpm device struct
+  *
+- * Return value:
++ * Return:
+  *	0 - Success
+  *	Non-zero - Failure
+  */
+@@ -265,7 +268,7 @@ static int ibmvtpm_crq_send_init(struct ibmvtpm_dev *ibmvtpm)
+  * tpm_ibmvtpm_remove - ibm vtpm remove entry point
+  * @vdev:	vio device struct
+  *
+- * Return value:
++ * Return:
+  *	0
+  */
+ static int tpm_ibmvtpm_remove(struct vio_dev *vdev)
+@@ -303,7 +306,7 @@ static int tpm_ibmvtpm_remove(struct vio_dev *vdev)
+  * tpm_ibmvtpm_get_desired_dma - Get DMA size needed by this driver
+  * @vdev:	vio device struct
+  *
+- * Return value:
++ * Return:
+  *	Number of bytes the driver needs to DMA map
+  */
+ static unsigned long tpm_ibmvtpm_get_desired_dma(struct vio_dev *vdev)
+@@ -325,7 +328,7 @@ static unsigned long tpm_ibmvtpm_get_desired_dma(struct vio_dev *vdev)
+  * tpm_ibmvtpm_suspend - Suspend
+  * @dev:	device struct
+  *
+- * Return value:
++ * Return:
+  *	0
+  */
+ static int tpm_ibmvtpm_suspend(struct device *dev)
+@@ -352,7 +355,7 @@ static int tpm_ibmvtpm_suspend(struct device *dev)
+  * ibmvtpm_reset_crq - Reset CRQ
+  * @ibmvtpm:	ibm vtpm struct
+  *
+- * Return value:
++ * Return:
+  *	0 - Success
+  *	Non-zero - Failure
+  */
+@@ -378,7 +381,7 @@ static int ibmvtpm_reset_crq(struct ibmvtpm_dev *ibmvtpm)
+  * tpm_ibmvtpm_resume - Resume from suspend
+  * @dev:	device struct
+  *
+- * Return value:
++ * Return:
+  *	0
+  */
+ static int tpm_ibmvtpm_resume(struct device *dev)
+@@ -434,10 +437,10 @@ static const struct dev_pm_ops tpm_ibmvtpm_pm_ops = {
+ 
+ /**
+  * ibmvtpm_crq_get_next - Get next responded crq
+- * @ibmvtpm	vtpm device struct
+  *
+- * Return value:
+- *	vtpm crq pointer
++ * @ibmvtpm:	vtpm device struct
++ *
++ * Return: vtpm crq pointer or NULL
+  */
+ static struct ibmvtpm_crq *ibmvtpm_crq_get_next(struct ibmvtpm_dev *ibmvtpm)
+ {
+@@ -455,11 +458,10 @@ static struct ibmvtpm_crq *ibmvtpm_crq_get_next(struct ibmvtpm_dev *ibmvtpm)
+ 
+ /**
+  * ibmvtpm_crq_process - Process responded crq
+- * @crq		crq to be processed
+- * @ibmvtpm	vtpm device struct
+  *
+- * Return value:
+- *	Nothing
++ * @crq:	crq to be processed
++ * @ibmvtpm:	vtpm device struct
++ *
+  */
+ static void ibmvtpm_crq_process(struct ibmvtpm_crq *crq,
+ 				struct ibmvtpm_dev *ibmvtpm)
+@@ -557,7 +559,7 @@ static irqreturn_t ibmvtpm_interrupt(int irq, void *vtpm_instance)
+  * @vio_dev:	vio device struct
+  * @id:		vio device id struct
+  *
+- * Return value:
++ * Return:
+  *	0 - Success
+  *	Non-zero - Failure
+  */
+@@ -673,7 +675,7 @@ static struct vio_driver ibmvtpm_driver = {
+ /**
+  * ibmvtpm_module_init - Initialize ibm vtpm module
+  *
+- * Return value:
++ * Return:
+  *	0 -Success
+  *	Non-zero - Failure
+  */
+@@ -684,9 +686,6 @@ static int __init ibmvtpm_module_init(void)
+ 
+ /**
+  * ibmvtpm_module_exit - Teardown ibm vtpm module
 - *
-- * @param buf: an allocated tpm_buf instance
-- * @param nonce: the session nonce, may be NULL if not used
-- * @param nonce_len: the session nonce length, may be 0 if not used
-- * @param attributes: the session attributes
-- * @param hmac: the session HMAC or password, may be NULL if not used
-- * @param hmac_len: the session HMAC or password length, maybe 0 if not used
-+ * tpm_buf_alloc() - Append TPMS_AUTH_COMMAND to the buffer.
-+ *      The buffer must be allocated with
-+ *
-+ * @buf: an allocated tpm_buf instance
-+ * @session_handle: session handle
-+ * @nonce: the session nonce, may be NULL if not used
-+ * @nonce_len: the session nonce length, may be 0 if not used
-+ * @attributes: the session attributes
-+ * @hmac: the session HMAC or password, may be NULL if not used
-+ * @hmac_len: the session HMAC or password length, maybe 0 if not used
+- * Return value:
+- *	Nothing
   */
- static void tpm2_buf_append_auth(struct tpm_buf *buf, u32 session_handle,
- 				 const u8 *nonce, u16 nonce_len,
-@@ -435,7 +434,8 @@ static void tpm2_buf_append_auth(struct tpm_buf *buf, u32 session_handle,
- 
- /**
-  * tpm2_seal_trusted() - seal the payload of a trusted key
-- * @chip_num: TPM chip to use
-+ *
-+ * @chip: TPM chip to use
-  * @payload: the key data in clear and encrypted form
-  * @options: authentication values and other options
-  *
-@@ -540,11 +540,17 @@ int tpm2_seal_trusted(struct tpm_chip *chip,
- 
- /**
-  * tpm2_load_cmd() - execute a TPM2_Load command
-- * @chip_num: TPM chip to use
-+ *
-+ * @chip: TPM chip to use
-  * @payload: the key data in clear and encrypted form
-  * @options: authentication values and other options
-+ * @blob_handle: returned blob handle
-+ * @flags: tpm transmit flags
-  *
-- * Return: same as with tpm_transmit_cmd
-+ * Return: 0 on success
-+ *        -E2BIG on wrong payload size
-+ *        -EPERM on tpm error status
-+ *        < 0 error from tpm_transmit_cmd
-  */
- static int tpm2_load_cmd(struct tpm_chip *chip,
- 			 struct trusted_key_payload *payload,
-@@ -600,9 +606,10 @@ static int tpm2_load_cmd(struct tpm_chip *chip,
- 
- /**
-  * tpm2_flush_context_cmd() - execute a TPM2_FlushContext command
-- * @chip_num: TPM chip to use
-- * @payload: the key data in clear and encrypted form
-- * @options: authentication values and other options
-+ *
-+ * @chip: TPM chip to use
-+ * @handle: the key data in clear and encrypted form
-+ * @flags: tpm transmit flags
-  *
-  * Return: same as with tpm_transmit_cmd
-  */
-@@ -632,11 +639,16 @@ static void tpm2_flush_context_cmd(struct tpm_chip *chip, u32 handle,
- 
- /**
-  * tpm2_unseal_cmd() - execute a TPM2_Unload command
-- * @chip_num: TPM chip to use
-+ *
-+ * @chip: TPM chip to use
-  * @payload: the key data in clear and encrypted form
-  * @options: authentication values and other options
-+ * @blob_handle: blob handle
-+ * @flags: tpm_transmit_cmd flags
-  *
-- * Return: same as with tpm_transmit_cmd
-+ * Return: 0 on success
-+ *         -EPERM on tpm error status
-+ *         < 0 error from tpm_transmit_cmd
-  */
- static int tpm2_unseal_cmd(struct tpm_chip *chip,
- 			   struct trusted_key_payload *payload,
-@@ -681,11 +693,12 @@ static int tpm2_unseal_cmd(struct tpm_chip *chip,
- 
- /**
-  * tpm2_unseal_trusted() - unseal the payload of a trusted key
-- * @chip_num: TPM chip to use
-+ *
-+ * @chip: TPM chip to use
-  * @payload: the key data in clear and encrypted form
-  * @options: authentication values and other options
-  *
-- * Return: < 0 on error and 0 on success.
-+ * Return: same as with tpm_transmit_cmd
-  */
- int tpm2_unseal_trusted(struct tpm_chip *chip,
- 			struct trusted_key_payload *payload,
-@@ -715,9 +728,7 @@ int tpm2_unseal_trusted(struct tpm_chip *chip,
-  * @value:		output variable.
-  * @desc:		passed to tpm_transmit_cmd()
-  *
-- * 0 is returned when the operation is successful. If a negative number is
-- * returned it remarks a POSIX error code. If a positive number is returned
-- * it remarks a TPM error.
-+ * Return: same as with tpm_transmit_cmd
-  */
- ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,  u32 *value,
- 			const char *desc)
-@@ -750,13 +761,12 @@ static const struct tpm_input_header tpm2_startup_header = {
- 
- /**
-  * tpm2_startup() - send startup command to the TPM chip
-+ *
-  * @chip:		TPM chip to use.
-- * @startup_type	startup type. The value is either
-+ * @startup_type:	startup type. The value is either
-  *			TPM_SU_CLEAR or TPM_SU_STATE.
-  *
-- * 0 is returned when the operation is successful. If a negative number is
-- * returned it remarks a POSIX error code. If a positive number is returned
-- * it remarks a TPM error.
-+ * Return: same as with tpm_transmit_cmd
-  */
- static int tpm2_startup(struct tpm_chip *chip, u16 startup_type)
+ static void __exit ibmvtpm_module_exit(void)
  {
-@@ -781,8 +791,9 @@ static const struct tpm_input_header tpm2_shutdown_header = {
- 
+diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
+index 3d6f6ca81def..f973d8840e07 100644
+--- a/drivers/char/tpm/tpm_vtpm_proxy.c
++++ b/drivers/char/tpm/tpm_vtpm_proxy.c
+@@ -64,7 +64,12 @@ static void vtpm_proxy_delete_device(struct proxy_dev *proxy_dev);
  /**
-  * tpm2_shutdown() - send shutdown command to the TPM chip
+  * vtpm_proxy_fops_read - Read TPM commands on 'server side'
+  *
+- * Return value:
++ * @filp: file pointer
++ * @buf: read buffer
++ * @count: number of bytes to read
++ * @off: offset
 + *
-  * @chip:		TPM chip to use.
-- * @shutdown_type	shutdown type. The value is either
-+ * @shutdown_type:	shutdown type. The value is either
-  *			TPM_SU_CLEAR or TPM_SU_STATE.
++ * Return:
+  *	Number of bytes read or negative error code
   */
- void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type)
-@@ -805,12 +816,11 @@ void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type)
+ static ssize_t vtpm_proxy_fops_read(struct file *filp, char __user *buf,
+@@ -114,7 +119,12 @@ static ssize_t vtpm_proxy_fops_read(struct file *filp, char __user *buf,
+ /**
+  * vtpm_proxy_fops_write - Write TPM responses on 'server side'
+  *
+- * Return value:
++ * @filp: file pointer
++ * @buf: write buffer
++ * @count: number of bytes to write
++ * @off: offset
++ *
++ * Return:
+  *	Number of bytes read or negative error value
+  */
+ static ssize_t vtpm_proxy_fops_write(struct file *filp, const char __user *buf,
+@@ -154,10 +164,12 @@ static ssize_t vtpm_proxy_fops_write(struct file *filp, const char __user *buf,
+ }
  
  /*
-  * tpm2_calc_ordinal_duration() - maximum duration for a command
+- * vtpm_proxy_fops_poll: Poll status on 'server side'
++ * vtpm_proxy_fops_poll - Poll status on 'server side'
 + *
-  * @chip:	TPM chip to use.
-  * @ordinal:	command code number.
++ * @filp: file pointer
++ * @wait: poll table
   *
-- * 0 is returned when the operation is successful. If a negative number is
-- * returned it remarks a POSIX error code. If a positive number is returned
-- * it remarks a TPM error.
-+ * Return: maximum duration for a command
+- * Return value:
+- *      Poll flags
++ * Return: Poll flags
   */
- unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal)
+ static unsigned int vtpm_proxy_fops_poll(struct file *filp, poll_table *wait)
  {
-@@ -842,13 +852,12 @@ static const struct tpm_input_header tpm2_selftest_header = {
+@@ -184,6 +196,8 @@ static unsigned int vtpm_proxy_fops_poll(struct file *filp, poll_table *wait)
+ /*
+  * vtpm_proxy_fops_open - Open vTPM device on 'server side'
+  *
++ * @filp: file pointer
++ *
+  * Called when setting up the anonymous file descriptor
+  */
+ static void vtpm_proxy_fops_open(struct file *filp)
+@@ -195,8 +209,9 @@ static void vtpm_proxy_fops_open(struct file *filp)
  
  /**
-  * tpm2_continue_selftest() - start a self test
-+ *
-  * @chip: TPM chip to use
-  * @full: test all commands instead of testing only those that were not
-  *        previously tested.
+  * vtpm_proxy_fops_undo_open - counter-part to vtpm_fops_open
++ *       Call to undo vtpm_proxy_fops_open
   *
-- * 0 is returned when the operation is successful. If a negative number is
-- * returned it remarks a POSIX error code. If a positive number is returned
-- * it remarks a TPM error.
-+ * Return: same as with tpm_transmit_cmd with exception of RC_TESTING
+- * Call to undo vtpm_proxy_fops_open
++ *@proxy_dev: tpm proxy device
   */
- static int tpm2_start_selftest(struct tpm_chip *chip, bool full)
+ static void vtpm_proxy_fops_undo_open(struct proxy_dev *proxy_dev)
  {
-@@ -874,14 +883,13 @@ static int tpm2_start_selftest(struct tpm_chip *chip, bool full)
+@@ -211,9 +226,11 @@ static void vtpm_proxy_fops_undo_open(struct proxy_dev *proxy_dev)
+ }
  
- /**
-  * tpm2_do_selftest() - run a full self test
-+ *
-  * @chip: TPM chip to use
+ /*
+- * vtpm_proxy_fops_release: Close 'server side'
++ * vtpm_proxy_fops_release - Close 'server side'
   *
-+ * Return: same as with tpm_transmit_cmd
-+ *
-  * During the self test TPM2 commands return with the error code RC_TESTING.
-  * Waiting is done by issuing PCR read until it executes successfully.
-- *
-- * 0 is returned when the operation is successful. If a negative number is
-- * returned it remarks a POSIX error code. If a positive number is returned
-- * it remarks a TPM error.
+- * Return value:
++ * @inode: inode
++ * @filp: file pointer
++ * Return:
+  *      Always returns 0.
   */
- static int tpm2_do_selftest(struct tpm_chip *chip)
- {
-@@ -928,6 +936,8 @@ static int tpm2_do_selftest(struct tpm_chip *chip)
-  * tpm2_probe() - probe TPM 2.0
-  * @chip: TPM chip to use
+ static int vtpm_proxy_fops_release(struct inode *inode, struct file *filp)
+@@ -244,7 +261,10 @@ static const struct file_operations vtpm_proxy_fops = {
+ /*
+  * Called when core TPM driver reads TPM responses from 'server side'
   *
-+ * Return: < 0 error and 0 on success.
-+ *
-  * Send idempotent TPM 2.0 command and see whether TPM 2.0 chip replied based on
-  * the reply tag.
+- * Return value:
++ * @chip: tpm chip to use
++ * @buf: receive buffer
++ * @count: bytes to read
++ * Return:
+  *      Number of TPM response bytes read, negative error value otherwise
   */
+ static int vtpm_proxy_tpm_op_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+@@ -281,7 +301,11 @@ static int vtpm_proxy_tpm_op_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+ /*
+  * Called when core TPM driver forwards TPM requests to 'server side'.
+  *
+- * Return value:
++ * @chip: tpm chip to use
++ * @buf: send buffer
++ * @count: bytes to send
++ *
++ * Return:
+  *      0 in case of success, negative error value otherwise.
+  */
+ static int vtpm_proxy_tpm_op_send(struct tpm_chip *chip, u8 *buf, size_t count)
+@@ -444,7 +468,7 @@ static inline void vtpm_proxy_delete_proxy_dev(struct proxy_dev *proxy_dev)
+ /*
+  * Create a /dev/tpm%d and 'server side' file descriptor pair
+  *
+- * Return value:
++ * Return:
+  *      Returns file pointer on success, an error value otherwise
+  */
+ static struct file *vtpm_proxy_create_device(
+@@ -572,7 +596,7 @@ static long vtpmx_ioc_new_dev(struct file *file, unsigned int ioctl,
+ /*
+  * vtpmx_fops_ioctl: ioctl on /dev/vtpmx
+  *
+- * Return value:
++ * Return:
+  *      Returns 0 on success, a negative error code otherwise.
+  */
+ static long vtpmx_fops_ioctl(struct file *f, unsigned int ioctl,
 -- 
 2.7.4
 
