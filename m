@@ -1,12 +1,14 @@
 From: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH 1/4] tpm: add kdoc for tpm_transmit and
-	tpm_transmit_cmd
-Date: Wed, 16 Nov 2016 19:03:38 +0200
-Message-ID: <1479315821-27349-1-git-send-email-tomas.winkler@intel.com>
+Subject: [PATCH 3/4 v2] tmp: use pdev for parent device in
+	tpm_chip_alloc
+Date: Wed, 16 Nov 2016 19:03:40 +0200
+Message-ID: <1479315821-27349-3-git-send-email-tomas.winkler@intel.com>
+References: <1479315821-27349-1-git-send-email-tomas.winkler@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1479315821-27349-1-git-send-email-tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,72 +21,56 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Jason Gunthor
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Functions tpm_transmit and transmit_cmd are referenced
-from other functions kdoc hence deserve documentation.
+The tpm stack uses pdev name convention for the parent device.
+Fix that also in tpm_chip_alloc().
 
+Fixes: 3897cd9c8d1d ("tpm: Split out the devm stuff from tpmm_chip_alloc")'
 Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 ---
- drivers/char/tpm/tpm-interface.c | 33 ++++++++++++++++++++++++++++-----
- 1 file changed, 28 insertions(+), 5 deletions(-)
+Resend.
+ drivers/char/tpm/tpm-chip.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index a2688ac2b48f..56c238a6e005 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -328,8 +328,17 @@ unsigned long tpm_calc_ordinal_duration(struct tpm_chip *chip,
- }
- EXPORT_SYMBOL_GPL(tpm_calc_ordinal_duration);
- 
--/*
-- * Internal kernel interface to transmit TPM commands
-+/**
-+ * tmp_transmit - Internal kernel interface to transmit TPM commands.
-+ *
-+ * @chip: TPM chip to use
-+ * @buf: TPM command buffer
-+ * @bufsiz: length of the TPM command buffer
-+ * @flags: tpm transmit flags - bitmap
-+ *
-+ * Return:
-+ *     0 when the operation is successful
-+ *     A negative number for system errors (errno)
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 3f27753d96aa..9e36a7f21a6e 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -141,7 +141,7 @@ static void tpm_dev_release(struct device *dev)
+  * Allocates a new struct tpm_chip instance and assigns a free
+  * device number for it. Must be paired with put_device(&chip->dev).
   */
- ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
- 		     unsigned int flags)
-@@ -409,9 +418,21 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
- 	return rc;
- }
- 
--#define TPM_DIGEST_SIZE 20
--#define TPM_RET_CODE_IDX 6
--
-+/**
-+ * tmp_transmit_cmd - send a tpm command to the device
-+ *    The function extracts tpm out header return code
-+ *
-+ * @chip: TPM chip to use
-+ * @cmd: TPM command buffer
-+ * @len: length of the TPM command
-+ * @flags: tpm transmit flags - bitmap
-+ * @desc: command description used in the error message
-+ *
-+ * Return:
-+ *     0 when the operation is successful
-+ *     A negative number for system errors (errno)
-+ *     A positive number for a TPM error.
-+ */
- ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd,
- 			 int len, unsigned int flags, const char *desc)
+-struct tpm_chip *tpm_chip_alloc(struct device *dev,
++struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+ 				const struct tpm_class_ops *ops)
  {
-@@ -434,6 +455,8 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd,
- 	return err;
- }
+ 	struct tpm_chip *chip;
+@@ -160,7 +160,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
+ 	rc = idr_alloc(&dev_nums_idr, NULL, 0, TPM_NUM_DEVICES, GFP_KERNEL);
+ 	mutex_unlock(&idr_lock);
+ 	if (rc < 0) {
+-		dev_err(dev, "No available tpm device numbers\n");
++		dev_err(pdev, "No available tpm device numbers\n");
+ 		kfree(chip);
+ 		return ERR_PTR(rc);
+ 	}
+@@ -170,7 +170,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
  
-+#define TPM_DIGEST_SIZE 20
-+#define TPM_RET_CODE_IDX 6
- #define TPM_INTERNAL_RESULT_SIZE 200
- #define TPM_ORD_GET_CAP cpu_to_be32(101)
- #define TPM_ORD_GET_RANDOM cpu_to_be32(70)
+ 	chip->dev.class = tpm_class;
+ 	chip->dev.release = tpm_dev_release;
+-	chip->dev.parent = dev;
++	chip->dev.parent = pdev;
+ 	chip->dev.groups = chip->groups;
+ 
+ 	if (chip->dev_num == 0)
+@@ -182,7 +182,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
+ 	if (rc)
+ 		goto out;
+ 
+-	if (!dev)
++	if (!pdev)
+ 		chip->flags |= TPM_CHIP_FLAG_VIRTUAL;
+ 
+ 	cdev_init(&chip->cdev, &tpm_fops);
 -- 
 2.7.4
 
