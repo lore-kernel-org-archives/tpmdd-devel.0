@@ -1,58 +1,32 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: Check the bios_dir entry for NULL
- before accessing it
-Date: Wed, 16 Nov 2016 14:08:54 -0800
-Message-ID: <20161116220854.4yrr7rajc2hhs6yw@intel.com>
-References: <1479304573-13601-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<20161116203853.GA22708@obsidianresearch.com>
-	<20161116220633.yfvpnvps3e222527@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH] tpm: drop chip->is_open and chip->duration_adjusted
+Date: Wed, 16 Nov 2016 14:54:12 -0800
+Message-ID: <20161116225412.gzvw7f5snnovk7na@intel.com>
+References: <20161114234500.24839-1-jarkko.sakkinen@linux.intel.com>
+ <20161115043001.GA22482@obsidianresearch.com>
+ <20161115051106.u2xoduwf2kpcznv3@intel.com>
+ <20161116052832.GB6044@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20161116220633.yfvpnvps3e222527-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <20161116052832.GB6044@obsidianresearch.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Christophe Ricard <christophe.ricard@gmail.com>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Nov 16, 2016 at 02:06:33PM -0800, Jarkko Sakkinen wrote:
-> On Wed, Nov 16, 2016 at 01:38:53PM -0700, Jason Gunthorpe wrote:
-> > On Wed, Nov 16, 2016 at 08:56:13AM -0500, Stefan Berger wrote:
-> > > Check the bios_dir entry for NULL before accessing it. Currently
-> > > this crashes the driver when a TPM 2 is attached and the entries
-> > > are NULL.
-> > 
-> > Yep
-> > 
-> > >  	for (i = (TPM_NUM_EVENT_LOG_FILES - 1); i >= 0; i--) {
-> > > -		inode = d_inode(chip->bios_dir[i]);
-> > > -		inode_lock(inode);
-> > > -		inode->i_private = NULL;
-> > > -		inode_unlock(inode);
-> > > -		securityfs_remove(chip->bios_dir[i]);
-> > > +		if (chip->bios_dir[i]) {
-> > 
-> > Nope, this must be is_err_or_null, we store err ptrs in this array.
+On Tue, Nov 15, 2016 at 10:28:32PM -0700, Jason Gunthorpe wrote:
+> On Mon, Nov 14, 2016 at 09:11:54PM -0800, Jarkko Sakkinen wrote:
 > 
-> "
-> err:
->         chip->bios_dir[cnt] = NULL;
-> "
+> > How strong is your opposition here? I do not see any exceptional damage
+> > done but see some subtle but still significant benefits.
 > 
-> There is assignment to NULL so this should be fine.
+> It seems OK, but I never like seeing locking made less clear - this
+> should be manageable, and there isn't a performance concern with tpm
+> either..
 
-Applied. Not yet squashed. I'll save that for the next week and possible
-other squashes to the point when I prepare the pull request.
+OK good to hear. I'm using this as part of my RM patch set. Just wanted
+to get some feedback for this patch. Not for the next rel.
 
 /Jarkko
-
-------------------------------------------------------------------------------
