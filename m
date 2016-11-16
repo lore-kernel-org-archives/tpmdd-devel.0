@@ -1,27 +1,56 @@
-From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [PATCH] tpm: drop chip->is_open and chip->duration_adjusted
-Date: Tue, 15 Nov 2016 22:28:32 -0700
-Message-ID: <20161116052832.GB6044@obsidianresearch.com>
-References: <20161114234500.24839-1-jarkko.sakkinen@linux.intel.com>
- <20161115043001.GA22482@obsidianresearch.com>
- <20161115051106.u2xoduwf2kpcznv3@intel.com>
+From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH] tpm: Check the bios_dir entry for NULL before
+	accessing it
+Date: Wed, 16 Nov 2016 08:56:13 -0500
+Message-ID: <1479304573-13601-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20161115051106.u2xoduwf2kpcznv3@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Christophe Ricard <christophe.ricard@gmail.com>, open list <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Nov 14, 2016 at 09:11:54PM -0800, Jarkko Sakkinen wrote:
+Check the bios_dir entry for NULL before accessing it. Currently
+this crashes the driver when a TPM 2 is attached and the entries
+are NULL.
 
-> How strong is your opposition here? I do not see any exceptional damage
-> done but see some subtle but still significant benefits.
+Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+---
+ drivers/char/tpm/tpm_eventlog.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
 
-It seems OK, but I never like seeing locking made less clear - this
-should be manageable, and there isn't a performance concern with tpm
-either..
+diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+index ebec4ac..fb603a7 100644
+--- a/drivers/char/tpm/tpm_eventlog.c
++++ b/drivers/char/tpm/tpm_eventlog.c
+@@ -455,10 +455,12 @@ void tpm_bios_log_teardown(struct tpm_chip *chip)
+ 	 * This design ensures that open() either safely gets kref or fails.
+ 	 */
+ 	for (i = (TPM_NUM_EVENT_LOG_FILES - 1); i >= 0; i--) {
+-		inode = d_inode(chip->bios_dir[i]);
+-		inode_lock(inode);
+-		inode->i_private = NULL;
+-		inode_unlock(inode);
+-		securityfs_remove(chip->bios_dir[i]);
++		if (chip->bios_dir[i]) {
++			inode = d_inode(chip->bios_dir[i]);
++			inode_lock(inode);
++			inode->i_private = NULL;
++			inode_unlock(inode);
++			securityfs_remove(chip->bios_dir[i]);
++		}
+ 	}
+ }
+-- 
+2.4.3
 
-Jason
+
+------------------------------------------------------------------------------
