@@ -1,19 +1,20 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH RFC 2/2] tpm: refactor tpm2_get_tpm_pt to
- tpm2_getcap_cmd
-Date: Thu, 17 Nov 2016 09:42:41 -0800
-Message-ID: <20161117174241.wvyd7g5lj4ibfnry@intel.com>
-References: <1476008057-2395-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<1476008057-2395-3-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<58254759.80406@linux.vnet.ibm.com>
-	<20161112000242.63hgv5ujmkr7hy6a@intel.com>
-	<582D998C.40605@linux.vnet.ibm.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH] tpm: vtpm_proxy: Do not access host's
+	event log
+Date: Thu, 17 Nov 2016 11:10:06 -0700
+Message-ID: <20161117181006.GA26039@obsidianresearch.com>
+References: <1479306245-14456-1-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20161116153731.pmmnxiai7ouuj6qf@intel.com>
+	<3a38ddc6-1758-ae82-3df3-9cc55906880d@linux.vnet.ibm.com>
+	<65f392b6-5141-c726-dacb-a1649ea215de@linux.vnet.ibm.com>
+	<20161116200759.GA19593@obsidianresearch.com>
+	<ef1f954d-fc52-0522-01f7-b0e31ea14c59@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <582D998C.40605-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <ef1f954d-fc52-0522-01f7-b0e31ea14c59-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,30 +23,50 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Nov 17, 2016 at 05:20:36PM +0530, Nayna wrote:
- 
-> I tested this for capability TPM2_CAP_PCRS. It seems TPM2_CAP_PCRS
-> capability always returns full PCR allocation, and more_data as 0, So, I
-> think the idea of looping over based on more_data may not work for this
-> capability.
+1;2802;0cOn Thu, Nov 17, 2016 at 07:35:05AM -0500, Stefan Berger wrote:
+> I ran the vtpm driver test suite (with -j32) a few times at that patch and
+> it didn't crash. It crashes severely with later patches applied. Here's the
+> current experimental patch that fixes these problems:
 
-You can always request one value at a time until there's no more.
+I can't see how setting owner has any bearing on this.. I also don't
+see why it should ever fail at all... It would be great to get a root
+cause here - could it be memory corruption????
 
-If you request N values, depending on the hardware, the hardware returns
-to you anything from 1 to N values. If you implement a function that
-requests N values in the command, you *must* handle the case where
-moreData is 1 even if the hardware you are testing that never happens.
+Getting a really bad feeling from this  :(
 
-That's the reason why I would start with a function that you request one
-property of one capability and optimize it in future if it doesn't scale
-for some workload.
+> iff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
+> index 0cb43ef..a73295a 100644
+> +++ b/drivers/char/tpm/tpm_acpi.c
+> @@ -56,6 +56,9 @@ int tpm_read_log_acpi(struct tpm_chip *chip)
+> 
+>      log = &chip->log;
+> 
+> +    if (!chip->acpi_dev_handle)
+> +        return 0;
+> +
+> 
+> // So ACPI is not supported on this device, but ACPI support is compiled in.
+> I am returning 0 here, assuming it's not an OF device and the corresponding
+> OF function need not be called (see below).
 
-Do you have a workload where it doesn't scale?
+Return -ENODEV
 
-/Jarkko
+> +    if (!(chip->flags & TPM_CHIP_FLAG_VIRTUAL))
+> +        rc = tpm_read_log_of(chip);
+> 
+> // I am not sure how to handle this case, in case we get here, which would
+> only be on an OF device (following 'return 0;' above), but we don't want to
+> attempt to read the log there, either. I think the most straight-forward way
+> would be to gate this whole function with a flag that only the vtpm proxy
+> driver has: TPM_CHIP_FLAG_NO_FIRMWARE_LOG.
+
+OF is already fine, it checks chip->dev.parent->of_node so it will
+exit properly for vtpm, no need for this.
+
+Jason
 
 ------------------------------------------------------------------------------
