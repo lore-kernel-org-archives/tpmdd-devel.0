@@ -1,17 +1,18 @@
-From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH RFC 2/2] tpm: refactor tpm2_get_tpm_pt to
- tpm2_getcap_cmd
-Date: Thu, 17 Nov 2016 17:20:36 +0530
-Message-ID: <582D998C.40605@linux.vnet.ibm.com>
-References: <1476008057-2395-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<1476008057-2395-3-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<58254759.80406@linux.vnet.ibm.com>
-	<20161112000242.63hgv5ujmkr7hy6a@intel.com>
+From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH] tpm: vtpm_proxy: Do not access host's
+	event log
+Date: Thu, 17 Nov 2016 07:35:05 -0500
+Message-ID: <ef1f954d-fc52-0522-01f7-b0e31ea14c59@linux.vnet.ibm.com>
+References: <1479306245-14456-1-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20161116153731.pmmnxiai7ouuj6qf@intel.com>
+	<3a38ddc6-1758-ae82-3df3-9cc55906880d@linux.vnet.ibm.com>
+	<65f392b6-5141-c726-dacb-a1649ea215de@linux.vnet.ibm.com>
+	<20161116200759.GA19593@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20161112000242.63hgv5ujmkr7hy6a-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20161116200759.GA19593-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,174 +21,90 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On 11/16/2016 03:07 PM, Jason Gunthorpe wrote:
+> On Wed, Nov 16, 2016 at 12:07:23PM -0500, Stefan Berger wrote:
+>> The culprit seems to be 'tpm: fix the missing .owner in
+>> tpm_bios_measurements_ops'
+> That is unlikely, it is probably the patch before which calls read_log
+> unconditionally now. That suggests the crashing is a little random..
+
+I ran the vtpm driver test suite (with -j32) a few times at that patch 
+and it didn't crash. It crashes severely with later patches applied. 
+Here's the current experimental patch that fixes these problems:
+
+iff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
+index 0cb43ef..a73295a 100644
+--- a/drivers/char/tpm/tpm_acpi.c
++++ b/drivers/char/tpm/tpm_acpi.c
+@@ -56,6 +56,9 @@ int tpm_read_log_acpi(struct tpm_chip *chip)
+
+      log = &chip->log;
+
++    if (!chip->acpi_dev_handle)
++        return 0;
++
+
+// So ACPI is not supported on this device, but ACPI support is compiled 
+in. I am returning 0 here, assuming it's not an OF device and the 
+corresponding OF function need not be called (see below).
+
+      /* Find TCPA entry in RSDT (ACPI_LOGICAL_ADDRESSING) */
+      status = acpi_get_table(ACPI_SIG_TCPA, 1,
+                  (struct acpi_table_header **)&buff);
+diff --git a/drivers/char/tpm/tpm_eventlog.c 
+b/drivers/char/tpm/tpm_eventlog.c
+index fb603a7..12b0356 100644
+--- a/drivers/char/tpm/tpm_eventlog.c
++++ b/drivers/char/tpm/tpm_eventlog.c
+@@ -380,7 +380,8 @@ static int tpm_read_log(struct tpm_chip *chip)
+      if ((rc == 0) || (rc == -ENOMEM))
+          return rc;
+
+-    rc = tpm_read_log_of(chip);
++    if (!(chip->flags & TPM_CHIP_FLAG_VIRTUAL))
++        rc = tpm_read_log_of(chip);
+
+// I am not sure how to handle this case, in case we get here, which 
+would only be on an OF device (following 'return 0;' above), but we 
+don't want to attempt to read the log there, either. I think the most 
+straight-forward way would be to gate this whole function with a flag 
+that only the vtpm proxy driver has: TPM_CHIP_FLAG_NO_FIRMWARE_LOG.
+
+      return rc;
 
 
-On 11/12/2016 05:32 AM, Jarkko Sakkinen wrote:
-> On Fri, Nov 11, 2016 at 09:51:45AM +0530, Nayna wrote:
->>
->>
->> On 10/09/2016 03:44 PM, Jarkko Sakkinen wrote:
->>> Refactored tpm2_get_tpm_pt to tpm2_getcap_cmd, which means that it also
->>> takes capability ID as input. This is required to access
->>> TPM_CAP_HANDLES, which contains metadata needed for swapping transient
->>> data.
->>>
->>> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
->>> ---
->>>    drivers/char/tpm/tpm.h          |  6 +++-
->>>    drivers/char/tpm/tpm2-cmd.c     | 64 ++++++++++++++++++++---------------------
->>>    drivers/char/tpm/tpm_tis_core.c |  3 +-
->>>    3 files changed, 38 insertions(+), 35 deletions(-)
->>>
->>> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
->>> index 0fab6d5..8176f42 100644
->>> --- a/drivers/char/tpm/tpm.h
->>> +++ b/drivers/char/tpm/tpm.h
->>> @@ -85,6 +85,10 @@ enum tpm2_capabilities {
->>>    	TPM2_CAP_TPM_PROPERTIES = 6,
->>>    };
->>>
->>> +enum tpm2_properties {
->>> +	TPM2_PT_FAMILY_INDICATOR	= 0x100,
->>> +};
->>> +
->>>    enum tpm2_startup_types {
->>>    	TPM2_SU_CLEAR	= 0x0000,
->>>    	TPM2_SU_STATE	= 0x0001,
->>> @@ -485,7 +489,7 @@ int tpm2_seal_trusted(struct tpm_chip *chip,
->>>    int tpm2_unseal_trusted(struct tpm_chip *chip,
->>>    			struct trusted_key_payload *payload,
->>>    			struct trusted_key_options *options);
->>> -ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,
->>> +ssize_t tpm2_getcap_cmd(struct tpm_chip *chip, u32 cap_id, u32 property_id,
->>>    			u32 *value, const char *desc);
->>>
->>>    int tpm2_auto_startup(struct tpm_chip *chip);
->>> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
->>> index 2900e18..fcf3d86 100644
->>> --- a/drivers/char/tpm/tpm2-cmd.c
->>> +++ b/drivers/char/tpm/tpm2-cmd.c
->>> @@ -111,13 +111,13 @@ struct tpm2_pcr_extend_in {
->>>    	u8				digest[TPM_DIGEST_SIZE];
->>>    } __packed;
->>>
->>> -struct tpm2_get_tpm_pt_in {
->>> +struct tpm2_getcap_in {
->>>    	__be32	cap_id;
->>>    	__be32	property_id;
->>>    	__be32	property_cnt;
->>>    } __packed;
->>>
->>> -struct tpm2_get_tpm_pt_out {
->>> +struct tpm2_getcap_out {
->>>    	u8	more_data;
->>>    	__be32	subcap_id;
->>>    	__be32	property_cnt;
->>> @@ -140,8 +140,8 @@ union tpm2_cmd_params {
->>>    	struct	tpm2_pcr_read_in	pcrread_in;
->>>    	struct	tpm2_pcr_read_out	pcrread_out;
->>>    	struct	tpm2_pcr_extend_in	pcrextend_in;
->>> -	struct	tpm2_get_tpm_pt_in	get_tpm_pt_in;
->>> -	struct	tpm2_get_tpm_pt_out	get_tpm_pt_out;
->>> +	struct	tpm2_getcap_in		getcap_in;
->>> +	struct	tpm2_getcap_out		getcap_out;
->>>    	struct	tpm2_get_random_in	getrandom_in;
->>>    	struct	tpm2_get_random_out	getrandom_out;
->>>    };
->>> @@ -435,16 +435,6 @@ int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max)
->>>    	return total ? total : -EIO;
->>>    }
->>>
->>> -#define TPM2_GET_TPM_PT_IN_SIZE \
->>> -	(sizeof(struct tpm_input_header) + \
->>> -	 sizeof(struct tpm2_get_tpm_pt_in))
->>> -
->>> -static const struct tpm_input_header tpm2_get_tpm_pt_header = {
->>> -	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
->>> -	.length = cpu_to_be32(TPM2_GET_TPM_PT_IN_SIZE),
->>> -	.ordinal = cpu_to_be32(TPM2_CC_GET_CAPABILITY)
->>> -};
->>> -
->>>    /**
->>>     * Append TPMS_AUTH_COMMAND to the buffer. The buffer must be allocated with
->>>     * tpm_buf_alloc().
->>> @@ -750,35 +740,43 @@ out:
->>>    	return rc;
->>>    }
->>>
->>> +#define TPM2_GETCAP_IN_SIZE \
->>> +	(sizeof(struct tpm_input_header) + sizeof(struct tpm2_getcap_in))
->>> +
->>> +static const struct tpm_input_header tpm2_getcap_header = {
->>> +	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
->>> +	.length = cpu_to_be32(TPM2_GETCAP_IN_SIZE),
->>> +	.ordinal = cpu_to_be32(TPM2_CC_GET_CAPABILITY)
->>> +};
->>> +
->>>    /**
->>> - * tpm2_get_tpm_pt() - get value of a TPM_CAP_TPM_PROPERTIES type property
->>> - * @chip:		TPM chip to use.
->>> - * @property_id:	property ID.
->>> - * @value:		output variable.
->>> + * tpm2_getcap_cmd() - execute a TPM2_GetCapability command
->>> + * @chip:		TPM chip to use
->>> + * @cap_id:		capability ID
->>> + * @property_id:	property ID
->>> + * @value:		value of the property
->>>     * @desc:		passed to tpm_transmit_cmd()
->>>     *
->>> - * 0 is returned when the operation is successful. If a negative number is
->>> - * returned it remarks a POSIX error code. If a positive number is returned
->>> - * it remarks a TPM error.
->>> + * Return: same as with tpm_transmit_cmd
->>>     */
->>> -ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,  u32 *value,
->>> -			const char *desc)
->>> +ssize_t tpm2_getcap_cmd(struct tpm_chip *chip, u32 cap_id, u32 property_id,
->>> +			u32 *value, const char *desc)
->>
->> This function currently returns single value "u32 *value" as output data.
->>
->> Some calling function expect list of values from capabilities output.
->> For eg., get_active_banks() use TPM_CAP_PCRS capability to retrieve list of
->> active banks. And this capability returns array of pcr selections(which is a
->> struct representing each active PCR bank)
->>
->> I was thinking, can we define output parameter as struct of cap_id and union
->> of expected cap_data ?
->
-> Unless you have major concerns about performance, which I think are not
-> relevant here, calling this in a loop is perfectly adequate and a lot of
-> simpler than having a generic version (with moreData handling and
-> everything).
->
-> I would rather see uses of struct cap_t to shrink than to expand. The
-> same goes for other horrific unions that exist today in the driver.
-
-I agree with the idea of not using union.
-
-I tested this for capability TPM2_CAP_PCRS. It seems TPM2_CAP_PCRS 
-capability always returns full PCR allocation, and more_data as 0, So, I 
-think the idea of looping over based on more_data may not work for this 
-capability.
-
-I was thinking in place of having u32 *value returning actual value, can 
-we have it as void *value, where getcap_cmd will memcpy its out 
-parameter content after subcap_id to value, and then calling function 
-typecast to expected type and use it.
-
-Please let me know if I am missing something in using this function.
-
-Thanks & Regards,
-    - Nayna
-
+    Stefan
 
 >
-> /Jarkko
+> tpm_read_log_acpi should check if the chip has a acpi_dev_handle
+> before running, but it also shouldn't crash - so there are two bugs
+> here I guess.. Please do that instead of the checking the virual flag.
+>
+> Jarkko, you know acpi better, we switched ppi to search starting from
+> the acpi_dev_handle for its data - can we do the same for event log?
+>
+>> The crash looks like this:
+>> [  173.608722]  [<ffffffff8140ca11>] dump_stack+0x63/0x82
+>> [  173.608722]  [<ffffffff8106b99f>] iounmap.part.1+0x7f/0x90
+>> [  173.608722]  [<ffffffff8106b9dc>] iounmap+0x2c/0x30
+>> [  173.608722]  [<ffffffff81496c75>] acpi_os_map_cleanup.part.10+0x31/0x3e
+>> [  173.608722]  [<ffffffff8179629c>] acpi_os_unmap_iomem+0xcb/0xd2
+>> [  173.608722]  [<ffffffffa00e1b28>] read_log+0xc8/0x19e [tpm]
+> This seems really strange ACPI should not crash like this - yes it
+> will wrongly read the log for the system into the vtpm, but that
+> *should* work.
+>
+> Are you doing anything special with this test like high parallism or
+> something?  Any chance you can look at little more? The tpm code looks
+> OK to me, the map and unmap are properly paired - but the bad address
+> from the iounmap suggests the refcounting in acpi is not working or
+> something along those lines?
+>
+> Jason
 >
 
 
