@@ -1,48 +1,89 @@
-From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH 2/2] tpm: Fix error code handling after
-	tpm_bios_log_setup
-Date: Thu, 17 Nov 2016 19:30:04 -0500
-Message-ID: <1479429004-7962-2-git-send-email-stefanb@linux.vnet.ibm.com>
-References: <1479429004-7962-1-git-send-email-stefanb@linux.vnet.ibm.com>
+From: Nayna <nayna@linux.vnet.ibm.com>
+Subject: Re: [tpmdd-devel] [PATCH RFC 2/2] tpm: refactor tpm2_get_tpm_pt to
+ tpm2_getcap_cmd
+Date: Fri, 18 Nov 2016 17:42:01 +0530
+Message-ID: <582EF011.1050007@linux.vnet.ibm.com>
+References: <1476008057-2395-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+ <1476008057-2395-3-git-send-email-jarkko.sakkinen@linux.intel.com>
+ <58254759.80406@linux.vnet.ibm.com>
+ <20161112000242.63hgv5ujmkr7hy6a@intel.com>
+ <582D998C.40605@linux.vnet.ibm.com>
+ <20161117174241.wvyd7g5lj4ibfnry@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1479429004-7962-1-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 8bit
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20161117174241.wvyd7g5lj4ibfnry@intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-tpm_bios_log_setup() may return -ENODEV in case no log was
-found. In this case we do not need to fail the device.
-
-Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
----
- drivers/char/tpm/tpm-chip.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index 3f27753..2d6530b 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -346,7 +346,7 @@ int tpm_chip_register(struct tpm_chip *chip)
- 	tpm_sysfs_add_device(chip);
- 
- 	rc = tpm_bios_log_setup(chip);
--	if (rc == -ENODEV)
-+	if (rc != -ENODEV)
- 		return rc;
- 
- 	tpm_add_ppi(chip);
--- 
-2.4.3
 
 
-------------------------------------------------------------------------------
+On 11/17/2016 11:12 PM, Jarkko Sakkinen wrote:
+> On Thu, Nov 17, 2016 at 05:20:36PM +0530, Nayna wrote:
+>
+>> I tested this for capability TPM2_CAP_PCRS. It seems TPM2_CAP_PCRS
+>> capability always returns full PCR allocation, and more_data as 0, So, I
+>> think the idea of looping over based on more_data may not work for this
+>> capability.
+>
+> You can always request one value at a time until there's no more.
+>
+> If you request N values, depending on the hardware, the hardware returns
+> to you anything from 1 to N values. If you implement a function that
+> requests N values in the command, you *must* handle the case where
+> moreData is 1 even if the hardware you are testing that never happens.
+>
+> That's the reason why I would start with a function that you request one
+> property of one capability and optimize it in future if it doesn't scale
+> for some workload.
+>
+> Do you have a workload where it doesn't scale?
+
+Thanks Jarkko for explaining in detail.
+
+If I understood correctly, the idea is to request for one property at a 
+time, and if we need multiple properties, then to request for each of 
+them in a loop. In case of TPM2_CAP_PCRS, property is always zero. This 
+is how I am calling getcap_cmd for TPM2_CAP_PCRS.
+
+tpm2_getcap_cmd(chip, TPM2_CAP_PCRS, 0, &cap_data, "get active pcr 
+banks");
+
+Output :
+
+[   17.081665] tpm: cap id to receive value is 2
+[   17.081666] tpm: TPM2_CAP_COMMANDS: more data 1
+[   17.081667] tpm: 2
+[   17.081668] tpm: tpm2_get_active_banks  -------> cap is TPM2_CAP_PCRS
+[   17.171665] tpm: cap id to receive value is 5
+[   17.171666] tpm: TPM2_CAP_PCRS: more data 0 ---> more data is zero.
+[   17.171666] tpm: TPM2_CAP_PCRS: more data 0
+[   17.171667] tpm: count pcr banks is 2 ------> count of active pcr 
+banks information returned
+
+more_data is always zero here, so am not sure how to handle more_data in 
+this case ?
+Since property_id is always zero, I am not able to request for one 
+property at a time.
+and response_buffer returns the details for both active banks.
+
+This is the expected behavior defined in TCG 2.0 Part 3 Commands 
+Specification (Section 30.2.1):
+
+"TPM_CAP_PCRS – Returns the current allocation of PCR in a 
+TPML_PCR_SELECTION. The property parameter shall be zero. The TPM will 
+always respond to this command with the full PCR allocation and moreData 
+will be NO."
+
+Please let me know, if I am missing something.
+
+Thanks & Regards,
+    - Nayna
+
+
+>
+> /Jarkko
+>
