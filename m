@@ -1,94 +1,103 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC 2/2] tpm: refactor tpm2_get_tpm_pt to
- tpm2_getcap_cmd
-Date: Fri, 18 Nov 2016 08:13:51 -0800
-Message-ID: <20161118161224.7sq4dbcnyzumbvds@intel.com>
-References: <1476008057-2395-1-git-send-email-jarkko.sakkinen@linux.intel.com>
- <1476008057-2395-3-git-send-email-jarkko.sakkinen@linux.intel.com>
- <58254759.80406@linux.vnet.ibm.com>
- <20161112000242.63hgv5ujmkr7hy6a@intel.com>
- <582D998C.40605@linux.vnet.ibm.com>
- <20161117174241.wvyd7g5lj4ibfnry@intel.com>
- <582EF011.1050007@linux.vnet.ibm.com>
+From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH] tpm: vtpm_proxy: Do not access host's
+	event log
+Date: Fri, 18 Nov 2016 11:58:08 -0500
+Message-ID: <8e1bea0b-5409-5b69-7ac1-1e3e29cc3da7@linux.vnet.ibm.com>
+References: <1479306245-14456-1-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20161116153731.pmmnxiai7ouuj6qf@intel.com>
+	<3a38ddc6-1758-ae82-3df3-9cc55906880d@linux.vnet.ibm.com>
+	<65f392b6-5141-c726-dacb-a1649ea215de@linux.vnet.ibm.com>
+	<20161116200759.GA19593@obsidianresearch.com>
+	<ef1f954d-fc52-0522-01f7-b0e31ea14c59@linux.vnet.ibm.com>
+	<20161117203743.odzdpwwynzlqyt5m@intel.com>
+	<abef96f0-97e3-22e6-c63b-4be5622b4fc2@linux.vnet.ibm.com>
+	<77bf7806-5007-feb4-e4a0-fc94775a5271@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <582EF011.1050007@linux.vnet.ibm.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Nayna <nayna@linux.vnet.ibm.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <77bf7806-5007-feb4-e4a0-fc94775a5271-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: linux-acpi-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Nov 18, 2016 at 05:42:01PM +0530, Nayna wrote:
-> 
-> 
-> On 11/17/2016 11:12 PM, Jarkko Sakkinen wrote:
-> > On Thu, Nov 17, 2016 at 05:20:36PM +0530, Nayna wrote:
-> > 
-> > > I tested this for capability TPM2_CAP_PCRS. It seems TPM2_CAP_PCRS
-> > > capability always returns full PCR allocation, and more_data as 0, So, I
-> > > think the idea of looping over based on more_data may not work for this
-> > > capability.
-> > 
-> > You can always request one value at a time until there's no more.
-> > 
-> > If you request N values, depending on the hardware, the hardware returns
-> > to you anything from 1 to N values. If you implement a function that
-> > requests N values in the command, you *must* handle the case where
-> > moreData is 1 even if the hardware you are testing that never happens.
-> > 
-> > That's the reason why I would start with a function that you request one
-> > property of one capability and optimize it in future if it doesn't scale
-> > for some workload.
-> > 
-> > Do you have a workload where it doesn't scale?
-> 
-> Thanks Jarkko for explaining in detail.
-> 
-> If I understood correctly, the idea is to request for one property at a
-> time, and if we need multiple properties, then to request for each of them
-> in a loop. In case of TPM2_CAP_PCRS, property is always zero. This is how I
-> am calling getcap_cmd for TPM2_CAP_PCRS.
-> 
-> tpm2_getcap_cmd(chip, TPM2_CAP_PCRS, 0, &cap_data, "get active pcr banks");
-> 
-> Output :
-> 
-> [   17.081665] tpm: cap id to receive value is 2
-> [   17.081666] tpm: TPM2_CAP_COMMANDS: more data 1
-> [   17.081667] tpm: 2
-> [   17.081668] tpm: tpm2_get_active_banks  -------> cap is TPM2_CAP_PCRS
-> [   17.171665] tpm: cap id to receive value is 5
-> [   17.171666] tpm: TPM2_CAP_PCRS: more data 0 ---> more data is zero.
-> [   17.171666] tpm: TPM2_CAP_PCRS: more data 0
-> [   17.171667] tpm: count pcr banks is 2 ------> count of active pcr banks
-> information returned
-> 
-> more_data is always zero here, so am not sure how to handle more_data in
-> this case ?
-> Since property_id is always zero, I am not able to request for one property
-> at a time.
-> and response_buffer returns the details for both active banks.
-> 
-> This is the expected behavior defined in TCG 2.0 Part 3 Commands
-> Specification (Section 30.2.1):
-> 
-> "TPM_CAP_PCRS – Returns the current allocation of PCR in a
-> TPML_PCR_SELECTION. The property parameter shall be zero. The TPM will
-> always respond to this command with the full PCR allocation and moreData
-> will be NO."
-> 
-> Please let me know, if I am missing something.
+On 11/18/2016 09:15 AM, Stefan Berger wrote:
+> On 11/18/2016 09:11 AM, Stefan Berger wrote:
+>> On 11/17/2016 03:37 PM, Jarkko Sakkinen wrote:
+>>> On Thu, Nov 17, 2016 at 07:35:05AM -0500, Stefan Berger wrote:
+>>>> On 11/16/2016 03:07 PM, Jason Gunthorpe wrote:
+>>>>> On Wed, Nov 16, 2016 at 12:07:23PM -0500, Stefan Berger wrote:
+>>>>>> The culprit seems to be 'tpm: fix the missing .owner in
+>>>>>> tpm_bios_measurements_ops'
+>>>>> That is unlikely, it is probably the patch before which calls 
+>>>>> read_log
+>>>>> unconditionally now. That suggests the crashing is a little random..
+>>>> I ran the vtpm driver test suite (with -j32) a few times at that 
+>>>> patch and
+>>>> it didn't crash. It crashes severely with later patches applied. 
+>>>> Here's the
+>>>> current experimental patch that fixes these problems:
+>>>>
+>>>> iff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
+>>>> index 0cb43ef..a73295a 100644
+>>>> --- a/drivers/char/tpm/tpm_acpi.c
+>>>> +++ b/drivers/char/tpm/tpm_acpi.c
+>>>> @@ -56,6 +56,9 @@ int tpm_read_log_acpi(struct tpm_chip *chip)
+>>>>
+>>>>       log = &chip->log;
+>>>>
+>>>> +    if (!chip->acpi_dev_handle)
+>>>> +        return 0;
+>>>> +
+>>> If there is a problem in the TPM driver, this does not fix the
+>>> problem. It will mask the problem. Maybe there's an ACPI regression
+>>> in the rc tree?
+>>
+>> Following the path from here :
+>>
+>> http://lxr.free-electrons.com/source/drivers/acpi/acpica/tbxface.c#L282
+>>
+>> acpi_get_table_with_size -> acpi_tb_validate_table -> 
+>> acpi_tb_acquire_table
+>>
+>> I see acpi_os_map_memory being called in acpi_tb_acquire_table but 
+>> not the corresponding acpi_os_unmap_memory...
+>>
+>
+> And to add to this: the call to acpi_get_table() in tpm_acpi.c alone 
+> is causing the crash. I am fairly sure that it has something to do 
+> with the memory mapping call above not being matched by an unmapping 
+> call.
 
-Thanks for pointing that. I think you got it right and I had some wrong
-assumptions about 'moreData'.
+Have to take that all back. This is not the reason. What seems to be the 
+reason is just the acpi_os_map_iomem() call. Without calling the 
+acpi_os_unmap_iomem() later on, which I assume should be allowed, the 
+driver will crash when the device terminates.
 
-Here's what I propose. Do a non-generic function just for getting CAP_PCRS.
-You could call it tpm2_get_pcr_allocation() as you don't want or rather
-need to handle all the bells and whistles in that TPM command.
+     Stefan
 
-It makes a lot more sense now than having one-size-for-all function.
+>
+>
+>>     Stefan
+>>
+>>
+>>>
+>>> This is a funky situation because those lines need to be there but
+>>> I do not want them before it is root caused that it is not a TPM
+>>> bug.
+>>>
+>>> /Jarkko
+>>>
+>>
+>
 
-/Jarkko
+
+------------------------------------------------------------------------------
