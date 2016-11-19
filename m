@@ -1,103 +1,199 @@
-From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH] tpm: vtpm_proxy: Do not access host's
-	event log
-Date: Fri, 18 Nov 2016 11:58:08 -0500
-Message-ID: <8e1bea0b-5409-5b69-7ac1-1e3e29cc3da7@linux.vnet.ibm.com>
-References: <1479306245-14456-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<20161116153731.pmmnxiai7ouuj6qf@intel.com>
-	<3a38ddc6-1758-ae82-3df3-9cc55906880d@linux.vnet.ibm.com>
-	<65f392b6-5141-c726-dacb-a1649ea215de@linux.vnet.ibm.com>
-	<20161116200759.GA19593@obsidianresearch.com>
-	<ef1f954d-fc52-0522-01f7-b0e31ea14c59@linux.vnet.ibm.com>
-	<20161117203743.odzdpwwynzlqyt5m@intel.com>
-	<abef96f0-97e3-22e6-c63b-4be5622b4fc2@linux.vnet.ibm.com>
-	<77bf7806-5007-feb4-e4a0-fc94775a5271@linux.vnet.ibm.com>
+From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Subject: Re: [PATCH 2/2] tpm: Fix error code handling after tpm_bios_log_setup
+Date: Sat, 19 Nov 2016 11:22:28 -0700
+Message-ID: <20161119182228.GA22775@obsidianresearch.com>
+References: <1479429004-7962-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <1479429004-7962-2-git-send-email-stefanb@linux.vnet.ibm.com>
+ <20161118155249.sdxp2qfjfzfw4tzt@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <77bf7806-5007-feb4-e4a0-fc94775a5271-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-acpi-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20161118155249.sdxp2qfjfzfw4tzt@intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: Stefan Berger <stefanb@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Nayna <nayna@linux.vnet.ibm.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 11/18/2016 09:15 AM, Stefan Berger wrote:
-> On 11/18/2016 09:11 AM, Stefan Berger wrote:
->> On 11/17/2016 03:37 PM, Jarkko Sakkinen wrote:
->>> On Thu, Nov 17, 2016 at 07:35:05AM -0500, Stefan Berger wrote:
->>>> On 11/16/2016 03:07 PM, Jason Gunthorpe wrote:
->>>>> On Wed, Nov 16, 2016 at 12:07:23PM -0500, Stefan Berger wrote:
->>>>>> The culprit seems to be 'tpm: fix the missing .owner in
->>>>>> tpm_bios_measurements_ops'
->>>>> That is unlikely, it is probably the patch before which calls 
->>>>> read_log
->>>>> unconditionally now. That suggests the crashing is a little random..
->>>> I ran the vtpm driver test suite (with -j32) a few times at that 
->>>> patch and
->>>> it didn't crash. It crashes severely with later patches applied. 
->>>> Here's the
->>>> current experimental patch that fixes these problems:
->>>>
->>>> iff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
->>>> index 0cb43ef..a73295a 100644
->>>> --- a/drivers/char/tpm/tpm_acpi.c
->>>> +++ b/drivers/char/tpm/tpm_acpi.c
->>>> @@ -56,6 +56,9 @@ int tpm_read_log_acpi(struct tpm_chip *chip)
->>>>
->>>>       log = &chip->log;
->>>>
->>>> +    if (!chip->acpi_dev_handle)
->>>> +        return 0;
->>>> +
->>> If there is a problem in the TPM driver, this does not fix the
->>> problem. It will mask the problem. Maybe there's an ACPI regression
->>> in the rc tree?
->>
->> Following the path from here :
->>
->> http://lxr.free-electrons.com/source/drivers/acpi/acpica/tbxface.c#L282
->>
->> acpi_get_table_with_size -> acpi_tb_validate_table -> 
->> acpi_tb_acquire_table
->>
->> I see acpi_os_map_memory being called in acpi_tb_acquire_table but 
->> not the corresponding acpi_os_unmap_memory...
->>
->
-> And to add to this: the call to acpi_get_table() in tpm_acpi.c alone 
-> is causing the crash. I am fairly sure that it has something to do 
-> with the memory mapping call above not being matched by an unmapping 
-> call.
+On Fri, Nov 18, 2016 at 07:52:49AM -0800, Jarkko Sakkinen wrote:
+> On Thu, Nov 17, 2016 at 07:30:04PM -0500, Stefan Berger wrote:
+> > tpm_bios_log_setup() may return -ENODEV in case no log was
+> > found. In this case we do not need to fail the device.
+> > 
+> > Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+> >  drivers/char/tpm/tpm-chip.c | 2 +-
+> >  1 file changed, 1 insertion(+), 1 deletion(-)
+> > 
+> > diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> > index 3f27753..2d6530b 100644
+> > +++ b/drivers/char/tpm/tpm-chip.c
+> > @@ -346,7 +346,7 @@ int tpm_chip_register(struct tpm_chip *chip)
+> >  	tpm_sysfs_add_device(chip);
+> >  
+> >  	rc = tpm_bios_log_setup(chip);
+> > -	if (rc == -ENODEV)
+> > +	if (rc != -ENODEV)
+> >  		return rc;
+> >  
+> >  	tpm_add_ppi(chip);
+> 
+> CC to linux-security-module
+> 
+> LGTM
+> 
+> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
-Have to take that all back. This is not the reason. What seems to be the 
-reason is just the acpi_os_map_iomem() call. Without calling the 
-acpi_os_unmap_iomem() later on, which I assume should be allowed, the 
-driver will crash when the device terminates.
+Erm, what about rc == 0? And all the other problems?
 
-     Stefan
+Here, use this (untested) should take care of everything on this
+topic..
 
->
->
->>     Stefan
->>
->>
->>>
->>> This is a funky situation because those lines need to be there but
->>> I do not want them before it is root caused that it is not a TPM
->>> bug.
->>>
->>> /Jarkko
->>>
->>
->
+The two things I haven't seen explained are the sysfs unregister crash
+and the acpi iounmap crash :/
 
+>From 8768bcb8cd2a5a17cc4d811a9298b20c3a2c0884 Mon Sep 17 00:00:00 2001
+From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Date: Sat, 19 Nov 2016 11:18:28 -0700
+Subject: [PATCH] tpm: Fix handling of missing event log
 
-------------------------------------------------------------------------------
+The event log is an optional firmware feature, if the firmware
+does not support it then the securityfs files should not be created
+and no other notification given.
+
+- Uniformly return -ENODEV from the tpm_bios_log_setup cone if
+  no event log is detected.
+- Check in ACPI if this node was discovered via ACPI.
+- Improve the check in OF to make sure there is a parent and to
+  fail detection if the two log properties are not declared
+- Pass through all other error codes instead of filtering just some
+
+Signed-off-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+---
+ drivers/char/tpm/tpm-chip.c     |  2 +-
+ drivers/char/tpm/tpm_acpi.c     |  8 +++++++-
+ drivers/char/tpm/tpm_eventlog.c | 26 +++++++++++++-------------
+ drivers/char/tpm/tpm_of.c       | 11 +++++------
+ 4 files changed, 26 insertions(+), 21 deletions(-)
+
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 3f27753d96aab5..7a4869151d3b90 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -346,7 +346,7 @@ int tpm_chip_register(struct tpm_chip *chip)
+ 	tpm_sysfs_add_device(chip);
+ 
+ 	rc = tpm_bios_log_setup(chip);
+-	if (rc == -ENODEV)
++	if (rc != 0 && rc != -ENODEV)
+ 		return rc;
+ 
+ 	tpm_add_ppi(chip);
+diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
+index 0cb43ef5f79a6e..99366bf64f3359 100644
+--- a/drivers/char/tpm/tpm_acpi.c
++++ b/drivers/char/tpm/tpm_acpi.c
+@@ -56,12 +56,18 @@ int tpm_read_log_acpi(struct tpm_chip *chip)
+ 
+ 	log = &chip->log;
+ 
++	/* Unfortuntely ACPI does not associate the event log with a specific
++	 * TPM, like PPI. Thus all ACPI TPMs will read the same log.
++	 */
++	if (!chip->acpi_dev_handle)
++		return -ENODEV;
++
+ 	/* Find TCPA entry in RSDT (ACPI_LOGICAL_ADDRESSING) */
+ 	status = acpi_get_table(ACPI_SIG_TCPA, 1,
+ 				(struct acpi_table_header **)&buff);
+ 
+ 	if (ACPI_FAILURE(status))
+-		return -EIO;
++		return -ENODEV;
+ 
+ 	switch(buff->platform_class) {
+ 	case BIOS_SERVER:
+diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+index fb603a74cbd29e..2a15b866ac257a 100644
+--- a/drivers/char/tpm/tpm_eventlog.c
++++ b/drivers/char/tpm/tpm_eventlog.c
+@@ -377,14 +377,21 @@ static int tpm_read_log(struct tpm_chip *chip)
+ 	}
+ 
+ 	rc = tpm_read_log_acpi(chip);
+-	if ((rc == 0) || (rc == -ENOMEM))
++	if (rc != -ENODEV)
+ 		return rc;
+ 
+-	rc = tpm_read_log_of(chip);
+-
+-	return rc;
++	return tpm_read_log_of(chip);
+ }
+ 
++/*
++ * tpm_bios_log_setup() - Read the event log from the firmware
++ * @chip: TPM chip to use.
++ *
++ * If an event log is found then the securityfs files are setup to
++ * export it to userspace, otherwise nothing is done.
++ *
++ * Returns -ENODEV if the firmware has no event log.
++ */
+ int tpm_bios_log_setup(struct tpm_chip *chip)
+ {
+ 	const char *name = dev_name(&chip->dev);
+@@ -395,15 +402,8 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+ 		return 0;
+ 
+ 	rc = tpm_read_log(chip);
+-	/*
+-	 * read_log failure means event log is not supported except for ENOMEM.
+-	 */
+-	if (rc < 0) {
+-		if (rc == -ENOMEM)
+-			return -ENODEV;
+-		else
+-			return rc;
+-	}
++	if (rc)
++		return rc;
+ 
+ 	cnt = 0;
+ 	chip->bios_dir[cnt] = securityfs_create_dir(name, NULL);
+diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
+index 36df9df4c472b9..7dee42d7b5e05c 100644
+--- a/drivers/char/tpm/tpm_of.c
++++ b/drivers/char/tpm/tpm_of.c
+@@ -29,13 +29,16 @@ int tpm_read_log_of(struct tpm_chip *chip)
+ 	struct tpm_bios_log *log;
+ 
+ 	log = &chip->log;
+-	if (chip->dev.parent->of_node)
++	if (chip->dev.parent && chip->dev.parent->of_node)
+ 		np = chip->dev.parent->of_node;
+ 	else
+ 		return -ENODEV;
+ 
+ 	sizep = of_get_property(np, "linux,sml-size", NULL);
+-	if (sizep == NULL)
++	basep = of_get_property(np, "linux,sml-base", NULL);
++	if (sizep == NULL && basep == NULL)
++		return -ENODEV;
++	if (sizep == NULL || basep == NULL)
+ 		return -EIO;
+ 
+ 	if (*sizep == 0) {
+@@ -43,10 +46,6 @@ int tpm_read_log_of(struct tpm_chip *chip)
+ 		return -EIO;
+ 	}
+ 
+-	basep = of_get_property(np, "linux,sml-base", NULL);
+-	if (basep == NULL)
+-		return -EIO;
+-
+ 	log->bios_event_log = kmalloc(*sizep, GFP_KERNEL);
+ 	if (!log->bios_event_log)
+ 		return -ENOMEM;
+-- 
+2.7.4
+
