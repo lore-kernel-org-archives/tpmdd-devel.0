@@ -1,51 +1,216 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v6 0/9] tpm: cleanup/fixes in existing event log support
-Date: Sun, 20 Nov 2016 09:58:48 +0000
-Message-ID: <20161120095848.4e5vq26oxagyrrp5@intel.com>
-References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
- <20161114223322.5uzdc7sob2vukwrq@intel.com>
- <20161115002514.qhweuyzg5mgebusq@intel.com>
- <20161115021543.d4wgjqid7fut4y4c@intel.com>
- <582A9EAE.5000505@linux.vnet.ibm.com>
- <20161115174012.3pfxzz2ugrdglj4o@intel.com>
- <20161115180610.GA1852@obsidianresearch.com>
- <20161115185453.e52miq2em7gj4qyi@intel.com>
- <20161119183627.GC22775@obsidianresearch.com>
+Subject: Re: [PATCH 2/2] tpm: Fix error code handling after tpm_bios_log_setup
+Date: Sun, 20 Nov 2016 12:14:51 +0000
+Message-ID: <20161120121451.awcraondhcvzpbig@intel.com>
+References: <1479429004-7962-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <1479429004-7962-2-git-send-email-stefanb@linux.vnet.ibm.com>
+ <20161118155249.sdxp2qfjfzfw4tzt@intel.com>
+ <20161119182228.GA22775@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20161119183627.GC22775@obsidianresearch.com>
+In-Reply-To: <20161119182228.GA22775@obsidianresearch.com>
 Sender: owner-linux-security-module@vger.kernel.org
 To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Nayna <nayna@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+Cc: Stefan Berger <stefanb@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Nayna <nayna@linux.vnet.ibm.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat, Nov 19, 2016 at 11:36:27AM -0700, Jason Gunthorpe wrote:
-> On Tue, Nov 15, 2016 at 10:54:53AM -0800, Jarkko Sakkinen wrote:
-> > On Tue, Nov 15, 2016 at 11:06:10AM -0700, Jason Gunthorpe wrote:
-> > > On Tue, Nov 15, 2016 at 09:40:12AM -0800, Jarkko Sakkinen wrote:
-> > > 
-> > > > I applied fix from Colin. I for OF specific patches in this patch set
-> > > > I do not have means to test the code paths that exercise OF specific
-> > > > functionality. This is what worries me a bit. If I had tested-by from
-> > > > someone running a system that can exercise those code paths, I would
-> > > > be less worried.
-> > > 
-> > > I can probably check it next week on my OF systems that do not use event log
-> > 
-> > Thanks Jason. I'll apppend your Tested-by's to the commits when you're
-> > done. Probably doing pull request in the latter part of next week.
-> 
-> What are we testing? Your master now? It will need the patch I just
-> sent or it will fail for me.
+I was able to apply the patch after manually editing the mbox file.
+Not nice. It'd be better to send these things with git-send-email
+to simplify the mgmt (like getting them into patchwork for starters)
+especially in a situation that is bit chaotic to begin with :-/
 
-$ git am -3 ~/Desktop/foo.txt 
-Patch is empty. Was it split wrong?
-When you have resolved this problem, run "git am --continue".
-If you prefer to skip this patch, run "git am --skip" instead.
-To restore the original branch and stop patching, run "git am --abort".
+It's there. I'm not yet sure what to do with these changes. I'll
+probably move my pull request towards late next week. Lets see if
+things stabilize. Too early to decide.
 
-I'm at the Heathrow airport boarding. Look it more properly later on
+In any case I won't squash the fixes to existing series even if I
+include them to the pull request. I'll add new tested-by's only to
+the fixes.
 
 /Jarkko
+
+On Sat, Nov 19, 2016 at 11:22:28AM -0700, Jason Gunthorpe wrote:
+> On Fri, Nov 18, 2016 at 07:52:49AM -0800, Jarkko Sakkinen wrote:
+> > On Thu, Nov 17, 2016 at 07:30:04PM -0500, Stefan Berger wrote:
+> > > tpm_bios_log_setup() may return -ENODEV in case no log was
+> > > found. In this case we do not need to fail the device.
+> > > 
+> > > Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+> > >  drivers/char/tpm/tpm-chip.c | 2 +-
+> > >  1 file changed, 1 insertion(+), 1 deletion(-)
+> > > 
+> > > diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> > > index 3f27753..2d6530b 100644
+> > > +++ b/drivers/char/tpm/tpm-chip.c
+> > > @@ -346,7 +346,7 @@ int tpm_chip_register(struct tpm_chip *chip)
+> > >  	tpm_sysfs_add_device(chip);
+> > >  
+> > >  	rc = tpm_bios_log_setup(chip);
+> > > -	if (rc == -ENODEV)
+> > > +	if (rc != -ENODEV)
+> > >  		return rc;
+> > >  
+> > >  	tpm_add_ppi(chip);
+> > 
+> > CC to linux-security-module
+> > 
+> > LGTM
+> > 
+> > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> 
+> Erm, what about rc == 0? And all the other problems?
+> 
+> Here, use this (untested) should take care of everything on this
+> topic..
+> 
+> The two things I haven't seen explained are the sysfs unregister crash
+> and the acpi iounmap crash :/
+> 
+> From 8768bcb8cd2a5a17cc4d811a9298b20c3a2c0884 Mon Sep 17 00:00:00 2001
+> From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+> Date: Sat, 19 Nov 2016 11:18:28 -0700
+> Subject: [PATCH] tpm: Fix handling of missing event log
+> 
+> The event log is an optional firmware feature, if the firmware
+> does not support it then the securityfs files should not be created
+> and no other notification given.
+> 
+> - Uniformly return -ENODEV from the tpm_bios_log_setup cone if
+>   no event log is detected.
+> - Check in ACPI if this node was discovered via ACPI.
+> - Improve the check in OF to make sure there is a parent and to
+>   fail detection if the two log properties are not declared
+> - Pass through all other error codes instead of filtering just some
+> 
+> Signed-off-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+> ---
+>  drivers/char/tpm/tpm-chip.c     |  2 +-
+>  drivers/char/tpm/tpm_acpi.c     |  8 +++++++-
+>  drivers/char/tpm/tpm_eventlog.c | 26 +++++++++++++-------------
+>  drivers/char/tpm/tpm_of.c       | 11 +++++------
+>  4 files changed, 26 insertions(+), 21 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index 3f27753d96aab5..7a4869151d3b90 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -346,7 +346,7 @@ int tpm_chip_register(struct tpm_chip *chip)
+>  	tpm_sysfs_add_device(chip);
+>  
+>  	rc = tpm_bios_log_setup(chip);
+> -	if (rc == -ENODEV)
+> +	if (rc != 0 && rc != -ENODEV)
+>  		return rc;
+>  
+>  	tpm_add_ppi(chip);
+> diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
+> index 0cb43ef5f79a6e..99366bf64f3359 100644
+> --- a/drivers/char/tpm/tpm_acpi.c
+> +++ b/drivers/char/tpm/tpm_acpi.c
+> @@ -56,12 +56,18 @@ int tpm_read_log_acpi(struct tpm_chip *chip)
+>  
+>  	log = &chip->log;
+>  
+> +	/* Unfortuntely ACPI does not associate the event log with a specific
+> +	 * TPM, like PPI. Thus all ACPI TPMs will read the same log.
+> +	 */
+> +	if (!chip->acpi_dev_handle)
+> +		return -ENODEV;
+> +
+>  	/* Find TCPA entry in RSDT (ACPI_LOGICAL_ADDRESSING) */
+>  	status = acpi_get_table(ACPI_SIG_TCPA, 1,
+>  				(struct acpi_table_header **)&buff);
+>  
+>  	if (ACPI_FAILURE(status))
+> -		return -EIO;
+> +		return -ENODEV;
+>  
+>  	switch(buff->platform_class) {
+>  	case BIOS_SERVER:
+> diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+> index fb603a74cbd29e..2a15b866ac257a 100644
+> --- a/drivers/char/tpm/tpm_eventlog.c
+> +++ b/drivers/char/tpm/tpm_eventlog.c
+> @@ -377,14 +377,21 @@ static int tpm_read_log(struct tpm_chip *chip)
+>  	}
+>  
+>  	rc = tpm_read_log_acpi(chip);
+> -	if ((rc == 0) || (rc == -ENOMEM))
+> +	if (rc != -ENODEV)
+>  		return rc;
+>  
+> -	rc = tpm_read_log_of(chip);
+> -
+> -	return rc;
+> +	return tpm_read_log_of(chip);
+>  }
+>  
+> +/*
+> + * tpm_bios_log_setup() - Read the event log from the firmware
+> + * @chip: TPM chip to use.
+> + *
+> + * If an event log is found then the securityfs files are setup to
+> + * export it to userspace, otherwise nothing is done.
+> + *
+> + * Returns -ENODEV if the firmware has no event log.
+> + */
+>  int tpm_bios_log_setup(struct tpm_chip *chip)
+>  {
+>  	const char *name = dev_name(&chip->dev);
+> @@ -395,15 +402,8 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+>  		return 0;
+>  
+>  	rc = tpm_read_log(chip);
+> -	/*
+> -	 * read_log failure means event log is not supported except for ENOMEM.
+> -	 */
+> -	if (rc < 0) {
+> -		if (rc == -ENOMEM)
+> -			return -ENODEV;
+> -		else
+> -			return rc;
+> -	}
+> +	if (rc)
+> +		return rc;
+>  
+>  	cnt = 0;
+>  	chip->bios_dir[cnt] = securityfs_create_dir(name, NULL);
+> diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
+> index 36df9df4c472b9..7dee42d7b5e05c 100644
+> --- a/drivers/char/tpm/tpm_of.c
+> +++ b/drivers/char/tpm/tpm_of.c
+> @@ -29,13 +29,16 @@ int tpm_read_log_of(struct tpm_chip *chip)
+>  	struct tpm_bios_log *log;
+>  
+>  	log = &chip->log;
+> -	if (chip->dev.parent->of_node)
+> +	if (chip->dev.parent && chip->dev.parent->of_node)
+>  		np = chip->dev.parent->of_node;
+>  	else
+>  		return -ENODEV;
+>  
+>  	sizep = of_get_property(np, "linux,sml-size", NULL);
+> -	if (sizep == NULL)
+> +	basep = of_get_property(np, "linux,sml-base", NULL);
+> +	if (sizep == NULL && basep == NULL)
+> +		return -ENODEV;
+> +	if (sizep == NULL || basep == NULL)
+>  		return -EIO;
+>  
+>  	if (*sizep == 0) {
+> @@ -43,10 +46,6 @@ int tpm_read_log_of(struct tpm_chip *chip)
+>  		return -EIO;
+>  	}
+>  
+> -	basep = of_get_property(np, "linux,sml-base", NULL);
+> -	if (basep == NULL)
+> -		return -EIO;
+> -
+>  	log->bios_event_log = kmalloc(*sizep, GFP_KERNEL);
+>  	if (!log->bios_event_log)
+>  		return -ENOMEM;
+> -- 
+> 2.7.4
+> 
