@@ -1,48 +1,77 @@
-From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [PATCH 2/2] tpm: Fix error code handling after tpm_bios_log_setup
-Date: Mon, 21 Nov 2016 13:37:08 -0700
-Message-ID: <20161121203708.GA7294@obsidianresearch.com>
-References: <1479429004-7962-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1479429004-7962-2-git-send-email-stefanb@linux.vnet.ibm.com>
- <20161118155249.sdxp2qfjfzfw4tzt@intel.com>
- <20161119182228.GA22775@obsidianresearch.com>
- <20161120121451.awcraondhcvzpbig@intel.com>
- <20161121175520.GA24191@obsidianresearch.com>
- <20161121203244.iwx2wa2zcilqd5ao@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm: Do not print an error message when
+ doing TPM auto startup
+Date: Mon, 21 Nov 2016 22:42:11 +0200
+Message-ID: <20161121204211.iuwi2embugn4f74v@intel.com>
+References: <20161121183109.GA18088@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20161121203244.iwx2wa2zcilqd5ao@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: Stefan Berger <stefanb@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Nayna <nayna@linux.vnet.ibm.com>
+In-Reply-To: <20161121183109.GA18088-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Nov 21, 2016 at 10:32:44PM +0200, Jarkko Sakkinen wrote:
-
-> > And this one fixes the sysfs problem
-> > 
-> > https://patchwork.kernel.org/patch/9438331/
-> > 
-> > Here is a commit message:
-> > 
-> > tpm: Do not call tpm_chip_unregister if register has not succeeded
-> > 
-> > This is no longer allowed, vtpm was relying on the check inside the
-> > tpm core which was removed. Fixes an oops during error unwind.
-> > 
-> > Fixes: a8ed92219a04 ("tpm: Get rid of TPM_CHIP_FLAG_REGISTERED")
-> > Signed-off-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-> > Tested-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
-> > 
-> > That just leaves the ACPI thing..
+On Mon, Nov 21, 2016 at 11:31:09AM -0700, Jason Gunthorpe wrote:
+> This is a regression when this code was reworked and made the error
+> print unconditional. The original code deliberately suppressed printing
+> of the first error message so it could quietly sense
+> TPM_ERR_INVALID_POSTINIT.
 > 
-> I like the original commit message more. It documents the change.
+> Fixes: a502feb67b47 ("tpm: Clean up reading of timeout and duration capabilities")
+> Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 
-??
+Thanks for spotting this out. I'll apply this tomorrow (i.e. not
+tonight) as it does not endager stability in anyway as I test the
+other fixes.
 
-This is for  https://patchwork.kernel.org/patch/9438331/ which didn't
-have a message yet.
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
-Jason
+/Jarkko
+
+> ---
+>  drivers/char/tpm/tpm-interface.c | 9 ++++++---
+>  1 file changed, 6 insertions(+), 3 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index a2688ac2b48f3c..c90f4f6d7871be 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -523,8 +523,7 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+>  		return 0;
+>  	}
+>  
+> -	rc = tpm_getcap(chip, TPM_CAP_PROP_TIS_TIMEOUT, &cap,
+> -			"attempting to determine the timeouts");
+> +	rc = tpm_getcap(chip, TPM_CAP_PROP_TIS_TIMEOUT, &cap, NULL);
+>  	if (rc == TPM_ERR_INVALID_POSTINIT) {
+>  		/* The TPM is not started, we are the first to talk to it.
+>  		   Execute a startup command. */
+> @@ -535,8 +534,12 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+>  		rc = tpm_getcap(chip, TPM_CAP_PROP_TIS_TIMEOUT, &cap,
+>  				"attempting to determine the timeouts");
+>  	}
+> -	if (rc)
+> +	if (rc) {
+> +		dev_err(&chip->dev,
+> +			"A TPM error (%zd) occurred attempting to determine the timeouts\n",
+> +			rc);
+>  		return rc;
+> +	}
+>  
+>  	old_timeout[0] = be32_to_cpu(cap.timeout.a);
+>  	old_timeout[1] = be32_to_cpu(cap.timeout.b);
+> -- 
+> 2.1.4
+
+------------------------------------------------------------------------------
