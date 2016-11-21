@@ -1,80 +1,63 @@
-From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [PATCH 2/2] tpm: Fix error code handling after tpm_bios_log_setup
-Date: Mon, 21 Nov 2016 10:15:30 -0700
-Message-ID: <20161121171530.GB22237@obsidianresearch.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH 2/2] tpm: Fix error code handling after
+	tpm_bios_log_setup
+Date: Mon, 21 Nov 2016 10:55:20 -0700
+Message-ID: <20161121175520.GA24191@obsidianresearch.com>
 References: <1479429004-7962-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1479429004-7962-2-git-send-email-stefanb@linux.vnet.ibm.com>
- <20161118155249.sdxp2qfjfzfw4tzt@intel.com>
- <20161119182228.GA22775@obsidianresearch.com>
- <5831ED24.6070102@linux.vnet.ibm.com>
+	<1479429004-7962-2-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20161118155249.sdxp2qfjfzfw4tzt@intel.com>
+	<20161119182228.GA22775@obsidianresearch.com>
+	<20161120121451.awcraondhcvzpbig@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <5831ED24.6070102@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Nayna <nayna@linux.vnet.ibm.com>
-Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Stefan Berger <stefanb@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
+In-Reply-To: <20161120121451.awcraondhcvzpbig-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Nov 21, 2016 at 12:06:20AM +0530, Nayna wrote:
-> >  	rc = tpm_bios_log_setup(chip);
-> >-	if (rc == -ENODEV)
-> >+	if (rc != 0 && rc != -ENODEV)
-> >  		return rc;
-> 
-> This will return in case of -EFAULT as well, where the check is that log is
-> already initialized. Do we want to fail the probe here as well ?
-> 
-> -EFAULT is returned from tpm_read_log() as below:
+On Sun, Nov 20, 2016 at 12:14:51PM +0000, Jarkko Sakkinen wrote:
+> I was able to apply the patch after manually editing the mbox file.
+> Not nice. It'd be better to send these things with git-send-email
+> to simplify the mgmt (like getting them into patchwork for starters)
+> especially in a situation that is bit chaotic to begin with :-/
 
-That is fine, we should never read the log twice.
+It is in patchwork just fine:
 
-> >index fb603a74cbd29e..2a15b866ac257a 100644
-> >+++ b/drivers/char/tpm/tpm_eventlog.c
-> >@@ -377,14 +377,21 @@ static int tpm_read_log(struct tpm_chip *chip)
-> >  	}
-> >
-> >  	rc = tpm_read_log_acpi(chip);
-> 
-> This is to understand..
-> It can return -ENOMEM error here, contd below...
-> 
-> >-	if ((rc == 0) || (rc == -ENOMEM))
-> >+	if (rc != -ENODEV)
-> >  		return rc;
-> >
-> >-	rc = tpm_read_log_of(chip);
-> >-
-> >-	return rc;
-> >+	return tpm_read_log_of(chip);
-> 
-> So, in ACPI if -ENOMEM error is returned, it will continue to
-> tpm_read_log_of(chip), which will return -ENODEV. So, -ENOMEM error is now
-> masked with -ENODEV error.
+https://patchwork.kernel.org/patch/9438323/
 
-No, if acpi is -ENOMEM then 'if (rc != -ENODEV)' is true and it
-returns -ENOMEM.
+git am is unfortunately much more limited than patchwork, but you can
+apply right out of patchwork.
 
-> >  	sizep = of_get_property(np, "linux,sml-size", NULL);
-> >-	if (sizep == NULL)
-> >+	basep = of_get_property(np, "linux,sml-base", NULL);
-> >+	if (sizep == NULL && basep == NULL)
-> >+		return -ENODEV;
-> >+	if (sizep == NULL || basep == NULL)
-> >  		return -EIO;
-> 
-> To confirm my understanding,
-> 
-> For -ENODEV, it means that both properties are not supported, so event log
-> is not supported.
+You forgot to add your signed-off-by though.
 
-Yes
+And this one fixes the sysfs problem
 
-> For -EIO , it means that event log is supported but there is some failure in
-> getting one of them, so should fail the probe.
-> Is my understanding right ?
+https://patchwork.kernel.org/patch/9438331/
 
-Yes
+Here is a commit message:
+
+tpm: Do not call tpm_chip_unregister if register has not succeeded
+
+This is no longer allowed, vtpm was relying on the check inside the
+tpm core which was removed. Fixes an oops during error unwind.
+
+Fixes: a8ed92219a04 ("tpm: Get rid of TPM_CHIP_FLAG_REGISTERED")
+Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Tested-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+
+That just leaves the ACPI thing..
 
 Jason
+
+------------------------------------------------------------------------------
