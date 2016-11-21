@@ -1,63 +1,49 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH 2/2] tpm: Fix error code handling after
-	tpm_bios_log_setup
-Date: Mon, 21 Nov 2016 10:55:20 -0700
-Message-ID: <20161121175520.GA24191@obsidianresearch.com>
-References: <1479429004-7962-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<1479429004-7962-2-git-send-email-stefanb@linux.vnet.ibm.com>
-	<20161118155249.sdxp2qfjfzfw4tzt@intel.com>
-	<20161119182228.GA22775@obsidianresearch.com>
-	<20161120121451.awcraondhcvzpbig@intel.com>
+From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Subject: Re: [PATCH v6 0/9] tpm: cleanup/fixes in existing event log support
+Date: Mon, 21 Nov 2016 11:25:04 -0700
+Message-ID: <20161121182504.GA9234@obsidianresearch.com>
+References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
+ <20161114223322.5uzdc7sob2vukwrq@intel.com>
+ <20161115002514.qhweuyzg5mgebusq@intel.com>
+ <20161115021543.d4wgjqid7fut4y4c@intel.com>
+ <582A9EAE.5000505@linux.vnet.ibm.com>
+ <20161115174012.3pfxzz2ugrdglj4o@intel.com>
+ <20161115180610.GA1852@obsidianresearch.com>
+ <20161115185453.e52miq2em7gj4qyi@intel.com>
+ <20161119183627.GC22775@obsidianresearch.com>
+ <20161120095848.4e5vq26oxagyrrp5@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20161120121451.awcraondhcvzpbig-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <20161120095848.4e5vq26oxagyrrp5@intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: Nayna <nayna@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Nov 20, 2016 at 12:14:51PM +0000, Jarkko Sakkinen wrote:
-> I was able to apply the patch after manually editing the mbox file.
-> Not nice. It'd be better to send these things with git-send-email
-> to simplify the mgmt (like getting them into patchwork for starters)
-> especially in a situation that is bit chaotic to begin with :-/
+On Sun, Nov 20, 2016 at 09:58:48AM +0000, Jarkko Sakkinen wrote:
+> On Sat, Nov 19, 2016 at 11:36:27AM -0700, Jason Gunthorpe wrote:
+> > On Tue, Nov 15, 2016 at 10:54:53AM -0800, Jarkko Sakkinen wrote:
+> > > On Tue, Nov 15, 2016 at 11:06:10AM -0700, Jason Gunthorpe wrote:
+> > > > On Tue, Nov 15, 2016 at 09:40:12AM -0800, Jarkko Sakkinen wrote:
+> > > > 
+> > > > > I applied fix from Colin. I for OF specific patches in this patch set
+> > > > > I do not have means to test the code paths that exercise OF specific
+> > > > > functionality. This is what worries me a bit. If I had tested-by from
+> > > > > someone running a system that can exercise those code paths, I would
+> > > > > be less worried.
+> > > > 
+> > > > I can probably check it next week on my OF systems that do not use event log
+> > > 
+> > > Thanks Jason. I'll apppend your Tested-by's to the commits when you're
+> > > done. Probably doing pull request in the latter part of next week.
+> > 
+> > What are we testing? Your master now? It will need the patch I just
+> > sent or it will fail for me.
 
-It is in patchwork just fine:
+Your TOT works for me (60632de288aac485b328e0863f0c987062ca9b49)
 
-https://patchwork.kernel.org/patch/9438323/
-
-git am is unfortunately much more limited than patchwork, but you can
-apply right out of patchwork.
-
-You forgot to add your signed-off-by though.
-
-And this one fixes the sysfs problem
-
-https://patchwork.kernel.org/patch/9438331/
-
-Here is a commit message:
-
-tpm: Do not call tpm_chip_unregister if register has not succeeded
-
-This is no longer allowed, vtpm was relying on the check inside the
-tpm core which was removed. Fixes an oops during error unwind.
-
-Fixes: a8ed92219a04 ("tpm: Get rid of TPM_CHIP_FLAG_REGISTERED")
-Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Tested-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-
-That just leaves the ACPI thing..
+There is one tiny regression, I'll send a patch for it..
 
 Jason
-
-------------------------------------------------------------------------------
