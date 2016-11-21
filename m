@@ -1,21 +1,30 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH 2/2] tpm: Fix error code handling after tpm_bios_log_setup
-Date: Mon, 21 Nov 2016 22:30:59 +0200
-Message-ID: <20161121203059.227bxfuemnp6z4ak@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH 2/2] tpm: Fix error code handling after
+	tpm_bios_log_setup
+Date: Mon, 21 Nov 2016 22:32:44 +0200
+Message-ID: <20161121203244.iwx2wa2zcilqd5ao@intel.com>
 References: <1479429004-7962-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1479429004-7962-2-git-send-email-stefanb@linux.vnet.ibm.com>
- <20161118155249.sdxp2qfjfzfw4tzt@intel.com>
- <20161119182228.GA22775@obsidianresearch.com>
- <20161120121451.awcraondhcvzpbig@intel.com>
- <20161121175520.GA24191@obsidianresearch.com>
+	<1479429004-7962-2-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20161118155249.sdxp2qfjfzfw4tzt@intel.com>
+	<20161119182228.GA22775@obsidianresearch.com>
+	<20161120121451.awcraondhcvzpbig@intel.com>
+	<20161121175520.GA24191@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20161121175520.GA24191@obsidianresearch.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Stefan Berger <stefanb@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Nayna <nayna@linux.vnet.ibm.com>
+In-Reply-To: <20161121175520.GA24191-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
 On Mon, Nov 21, 2016 at 10:55:20AM -0700, Jason Gunthorpe wrote:
@@ -33,12 +42,6 @@ On Mon, Nov 21, 2016 at 10:55:20AM -0700, Jason Gunthorpe wrote:
 > apply right out of patchwork.
 > 
 > You forgot to add your signed-off-by though.
-
-It's not forgotten. I'm yet to test it properly. I just quickly wanted
-to make it available...
-
-/Jarkko
-
 > 
 > And this one fixes the sysfs problem
 > 
@@ -52,9 +55,15 @@ to make it available...
 > tpm core which was removed. Fixes an oops during error unwind.
 > 
 > Fixes: a8ed92219a04 ("tpm: Get rid of TPM_CHIP_FLAG_REGISTERED")
-> Signed-off-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-> Tested-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+> Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> Tested-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 > 
 > That just leaves the ACPI thing..
+
+I like the original commit message more. It documents the change.
+
+/Jarkko
 > 
 > Jason
+
+------------------------------------------------------------------------------
