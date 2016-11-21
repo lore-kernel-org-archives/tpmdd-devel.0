@@ -1,50 +1,80 @@
-From: Nayna Jain <nayna@linux.vnet.ibm.com>
-Subject: [PATCH] tpm: use test_bit() to check TPM2 flag in eventlog and sysfs code
-Date: Mon, 21 Nov 2016 03:03:51 -0500
-Message-ID: <1479715431-11983-1-git-send-email-nayna@linux.vnet.ibm.com>
+From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Subject: Re: [PATCH 2/2] tpm: Fix error code handling after tpm_bios_log_setup
+Date: Mon, 21 Nov 2016 10:15:30 -0700
+Message-ID: <20161121171530.GB22237@obsidianresearch.com>
+References: <1479429004-7962-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <1479429004-7962-2-git-send-email-stefanb@linux.vnet.ibm.com>
+ <20161118155249.sdxp2qfjfzfw4tzt@intel.com>
+ <20161119182228.GA22775@obsidianresearch.com>
+ <5831ED24.6070102@linux.vnet.ibm.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <5831ED24.6070102@linux.vnet.ibm.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, Nayna Jain <nayna@linux.vnet.ibm.com>
+To: Nayna <nayna@linux.vnet.ibm.com>
+Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Stefan Berger <stefanb@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-There is change done to introduce atomic bitops to set and test
-chip->flags.
-This patch fixes tpm_bios_log_setup() and tpm_sysfs_add_device()
-to use test_bit() to check for TPM_CHIP_FLAG_TPM2 flag.
+On Mon, Nov 21, 2016 at 12:06:20AM +0530, Nayna wrote:
+> >  	rc = tpm_bios_log_setup(chip);
+> >-	if (rc == -ENODEV)
+> >+	if (rc != 0 && rc != -ENODEV)
+> >  		return rc;
+> 
+> This will return in case of -EFAULT as well, where the check is that log is
+> already initialized. Do we want to fail the probe here as well ?
+> 
+> -EFAULT is returned from tpm_read_log() as below:
 
-Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
----
- drivers/char/tpm/tpm-sysfs.c    | 2 +-
- drivers/char/tpm/tpm_eventlog.c | 2 +-
- 2 files changed, 2 insertions(+), 2 deletions(-)
+That is fine, we should never read the log twice.
 
-diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
-index 82298e51..9a37c26 100644
---- a/drivers/char/tpm/tpm-sysfs.c
-+++ b/drivers/char/tpm/tpm-sysfs.c
-@@ -284,7 +284,7 @@ static const struct attribute_group tpm_dev_group = {
- 
- void tpm_sysfs_add_device(struct tpm_chip *chip)
- {
--	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+	if (test_bit(TPM_CHIP_FLAG_TPM2, &chip->flags))
- 		return;
- 
- 	/* The sysfs routines rely on an implicit tpm_try_get_ops, device_del
-diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-index ebec4ac..dede2ec 100644
---- a/drivers/char/tpm/tpm_eventlog.c
-+++ b/drivers/char/tpm/tpm_eventlog.c
-@@ -391,7 +391,7 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
- 	unsigned int cnt;
- 	int rc = 0;
- 
--	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+	if (test_bit(TPM_CHIP_FLAG_TPM2, &chip->flags))
- 		return 0;
- 
- 	rc = tpm_read_log(chip);
--- 
-2.5.0
+> >index fb603a74cbd29e..2a15b866ac257a 100644
+> >+++ b/drivers/char/tpm/tpm_eventlog.c
+> >@@ -377,14 +377,21 @@ static int tpm_read_log(struct tpm_chip *chip)
+> >  	}
+> >
+> >  	rc = tpm_read_log_acpi(chip);
+> 
+> This is to understand..
+> It can return -ENOMEM error here, contd below...
+> 
+> >-	if ((rc == 0) || (rc == -ENOMEM))
+> >+	if (rc != -ENODEV)
+> >  		return rc;
+> >
+> >-	rc = tpm_read_log_of(chip);
+> >-
+> >-	return rc;
+> >+	return tpm_read_log_of(chip);
+> 
+> So, in ACPI if -ENOMEM error is returned, it will continue to
+> tpm_read_log_of(chip), which will return -ENODEV. So, -ENOMEM error is now
+> masked with -ENODEV error.
 
+No, if acpi is -ENOMEM then 'if (rc != -ENODEV)' is true and it
+returns -ENOMEM.
+
+> >  	sizep = of_get_property(np, "linux,sml-size", NULL);
+> >-	if (sizep == NULL)
+> >+	basep = of_get_property(np, "linux,sml-base", NULL);
+> >+	if (sizep == NULL && basep == NULL)
+> >+		return -ENODEV;
+> >+	if (sizep == NULL || basep == NULL)
+> >  		return -EIO;
+> 
+> To confirm my understanding,
+> 
+> For -ENODEV, it means that both properties are not supported, so event log
+> is not supported.
+
+Yes
+
+> For -EIO , it means that event log is supported but there is some failure in
+> getting one of them, so should fail the probe.
+> Is my understanding right ?
+
+Yes
+
+Jason
