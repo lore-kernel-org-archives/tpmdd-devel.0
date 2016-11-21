@@ -1,44 +1,60 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 Subject: Re: [PATCH 2/2] tpm: Fix error code handling after tpm_bios_log_setup
-Date: Mon, 21 Nov 2016 22:29:15 +0200
-Message-ID: <20161121202915.he2pgzoqza3rugnd@intel.com>
+Date: Mon, 21 Nov 2016 22:30:59 +0200
+Message-ID: <20161121203059.227bxfuemnp6z4ak@intel.com>
 References: <1479429004-7962-1-git-send-email-stefanb@linux.vnet.ibm.com>
  <1479429004-7962-2-git-send-email-stefanb@linux.vnet.ibm.com>
  <20161118155249.sdxp2qfjfzfw4tzt@intel.com>
  <20161119182228.GA22775@obsidianresearch.com>
- <5831ED24.6070102@linux.vnet.ibm.com>
- <20161121171530.GB22237@obsidianresearch.com>
+ <20161120121451.awcraondhcvzpbig@intel.com>
+ <20161121175520.GA24191@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20161121171530.GB22237@obsidianresearch.com>
+In-Reply-To: <20161121175520.GA24191@obsidianresearch.com>
 Sender: owner-linux-security-module@vger.kernel.org
 To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Nayna <nayna@linux.vnet.ibm.com>, Stefan Berger <stefanb@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Cc: Stefan Berger <stefanb@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Nayna <nayna@linux.vnet.ibm.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Nov 21, 2016 at 10:15:30AM -0700, Jason Gunthorpe wrote:
-> On Mon, Nov 21, 2016 at 12:06:20AM +0530, Nayna wrote:
-> > >  	rc = tpm_bios_log_setup(chip);
-> > >-	if (rc == -ENODEV)
-> > >+	if (rc != 0 && rc != -ENODEV)
-> > >  		return rc;
-> > 
-> > This will return in case of -EFAULT as well, where the check is that log is
-> > already initialized. Do we want to fail the probe here as well ?
-> > 
-> > -EFAULT is returned from tpm_read_log() as below:
+On Mon, Nov 21, 2016 at 10:55:20AM -0700, Jason Gunthorpe wrote:
+> On Sun, Nov 20, 2016 at 12:14:51PM +0000, Jarkko Sakkinen wrote:
+> > I was able to apply the patch after manually editing the mbox file.
+> > Not nice. It'd be better to send these things with git-send-email
+> > to simplify the mgmt (like getting them into patchwork for starters)
+> > especially in a situation that is bit chaotic to begin with :-/
 > 
-> That is fine, we should never read the log twice.
+> It is in patchwork just fine:
+> 
+> https://patchwork.kernel.org/patch/9438323/
+> 
+> git am is unfortunately much more limited than patchwork, but you can
+> apply right out of patchwork.
+> 
+> You forgot to add your signed-off-by though.
 
-I just went through tpm_bios_log_setup(), tpm_read_log_of() and
-tpm_read_log_acpi(). The error handling is sound now but the condition
-should be in tpm_bios_log_setup(). Not in tpm_chip_register().
-
-It is applied but if you don't mind I would like make a small commit
-that moves the condition to that function.
-
-I think tpm_chip_register() should only care when something went wrong.
+It's not forgotten. I'm yet to test it properly. I just quickly wanted
+to make it available...
 
 /Jarkko
+
+> 
+> And this one fixes the sysfs problem
+> 
+> https://patchwork.kernel.org/patch/9438331/
+> 
+> Here is a commit message:
+> 
+> tpm: Do not call tpm_chip_unregister if register has not succeeded
+> 
+> This is no longer allowed, vtpm was relying on the check inside the
+> tpm core which was removed. Fixes an oops during error unwind.
+> 
+> Fixes: a8ed92219a04 ("tpm: Get rid of TPM_CHIP_FLAG_REGISTERED")
+> Signed-off-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+> Tested-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+> 
+> That just leaves the ACPI thing..
+> 
+> Jason
