@@ -1,26 +1,26 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v6 4/9] tpm: drop tpm1_chip_register(/unregister)
-Date: Tue, 22 Nov 2016 13:22:00 +0200
-Message-ID: <20161122112200.55khdxtctt5rel4j@intel.com>
+Subject: Re: [PATCH v6 3/9] tpm: replace dynamically allocated bios_dir with
+ a static array
+Date: Tue, 22 Nov 2016 13:23:33 +0200
+Message-ID: <20161122112333.7ootyrbssd6pkrjb@intel.com>
 References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
- <1479117656-12403-5-git-send-email-nayna@linux.vnet.ibm.com>
+ <1479117656-12403-4-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1479117656-12403-5-git-send-email-nayna@linux.vnet.ibm.com>
+In-Reply-To: <1479117656-12403-4-git-send-email-nayna@linux.vnet.ibm.com>
 Sender: owner-linux-security-module@vger.kernel.org
 To: Nayna Jain <nayna@linux.vnet.ibm.com>
 Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Nov 14, 2016 at 05:00:51AM -0500, Nayna Jain wrote:
-> Check for TPM2 chip in tpm_sysfs_add_device, tpm_bios_log_setup and
-> tpm_bios_log_teardown in order to make code flow cleaner and to enable
-> to implement TPM 2.0 support later on. This is partially derived from
-> the commit by Nayna Jain with the extension that also tpm1_chip_register
-> is dropped.
+On Mon, Nov 14, 2016 at 05:00:50AM -0500, Nayna Jain wrote:
+> This commit is based on a commit by Nayna Jain. Replaced dynamically
+> allocated bios_dir with a static array as the size is always constant.
 > 
+> Suggested-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+> Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
 > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
 This commit remains unreviewed and tested. I'm in the author role here
@@ -29,103 +29,177 @@ this into the pull request.
 
 /Jarkko
 
+
 > ---
->  drivers/char/tpm/tpm-chip.c     | 31 +++++--------------------------
->  drivers/char/tpm/tpm-sysfs.c    |  3 +++
->  drivers/char/tpm/tpm_eventlog.c |  3 +++
->  3 files changed, 11 insertions(+), 26 deletions(-)
+>  drivers/char/tpm/tpm-chip.c     |  9 ++++---
+>  drivers/char/tpm/tpm.h          |  3 ++-
+>  drivers/char/tpm/tpm_eventlog.c | 59 ++++++++++++++++++-----------------------
+>  drivers/char/tpm/tpm_eventlog.h | 10 +++----
+>  4 files changed, 38 insertions(+), 43 deletions(-)
 > 
 > diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> index d0c1872..250a651 100644
+> index 836f056..d0c1872 100644
 > --- a/drivers/char/tpm/tpm-chip.c
 > +++ b/drivers/char/tpm/tpm-chip.c
-> @@ -276,28 +276,6 @@ static void tpm_del_char_device(struct tpm_chip *chip)
->  	up_write(&chip->ops_sem);
->  }
+> @@ -278,14 +278,16 @@ static void tpm_del_char_device(struct tpm_chip *chip)
 >  
-> -static int tpm1_chip_register(struct tpm_chip *chip)
-> -{
-> -	int rc;
-> -
-> -	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> -		return 0;
-> -
-> -	tpm_sysfs_add_device(chip);
-> -
-> -	rc = tpm_bios_log_setup(chip);
-> -
-> -	return rc;
-> -}
-> -
-> -static void tpm1_chip_unregister(struct tpm_chip *chip)
-> -{
-> -	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> -		return;
-> -
-> -	tpm_bios_log_teardown(chip);
-> -}
-> -
->  static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
+>  static int tpm1_chip_register(struct tpm_chip *chip)
 >  {
->  	struct attribute **i;
-> @@ -364,7 +342,9 @@ int tpm_chip_register(struct tpm_chip *chip)
->  			return rc;
->  	}
->  
-> -	rc = tpm1_chip_register(chip);
-> +	tpm_sysfs_add_device(chip);
+> +	int rc;
 > +
+>  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+>  		return 0;
+>  
+>  	tpm_sysfs_add_device(chip);
+>  
+> -	chip->bios_dir = tpm_bios_log_setup(dev_name(&chip->dev));
 > +	rc = tpm_bios_log_setup(chip);
->  	if (rc)
->  		return rc;
 >  
-> @@ -372,7 +352,7 @@ int tpm_chip_register(struct tpm_chip *chip)
->  
->  	rc = tpm_add_char_device(chip);
->  	if (rc) {
-> -		tpm1_chip_unregister(chip);
-> +		tpm_bios_log_teardown(chip);
->  		return rc;
->  	}
->  
-> @@ -402,8 +382,7 @@ EXPORT_SYMBOL_GPL(tpm_chip_register);
->  void tpm_chip_unregister(struct tpm_chip *chip)
->  {
->  	tpm_del_legacy_sysfs(chip);
-> -
-> -	tpm1_chip_unregister(chip);
-> +	tpm_bios_log_teardown(chip);
->  	tpm_del_char_device(chip);
+> -	return 0;
+> +	return rc;
 >  }
->  EXPORT_SYMBOL_GPL(tpm_chip_unregister);
-> diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
-> index 59a1ead..848ad65 100644
-> --- a/drivers/char/tpm/tpm-sysfs.c
-> +++ b/drivers/char/tpm/tpm-sysfs.c
-> @@ -284,6 +284,9 @@ static const struct attribute_group tpm_dev_group = {
 >  
->  void tpm_sysfs_add_device(struct tpm_chip *chip)
->  {
-> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> +		return;
-> +
->  	/* The sysfs routines rely on an implicit tpm_try_get_ops, device_del
->  	 * is called before ops is null'd and the sysfs core synchronizes this
->  	 * removal so that no callbacks are running or can run again
+>  static void tpm1_chip_unregister(struct tpm_chip *chip)
+> @@ -293,8 +295,7 @@ static void tpm1_chip_unregister(struct tpm_chip *chip)
+>  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+>  		return;
+>  
+> -	if (chip->bios_dir)
+> -		tpm_bios_log_teardown(chip->bios_dir);
+> +	tpm_bios_log_teardown(chip);
+>  }
+>  
+>  static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index f9401ca..9d69580 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -40,6 +40,7 @@ enum tpm_const {
+>  	TPM_BUFSIZE = 4096,
+>  	TPM_NUM_DEVICES = 65536,
+>  	TPM_RETRY = 50,		/* 5 seconds */
+> +	TPM_NUM_EVENT_LOG_FILES = 3,
+>  };
+>  
+>  enum tpm_timeout {
+> @@ -171,7 +172,7 @@ struct tpm_chip {
+>  	unsigned long duration[3]; /* jiffies */
+>  	bool duration_adjusted;
+>  
+> -	struct dentry **bios_dir;
+> +	struct dentry *bios_dir[TPM_NUM_EVENT_LOG_FILES];
+>  
+>  	const struct attribute_group *groups[3];
+>  	unsigned int groups_cnt;
 > diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
-> index 62e9da6..57ac862 100644
+> index 9467e31..62e9da6 100644
 > --- a/drivers/char/tpm/tpm_eventlog.c
 > +++ b/drivers/char/tpm/tpm_eventlog.c
-> @@ -373,6 +373,9 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
->  	const char *name = dev_name(&chip->dev);
->  	unsigned int cnt;
+> @@ -368,54 +368,47 @@ static int is_bad(void *p)
+>  	return 0;
+>  }
 >  
-> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> +		return 0;
-> +
->  	cnt = 0;
->  	chip->bios_dir[cnt] = securityfs_create_dir(name, NULL);
->  	if (is_bad(chip->bios_dir[cnt]))
+> -struct dentry **tpm_bios_log_setup(const char *name)
+> +int tpm_bios_log_setup(struct tpm_chip *chip)
+>  {
+> -	struct dentry **ret = NULL, *tpm_dir, *bin_file, *ascii_file;
+> +	const char *name = dev_name(&chip->dev);
+> +	unsigned int cnt;
+>  
+> -	tpm_dir = securityfs_create_dir(name, NULL);
+> -	if (is_bad(tpm_dir))
+> -		goto out;
+> +	cnt = 0;
+> +	chip->bios_dir[cnt] = securityfs_create_dir(name, NULL);
+> +	if (is_bad(chip->bios_dir[cnt]))
+> +		goto err;
+> +	cnt++;
+>  
+> -	bin_file =
+> +	chip->bios_dir[cnt] =
+>  	    securityfs_create_file("binary_bios_measurements",
+> -				   0440, tpm_dir,
+> +				   0440, chip->bios_dir[0],
+>  				   (void *)&tpm_binary_b_measurements_seqops,
+>  				   &tpm_bios_measurements_ops);
+> -	if (is_bad(bin_file))
+> -		goto out_tpm;
+> +	if (is_bad(chip->bios_dir[cnt]))
+> +		goto err;
+> +	cnt++;
+>  
+> -	ascii_file =
+> +	chip->bios_dir[cnt] =
+>  	    securityfs_create_file("ascii_bios_measurements",
+> -				   0440, tpm_dir,
+> +				   0440, chip->bios_dir[0],
+>  				   (void *)&tpm_ascii_b_measurements_seqops,
+>  				   &tpm_bios_measurements_ops);
+> -	if (is_bad(ascii_file))
+> -		goto out_bin;
+> +	if (is_bad(chip->bios_dir[cnt]))
+> +		goto err;
+> +	cnt++;
+>  
+> -	ret = kmalloc(3 * sizeof(struct dentry *), GFP_KERNEL);
+> -	if (!ret)
+> -		goto out_ascii;
+> -
+> -	ret[0] = ascii_file;
+> -	ret[1] = bin_file;
+> -	ret[2] = tpm_dir;
+> -
+> -	return ret;
+> +	return 0;
+>  
+> -out_ascii:
+> -	securityfs_remove(ascii_file);
+> -out_bin:
+> -	securityfs_remove(bin_file);
+> -out_tpm:
+> -	securityfs_remove(tpm_dir);
+> -out:
+> -	return NULL;
+> +err:
+> +	chip->bios_dir[cnt] = NULL;
+> +	tpm_bios_log_teardown(chip);
+> +	return -EIO;
+>  }
+>  
+> -void tpm_bios_log_teardown(struct dentry **lst)
+> +void tpm_bios_log_teardown(struct tpm_chip *chip)
+>  {
+>  	int i;
+>  
+> -	for (i = 0; i < 3; i++)
+> -		securityfs_remove(lst[i]);
+> +	for (i = (TPM_NUM_EVENT_LOG_FILES - 1); i >= 0; i--)
+> +		securityfs_remove(chip->bios_dir[i]);
+>  }
+> diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
+> index 8de62b0..fd3357e 100644
+> --- a/drivers/char/tpm/tpm_eventlog.h
+> +++ b/drivers/char/tpm/tpm_eventlog.h
+> @@ -77,14 +77,14 @@ int read_log(struct tpm_bios_log *log);
+>  
+>  #if defined(CONFIG_TCG_IBMVTPM) || defined(CONFIG_TCG_IBMVTPM_MODULE) || \
+>  	defined(CONFIG_ACPI)
+> -extern struct dentry **tpm_bios_log_setup(const char *);
+> -extern void tpm_bios_log_teardown(struct dentry **);
+> +extern int tpm_bios_log_setup(struct tpm_chip *chip);
+> +extern void tpm_bios_log_teardown(struct tpm_chip *chip);
+>  #else
+> -static inline struct dentry **tpm_bios_log_setup(const char *name)
+> +static inline int tpm_bios_log_setup(struct tpm_chip *chip)
+>  {
+> -	return NULL;
+> +	return 0;
+>  }
+> -static inline void tpm_bios_log_teardown(struct dentry **dir)
+> +static inline void tpm_bios_log_teardown(struct tpm_chip *chip)
+>  {
+>  }
+>  #endif
 > -- 
 > 2.5.0
 > 
