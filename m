@@ -1,94 +1,93 @@
-From: Nayna <nayna@linux.vnet.ibm.com>
-Subject: Re: [PATCH 2/2] tpm: Fix error code handling after tpm_bios_log_setup
-Date: Tue, 22 Nov 2016 14:34:12 +0530
-Message-ID: <58340A0C.3050706@linux.vnet.ibm.com>
-References: <1479429004-7962-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1479429004-7962-2-git-send-email-stefanb@linux.vnet.ibm.com>
- <20161118155249.sdxp2qfjfzfw4tzt@intel.com>
- <20161119182228.GA22775@obsidianresearch.com>
- <5831ED24.6070102@linux.vnet.ibm.com>
- <20161121171530.GB22237@obsidianresearch.com>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH RFC 2/2] tpm: refactor tpm2_get_tpm_pt to
+ tpm2_getcap_cmd
+Date: Tue, 22 Nov 2016 14:38:21 +0530
+Message-ID: <58340B05.4060702@linux.vnet.ibm.com>
+References: <1476008057-2395-1-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<1476008057-2395-3-git-send-email-jarkko.sakkinen@linux.intel.com>
+	<58254759.80406@linux.vnet.ibm.com>
+	<20161112000242.63hgv5ujmkr7hy6a@intel.com>
+	<582D998C.40605@linux.vnet.ibm.com>
+	<20161117174241.wvyd7g5lj4ibfnry@intel.com>
+	<582EF011.1050007@linux.vnet.ibm.com>
+	<20161118161224.7sq4dbcnyzumbvds@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20161121171530.GB22237@obsidianresearch.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Stefan Berger <stefanb@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20161118161224.7sq4dbcnyzumbvds-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-
-
-On 11/21/2016 10:45 PM, Jason Gunthorpe wrote:
-> On Mon, Nov 21, 2016 at 12:06:20AM +0530, Nayna wrote:
->>>   	rc = tpm_bios_log_setup(chip);
->>> -	if (rc == -ENODEV)
->>> +	if (rc != 0 && rc != -ENODEV)
->>>   		return rc;
->>
->> This will return in case of -EFAULT as well, where the check is that log is
->> already initialized. Do we want to fail the probe here as well ?
->>
->> -EFAULT is returned from tpm_read_log() as below:
->
-> That is fine, we should never read the log twice.
->
->>> index fb603a74cbd29e..2a15b866ac257a 100644
->>> +++ b/drivers/char/tpm/tpm_eventlog.c
->>> @@ -377,14 +377,21 @@ static int tpm_read_log(struct tpm_chip *chip)
->>>   	}
->>>
->>>   	rc = tpm_read_log_acpi(chip);
->>
->> This is to understand..
->> It can return -ENOMEM error here, contd below...
->>
->>> -	if ((rc == 0) || (rc == -ENOMEM))
->>> +	if (rc != -ENODEV)
->>>   		return rc;
->>>
->>> -	rc = tpm_read_log_of(chip);
->>> -
->>> -	return rc;
->>> +	return tpm_read_log_of(chip);
->>
->> So, in ACPI if -ENOMEM error is returned, it will continue to
->> tpm_read_log_of(chip), which will return -ENODEV. So, -ENOMEM error is now
->> masked with -ENODEV error.
->
-> No, if acpi is -ENOMEM then 'if (rc != -ENODEV)' is true and it
-> returns -ENOMEM.
-
-Yeah, I missed it. Sorry.
->
->>>   	sizep = of_get_property(np, "linux,sml-size", NULL);
->>> -	if (sizep == NULL)
->>> +	basep = of_get_property(np, "linux,sml-base", NULL);
->>> +	if (sizep == NULL && basep == NULL)
->>> +		return -ENODEV;
->>> +	if (sizep == NULL || basep == NULL)
->>>   		return -EIO;
->>
->> To confirm my understanding,
->>
->> For -ENODEV, it means that both properties are not supported, so event log
->> is not supported.
->
-> Yes
->
->> For -EIO , it means that event log is supported but there is some failure in
->> getting one of them, so should fail the probe.
->> Is my understanding right ?
->
-> Yes
-
-Thanks for explaining. Looks good now.
-
-Thanks & Regards,
-   - Nayna
-
->
-> Jason
->
-
+CgpPbiAxMS8xOC8yMDE2IDA5OjQzIFBNLCBKYXJra28gU2Fra2luZW4gd3JvdGU6Cj4gT24gRnJp
+LCBOb3YgMTgsIDIwMTYgYXQgMDU6NDI6MDFQTSArMDUzMCwgTmF5bmEgd3JvdGU6Cj4+Cj4+Cj4+
+IE9uIDExLzE3LzIwMTYgMTE6MTIgUE0sIEphcmtrbyBTYWtraW5lbiB3cm90ZToKPj4+IE9uIFRo
+dSwgTm92IDE3LCAyMDE2IGF0IDA1OjIwOjM2UE0gKzA1MzAsIE5heW5hIHdyb3RlOgo+Pj4KPj4+
+PiBJIHRlc3RlZCB0aGlzIGZvciBjYXBhYmlsaXR5IFRQTTJfQ0FQX1BDUlMuIEl0IHNlZW1zIFRQ
+TTJfQ0FQX1BDUlMKPj4+PiBjYXBhYmlsaXR5IGFsd2F5cyByZXR1cm5zIGZ1bGwgUENSIGFsbG9j
+YXRpb24sIGFuZCBtb3JlX2RhdGEgYXMgMCwgU28sIEkKPj4+PiB0aGluayB0aGUgaWRlYSBvZiBs
+b29waW5nIG92ZXIgYmFzZWQgb24gbW9yZV9kYXRhIG1heSBub3Qgd29yayBmb3IgdGhpcwo+Pj4+
+IGNhcGFiaWxpdHkuCj4+Pgo+Pj4gWW91IGNhbiBhbHdheXMgcmVxdWVzdCBvbmUgdmFsdWUgYXQg
+YSB0aW1lIHVudGlsIHRoZXJlJ3Mgbm8gbW9yZS4KPj4+Cj4+PiBJZiB5b3UgcmVxdWVzdCBOIHZh
+bHVlcywgZGVwZW5kaW5nIG9uIHRoZSBoYXJkd2FyZSwgdGhlIGhhcmR3YXJlIHJldHVybnMKPj4+
+IHRvIHlvdSBhbnl0aGluZyBmcm9tIDEgdG8gTiB2YWx1ZXMuIElmIHlvdSBpbXBsZW1lbnQgYSBm
+dW5jdGlvbiB0aGF0Cj4+PiByZXF1ZXN0cyBOIHZhbHVlcyBpbiB0aGUgY29tbWFuZCwgeW91ICpt
+dXN0KiBoYW5kbGUgdGhlIGNhc2Ugd2hlcmUKPj4+IG1vcmVEYXRhIGlzIDEgZXZlbiBpZiB0aGUg
+aGFyZHdhcmUgeW91IGFyZSB0ZXN0aW5nIHRoYXQgbmV2ZXIgaGFwcGVucy4KPj4+Cj4+PiBUaGF0
+J3MgdGhlIHJlYXNvbiB3aHkgSSB3b3VsZCBzdGFydCB3aXRoIGEgZnVuY3Rpb24gdGhhdCB5b3Ug
+cmVxdWVzdCBvbmUKPj4+IHByb3BlcnR5IG9mIG9uZSBjYXBhYmlsaXR5IGFuZCBvcHRpbWl6ZSBp
+dCBpbiBmdXR1cmUgaWYgaXQgZG9lc24ndCBzY2FsZQo+Pj4gZm9yIHNvbWUgd29ya2xvYWQuCj4+
+Pgo+Pj4gRG8geW91IGhhdmUgYSB3b3JrbG9hZCB3aGVyZSBpdCBkb2Vzbid0IHNjYWxlPwo+Pgo+
+PiBUaGFua3MgSmFya2tvIGZvciBleHBsYWluaW5nIGluIGRldGFpbC4KPj4KPj4gSWYgSSB1bmRl
+cnN0b29kIGNvcnJlY3RseSwgdGhlIGlkZWEgaXMgdG8gcmVxdWVzdCBmb3Igb25lIHByb3BlcnR5
+IGF0IGEKPj4gdGltZSwgYW5kIGlmIHdlIG5lZWQgbXVsdGlwbGUgcHJvcGVydGllcywgdGhlbiB0
+byByZXF1ZXN0IGZvciBlYWNoIG9mIHRoZW0KPj4gaW4gYSBsb29wLiBJbiBjYXNlIG9mIFRQTTJf
+Q0FQX1BDUlMsIHByb3BlcnR5IGlzIGFsd2F5cyB6ZXJvLiBUaGlzIGlzIGhvdyBJCj4+IGFtIGNh
+bGxpbmcgZ2V0Y2FwX2NtZCBmb3IgVFBNMl9DQVBfUENSUy4KPj4KPj4gdHBtMl9nZXRjYXBfY21k
+KGNoaXAsIFRQTTJfQ0FQX1BDUlMsIDAsICZjYXBfZGF0YSwgImdldCBhY3RpdmUgcGNyIGJhbmtz
+Iik7Cj4+Cj4+IE91dHB1dCA6Cj4+Cj4+IFsgICAxNy4wODE2NjVdIHRwbTogY2FwIGlkIHRvIHJl
+Y2VpdmUgdmFsdWUgaXMgMgo+PiBbICAgMTcuMDgxNjY2XSB0cG06IFRQTTJfQ0FQX0NPTU1BTkRT
+OiBtb3JlIGRhdGEgMQo+PiBbICAgMTcuMDgxNjY3XSB0cG06IDIKPj4gWyAgIDE3LjA4MTY2OF0g
+dHBtOiB0cG0yX2dldF9hY3RpdmVfYmFua3MgIC0tLS0tLS0+IGNhcCBpcyBUUE0yX0NBUF9QQ1JT
+Cj4+IFsgICAxNy4xNzE2NjVdIHRwbTogY2FwIGlkIHRvIHJlY2VpdmUgdmFsdWUgaXMgNQo+PiBb
+ICAgMTcuMTcxNjY2XSB0cG06IFRQTTJfQ0FQX1BDUlM6IG1vcmUgZGF0YSAwIC0tLT4gbW9yZSBk
+YXRhIGlzIHplcm8uCj4+IFsgICAxNy4xNzE2NjZdIHRwbTogVFBNMl9DQVBfUENSUzogbW9yZSBk
+YXRhIDAKPj4gWyAgIDE3LjE3MTY2N10gdHBtOiBjb3VudCBwY3IgYmFua3MgaXMgMiAtLS0tLS0+
+IGNvdW50IG9mIGFjdGl2ZSBwY3IgYmFua3MKPj4gaW5mb3JtYXRpb24gcmV0dXJuZWQKPj4KPj4g
+bW9yZV9kYXRhIGlzIGFsd2F5cyB6ZXJvIGhlcmUsIHNvIGFtIG5vdCBzdXJlIGhvdyB0byBoYW5k
+bGUgbW9yZV9kYXRhIGluCj4+IHRoaXMgY2FzZSA/Cj4+IFNpbmNlIHByb3BlcnR5X2lkIGlzIGFs
+d2F5cyB6ZXJvLCBJIGFtIG5vdCBhYmxlIHRvIHJlcXVlc3QgZm9yIG9uZSBwcm9wZXJ0eQo+PiBh
+dCBhIHRpbWUuCj4+IGFuZCByZXNwb25zZV9idWZmZXIgcmV0dXJucyB0aGUgZGV0YWlscyBmb3Ig
+Ym90aCBhY3RpdmUgYmFua3MuCj4+Cj4+IFRoaXMgaXMgdGhlIGV4cGVjdGVkIGJlaGF2aW9yIGRl
+ZmluZWQgaW4gVENHIDIuMCBQYXJ0IDMgQ29tbWFuZHMKPj4gU3BlY2lmaWNhdGlvbiAoU2VjdGlv
+biAzMC4yLjEpOgo+Pgo+PiAiVFBNX0NBUF9QQ1JTIOKAkyBSZXR1cm5zIHRoZSBjdXJyZW50IGFs
+bG9jYXRpb24gb2YgUENSIGluIGEKPj4gVFBNTF9QQ1JfU0VMRUNUSU9OLiBUaGUgcHJvcGVydHkg
+cGFyYW1ldGVyIHNoYWxsIGJlIHplcm8uIFRoZSBUUE0gd2lsbAo+PiBhbHdheXMgcmVzcG9uZCB0
+byB0aGlzIGNvbW1hbmQgd2l0aCB0aGUgZnVsbCBQQ1IgYWxsb2NhdGlvbiBhbmQgbW9yZURhdGEK
+Pj4gd2lsbCBiZSBOTy4iCj4+Cj4+IFBsZWFzZSBsZXQgbWUga25vdywgaWYgSSBhbSBtaXNzaW5n
+IHNvbWV0aGluZy4KPgo+IFRoYW5rcyBmb3IgcG9pbnRpbmcgdGhhdC4gSSB0aGluayB5b3UgZ290
+IGl0IHJpZ2h0IGFuZCBJIGhhZCBzb21lIHdyb25nCj4gYXNzdW1wdGlvbnMgYWJvdXQgJ21vcmVE
+YXRhJy4KPgo+IEhlcmUncyB3aGF0IEkgcHJvcG9zZS4gRG8gYSBub24tZ2VuZXJpYyBmdW5jdGlv
+biBqdXN0IGZvciBnZXR0aW5nIENBUF9QQ1JTLgo+IFlvdSBjb3VsZCBjYWxsIGl0IHRwbTJfZ2V0
+X3Bjcl9hbGxvY2F0aW9uKCkgYXMgeW91IGRvbid0IHdhbnQgb3IgcmF0aGVyCj4gbmVlZCB0byBo
+YW5kbGUgYWxsIHRoZSBiZWxscyBhbmQgd2hpc3RsZXMgaW4gdGhhdCBUUE0gY29tbWFuZC4KPgo+
+IEl0IG1ha2VzIGEgbG90IG1vcmUgc2Vuc2Ugbm93IHRoYW4gaGF2aW5nIG9uZS1zaXplLWZvci1h
+bGwgZnVuY3Rpb24uCgpUaGFua3MgSmFya2tvLCBZZWFoLCBTdXJlLCBJIHdpbGwgd3JpdGUgaXQg
+YXMgZGlmZmVyZW50IG5vbi1nZW5lcmljIGNhbGwuCk90aGVyd2lzZSwgdGhlIGZ1bmN0aW9uIHdv
+cmtzIGdvb2QuCkFsc28sIEkgYW0gdGhpbmtpbmcgbm93IEkgY2FuIHdyaXRlICJtdWx0aS1iYW5r
+IHN1cHBvcnQgZm9yIGV4dGVuZCIgb24gCnRvcCBvZiBtYXN0ZXIgYnJhbmNoIGl0c2VsZi4gIEFu
+eSBpc3N1ZXMgd2l0aCB0aGF0ID8KClRoYW5rcyAmIFJlZ2FyZHMsCiAgICAtIE5heW5hCgo+Cj4g
+L0phcmtrbwo+CgoKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCl9fX19fX19fX19fX19fX19fX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fCnRwbWRkLWRldmVsIG1haWxpbmcgbGlzdAp0cG1kZC1k
+ZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9saXN0cy5zb3VyY2Vmb3JnZS5uZXQv
+bGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwK
