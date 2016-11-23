@@ -1,14 +1,15 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 0/4] tpm: kdoc cleanup
-Date: Wed, 23 Nov 2016 17:59:25 +0200
-Message-ID: <20161123155925.v7moohcnil35afhq@intel.com>
-References: <1479895454-15076-1-git-send-email-tomas.winkler@intel.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH] tpm: use get_unaligned_be32 unaligned
+	buffer access.
+Date: Wed, 23 Nov 2016 09:57:35 -0700
+Message-ID: <20161123165734.GA2763@obsidianresearch.com>
+References: <1479899094-9486-1-git-send-email-tomas.winkler@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1479895454-15076-1-git-send-email-tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <1479899094-9486-1-git-send-email-tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,29 +22,102 @@ To: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Nov 23, 2016 at 12:04:10PM +0200, Tomas Winkler wrote:
-> Cleanup tpm in-code documentation.
+On Wed, Nov 23, 2016 at 01:04:54PM +0200, Tomas Winkler wrote:
+> Use get_unaligned_be32 as b32_to_cpu doesn't work correctly on
+> all platforms for unaligned access.
 > 
-> Tomas Winkler (4):
->   tpm: add kdoc for tpm_transmit and tpm_transmit_cmd
->   tpm/tpm2-chip: fix kdoc errors
->   tmp: use pdev for parent device in tpm_chip_alloc
->   tpm/vtpm: fix kdoc warnings
+> The fix doesn't cover all the cases as also some cast
+> structures have members on unaligned addresses.
 
-Thanks. Overally LGTM but I have to postpone the review till' next week.
+I think this is a good idea..
 
-/Jarkko
+> @@ -353,8 +353,8 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
+>  	if (bufsiz > TPM_BUFSIZE)
+>  		bufsiz = TPM_BUFSIZE;
+>  
+> -	count = be32_to_cpu(*((__be32 *) (buf + 2)));
+> -	ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
+> +	count = get_unaligned_be32(buf + 2);
+> +	ordinal = get_unaligned_be32(buf + 6);
 
-> 
->  drivers/char/tpm/tpm-chip.c       |   8 +--
->  drivers/char/tpm/tpm-interface.c  |  33 ++++++++++--
->  drivers/char/tpm/tpm2-cmd.c       | 105 +++++++++++++++++++++-----------------
->  drivers/char/tpm/tpm_ibmvtpm.c    |  51 +++++++++---------
->  drivers/char/tpm/tpm_vtpm_proxy.c |  48 ++++++++++++-----
->  5 files changed, 150 insertions(+), 95 deletions(-)
-> 
-> -- 
-> 2.7.4
-> 
+But lets fix this better and get rid of the constants too...
+
+ const tpm_input_header *hdr = buf;
+ count = be32_to_cpu(hdr->length);
+ ordinal = be32_to_cpu(hdr->ordinal);
+
+Compiler will take care of unaligned for __packed.
+
+> @@ -178,7 +178,7 @@ static int crb_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+>  		return -EIO;
+>  
+>  	memcpy_fromio(buf, priv->rsp, 6);
+> -	expected = be32_to_cpup((__be32 *) &buf[2]);
+> +	expected = get_unaligned_be32(buf + 2);
+
+Here too, except tpm_output_header (and is tpm1 and 2 the same here?)
+
+> @@ -451,7 +452,7 @@ static int tpm_tis_i2c_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+>  		goto out;
+>  	}
+>  
+> -	expected = be32_to_cpu(*(__be32 *)(buf + 2));
+> +	expected = get_unaligned_be32(buf + 2);
+
+Ditto
+
+> @@ -314,7 +315,7 @@ static int i2c_nuvoton_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+>  		 * convert number of expected bytes field from big endian 32 bit
+>  		 * to machine native
+>  		 */
+> -		expected = be32_to_cpu(*(__be32 *) (buf + 2));
+> +		expected = get_unaligned_be32(buf + 2);
+
+Ditto
+
+>  		if (expected > count) {
+>  			dev_err(dev, "%s() expected > count\n", __func__);
+>  			size = -EIO;
+> @@ -442,7 +443,7 @@ static int i2c_nuvoton_send(struct tpm_chip *chip, u8 *buf, size_t len)
+>  		i2c_nuvoton_ready(chip);
+>  		return rc;
+>  	}
+> -	ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
+> +	ordinal = get_unaligned_be32(buf + 6);
+
+Ditto
+
+> @@ -174,8 +173,7 @@ static int tpm_nsc_recv(struct tpm_chip *chip, u8 * buf, size_t count)
+>  		return -EIO;
+>  	}
+>  
+> -	native_size = (__force __be32 *) (buf + 2);
+> -	size = be32_to_cpu(*native_size);
+> +	size = get_unaligned_be32(buf + 2);
+
+Ditto
+
+> diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+> index 7993678954a2..5323c54dc917 100644
+> +++ b/drivers/char/tpm/tpm_tis_core.c
+> @@ -222,7 +222,7 @@ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+>  		goto out;
+>  	}
+>  
+> -	expected = be32_to_cpu(*(__be32 *) (buf + 2));
+> +	expected = get_unaligned_be32(buf + 2);
+
+Ditto
+
+> @@ -371,7 +371,7 @@ static int tpm_tis_send_main(struct tpm_chip *chip, u8 *buf, size_t len)
+>  		goto out_err;
+>  
+>  	if (chip->flags & TPM_CHIP_FLAG_IRQ) {
+> -		ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
+> +		ordinal = get_unaligned_be32(buf + 6);
+
+Ditto
+
+Jason
 
 ------------------------------------------------------------------------------
