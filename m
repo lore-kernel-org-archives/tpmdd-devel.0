@@ -1,27 +1,95 @@
-From: Tomas Winkler <tomas.winkler@intel.com>
-Subject: [PATCH v2 0/4] tpm: kdoc cleanup
-Date: Wed, 23 Nov 2016 12:04:10 +0200
-Message-ID: <1479895454-15076-1-git-send-email-tomas.winkler@intel.com>
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Sender: linux-kernel-owner@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: linux-kernel@vger.kernel.org, Tomas Winkler <tomas.winkler@intel.com>
+From: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Subject: [PATCH v2 1/4] tpm: add kdoc for tpm_transmit and
+	tpm_transmit_cmd
+Date: Wed, 23 Nov 2016 12:04:11 +0200
+Message-ID: <1479895454-15076-2-git-send-email-tomas.winkler@intel.com>
+References: <1479895454-15076-1-git-send-email-tomas.winkler@intel.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1479895454-15076-1-git-send-email-tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Cleanup tpm in-code documentation.
+Functions tpm_transmit and transmit_cmd are referenced
+from other functions kdoc hence deserve documentation.
 
-Tomas Winkler (4):
-  tpm: add kdoc for tpm_transmit and tpm_transmit_cmd
-  tpm/tpm2-chip: fix kdoc errors
-  tmp: use pdev for parent device in tpm_chip_alloc
-  tpm/vtpm: fix kdoc warnings
+Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+---
+V2: Add some missing '.'
+ drivers/char/tpm/tpm-interface.c | 33 ++++++++++++++++++++++++++++-----
+ 1 file changed, 28 insertions(+), 5 deletions(-)
 
- drivers/char/tpm/tpm-chip.c       |   8 +--
- drivers/char/tpm/tpm-interface.c  |  33 ++++++++++--
- drivers/char/tpm/tpm2-cmd.c       | 105 +++++++++++++++++++++-----------------
- drivers/char/tpm/tpm_ibmvtpm.c    |  51 +++++++++---------
- drivers/char/tpm/tpm_vtpm_proxy.c |  48 ++++++++++++-----
- 5 files changed, 150 insertions(+), 95 deletions(-)
-
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index a2688ac2b48f..769d8b0d31a3 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -328,8 +328,17 @@ unsigned long tpm_calc_ordinal_duration(struct tpm_chip *chip,
+ }
+ EXPORT_SYMBOL_GPL(tpm_calc_ordinal_duration);
+ 
+-/*
+- * Internal kernel interface to transmit TPM commands
++/**
++ * tmp_transmit - Internal kernel interface to transmit TPM commands.
++ *
++ * @chip: TPM chip to use
++ * @buf: TPM command buffer
++ * @bufsiz: length of the TPM command buffer
++ * @flags: tpm transmit flags - bitmap
++ *
++ * Return:
++ *     0 when the operation is successful.
++ *     A negative number for system errors (errno).
+  */
+ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
+ 		     unsigned int flags)
+@@ -409,9 +418,21 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
+ 	return rc;
+ }
+ 
+-#define TPM_DIGEST_SIZE 20
+-#define TPM_RET_CODE_IDX 6
+-
++/**
++ * tmp_transmit_cmd - send a tpm command to the device
++ *    The function extracts tpm out header return code
++ *
++ * @chip: TPM chip to use
++ * @cmd: TPM command buffer
++ * @len: length of the TPM command
++ * @flags: tpm transmit flags - bitmap
++ * @desc: command description used in the error message
++ *
++ * Return:
++ *     0 when the operation is successful.
++ *     A negative number for system errors (errno).
++ *     A positive number for a TPM error.
++ */
+ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd,
+ 			 int len, unsigned int flags, const char *desc)
+ {
+@@ -434,6 +455,8 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd,
+ 	return err;
+ }
+ 
++#define TPM_DIGEST_SIZE 20
++#define TPM_RET_CODE_IDX 6
+ #define TPM_INTERNAL_RESULT_SIZE 200
+ #define TPM_ORD_GET_CAP cpu_to_be32(101)
+ #define TPM_ORD_GET_RANDOM cpu_to_be32(70)
 -- 
 2.7.4
+
+
+------------------------------------------------------------------------------
