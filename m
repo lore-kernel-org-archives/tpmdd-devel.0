@@ -1,16 +1,18 @@
-From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v5 1/3] tpm: move event log init functions
- to tpm_eventlog_init.c
-Date: Thu, 24 Nov 2016 13:31:03 +0530
-Message-ID: <58369E3F.40509@linux.vnet.ibm.com>
-References: <1479922057-8752-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1479922057-8752-2-git-send-email-nayna@linux.vnet.ibm.com>
-	<20161123193830.GB13927@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v6 4/9] tpm: drop
+	tpm1_chip_register(/unregister)
+Date: Thu, 24 Nov 2016 13:51:28 +0200
+Message-ID: <20161124115128.phhd67edwehipkgk@intel.com>
+References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1479117656-12403-5-git-send-email-nayna@linux.vnet.ibm.com>
+	<20161122112200.55khdxtctt5rel4j@intel.com>
+	<20161122164240.GC3956@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20161123193830.GB13927-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20161122164240.GC3956-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,33 +25,29 @@ To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.or
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Tue, Nov 22, 2016 at 09:42:40AM -0700, Jason Gunthorpe wrote:
+> On Tue, Nov 22, 2016 at 01:22:00PM +0200, Jarkko Sakkinen wrote:
+> > On Mon, Nov 14, 2016 at 05:00:51AM -0500, Nayna Jain wrote:
+> > > Check for TPM2 chip in tpm_sysfs_add_device, tpm_bios_log_setup and
+> > > tpm_bios_log_teardown in order to make code flow cleaner and to enable
+> > > to implement TPM 2.0 support later on. This is partially derived from
+> > > the commit by Nayna Jain with the extension that also tpm1_chip_register
+> > > is dropped.
+> > > 
+> > > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> > 
+> > This commit remains unreviewed and tested. I'm in the author role here
+> > so I cannot help with this. If that does not happen soon I cannot put
+> > this into the pull request.
+> 
+> I tested it on my ARM system when I tested your branch.
+> 
+> I think it looks better this way..
+> 
+> Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 
+Thanks. I'll also add tested-by from you then.
 
-On 11/24/2016 01:08 AM, Jason Gunthorpe wrote:
-> On Wed, Nov 23, 2016 at 12:27:35PM -0500, Nayna Jain wrote:
->> The device driver code for the event log has the init functions and
->> TPM 1.2 parsing logic both defined in same file(tpm_eventlog.c).
->>
->> Since the initialization functions are common with the TPM 2.0 event
->> log support, this patch splits tpm_eventlog.c to have only TPM 1.2
->> event log parsing logic and moves the init functions into
->> tpm_eventlog_init.c.
->
-> I think I'd rather see a tpm_eventlog1.c/tpm_eventlog2.c than this
-> _init thing..
-
-Do you mean tpm_eventlog1.c for TPM 1.2 and tpm_eventlog2.c for TPM 2.0 
-  event log specific parsing ?
-
-And if so, then which one should have the common functions for TPM 1.2 
-and TPM 2.0 ?
-
-Thanks & Regards,
-    - Nayna
-
->
-> Jason
->
-
+/Jarkko
 
 ------------------------------------------------------------------------------
