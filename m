@@ -1,52 +1,59 @@
-From: Nayna <nayna@linux.vnet.ibm.com>
-Subject: Re: [PATCH v5 1/3] tpm: move event log init functions to
- tpm_eventlog_init.c
-Date: Thu, 24 Nov 2016 22:20:14 +0530
-Message-ID: <58371A46.3090400@linux.vnet.ibm.com>
-References: <1479922057-8752-1-git-send-email-nayna@linux.vnet.ibm.com>
- <1479922057-8752-2-git-send-email-nayna@linux.vnet.ibm.com>
- <20161123193830.GB13927@obsidianresearch.com>
- <58369E3F.40509@linux.vnet.ibm.com>
- <20161124164331.GA4930@obsidianresearch.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH v6 3/9] tpm: replace dynamically allocated
+ bios_dir with a static array
+Date: Thu, 24 Nov 2016 09:53:13 -0700
+Message-ID: <20161124165313.GB4930@obsidianresearch.com>
+References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1479117656-12403-4-git-send-email-nayna@linux.vnet.ibm.com>
+	<20161122112333.7ootyrbssd6pkrjb@intel.com>
+	<20161122165856.GD3956@obsidianresearch.com>
+	<20161124135723.kfafipftppjyr5ip@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20161124164331.GA4930@obsidianresearch.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20161124135723.kfafipftppjyr5ip-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Thu, Nov 24, 2016 at 03:57:23PM +0200, Jarkko Sakkinen wrote:
+> I manually added the changes to:
+> 
+>   tpm: replace dynamically allocated bios_dir with a static array
 
+For this patch..
 
-On 11/24/2016 10:13 PM, Jason Gunthorpe wrote:
-> On Thu, Nov 24, 2016 at 01:31:03PM +0530, Nayna wrote:
->
->>>> Since the initialization functions are common with the TPM 2.0 event
->>>> log support, this patch splits tpm_eventlog.c to have only TPM 1.2
->>>> event log parsing logic and moves the init functions into
->>>> tpm_eventlog_init.c.
->>>
->>> I think I'd rather see a tpm_eventlog1.c/tpm_eventlog2.c than this
->>> _init thing..
->>
->> Do you mean tpm_eventlog1.c for TPM 1.2 and tpm_eventlog2.c for TPM 2.0
->> event log specific parsing ?
->>
->> And if so, then which one should have the common functions for TPM 1.2 and
->> TPM 2.0?
->
-> Leave them in tpm_eventlog.c ..
+Could drop 'int rc' from tpm1_chip_register, but it will come back in
+a later patch
 
-Sure. I am fine with that. I just feel that it bit of mixed up the scope 
-of tpm_eventlog.c file, where it now also refers to TPM2, but have 
-corresponding seq functions in separate file.
+Could dump TPM_NUM_EVENT_LOG_FILES and just use
+ARRAY_SIZE(chip->bios_dir)
 
-Thanks & Regards,
-    - Nayna
+Now the the stub for tpm_bios_log_setup can properly return -ENODEV
 
->
-> Jason
->
+This is no good at this point in the series - we need the ENODEV
+detection in tpm_chip_register() from the 'Fix handle of missing event
+log' moved into this patch, because it now returns ENODEV due to
+sercurityfs
 
+The commit 'tpm: vtpm_proxy: Do not access host's event log' still
+needs a proper commit message - it doesn't match what the patch is
+doing at all.
+
+If you are going to be editing the patches I'd suggest squashing all
+the bug fix ones with proper credit so it at least makes sense to
+read..
+
+Jason
+
+------------------------------------------------------------------------------
