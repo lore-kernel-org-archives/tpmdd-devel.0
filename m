@@ -1,79 +1,50 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH 3/4 v2] tmp: use pdev for parent device in tpm_chip_alloc
-Date: Thu, 24 Nov 2016 15:17:50 +0200
-Message-ID: <20161124131750.24px2yoavtk4ipk7@intel.com>
-References: <1479315821-27349-1-git-send-email-tomas.winkler@intel.com>
- <1479315821-27349-3-git-send-email-tomas.winkler@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v2 0/4] tpm: kdoc cleanup
+Date: Thu, 24 Nov 2016 15:19:17 +0200
+Message-ID: <20161124131917.rjg7nsz6j4xqkssc@intel.com>
+References: <1479895454-15076-1-git-send-email-tomas.winkler@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1479315821-27349-3-git-send-email-tomas.winkler@intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Tomas Winkler <tomas.winkler@intel.com>
-Cc: tpmdd-devel@lists.sourceforge.net, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, linux-kernel@vger.kernel.org
+In-Reply-To: <1479895454-15076-1-git-send-email-tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Nov 16, 2016 at 07:03:40PM +0200, Tomas Winkler wrote:
-> The tpm stack uses pdev name convention for the parent device.
-> Fix that also in tpm_chip_alloc().
+On Wed, Nov 23, 2016 at 12:04:10PM +0200, Tomas Winkler wrote:
+> Cleanup tpm in-code documentation.
 > 
-> Fixes: 3897cd9c8d1d ("tpm: Split out the devm stuff from tpmm_chip_alloc")'
-> Signed-off-by: Tomas Winkler <tomas.winkler@intel.com>
+> Tomas Winkler (4):
+>   tpm: add kdoc for tpm_transmit and tpm_transmit_cmd
+>   tpm/tpm2-chip: fix kdoc errors
+>   tmp: use pdev for parent device in tpm_chip_alloc
+>   tpm/vtpm: fix kdoc warnings
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Sorry I my previous comments were meant to this series. I looked them up
+from patchwork and replied to wrong series
 
-You should CC patches by default also to linux-security-module. I don't
-think for this particular series it is a major concern though.
-
-/Jarkko
-
-
-> ---
-> Resend.
->  drivers/char/tpm/tpm-chip.c | 8 ++++----
->  1 file changed, 4 insertions(+), 4 deletions(-)
 > 
-> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> index 3f27753d96aa..9e36a7f21a6e 100644
-> --- a/drivers/char/tpm/tpm-chip.c
-> +++ b/drivers/char/tpm/tpm-chip.c
-> @@ -141,7 +141,7 @@ static void tpm_dev_release(struct device *dev)
->   * Allocates a new struct tpm_chip instance and assigns a free
->   * device number for it. Must be paired with put_device(&chip->dev).
->   */
-> -struct tpm_chip *tpm_chip_alloc(struct device *dev,
-> +struct tpm_chip *tpm_chip_alloc(struct device *pdev,
->  				const struct tpm_class_ops *ops)
->  {
->  	struct tpm_chip *chip;
-> @@ -160,7 +160,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
->  	rc = idr_alloc(&dev_nums_idr, NULL, 0, TPM_NUM_DEVICES, GFP_KERNEL);
->  	mutex_unlock(&idr_lock);
->  	if (rc < 0) {
-> -		dev_err(dev, "No available tpm device numbers\n");
-> +		dev_err(pdev, "No available tpm device numbers\n");
->  		kfree(chip);
->  		return ERR_PTR(rc);
->  	}
-> @@ -170,7 +170,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
->  
->  	chip->dev.class = tpm_class;
->  	chip->dev.release = tpm_dev_release;
-> -	chip->dev.parent = dev;
-> +	chip->dev.parent = pdev;
->  	chip->dev.groups = chip->groups;
->  
->  	if (chip->dev_num == 0)
-> @@ -182,7 +182,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *dev,
->  	if (rc)
->  		goto out;
->  
-> -	if (!dev)
-> +	if (!pdev)
->  		chip->flags |= TPM_CHIP_FLAG_VIRTUAL;
->  
->  	cdev_init(&chip->cdev, &tpm_fops);
+>  drivers/char/tpm/tpm-chip.c       |   8 +--
+>  drivers/char/tpm/tpm-interface.c  |  33 ++++++++++--
+>  drivers/char/tpm/tpm2-cmd.c       | 105 +++++++++++++++++++++-----------------
+>  drivers/char/tpm/tpm_ibmvtpm.c    |  51 +++++++++---------
+>  drivers/char/tpm/tpm_vtpm_proxy.c |  48 ++++++++++++-----
+>  5 files changed, 150 insertions(+), 95 deletions(-)
+> 
 > -- 
 > 2.7.4
 > 
+
+/Jarkko
+
+------------------------------------------------------------------------------
