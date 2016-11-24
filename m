@@ -1,65 +1,79 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH] tpm: use get_unaligned_be32 unaligned
-	buffer access.
-Date: Wed, 23 Nov 2016 14:01:39 -0700
-Message-ID: <20161123210138.GB15803@obsidianresearch.com>
-References: <1479899094-9486-1-git-send-email-tomas.winkler@intel.com>
-	<20161123165734.GA2763@obsidianresearch.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B543308CB@hasmsx108.ger.corp.intel.com>
+From: Nayna <nayna@linux.vnet.ibm.com>
+Subject: Re: [PATCH v5 2/3] tpm: enhance read_log_of() to support Physical TPM
+ event log
+Date: Thu, 24 Nov 2016 13:23:51 +0530
+Message-ID: <58369C8F.5000800@linux.vnet.ibm.com>
+References: <1479922057-8752-1-git-send-email-nayna@linux.vnet.ibm.com>
+ <1479922057-8752-3-git-send-email-nayna@linux.vnet.ibm.com>
+ <20161123193700.GA13927@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset=windows-1252; format=flowed
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B543308CB-Jy8z56yoSI8MvF1YICWikbfspsVTdybXVpNB7YpNyf8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20161123193700.GA13927@obsidianresearch.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Nov 23, 2016 at 08:56:25PM +0000, Winkler, Tomas wrote:
-> > On Wed, Nov 23, 2016 at 01:04:54PM +0200, Tomas Winkler wrote:
-> > > Use get_unaligned_be32 as b32_to_cpu doesn't work correctly on all
-> > > platforms for unaligned access.
-> > >
-> > > The fix doesn't cover all the cases as also some cast structures have
-> > > members on unaligned addresses.
-> > 
-> > I think this is a good idea..
-> > 
-> > > @@ -353,8 +353,8 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8
-> > *buf, size_t bufsiz,
-> > >  	if (bufsiz > TPM_BUFSIZE)
-> > >  		bufsiz = TPM_BUFSIZE;
-> > >
-> > > -	count = be32_to_cpu(*((__be32 *) (buf + 2)));
-> > > -	ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
-> > > +	count = get_unaligned_be32(buf + 2);
-> > > +	ordinal = get_unaligned_be32(buf + 6);
-> >
-> > But lets fix this better and get rid of the constants too...
-> 
-> >  const tpm_input_header *hdr = buf;
-> >  count = be32_to_cpu(hdr->length);
-> >  ordinal = be32_to_cpu(hdr->ordinal);
-> > 
-> > Compiler will take care of unaligned for __packed.
-> 
-> Yes, compiler takes care at performance penalty but probably we
-> don't care about that much,
 
-Hmm? get_unaligned_be32 boils down to the same __packed construct.
 
-As is today we must be hitting the in-kernel unaligned access trap (eg
-on ARM) which is *very* expensive so this is a very worthwhile fix ...
+On 11/24/2016 01:07 AM, Jason Gunthorpe wrote:
+> On Wed, Nov 23, 2016 at 12:27:36PM -0500, Nayna Jain wrote:
+>>   	sizep = of_get_property(np, "linux,sml-size", NULL);
+>> +	if (of_property_match_string(np, "compatible", "IBM,vtpm") < 0)
+>> +		log_size = be32_to_cpup(sizep);
+>> +	else
+>> +		log_size = *sizep;
+>> +
+>
+> Uh, no, sizep can be null at this point:
 
-Jason
+Oops !! Missed the basic. Will fix it. Sorry, and Thanks for noticing.
 
-------------------------------------------------------------------------------
+>
+>>   	basep = of_get_property(np, "linux,sml-base", NULL);
+>>   	if (sizep == NULL && basep == NULL)
+>>   		return -ENODEV;
+>>   	if (sizep == NULL || basep == NULL)
+>>   		return -EIO;
+>
+> Move the if here.
+
+Yeah..
+
+>
+>> -	if (*sizep == 0) {
+>> +	if (log_size == 0) {
+>>   		dev_warn(&chip->dev, "%s: Event log area empty\n", __func__);
+>>   		return -EIO;
+>>   	}
+>>
+>> -	log->bios_event_log = kmalloc(*sizep, GFP_KERNEL);
+>> +	log->bios_event_log = kmalloc(log_size, GFP_KERNEL);
+>>   	if (!log->bios_event_log)
+>>   		return -ENOMEM;
+>>
+>> -	log->bios_event_log_end = log->bios_event_log + *sizep;
+>> +	log->bios_event_log_end = log->bios_event_log + log_size;
+>>
+>> -	memcpy(log->bios_event_log, __va(*basep), *sizep);
+>> +	if (of_property_match_string(np, "compatible", "IBM,vtpm") < 0)
+>> +		memcpy(chip->log.bios_event_log, __va(be64_to_cpup(basep)),
+>> +		       log_size);
+>> +	else
+>> +		memcpy(chip->log.bios_event_log, __va(*basep),
+>> log_size);
+>
+> And move the conditional swap of basep up to be along side sizep as
+> well (ie get rid of the second of_property_match_string)
+>
+
+Yeah.. true.. Will fix this also.
+
+Thanks & Regards,
+    - Nayna
+
+> Jason
+>
+
