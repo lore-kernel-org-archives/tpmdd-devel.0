@@ -1,73 +1,95 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm_i2c_atmel: fix i2c_atmel_recv() when
- response is greater than 35 bytes
-Date: Thu, 24 Nov 2016 15:04:02 +0200
-Message-ID: <20161124130402.tblatokp6pakx5e7@intel.com>
-References: <20161122124007.16487-1-flus@cesar.org.br>
-	<20161122170822.GF3956@obsidianresearch.com>
-	<CANX2WTY5ZnULO5BJppR=qoiBFMJb_46pXEb6Dv4qsA9-EpGkow@mail.gmail.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH 1/4] tpm: add kdoc for tpm_transmit and tpm_transmit_cmd
+Date: Thu, 24 Nov 2016 15:11:55 +0200
+Message-ID: <20161124131155.zt23thu5hg3ethdw@intel.com>
+References: <1479315821-27349-1-git-send-email-tomas.winkler@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="iso-8859-1"
-Content-Transfer-Encoding: quoted-printable
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <CANX2WTY5ZnULO5BJppR=qoiBFMJb_46pXEb6Dv4qsA9-EpGkow-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: =?iso-8859-1?Q?F=E1bio?= Urquiza <flus-/PpS1Qp42A70xEqrn79Vhg@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <1479315821-27349-1-git-send-email-tomas.winkler@intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Tomas Winkler <tomas.winkler@intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Nov 22, 2016 at 02:47:37PM -0300, F=E1bio Urquiza wrote:
-> On Tue, Nov 22, 2016 at 2:08 PM, Jason Gunthorpe
-> <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote:
-> >
-> > On Tue, Nov 22, 2016 at 09:40:07AM -0300, Fabio Urquiza wrote:
-> > > If the variable expected_len is greater than 35 bytes, i2c_atmel_recv=
-()
-> > > ignores the amount of data already read in i2c_atmel_read_status() and
-> > > request more data than what the device is ready to supply. As result =
-the
-> > > TPM data sent to the upper layers will miss the first 35 bytes of the
-> > > response and will be filled with garbage in the end.
-> >
-> > I'm concerned your chip is not behaving the same as mine, I have to
-> > dig out my hardware and check. I'm fairly certain I would have hit
-> > this..
-> >
-> > Do you know the revision code for your chip?
-> >
-> > IIRC my TPM re-read the message starting from byte 0, which is why the
-> > code is like this.
-> >
-> > Jason
-> =
+On Wed, Nov 16, 2016 at 07:03:38PM +0200, Tomas Winkler wrote:
+> Functions tpm_transmit and transmit_cmd are referenced
+> from other functions kdoc hence deserve documentation.
+> 
+> Signed-off-by: Tomas Winkler <tomas.winkler@intel.com>
+> ---
+>  drivers/char/tpm/tpm-interface.c | 33 ++++++++++++++++++++++++++++-----
+>  1 file changed, 28 insertions(+), 5 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index a2688ac2b48f..56c238a6e005 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -328,8 +328,17 @@ unsigned long tpm_calc_ordinal_duration(struct tpm_chip *chip,
+>  }
+>  EXPORT_SYMBOL_GPL(tpm_calc_ordinal_duration);
+>  
+> -/*
+> - * Internal kernel interface to transmit TPM commands
+> +/**
+> + * tmp_transmit - Internal kernel interface to transmit TPM commands.
+> + *
+> + * @chip: TPM chip to use
+> + * @buf: TPM command buffer
+> + * @bufsiz: length of the TPM command buffer
+> + * @flags: tpm transmit flags - bitmap
+> + *
+> + * Return:
+> + *     0 when the operation is successful
+> + *     A negative number for system errors (errno)
+>   */
+>  ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
+>  		     unsigned int flags)
+> @@ -409,9 +418,21 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
+>  	return rc;
+>  }
+>  
+> -#define TPM_DIGEST_SIZE 20
+> -#define TPM_RET_CODE_IDX 6
+> -
+> +/**
+> + * tmp_transmit_cmd - send a tpm command to the device
+> + *    The function extracts tpm out header return code
+> + *
+> + * @chip: TPM chip to use
+> + * @cmd: TPM command buffer
+> + * @len: length of the TPM command
+> + * @flags: tpm transmit flags - bitmap
+> + * @desc: command description used in the error message
+> + *
+> + * Return:
+> + *     0 when the operation is successful
+> + *     A negative number for system errors (errno)
+> + *     A positive number for a TPM error.
+> + */
+>  ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd,
+>  			 int len, unsigned int flags, const char *desc)
+>  {
+> @@ -434,6 +455,8 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd,
+>  	return err;
+>  }
+>  
+> +#define TPM_DIGEST_SIZE 20
+> +#define TPM_RET_CODE_IDX 6
 
-> I'm working on an emulator for that chip and I don't have the real
-> hardware to check.
-> =
+I think we should scrap this stupid constant away but its not this
+patches fault :-) Would be better to just use SHA1_DIGEST_SIZE.
 
-> That behavior makes sense. I will change the emulator to follow that.
-> =
+>  #define TPM_INTERNAL_RESULT_SIZE 200
+>  #define TPM_ORD_GET_CAP cpu_to_be32(101)
+>  #define TPM_ORD_GET_RANDOM cpu_to_be32(70)
+> -- 
+> 2.7.4
 
-> You can ignore that patch, then.
-> =
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
-> Thanks,
-> =
-
-> -Fabio Urquiza
-
-Thanks guys. I was going to ask if someone is able to test this. Good
-that you sorted this out.
+I'm applying this and other patches in this series post pull requeest as
+it is not release critical.
 
 /Jarkko
-
----------------------------------------------------------------------------=
----
