@@ -1,37 +1,40 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v5 1/3] tpm: move event log init functions to
- tpm_eventlog_init.c
-Date: Thu, 24 Nov 2016 23:01:05 +0200
-Message-ID: <20161124210105.ykmbednlmae52tla@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v5 2/3] tpm: enhance read_log_of() to
+ support Physical TPM event log
+Date: Thu, 24 Nov 2016 23:06:37 +0200
+Message-ID: <20161124210637.6dspokalv7tcql26@intel.com>
 References: <1479922057-8752-1-git-send-email-nayna@linux.vnet.ibm.com>
- <1479922057-8752-2-git-send-email-nayna@linux.vnet.ibm.com>
- <20161123193830.GB13927@obsidianresearch.com>
+	<1479922057-8752-3-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20161123193830.GB13927@obsidianresearch.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Nayna Jain <nayna@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+In-Reply-To: <1479922057-8752-3-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Nov 23, 2016 at 12:38:30PM -0700, Jason Gunthorpe wrote:
-> On Wed, Nov 23, 2016 at 12:27:35PM -0500, Nayna Jain wrote:
-> > The device driver code for the event log has the init functions and
-> > TPM 1.2 parsing logic both defined in same file(tpm_eventlog.c).
-> > 
-> > Since the initialization functions are common with the TPM 2.0 event
-> > log support, this patch splits tpm_eventlog.c to have only TPM 1.2
-> > event log parsing logic and moves the init functions into
-> > tpm_eventlog_init.c.
-> 
-> I think I'd rather see a tpm_eventlog1.c/tpm_eventlog2.c than this
-> _init thing..
-> 
-> Jason
+On Wed, Nov 23, 2016 at 12:27:36PM -0500, Nayna Jain wrote:
+> -	memcpy(log->bios_event_log, __va(*basep), *sizep);
+> +	if (of_property_match_string(np, "compatible", "IBM,vtpm") < 0)
+> +		memcpy(chip->log.bios_event_log, __va(be64_to_cpup(basep)),
+> +		       log_size);
+> +	else
+> +		memcpy(chip->log.bios_event_log, __va(*basep), log_size);
 
-I would rather see tpm1-eventlog.c and tpm2-eventlog.c as we already
-have tpm2-cmd.c for the sake of consistency.
+
+This does not look good. You should be able rearrange your code in a way
+that you only have only one memcpy call.
 
 /Jarkko
+
+------------------------------------------------------------------------------
