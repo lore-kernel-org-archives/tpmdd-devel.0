@@ -1,58 +1,73 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v6 4/9] tpm: drop tpm1_chip_register(/unregister)
-Date: Thu, 24 Nov 2016 13:52:04 +0200
-Message-ID: <20161124115204.5hkqpuyh2cl64vje@intel.com>
-References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
- <1479117656-12403-5-git-send-email-nayna@linux.vnet.ibm.com>
- <20161122112200.55khdxtctt5rel4j@intel.com>
- <20161122164240.GC3956@obsidianresearch.com>
- <5835E103.90600@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm_i2c_atmel: fix i2c_atmel_recv() when
+ response is greater than 35 bytes
+Date: Thu, 24 Nov 2016 15:04:02 +0200
+Message-ID: <20161124130402.tblatokp6pakx5e7@intel.com>
+References: <20161122124007.16487-1-flus@cesar.org.br>
+	<20161122170822.GF3956@obsidianresearch.com>
+	<CANX2WTY5ZnULO5BJppR=qoiBFMJb_46pXEb6Dv4qsA9-EpGkow@mail.gmail.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="iso-8859-1"
+Content-Transfer-Encoding: quoted-printable
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <5835E103.90600@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Nayna <nayna@linux.vnet.ibm.com>
-Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+In-Reply-To: <CANX2WTY5ZnULO5BJppR=qoiBFMJb_46pXEb6Dv4qsA9-EpGkow-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: =?iso-8859-1?Q?F=E1bio?= Urquiza <flus-/PpS1Qp42A70xEqrn79Vhg@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Nov 24, 2016 at 12:03:39AM +0530, Nayna wrote:
-> 
-> 
-> On 11/22/2016 10:12 PM, Jason Gunthorpe wrote:
-> > On Tue, Nov 22, 2016 at 01:22:00PM +0200, Jarkko Sakkinen wrote:
-> > > On Mon, Nov 14, 2016 at 05:00:51AM -0500, Nayna Jain wrote:
-> > > > Check for TPM2 chip in tpm_sysfs_add_device, tpm_bios_log_setup and
-> > > > tpm_bios_log_teardown in order to make code flow cleaner and to enable
-> > > > to implement TPM 2.0 support later on. This is partially derived from
-> > > > the commit by Nayna Jain with the extension that also tpm1_chip_register
-> > > > is dropped.
-> > > > 
-> > > > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-> > > 
-> > > This commit remains unreviewed and tested. I'm in the author role here
-> > > so I cannot help with this. If that does not happen soon I cannot put
-> > > this into the pull request.
-> > 
-> > I tested it on my ARM system when I tested your branch.
-> > 
-> > I think it looks better this way..
-> > 
-> > Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-> > 
+On Tue, Nov 22, 2016 at 02:47:37PM -0300, F=E1bio Urquiza wrote:
+> On Tue, Nov 22, 2016 at 2:08 PM, Jason Gunthorpe
+> <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote:
+> >
+> > On Tue, Nov 22, 2016 at 09:40:07AM -0300, Fabio Urquiza wrote:
+> > > If the variable expected_len is greater than 35 bytes, i2c_atmel_recv=
+()
+> > > ignores the amount of data already read in i2c_atmel_read_status() and
+> > > request more data than what the device is ready to supply. As result =
+the
+> > > TPM data sent to the upper layers will miss the first 35 bytes of the
+> > > response and will be filled with garbage in the end.
+> >
+> > I'm concerned your chip is not behaving the same as mine, I have to
+> > dig out my hardware and check. I'm fairly certain I would have hit
+> > this..
+> >
+> > Do you know the revision code for your chip?
+> >
+> > IIRC my TPM re-read the message starting from byte 0, which is why the
+> > code is like this.
+> >
 > > Jason
-> > 
-> 
-> From my side also, as part of testing the whole patchset, I have tested this
-> patch.
-> 
-> Tested-by: Nayna Jain <nayna@linux.vnet.ibm.com>
-> Reviewed-by: Nayna Jain <nayna@linux.vnet.ibm.com>
-> 
-> Thanks & Regards,
->   - Nayna
+> =
 
-Thanks Nayna! I'll go on creating pull request...
+> I'm working on an emulator for that chip and I don't have the real
+> hardware to check.
+> =
+
+> That behavior makes sense. I will change the emulator to follow that.
+> =
+
+> You can ignore that patch, then.
+> =
+
+> Thanks,
+> =
+
+> -Fabio Urquiza
+
+Thanks guys. I was going to ask if someone is able to test this. Good
+that you sorted this out.
 
 /Jarkko
+
+---------------------------------------------------------------------------=
+---
