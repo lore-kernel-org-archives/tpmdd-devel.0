@@ -1,183 +1,162 @@
-From: Nayna <nayna@linux.vnet.ibm.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC 2/2] tpm: refactor tpm2_get_tpm_pt to
- tpm2_getcap_cmd
-Date: Thu, 24 Nov 2016 19:12:57 +0530
-Message-ID: <5836EE61.4010200@linux.vnet.ibm.com>
-References: <1476008057-2395-1-git-send-email-jarkko.sakkinen@linux.intel.com>
- <1476008057-2395-3-git-send-email-jarkko.sakkinen@linux.intel.com>
- <58254759.80406@linux.vnet.ibm.com>
- <20161112000242.63hgv5ujmkr7hy6a@intel.com>
- <20161114234850.iat2zkqvuva6ae6t@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v6 3/9] tpm: replace dynamically allocated
+ bios_dir with a static array
+Date: Thu, 24 Nov 2016 15:57:23 +0200
+Message-ID: <20161124135723.kfafipftppjyr5ip@intel.com>
+References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1479117656-12403-4-git-send-email-nayna@linux.vnet.ibm.com>
+	<20161122112333.7ootyrbssd6pkrjb@intel.com>
+	<20161122165856.GD3956@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20161114234850.iat2zkqvuva6ae6t@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20161122165856.GD3956-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Tue, Nov 22, 2016 at 09:58:56AM -0700, Jason Gunthorpe wrote:
+> On Tue, Nov 22, 2016 at 01:23:33PM +0200, Jarkko Sakkinen wrote:
+> > On Mon, Nov 14, 2016 at 05:00:50AM -0500, Nayna Jain wrote:
+> > > This commit is based on a commit by Nayna Jain. Replaced dynamically
+> > > allocated bios_dir with a static array as the size is always constant.
+> > > 
+> > > Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> > > Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> > > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> > 
+> > This commit remains unreviewed and tested. I'm in the author role here
+> > so I cannot help with this. If that does not happen soon I cannot put
+> > this into the pull request.
+> 
+> Nayna must have tested it, looks OK to me..
+> 
+> > > +err:
+> > > +	chip->bios_dir[cnt] = NULL;
+> > > +	tpm_bios_log_teardown(chip);
+> > > +	return -EIO;
+> 
+> Except that return should ideally be PTR_ERR(chip->bios_dir[cnt])
+> 
+> .. and we still set ERR_PTR into bios_dir in the ENODEV case, so the
+> overall series is still broken if securityfs is compiled out.
+> 
+> Lets fix this all like this - which is a good enough reason to leave the
+> ENODEV detect alone - just squash this into your patch:
 
+That was a great catch. Thank you.
 
-On 11/15/2016 05:18 AM, Jarkko Sakkinen wrote:
-> On Fri, Nov 11, 2016 at 04:02:43PM -0800, Jarkko Sakkinen wrote:
->> On Fri, Nov 11, 2016 at 09:51:45AM +0530, Nayna wrote:
->>>
->>>
->>> On 10/09/2016 03:44 PM, Jarkko Sakkinen wrote:
->>>> Refactored tpm2_get_tpm_pt to tpm2_getcap_cmd, which means that it also
->>>> takes capability ID as input. This is required to access
->>>> TPM_CAP_HANDLES, which contains metadata needed for swapping transient
->>>> data.
->>>>
->>>> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
->>>> ---
->>>>    drivers/char/tpm/tpm.h          |  6 +++-
->>>>    drivers/char/tpm/tpm2-cmd.c     | 64 ++++++++++++++++++++---------------------
->>>>    drivers/char/tpm/tpm_tis_core.c |  3 +-
->>>>    3 files changed, 38 insertions(+), 35 deletions(-)
->>>>
->>>> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
->>>> index 0fab6d5..8176f42 100644
->>>> --- a/drivers/char/tpm/tpm.h
->>>> +++ b/drivers/char/tpm/tpm.h
->>>> @@ -85,6 +85,10 @@ enum tpm2_capabilities {
->>>>    	TPM2_CAP_TPM_PROPERTIES = 6,
->>>>    };
->>>>
->>>> +enum tpm2_properties {
->>>> +	TPM2_PT_FAMILY_INDICATOR	= 0x100,
->>>> +};
->>>> +
->>>>    enum tpm2_startup_types {
->>>>    	TPM2_SU_CLEAR	= 0x0000,
->>>>    	TPM2_SU_STATE	= 0x0001,
->>>> @@ -485,7 +489,7 @@ int tpm2_seal_trusted(struct tpm_chip *chip,
->>>>    int tpm2_unseal_trusted(struct tpm_chip *chip,
->>>>    			struct trusted_key_payload *payload,
->>>>    			struct trusted_key_options *options);
->>>> -ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,
->>>> +ssize_t tpm2_getcap_cmd(struct tpm_chip *chip, u32 cap_id, u32 property_id,
->>>>    			u32 *value, const char *desc);
->>>>
->>>>    int tpm2_auto_startup(struct tpm_chip *chip);
->>>> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
->>>> index 2900e18..fcf3d86 100644
->>>> --- a/drivers/char/tpm/tpm2-cmd.c
->>>> +++ b/drivers/char/tpm/tpm2-cmd.c
->>>> @@ -111,13 +111,13 @@ struct tpm2_pcr_extend_in {
->>>>    	u8				digest[TPM_DIGEST_SIZE];
->>>>    } __packed;
->>>>
->>>> -struct tpm2_get_tpm_pt_in {
->>>> +struct tpm2_getcap_in {
->>>>    	__be32	cap_id;
->>>>    	__be32	property_id;
->>>>    	__be32	property_cnt;
->>>>    } __packed;
->>>>
->>>> -struct tpm2_get_tpm_pt_out {
->>>> +struct tpm2_getcap_out {
->>>>    	u8	more_data;
->>>>    	__be32	subcap_id;
->>>>    	__be32	property_cnt;
->>>> @@ -140,8 +140,8 @@ union tpm2_cmd_params {
->>>>    	struct	tpm2_pcr_read_in	pcrread_in;
->>>>    	struct	tpm2_pcr_read_out	pcrread_out;
->>>>    	struct	tpm2_pcr_extend_in	pcrextend_in;
->>>> -	struct	tpm2_get_tpm_pt_in	get_tpm_pt_in;
->>>> -	struct	tpm2_get_tpm_pt_out	get_tpm_pt_out;
->>>> +	struct	tpm2_getcap_in		getcap_in;
->>>> +	struct	tpm2_getcap_out		getcap_out;
->>>>    	struct	tpm2_get_random_in	getrandom_in;
->>>>    	struct	tpm2_get_random_out	getrandom_out;
->>>>    };
->>>> @@ -435,16 +435,6 @@ int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max)
->>>>    	return total ? total : -EIO;
->>>>    }
->>>>
->>>> -#define TPM2_GET_TPM_PT_IN_SIZE \
->>>> -	(sizeof(struct tpm_input_header) + \
->>>> -	 sizeof(struct tpm2_get_tpm_pt_in))
->>>> -
->>>> -static const struct tpm_input_header tpm2_get_tpm_pt_header = {
->>>> -	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
->>>> -	.length = cpu_to_be32(TPM2_GET_TPM_PT_IN_SIZE),
->>>> -	.ordinal = cpu_to_be32(TPM2_CC_GET_CAPABILITY)
->>>> -};
->>>> -
->>>>    /**
->>>>     * Append TPMS_AUTH_COMMAND to the buffer. The buffer must be allocated with
->>>>     * tpm_buf_alloc().
->>>> @@ -750,35 +740,43 @@ out:
->>>>    	return rc;
->>>>    }
->>>>
->>>> +#define TPM2_GETCAP_IN_SIZE \
->>>> +	(sizeof(struct tpm_input_header) + sizeof(struct tpm2_getcap_in))
->>>> +
->>>> +static const struct tpm_input_header tpm2_getcap_header = {
->>>> +	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
->>>> +	.length = cpu_to_be32(TPM2_GETCAP_IN_SIZE),
->>>> +	.ordinal = cpu_to_be32(TPM2_CC_GET_CAPABILITY)
->>>> +};
->>>> +
->>>>    /**
->>>> - * tpm2_get_tpm_pt() - get value of a TPM_CAP_TPM_PROPERTIES type property
->>>> - * @chip:		TPM chip to use.
->>>> - * @property_id:	property ID.
->>>> - * @value:		output variable.
->>>> + * tpm2_getcap_cmd() - execute a TPM2_GetCapability command
->>>> + * @chip:		TPM chip to use
->>>> + * @cap_id:		capability ID
->>>> + * @property_id:	property ID
->>>> + * @value:		value of the property
->>>>     * @desc:		passed to tpm_transmit_cmd()
->>>>     *
->>>> - * 0 is returned when the operation is successful. If a negative number is
->>>> - * returned it remarks a POSIX error code. If a positive number is returned
->>>> - * it remarks a TPM error.
->>>> + * Return: same as with tpm_transmit_cmd
->>>>     */
->>>> -ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,  u32 *value,
->>>> -			const char *desc)
->>>> +ssize_t tpm2_getcap_cmd(struct tpm_chip *chip, u32 cap_id, u32 property_id,
->>>> +			u32 *value, const char *desc)
->>>
->>> This function currently returns single value "u32 *value" as output data.
->>>
->>> Some calling function expect list of values from capabilities output.
->>> For eg., get_active_banks() use TPM_CAP_PCRS capability to retrieve list of
->>> active banks. And this capability returns array of pcr selections(which is a
->>> struct representing each active PCR bank)
->>>
->>> I was thinking, can we define output parameter as struct of cap_id and union
->>> of expected cap_data ?
->>
->> Unless you have major concerns about performance, which I think are not
->> relevant here, calling this in a loop is perfectly adequate and a lot of
->> simpler than having a generic version (with moreData handling and
->> everything).
->>
->> I would rather see uses of struct cap_t to shrink than to expand. The
->> same goes for other horrific unions that exist today in the driver.
->
-> If you are fine with this patch (give Reviewed-by) I can apply this
-> and add to my 4.10 pull request so that we have common baseline to
-> develop both event log and the resource manager.
->
-> This is a very low risk commit to take to 4.10 because it is only used
-> for interrupt generation in the TIS driver at the moment.
+> diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm_eventlog.c
+> index 2a15b866ac257a..11bb1138a8282e 100644
+> --- a/drivers/char/tpm/tpm_eventlog.c
+> +++ b/drivers/char/tpm/tpm_eventlog.c
+> @@ -356,15 +356,6 @@ static const struct file_operations tpm_bios_measurements_ops = {
+>  	.release = tpm_bios_measurements_release,
+>  };
+>  
+> -static int is_bad(void *p)
+> -{
+> -	if (!p)
+> -		return 1;
+> -	if (IS_ERR(p) && (PTR_ERR(p) != -ENODEV))
+> -		return 1;
+> -	return 0;
+> -}
+> -
 
-Works for capabilities with more_data(yes) and single value properties.
+This function is only confusing indirection anyway. Does not serve
+really any justifiable purpose.
 
-Reviewed-by: Nayna Jain <nayna@linux.vnet.ibm.com>
+>  static int tpm_read_log(struct tpm_chip *chip)
+>  {
+>  	int rc;
+> @@ -390,7 +381,8 @@ static int tpm_read_log(struct tpm_chip *chip)
+>   * If an event log is found then the securityfs files are setup to
+>   * export it to userspace, otherwise nothing is done.
+>   *
+> - * Returns -ENODEV if the firmware has no event log.
+> + * Returns -ENODEV if the firmware has no event log or securityfs is not
+> + * supported.
+>   */
+>  int tpm_bios_log_setup(struct tpm_chip *chip)
+>  {
+> @@ -407,7 +399,10 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+>  
+>  	cnt = 0;
+>  	chip->bios_dir[cnt] = securityfs_create_dir(name, NULL);
+> -	if (is_bad(chip->bios_dir[cnt]))
+> +	/* NOTE: securityfs_create_dir can return ENODEV if securityfs is
+> +	 * compiled out. The caller should ignore the ENODEV return code.
+> +	 */
+> +	if (IS_ERR(chip->bios_dir[cnt]))
+>  		goto err;
+>  	cnt++;
+>  
+> @@ -419,7 +414,7 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+>  				   0440, chip->bios_dir[0],
+>  				   (void *)&chip->bin_log_seqops,
+>  				   &tpm_bios_measurements_ops);
+> -	if (is_bad(chip->bios_dir[cnt]))
+> +	if (IS_ERR(chip->bios_dir[cnt]))
+>  		goto err;
+>  	cnt++;
+>  
+> @@ -431,16 +426,17 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+>  				   0440, chip->bios_dir[0],
+>  				   (void *)&chip->ascii_log_seqops,
+>  				   &tpm_bios_measurements_ops);
+> -	if (is_bad(chip->bios_dir[cnt]))
+> +	if (IS_ERR(chip->bios_dir[cnt]))
+>  		goto err;
+>  	cnt++;
+>  
+>  	return 0;
+>  
+>  err:
+> +	rc = PTR_ERR(chip->bios_dir[cnt]);
+>  	chip->bios_dir[cnt] = NULL;
+>  	tpm_bios_log_teardown(chip);
+> -	return -EIO;
+> +	return rc;
+>  }
+>  
+>  void tpm_bios_log_teardown(struct tpm_chip *chip)
 
-Thanks & Regards,
-   - Nayna
+I manually added the changes to:
 
->
-> /Jarkko
->
+  tpm: replace dynamically allocated bios_dir with a static array
 
+The code was changed so radically after that patch so it was the
+cleanest way.
+
+I need to declare 'rc' in that patch.  I changed also this "int rc = 0;"
+to "int rc;" as it does not need to be initialized in the declaration.
+This affects:
+
+  tpm: have event log use the tpm_chip
+
+And finally I needed the update this patch too to accomadate the doc
+change:
+
+  tpm: Fix handling of missing event log
+
+Could you check through those patches that I didn't blow things up,
+which could easily happen given that I needed to update three patches
+and give your final reviewed-by if it looks good to you?
+
+In the meanwhile I'll start running sparse, coccicheck etc. for the
+release content.
+
+/Jarkko
+
+------------------------------------------------------------------------------
