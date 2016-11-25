@@ -1,195 +1,49 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH RFC 2/2] tpm: refactor tpm2_get_tpm_pt to
- tpm2_getcap_cmd
-Date: Fri, 25 Nov 2016 10:09:38 +0200
-Message-ID: <20161125080938.gudvhadgz2i5sgwg@intel.com>
-References: <1476008057-2395-1-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<1476008057-2395-3-git-send-email-jarkko.sakkinen@linux.intel.com>
-	<58254759.80406@linux.vnet.ibm.com>
-	<20161112000242.63hgv5ujmkr7hy6a@intel.com>
-	<20161114234850.iat2zkqvuva6ae6t@intel.com>
-	<5836EE61.4010200@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [PATCH v5 3/3] tpm: add securityfs support for TPM
+ 2.0 firmware event log
+Date: Fri, 25 Nov 2016 10:11:11 +0200
+Message-ID: <20161125081111.qkfqfmtpkobsiu2a@intel.com>
+References: <1479922057-8752-1-git-send-email-nayna@linux.vnet.ibm.com>
+ <1479922057-8752-4-git-send-email-nayna@linux.vnet.ibm.com>
+ <20161124211057.xynmfteky5r7uc27@intel.com>
+ <11f97863-aa40-a9aa-836f-4b446faf1ed3@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <5836EE61.4010200-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+In-Reply-To: <11f97863-aa40-a9aa-836f-4b446faf1ed3@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: Nayna Jain <nayna@linux.vnet.ibm.com>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Nov 24, 2016 at 07:12:57PM +0530, Nayna wrote:
-> 
-> 
-> On 11/15/2016 05:18 AM, Jarkko Sakkinen wrote:
-> > On Fri, Nov 11, 2016 at 04:02:43PM -0800, Jarkko Sakkinen wrote:
-> > > On Fri, Nov 11, 2016 at 09:51:45AM +0530, Nayna wrote:
-> > > > 
-> > > > 
-> > > > On 10/09/2016 03:44 PM, Jarkko Sakkinen wrote:
-> > > > > Refactored tpm2_get_tpm_pt to tpm2_getcap_cmd, which means that it also
-> > > > > takes capability ID as input. This is required to access
-> > > > > TPM_CAP_HANDLES, which contains metadata needed for swapping transient
-> > > > > data.
-> > > > > 
-> > > > > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> > > > > ---
-> > > > >    drivers/char/tpm/tpm.h          |  6 +++-
-> > > > >    drivers/char/tpm/tpm2-cmd.c     | 64 ++++++++++++++++++++---------------------
-> > > > >    drivers/char/tpm/tpm_tis_core.c |  3 +-
-> > > > >    3 files changed, 38 insertions(+), 35 deletions(-)
-> > > > > 
-> > > > > diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> > > > > index 0fab6d5..8176f42 100644
-> > > > > --- a/drivers/char/tpm/tpm.h
-> > > > > +++ b/drivers/char/tpm/tpm.h
-> > > > > @@ -85,6 +85,10 @@ enum tpm2_capabilities {
-> > > > >    	TPM2_CAP_TPM_PROPERTIES = 6,
-> > > > >    };
-> > > > > 
-> > > > > +enum tpm2_properties {
-> > > > > +	TPM2_PT_FAMILY_INDICATOR	= 0x100,
-> > > > > +};
-> > > > > +
-> > > > >    enum tpm2_startup_types {
-> > > > >    	TPM2_SU_CLEAR	= 0x0000,
-> > > > >    	TPM2_SU_STATE	= 0x0001,
-> > > > > @@ -485,7 +489,7 @@ int tpm2_seal_trusted(struct tpm_chip *chip,
-> > > > >    int tpm2_unseal_trusted(struct tpm_chip *chip,
-> > > > >    			struct trusted_key_payload *payload,
-> > > > >    			struct trusted_key_options *options);
-> > > > > -ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,
-> > > > > +ssize_t tpm2_getcap_cmd(struct tpm_chip *chip, u32 cap_id, u32 property_id,
-> > > > >    			u32 *value, const char *desc);
-> > > > > 
-> > > > >    int tpm2_auto_startup(struct tpm_chip *chip);
-> > > > > diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-> > > > > index 2900e18..fcf3d86 100644
-> > > > > --- a/drivers/char/tpm/tpm2-cmd.c
-> > > > > +++ b/drivers/char/tpm/tpm2-cmd.c
-> > > > > @@ -111,13 +111,13 @@ struct tpm2_pcr_extend_in {
-> > > > >    	u8				digest[TPM_DIGEST_SIZE];
-> > > > >    } __packed;
-> > > > > 
-> > > > > -struct tpm2_get_tpm_pt_in {
-> > > > > +struct tpm2_getcap_in {
-> > > > >    	__be32	cap_id;
-> > > > >    	__be32	property_id;
-> > > > >    	__be32	property_cnt;
-> > > > >    } __packed;
-> > > > > 
-> > > > > -struct tpm2_get_tpm_pt_out {
-> > > > > +struct tpm2_getcap_out {
-> > > > >    	u8	more_data;
-> > > > >    	__be32	subcap_id;
-> > > > >    	__be32	property_cnt;
-> > > > > @@ -140,8 +140,8 @@ union tpm2_cmd_params {
-> > > > >    	struct	tpm2_pcr_read_in	pcrread_in;
-> > > > >    	struct	tpm2_pcr_read_out	pcrread_out;
-> > > > >    	struct	tpm2_pcr_extend_in	pcrextend_in;
-> > > > > -	struct	tpm2_get_tpm_pt_in	get_tpm_pt_in;
-> > > > > -	struct	tpm2_get_tpm_pt_out	get_tpm_pt_out;
-> > > > > +	struct	tpm2_getcap_in		getcap_in;
-> > > > > +	struct	tpm2_getcap_out		getcap_out;
-> > > > >    	struct	tpm2_get_random_in	getrandom_in;
-> > > > >    	struct	tpm2_get_random_out	getrandom_out;
-> > > > >    };
-> > > > > @@ -435,16 +435,6 @@ int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max)
-> > > > >    	return total ? total : -EIO;
-> > > > >    }
-> > > > > 
-> > > > > -#define TPM2_GET_TPM_PT_IN_SIZE \
-> > > > > -	(sizeof(struct tpm_input_header) + \
-> > > > > -	 sizeof(struct tpm2_get_tpm_pt_in))
-> > > > > -
-> > > > > -static const struct tpm_input_header tpm2_get_tpm_pt_header = {
-> > > > > -	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
-> > > > > -	.length = cpu_to_be32(TPM2_GET_TPM_PT_IN_SIZE),
-> > > > > -	.ordinal = cpu_to_be32(TPM2_CC_GET_CAPABILITY)
-> > > > > -};
-> > > > > -
-> > > > >    /**
-> > > > >     * Append TPMS_AUTH_COMMAND to the buffer. The buffer must be allocated with
-> > > > >     * tpm_buf_alloc().
-> > > > > @@ -750,35 +740,43 @@ out:
-> > > > >    	return rc;
-> > > > >    }
-> > > > > 
-> > > > > +#define TPM2_GETCAP_IN_SIZE \
-> > > > > +	(sizeof(struct tpm_input_header) + sizeof(struct tpm2_getcap_in))
-> > > > > +
-> > > > > +static const struct tpm_input_header tpm2_getcap_header = {
-> > > > > +	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
-> > > > > +	.length = cpu_to_be32(TPM2_GETCAP_IN_SIZE),
-> > > > > +	.ordinal = cpu_to_be32(TPM2_CC_GET_CAPABILITY)
-> > > > > +};
-> > > > > +
-> > > > >    /**
-> > > > > - * tpm2_get_tpm_pt() - get value of a TPM_CAP_TPM_PROPERTIES type property
-> > > > > - * @chip:		TPM chip to use.
-> > > > > - * @property_id:	property ID.
-> > > > > - * @value:		output variable.
-> > > > > + * tpm2_getcap_cmd() - execute a TPM2_GetCapability command
-> > > > > + * @chip:		TPM chip to use
-> > > > > + * @cap_id:		capability ID
-> > > > > + * @property_id:	property ID
-> > > > > + * @value:		value of the property
-> > > > >     * @desc:		passed to tpm_transmit_cmd()
-> > > > >     *
-> > > > > - * 0 is returned when the operation is successful. If a negative number is
-> > > > > - * returned it remarks a POSIX error code. If a positive number is returned
-> > > > > - * it remarks a TPM error.
-> > > > > + * Return: same as with tpm_transmit_cmd
-> > > > >     */
-> > > > > -ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,  u32 *value,
-> > > > > -			const char *desc)
-> > > > > +ssize_t tpm2_getcap_cmd(struct tpm_chip *chip, u32 cap_id, u32 property_id,
-> > > > > +			u32 *value, const char *desc)
-> > > > 
-> > > > This function currently returns single value "u32 *value" as output data.
-> > > > 
-> > > > Some calling function expect list of values from capabilities output.
-> > > > For eg., get_active_banks() use TPM_CAP_PCRS capability to retrieve list of
-> > > > active banks. And this capability returns array of pcr selections(which is a
-> > > > struct representing each active PCR bank)
-> > > > 
-> > > > I was thinking, can we define output parameter as struct of cap_id and union
-> > > > of expected cap_data ?
+On Thu, Nov 24, 2016 at 09:51:03PM -0500, Stefan Berger wrote:
+> On 11/24/2016 04:10 PM, Jarkko Sakkinen wrote:
+> > On Wed, Nov 23, 2016 at 12:27:37PM -0500, Nayna Jain wrote:
+> > > Unlike the device driver support for TPM 1.2, the TPM 2.0 does
+> > > not support the securityfs pseudo files for displaying the
+> > > firmware event log.
 > > > 
-> > > Unless you have major concerns about performance, which I think are not
-> > > relevant here, calling this in a loop is perfectly adequate and a lot of
-> > > simpler than having a generic version (with moreData handling and
-> > > everything).
+> > > This patch enables support for providing the TPM 2.0 event log in
+> > > binary form. TPM 2.0 event log supports a crypto agile format that
+> > > records multiple digests, which is different from TPM 1.2. This
+> > > patch enables the tpm_bios_log_setup for TPM 2.0  and adds the
+> > > event log parser which understand the TPM 2.0 crypto agile format.
 > > > 
-> > > I would rather see uses of struct cap_t to shrink than to expand. The
-> > > same goes for other horrific unions that exist today in the driver.
-> > 
-> > If you are fine with this patch (give Reviewed-by) I can apply this
-> > and add to my 4.10 pull request so that we have common baseline to
-> > develop both event log and the resource manager.
-> > 
-> > This is a very low risk commit to take to 4.10 because it is only used
-> > for interrupt generation in the TIS driver at the moment.
+> > > Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
+> > I don't want to say much about this before I've tested it. I wonder
+> > what cheap hardware I could use to test this. Any advice is on this
+> > from anyone is much appreciated.
 > 
-> Works for capabilities with more_data(yes) and single value properties.
+> Virtual hardware would be cheap :-)
 > 
-> Reviewed-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> I tested this series with QEMU + vTPM + SeaBIOS with TPM 1.2 + TPM 2 support
+> (basing the log on ACPI). I had to fix an endianess issue on the SeaBIOS
+> side, which made it work. So for this version of the patches I can give it
+> my tested-by:
 > 
-> Thanks & Regards,
->   - Nayna
+> Tested-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
 
-Thanks. Not taking this into release though because you don't need it
-as was the result of earlier discussion.
+Thanks.
 
 /Jarkko
-
-------------------------------------------------------------------------------
