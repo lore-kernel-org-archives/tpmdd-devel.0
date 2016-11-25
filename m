@@ -1,46 +1,53 @@
-From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [PATCH v6 3/9] tpm: replace dynamically allocated bios_dir with
- a static array
-Date: Fri, 25 Nov 2016 12:38:13 -0700
-Message-ID: <20161125193813.GE16504@obsidianresearch.com>
-References: <1479117656-12403-1-git-send-email-nayna@linux.vnet.ibm.com>
- <1479117656-12403-4-git-send-email-nayna@linux.vnet.ibm.com>
- <20161122112333.7ootyrbssd6pkrjb@intel.com>
- <20161122165856.GD3956@obsidianresearch.com>
- <20161124135723.kfafipftppjyr5ip@intel.com>
- <20161124165313.GB4930@obsidianresearch.com>
- <20161125080838.mpzflnz7epo6wv6g@intel.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH v5 3/3] tpm: add securityfs support for
+ TPM 2.0 firmware event log
+Date: Fri, 25 Nov 2016 12:43:17 -0700
+Message-ID: <20161125194317.GG16504@obsidianresearch.com>
+References: <1479922057-8752-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1479922057-8752-4-git-send-email-nayna@linux.vnet.ibm.com>
+	<20161124211057.xynmfteky5r7uc27@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20161125080838.mpzflnz7epo6wv6g@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: Nayna Jain <nayna@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+In-Reply-To: <20161124211057.xynmfteky5r7uc27-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Nov 25, 2016 at 10:08:38AM +0200, Jarkko Sakkinen wrote:
-
-> > This is no good at this point in the series - we need the ENODEV
-> > detection in tpm_chip_register() from the 'Fix handle of missing event
-> > log' moved into this patch, because it now returns ENODEV due to
-> > sercurityfs
+On Thu, Nov 24, 2016 at 11:10:57PM +0200, Jarkko Sakkinen wrote:
+> On Wed, Nov 23, 2016 at 12:27:37PM -0500, Nayna Jain wrote:
+> > Unlike the device driver support for TPM 1.2, the TPM 2.0 does
+> > not support the securityfs pseudo files for displaying the
+> > firmware event log.
+> > 
+> > This patch enables support for providing the TPM 2.0 event log in
+> > binary form. TPM 2.0 event log supports a crypto agile format that
+> > records multiple digests, which is different from TPM 1.2. This
+> > patch enables the tpm_bios_log_setup for TPM 2.0  and adds the
+> > event log parser which understand the TPM 2.0 crypto agile format.
+> > 
+> > Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 > 
-> Sure it would be cleaner but not really necessary. Do you really think
-> this is mandatory? No matter how I reorder patches this will require
-> time and effort to fix various merge conflicts because of the replacemnt
-> of event log. After that I have to test everything.
+> I don't want to say much about this before I've tested it. I wonder
+> what cheap hardware I could use to test this. Any advice is on this
+> from anyone is much appreciated.
 
-Well, once you started editing patches to fix them you should make
-them fully correct so bisection works.
+If you found a small ARM system with TPM you could customize the uboot
+to build an event log and pass it in via DT.
 
-If you applied the patch I gave you on top of the tree then I would
-have said to leave it...
-
-> The commit message otherwise great except for the short summary, which
-> is now fixed.
-
-It is good now
+Not sure how much work that would be, does uboot have tpm code
+already?
 
 Jason
+
+------------------------------------------------------------------------------
