@@ -1,105 +1,114 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v6 1/2] tpm: enhance read_log_of() to
- support Physical TPM event log
-Date: Sat, 26 Nov 2016 18:15:22 +0200
-Message-ID: <20161126161522.umra77n3yqbpwn5u@intel.com>
-References: <1480164339-26409-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1480164339-26409-2-git-send-email-nayna@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: [GIT PULL] tpmdd updates for Linux 4.10
+Date: Mon, 28 Nov 2016 01:40:30 +0200
+Message-ID: <20161127234030.zhupzkizruv36o5n@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1480164339-26409-2-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Sender: owner-linux-security-module@vger.kernel.org
+To: James Morris <jmorris@namei.org>
+Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat, Nov 26, 2016 at 07:45:38AM -0500, Nayna Jain wrote:
-> Physical TPMs use Open Firmware Device Tree bindings that are similar
-> to the IBM Power virtual TPM to support event log. However, these
-> properties store the values in different endianness for Physical
-> and Virtual TPM.
-> 
-> This patch fixes the endianness issue by doing appropriate conversion
-> based on Physical or Virtual TPM.
-> 
-> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> ---
->  drivers/char/tpm/tpm_of.c | 27 +++++++++++++++++++++++----
->  1 file changed, 23 insertions(+), 4 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
-> index 7dee42d7..4b0d5e6 100644
-> --- a/drivers/char/tpm/tpm_of.c
-> +++ b/drivers/char/tpm/tpm_of.c
-> @@ -27,6 +27,8 @@ int tpm_read_log_of(struct tpm_chip *chip)
->  	const u32 *sizep;
->  	const u64 *basep;
->  	struct tpm_bios_log *log;
-> +	u32 log_size;
-> +	u64 log_base;
+Hi James,
 
-Maybe just base and size?
-
->  
->  	log = &chip->log;
->  	if (chip->dev.parent && chip->dev.parent->of_node)
-> @@ -41,18 +43,35 @@ int tpm_read_log_of(struct tpm_chip *chip)
->  	if (sizep == NULL || basep == NULL)
->  		return -EIO;
->  
-> -	if (*sizep == 0) {
-> +	/*
-> +	 * For both vtpm/tpm, firmware has log addr and log size in big
-> +	 * endian format. But in case of vtpm, there is a method called
-> +	 * sml-handover which is run during kernel init even before
-> +	 * device tree is setup. This sml-handover function takes care
-> +	 * of endianness and writes to sml-base and sml-size in little
-> +	 * endian format. For this reason, vtpm doesn't need conversion
-> +	 * but physical tpm needs the conversion.
-> +	 */
-> +	if (of_property_match_string(np, "compatible", "IBM,vtpm") < 0) {
-> +		log_size = be32_to_cpup(sizep);
-> +		log_base = be64_to_cpup(basep);
-> +	} else {
-> +		log_size = *sizep;
-> +		log_base = *basep;
-> +	}
-> +
-> +	if (log_size == 0) {
->  		dev_warn(&chip->dev, "%s: Event log area empty\n", __func__);
->  		return -EIO;
->  	}
->  
-> -	log->bios_event_log = kmalloc(*sizep, GFP_KERNEL);
-> +	log->bios_event_log = kmalloc(log_size, GFP_KERNEL);
->  	if (!log->bios_event_log)
->  		return -ENOMEM;
->  
-> -	log->bios_event_log_end = log->bios_event_log + *sizep;
-> +	log->bios_event_log_end = log->bios_event_log + log_size;
->  
-> -	memcpy(log->bios_event_log, __va(*basep), *sizep);
-> +	memcpy(chip->log.bios_event_log, __va(log_base), log_size);
-
-Why did you change the first parameter?
-
->  
->  	return 0;
->  }
-> -- 
-> 2.5.0
-> 
+This pull request contains tpmdd updates for Linux 4.10. This release
+contains two major changes: power gating support tpm_crb and precursory
+cleanup work for the event log so that in a future release we will be
+able to add event log for TPM 2.0.
 
 /Jarkko
 
-------------------------------------------------------------------------------
+The following changes since commit 0821e30cd2f246a93c5271f6c23d7134f809d70d:
+
+  Merge branch 'stable-4.10' of git://git.infradead.org/users/pcmoore/selinux into next (2016-11-24 11:21:25 +1100)
+
+are available in the git repository at:
+
+  git://git.infradead.org/users/jjs/linux-tpmdd.git tags/tpmdd-next-20161128
+
+for you to fetch changes up to 9430066a15d6f55a3d008a6f99bb462480870207:
+
+  tpm: adjust return value of tpm_read_log (2016-11-28 01:31:33 +0200)
+
+----------------------------------------------------------------
+tpmdd updates for Linux 4.10
+
+----------------------------------------------------------------
+Baruch Siach (1):
+      char: tpm: fix kerneldoc tpm2_unseal_trusted name typo
+
+Colin Ian King (1):
+      tpm: return -ENODEV if np is not set
+
+Ed Swierk (1):
+      tpm: Clean up reading of timeout and duration capabilities
+
+Jarkko Sakkinen (4):
+      tpm: sanitize constant expressions
+      tpm, tpm_vtpm_proxy: add kdoc comments for VTPM_PROXY_IOC_NEW_DEV
+      tpm: replace dynamically allocated bios_dir with a static array
+      tpm: drop tpm1_chip_register(/unregister)
+
+Jason Gunthorpe (7):
+      tpm tis: Do not print timeout messages twice
+      tpm xen: Remove bogus tpm_chip_unregister
+      tpm: Get rid of TPM_CHIP_FLAG_REGISTERED
+      tpm_tis: Allow tpm_tis to be bound using DT
+      tpm: Fix handling of missing event log
+      tpm: vtpm_proxy: conditionally call tpm_chip_unregister
+      tpm: adjust return value of tpm_read_log
+
+Josh Zimmerman (1):
+      tpm_tis: Check return values from get_burstcount.
+
+Nayna Jain (9):
+      Documentation: tpm: add the IBM Virtual TPM device tree binding documentation
+      Documentation: tpm: add the Physical TPM device tree binding documentation
+      tpm: define a generic open() method for ascii & bios measurements
+      tpm: replace symbolic permission with octal for securityfs files
+      tpm: have event log use the tpm_chip
+      tpm: fix the missing .owner in tpm_bios_measurements_ops
+      tpm: redefine read_log() to handle ACPI/OF at runtime
+      tpm: replace of_find_node_by_name() with dev of_node property
+      tpm: cleanup of printk error messages
+
+Peter Huewe (1):
+      char/tpm: Check return code of wait_for_tpm_stat
+
+Stefan Berger (2):
+      tpm: Only call pm_runtime_get_sync if device has a parent
+      tpm: Check the bios_dir entry for NULL before accessing it
+
+Winkler, Tomas (5):
+      tpm/tpm_crb: implement tpm crb idle state
+      tmp/tpm_crb: fix Intel PTT hw bug during idle state
+      tpm/tpm_crb: open code the crb_init into acpi_add
+      tmp/tpm_crb: implement runtime pm for tpm_crb
+      tpm: place kdoc just above tpm_pcr_extend
+
+ .../devicetree/bindings/security/tpm/ibmvtpm.txt   |  41 ++++
+ .../devicetree/bindings/security/tpm/tpm-i2c.txt   |  21 ++
+ .../bindings/security/tpm/tpm_tis_mmio.txt         |  25 +++
+ drivers/char/tpm/Kconfig                           |   2 +-
+ drivers/char/tpm/Makefile                          |  14 +-
+ drivers/char/tpm/tpm-chip.c                        |  38 +---
+ drivers/char/tpm/tpm-interface.c                   | 110 +++++-----
+ drivers/char/tpm/tpm-sysfs.c                       |   7 +-
+ drivers/char/tpm/tpm.h                             |  41 ++--
+ drivers/char/tpm/tpm2-cmd.c                        |   2 +-
+ drivers/char/tpm/tpm_acpi.c                        |  46 ++---
+ drivers/char/tpm/tpm_crb.c                         | 173 +++++++++++++---
+ drivers/char/tpm/tpm_eventlog.c                    | 230 +++++++++++----------
+ drivers/char/tpm/tpm_eventlog.h                    |  22 +-
+ drivers/char/tpm/tpm_of.c                          |  48 ++---
+ drivers/char/tpm/tpm_tis.c                         |  11 +
+ drivers/char/tpm/tpm_tis_core.c                    |  64 ++++--
+ drivers/char/tpm/tpm_vtpm_proxy.c                  |  85 +++++---
+ drivers/char/tpm/xen-tpmfront.c                    |   1 -
+ include/uapi/linux/vtpm_proxy.h                    |  23 ++-
+ 20 files changed, 624 insertions(+), 380 deletions(-)
+ create mode 100644 Documentation/devicetree/bindings/security/tpm/ibmvtpm.txt
+ create mode 100644 Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
+ create mode 100644 Documentation/devicetree/bindings/security/tpm/tpm_tis_mmio.txt
