@@ -1,16 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 1/4] tpm: add kdoc for tpm_transmit and
- tpm_transmit_cmd
-Date: Sat, 3 Dec 2016 17:32:36 +0200
-Message-ID: <20161203153236.jmulnrlvoitvjnhq@intel.com>
+Subject: Re: [PATCH v2 2/4] tpm/tpm2-chip: fix kdoc errors
+Date: Sat, 3 Dec 2016 17:34:17 +0200
+Message-ID: <20161203153417.r4fue7uoka3xcaqo@intel.com>
 References: <1479895454-15076-1-git-send-email-tomas.winkler@intel.com>
-	<1479895454-15076-2-git-send-email-tomas.winkler@intel.com>
+	<1479895454-15076-3-git-send-email-tomas.winkler@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1479895454-15076-2-git-send-email-tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <1479895454-15076-3-git-send-email-tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,83 +22,276 @@ To: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Nov 23, 2016 at 12:04:11PM +0200, Tomas Winkler wrote:
-> Functions tpm_transmit and transmit_cmd are referenced
-> from other functions kdoc hence deserve documentation.
+On Wed, Nov 23, 2016 at 12:04:12PM +0200, Tomas Winkler wrote:
+> Use correct kdoc format, describe correct parameters and return values.
 > 
 > Signed-off-by: Tomas Winkler <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-
-Do you mind if I change TPM_DIGEST_SIZE to SHA1_DIGEST_SIZE?
-
-I'm looking to drop TPM_DIGEST_SIZE eventually.
 
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
 /Jarkko
 
 > ---
-> V2: Add some missing '.'
->  drivers/char/tpm/tpm-interface.c | 33 ++++++++++++++++++++++++++++-----
->  1 file changed, 28 insertions(+), 5 deletions(-)
+> V2: Add missing '.'
 > 
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index a2688ac2b48f..769d8b0d31a3 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -328,8 +328,17 @@ unsigned long tpm_calc_ordinal_duration(struct tpm_chip *chip,
->  }
->  EXPORT_SYMBOL_GPL(tpm_calc_ordinal_duration);
->  
-> -/*
-> - * Internal kernel interface to transmit TPM commands
-> +/**
-> + * tmp_transmit - Internal kernel interface to transmit TPM commands.
-> + *
-> + * @chip: TPM chip to use
-> + * @buf: TPM command buffer
-> + * @bufsiz: length of the TPM command buffer
-> + * @flags: tpm transmit flags - bitmap
-> + *
-> + * Return:
-> + *     0 when the operation is successful.
-> + *     A negative number for system errors (errno).
+>  drivers/char/tpm/tpm2-cmd.c | 105 ++++++++++++++++++++++++--------------------
+>  1 file changed, 57 insertions(+), 48 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+> index da5b782a9731..cc624e1e052d 100644
+> --- a/drivers/char/tpm/tpm2-cmd.c
+> +++ b/drivers/char/tpm/tpm2-cmd.c
+> @@ -258,11 +258,9 @@ static const struct tpm_input_header tpm2_pcrread_header = {
+>   * tpm2_pcr_read() - read a PCR value
+>   * @chip:	TPM chip to use.
+>   * @pcr_idx:	index of the PCR to read.
+> - * @ref_buf:	buffer to store the resulting hash,
+> + * @res_buf:	buffer to store the resulting hash.
+>   *
+> - * 0 is returned when the operation is successful. If a negative number is
+> - * returned it remarks a POSIX error code. If a positive number is returned
+> - * it remarks a TPM error.
+> + * Return: Same as with tpm_transmit_cmd.
 >   */
->  ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
->  		     unsigned int flags)
-> @@ -409,9 +418,21 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
->  	return rc;
->  }
+>  int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
+>  {
+> @@ -304,13 +302,12 @@ static const struct tpm_input_header tpm2_pcrextend_header = {
 >  
-> -#define TPM_DIGEST_SIZE 20
-> -#define TPM_RET_CODE_IDX 6
-> -
-> +/**
-> + * tmp_transmit_cmd - send a tpm command to the device
-> + *    The function extracts tpm out header return code
+>  /**
+>   * tpm2_pcr_extend() - extend a PCR value
+> + *
+>   * @chip:	TPM chip to use.
+>   * @pcr_idx:	index of the PCR.
+>   * @hash:	hash value to use for the extend operation.
+>   *
+> - * 0 is returned when the operation is successful. If a negative number is
+> - * returned it remarks a POSIX error code. If a positive number is returned
+> - * it remarks a TPM error.
+> + * Return: Same as with tpm_transmit_cmd.
+>   */
+>  int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash)
+>  {
+> @@ -348,13 +345,13 @@ static const struct tpm_input_header tpm2_getrandom_header = {
+>  
+>  /**
+>   * tpm2_get_random() - get random bytes from the TPM RNG
+> + *
+>   * @chip: TPM chip to use
+>   * @out: destination buffer for the random bytes
+>   * @max: the max number of bytes to write to @out
+>   *
+> - * 0 is returned when the operation is successful. If a negative number is
+> - * returned it remarks a POSIX error code. If a positive number is returned
+> - * it remarks a TPM error.
+> + * Return:
+> + *    Size of the output buffer, or -EIO on error.
+>   */
+>  int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max)
+>  {
+> @@ -404,15 +401,16 @@ static const struct tpm_input_header tpm2_get_tpm_pt_header = {
+>  };
+>  
+>  /**
+> - * Append TPMS_AUTH_COMMAND to the buffer. The buffer must be allocated with
+> - * tpm_buf_alloc().
+> - *
+> - * @param buf: an allocated tpm_buf instance
+> - * @param nonce: the session nonce, may be NULL if not used
+> - * @param nonce_len: the session nonce length, may be 0 if not used
+> - * @param attributes: the session attributes
+> - * @param hmac: the session HMAC or password, may be NULL if not used
+> - * @param hmac_len: the session HMAC or password length, maybe 0 if not used
+> + * tpm_buf_alloc() - Append TPMS_AUTH_COMMAND to the buffer.
+> + *      The buffer must be allocated with
+> + *
+> + * @buf: an allocated tpm_buf instance
+> + * @session_handle: session handle
+> + * @nonce: the session nonce, may be NULL if not used
+> + * @nonce_len: the session nonce length, may be 0 if not used
+> + * @attributes: the session attributes
+> + * @hmac: the session HMAC or password, may be NULL if not used
+> + * @hmac_len: the session HMAC or password length, maybe 0 if not used
+>   */
+>  static void tpm2_buf_append_auth(struct tpm_buf *buf, u32 session_handle,
+>  				 const u8 *nonce, u16 nonce_len,
+> @@ -435,7 +433,8 @@ static void tpm2_buf_append_auth(struct tpm_buf *buf, u32 session_handle,
+>  
+>  /**
+>   * tpm2_seal_trusted() - seal the payload of a trusted key
+> - * @chip_num: TPM chip to use
 > + *
 > + * @chip: TPM chip to use
-> + * @cmd: TPM command buffer
-> + * @len: length of the TPM command
-> + * @flags: tpm transmit flags - bitmap
-> + * @desc: command description used in the error message
-> + *
-> + * Return:
-> + *     0 when the operation is successful.
-> + *     A negative number for system errors (errno).
-> + *     A positive number for a TPM error.
-> + */
->  ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd,
->  			 int len, unsigned int flags, const char *desc)
->  {
-> @@ -434,6 +455,8 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd,
->  	return err;
->  }
+>   * @payload: the key data in clear and encrypted form
+>   * @options: authentication values and other options
+>   *
+> @@ -540,11 +539,17 @@ int tpm2_seal_trusted(struct tpm_chip *chip,
 >  
-> +#define TPM_DIGEST_SIZE 20
-> +#define TPM_RET_CODE_IDX 6
->  #define TPM_INTERNAL_RESULT_SIZE 200
->  #define TPM_ORD_GET_CAP cpu_to_be32(101)
->  #define TPM_ORD_GET_RANDOM cpu_to_be32(70)
+>  /**
+>   * tpm2_load_cmd() - execute a TPM2_Load command
+> - * @chip_num: TPM chip to use
+> + *
+> + * @chip: TPM chip to use
+>   * @payload: the key data in clear and encrypted form
+>   * @options: authentication values and other options
+> + * @blob_handle: returned blob handle
+> + * @flags: tpm transmit flags
+>   *
+> - * Return: same as with tpm_transmit_cmd
+> + * Return: 0 on success.
+> + *        -E2BIG on wrong payload size.
+> + *        -EPERM on tpm error status.
+> + *        < 0 error from tpm_transmit_cmd.
+>   */
+>  static int tpm2_load_cmd(struct tpm_chip *chip,
+>  			 struct trusted_key_payload *payload,
+> @@ -600,11 +605,12 @@ static int tpm2_load_cmd(struct tpm_chip *chip,
+>  
+>  /**
+>   * tpm2_flush_context_cmd() - execute a TPM2_FlushContext command
+> - * @chip_num: TPM chip to use
+> - * @payload: the key data in clear and encrypted form
+> - * @options: authentication values and other options
+>   *
+> - * Return: same as with tpm_transmit_cmd
+> + * @chip: TPM chip to use
+> + * @handle: the key data in clear and encrypted form
+> + * @flags: tpm transmit flags
+> + *
+> + * Return: Same as with tpm_transmit_cmd.
+>   */
+>  static void tpm2_flush_context_cmd(struct tpm_chip *chip, u32 handle,
+>  				   unsigned int flags)
+> @@ -632,11 +638,16 @@ static void tpm2_flush_context_cmd(struct tpm_chip *chip, u32 handle,
+>  
+>  /**
+>   * tpm2_unseal_cmd() - execute a TPM2_Unload command
+> - * @chip_num: TPM chip to use
+> + *
+> + * @chip: TPM chip to use
+>   * @payload: the key data in clear and encrypted form
+>   * @options: authentication values and other options
+> + * @blob_handle: blob handle
+> + * @flags: tpm_transmit_cmd flags
+>   *
+> - * Return: same as with tpm_transmit_cmd
+> + * Return: 0 on success
+> + *         -EPERM on tpm error status
+> + *         < 0 error from tpm_transmit_cmd
+>   */
+>  static int tpm2_unseal_cmd(struct tpm_chip *chip,
+>  			   struct trusted_key_payload *payload,
+> @@ -681,11 +692,12 @@ static int tpm2_unseal_cmd(struct tpm_chip *chip,
+>  
+>  /**
+>   * tpm2_unseal_trusted() - unseal the payload of a trusted key
+> - * @chip_num: TPM chip to use
+> + *
+> + * @chip: TPM chip to use
+>   * @payload: the key data in clear and encrypted form
+>   * @options: authentication values and other options
+>   *
+> - * Return: < 0 on error and 0 on success.
+> + * Return: Same as with tpm_transmit_cmd.
+>   */
+>  int tpm2_unseal_trusted(struct tpm_chip *chip,
+>  			struct trusted_key_payload *payload,
+> @@ -715,9 +727,7 @@ int tpm2_unseal_trusted(struct tpm_chip *chip,
+>   * @value:		output variable.
+>   * @desc:		passed to tpm_transmit_cmd()
+>   *
+> - * 0 is returned when the operation is successful. If a negative number is
+> - * returned it remarks a POSIX error code. If a positive number is returned
+> - * it remarks a TPM error.
+> + * Return: Same as with tpm_transmit_cmd.
+>   */
+>  ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,  u32 *value,
+>  			const char *desc)
+> @@ -750,13 +760,12 @@ static const struct tpm_input_header tpm2_startup_header = {
+>  
+>  /**
+>   * tpm2_startup() - send startup command to the TPM chip
+> + *
+>   * @chip:		TPM chip to use.
+> - * @startup_type	startup type. The value is either
+> + * @startup_type:	startup type. The value is either
+>   *			TPM_SU_CLEAR or TPM_SU_STATE.
+>   *
+> - * 0 is returned when the operation is successful. If a negative number is
+> - * returned it remarks a POSIX error code. If a positive number is returned
+> - * it remarks a TPM error.
+> + * Return: Same as with tpm_transmit_cmd.
+>   */
+>  static int tpm2_startup(struct tpm_chip *chip, u16 startup_type)
+>  {
+> @@ -781,8 +790,9 @@ static const struct tpm_input_header tpm2_shutdown_header = {
+>  
+>  /**
+>   * tpm2_shutdown() - send shutdown command to the TPM chip
+> + *
+>   * @chip:		TPM chip to use.
+> - * @shutdown_type	shutdown type. The value is either
+> + * @shutdown_type:	shutdown type. The value is either
+>   *			TPM_SU_CLEAR or TPM_SU_STATE.
+>   */
+>  void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type)
+> @@ -805,12 +815,11 @@ void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type)
+>  
+>  /*
+>   * tpm2_calc_ordinal_duration() - maximum duration for a command
+> + *
+>   * @chip:	TPM chip to use.
+>   * @ordinal:	command code number.
+>   *
+> - * 0 is returned when the operation is successful. If a negative number is
+> - * returned it remarks a POSIX error code. If a positive number is returned
+> - * it remarks a TPM error.
+> + * Return: maximum duration for a command
+>   */
+>  unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal)
+>  {
+> @@ -842,13 +851,12 @@ static const struct tpm_input_header tpm2_selftest_header = {
+>  
+>  /**
+>   * tpm2_continue_selftest() - start a self test
+> + *
+>   * @chip: TPM chip to use
+>   * @full: test all commands instead of testing only those that were not
+>   *        previously tested.
+>   *
+> - * 0 is returned when the operation is successful. If a negative number is
+> - * returned it remarks a POSIX error code. If a positive number is returned
+> - * it remarks a TPM error.
+> + * Return: Same as with tpm_transmit_cmd with exception of RC_TESTING.
+>   */
+>  static int tpm2_start_selftest(struct tpm_chip *chip, bool full)
+>  {
+> @@ -874,14 +882,13 @@ static int tpm2_start_selftest(struct tpm_chip *chip, bool full)
+>  
+>  /**
+>   * tpm2_do_selftest() - run a full self test
+> + *
+>   * @chip: TPM chip to use
+>   *
+> + * Return: Same as with tpm_transmit_cmd.
+> + *
+>   * During the self test TPM2 commands return with the error code RC_TESTING.
+>   * Waiting is done by issuing PCR read until it executes successfully.
+> - *
+> - * 0 is returned when the operation is successful. If a negative number is
+> - * returned it remarks a POSIX error code. If a positive number is returned
+> - * it remarks a TPM error.
+>   */
+>  static int tpm2_do_selftest(struct tpm_chip *chip)
+>  {
+> @@ -928,6 +935,8 @@ static int tpm2_do_selftest(struct tpm_chip *chip)
+>   * tpm2_probe() - probe TPM 2.0
+>   * @chip: TPM chip to use
+>   *
+> + * Return: < 0 error and 0 on success.
+> + *
+>   * Send idempotent TPM 2.0 command and see whether TPM 2.0 chip replied based on
+>   * the reply tag.
+>   */
 > -- 
 > 2.7.4
 > 
