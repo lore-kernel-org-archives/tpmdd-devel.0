@@ -1,105 +1,127 @@
 From: "Winkler, Tomas" <tomas.winkler@intel.com>
-Subject: RE: [tpmdd-devel] [PATCH v2 2/3] tpm_crb: encapsulate
-        crb_wait_for_reg_32
-Date: Mon, 5 Dec 2016 21:34:50 +0000
-Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B54336FFE@hasmsx108.ger.corp.intel.com>
+Subject: RE: [tpmdd-devel] [PATCH v2 3/3] tpm_crb: request and relinquish
+        locality 0
+Date: Mon, 5 Dec 2016 21:51:42 +0000
+Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B54337027@hasmsx108.ger.corp.intel.com>
 References: <20161203175213.10210-1-jarkko.sakkinen@linux.intel.com>
-        <20161203175213.10210-3-jarkko.sakkinen@linux.intel.com>
- <20161203184137.p4mk3gdldcflty5x@intel.com>
+        <20161203175213.10210-4-jarkko.sakkinen@linux.intel.com>
+ <20161203184207.5vjrxqowfodni73m@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 8BIT
 Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20161203184137.p4mk3gdldcflty5x@intel.com>
+In-Reply-To: <20161203184207.5vjrxqowfodni73m@intel.com>
 Content-Language: en-US
 Sender: owner-linux-security-module@vger.kernel.org
 To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>
 Cc: "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+> 
 > CC linux-security-module
 > 
-> On Sat, Dec 03, 2016 at 07:52:12PM +0200, Jarkko Sakkinen wrote:
-> > Encapsulated crb_wait_for_reg32() so that state changes in other CRB
-> > registers than TPM_CRB_CTRL_REQ_x can be waited.
-> >
+> On Sat, Dec 03, 2016 at 07:52:13PM +0200, Jarkko Sakkinen wrote:
+> > Request and relinquish locality for the driver use in order to be a
+> > better citizen in a multi locality environment like TXT. The locality
+> > is requested and relinquished as part of going into and waking up from
+> > idle.
+> 
+This has nothing to do with power management, please note, that this is run via runtime_pm handlers, 
+which can be disabled  via sysfs and actually on server platforms runtime pm is not relevant, 
+while you cannot disable locality acquire/relinquish flow.
+
+NACK
 > > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 > > ---
-> >  drivers/char/tpm/tpm_crb.c | 37 +++++++++++++++++++++++--------------
-> >  1 file changed, 23 insertions(+), 14 deletions(-)
+> >  drivers/char/tpm/tpm_crb.c | 36 ++++++++++++++++++++++++------------
+> >  1 file changed, 24 insertions(+), 12 deletions(-)
 > >
 > > diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> > index 8d81b66..f986d02 100644
+> > index f986d02..f6e0beb 100644
 > > --- a/drivers/char/tpm/tpm_crb.c
 > > +++ b/drivers/char/tpm/tpm_crb.c
-> > @@ -121,6 +121,25 @@ static int __maybe_unused crb_go_idle(struct
-> device *dev, struct crb_priv *priv)
-> >  	return 0;
-> >  }
+> > @@ -34,6 +34,15 @@ enum crb_defaults {
+> >  	CRB_ACPI_START_INDEX = 1,
+> >  };
 > >
-> > +static bool crb_wait_for_reg_32(u32 __iomem *reg, u32 mask, u32 value,
-> > +				unsigned long timeout)
-> > +{
-> > +	ktime_t start;
-> > +	ktime_t stop;
+> > +enum crb_loc_ctrl {
+> > +	CRB_LOC_CTRL_REQUEST_ACCESS	= BIT(0),
+> > +	CRB_LOC_CTRL_RELINQUISH		= BIT(1),
+> > +};
 > > +
-> > +	start = ktime_get();
-> > +	stop = ktime_add(start, ms_to_ktime(timeout));
+> > +enum crb_loc_state {
+> > +	CRB_LOC_STATE_LOC_ASSIGNED	= BIT(1),
+> > +};
 > > +
-> > +	do {
-> > +		if ((ioread32(reg) & mask) == value)
-> > +			return true;
-> > +
-> > +		usleep_range(50, 100);
-This was tuned for power management, have you tuned it for locality? 
-
-> > +	} while (ktime_before(ktime_get(), stop));
-> > +
-> > +	return false;
-> > +}
-> > +
-> >  /**
-> >   * crb_cmd_ready - request tpm crb device to enter ready state
+> >  enum crb_ctrl_req {
+> >  	CRB_CTRL_REQ_CMD_READY	= BIT(0),
+> >  	CRB_CTRL_REQ_GO_IDLE	= BIT(1),
+> > @@ -101,12 +110,8 @@ struct crb_priv {
+> >   * @dev:  crb device
+> >   * @priv: crb private data
 > >   *
-> > @@ -138,24 +157,14 @@ static int __maybe_unused crb_go_idle(struct
-> > device *dev, struct crb_priv *priv)  static int __maybe_unused
-> crb_cmd_ready(struct device *dev,
-> >  					struct crb_priv *priv)
-> >  {
-> > -	ktime_t stop, start;
-> > -	u32 req;
-> > -
+> > - * Write CRB_CTRL_REQ_GO_IDLE to TPM_CRB_CTRL_REQ
+> > - * The device should respond within TIMEOUT_C by clearing the bit.
+> > - * Anyhow, we do not wait here as a consequent CMD_READY request
+> > - * will be handled correctly even if idle was not completed.
+> > - *
+> > - * The function does nothing for devices with ACPI-start method.
+> > + * Put device to the idle state and relinquish locality. The function
+> > + does
+> > + * nothing for devices with the ACPI-start method.
+> >   *
+> >   * Return: 0 always
+> >   */
+> > @@ -115,6 +120,7 @@ static int __maybe_unused crb_go_idle(struct device
+> *dev, struct crb_priv *priv)
 > >  	if (priv->flags & CRB_FL_ACPI_START)
 > >  		return 0;
 > >
-> >  	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
-> > -
-> > -	start = ktime_get();
-> > -	stop = ktime_add(start, ms_to_ktime(TPM2_TIMEOUT_C));
-> > -	do {
-> > -		req = ioread32(&priv->regs_t->ctrl_req);
-> > -		if (!(req & CRB_CTRL_REQ_CMD_READY))
-> > -			return 0;
-> > -		usleep_range(50, 100);
-> > -	} while (ktime_before(ktime_get(), stop));
-> > -
-> > -	if (ioread32(&priv->regs_t->ctrl_req) & CRB_CTRL_REQ_CMD_READY)
-> {
-> > +	if (!crb_wait_for_reg_32(&priv->regs_t->ctrl_req,
-> > +				 CRB_CTRL_REQ_CMD_READY /* mask */,
-> > +				 0, /* value */
+> > +	iowrite32(CRB_LOC_CTRL_RELINQUISH, &priv->regs_h->loc_ctrl);	
+This is misleading this has nothing to do with go idle,  what is the 
+> >  	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
+> >  	/* we don't really care when this settles */
+> >
+> > @@ -146,11 +152,8 @@ static bool crb_wait_for_reg_32(u32 __iomem *reg,
+> u32 mask, u32 value,
+> >   * @dev:  crb device
+> >   * @priv: crb private data
+> >   *
+> > - * Write CRB_CTRL_REQ_CMD_READY to TPM_CRB_CTRL_REQ
+> > - * and poll till the device acknowledge it by clearing the bit.
+> > - * The device should respond within TIMEOUT_C.
+> > - *
+> > - * The function does nothing for devices with ACPI-start method
+> > + * Try to wake up the device and request locality. The function does
+> > + nothing
+> > + * for devices with the ACPI-start method.
+> >   *
+> >   * Return: 0 on success -ETIME on timeout;
+> >   */
+> > @@ -165,7 +168,16 @@ static int __maybe_unused crb_cmd_ready(struct
+> device *dev,
+> >  				 CRB_CTRL_REQ_CMD_READY /* mask */,
+> >  				 0, /* value */
+> >  				 TPM2_TIMEOUT_C)) {
+> > -		dev_warn(dev, "cmdReady timed out\n");
+> > +		dev_warn(dev, "TPM_CRB_CTRL_REQ_x.cmdReady timed
+> out\n");
+We are always in locality 0 here, right?
+
+> > +		return -ETIME;
+> > +	}
+> > +
+> > +	iowrite32(CRB_LOC_CTRL_REQUEST_ACCESS, &priv->regs_h-
+> >loc_ctrl);
+> > +	if (!crb_wait_for_reg_32(&priv->regs_h->loc_state,
+> > +				 CRB_LOC_STATE_LOC_ASSIGNED, /* mask */
+> > +				 CRB_LOC_STATE_LOC_ASSIGNED, /* value */
 > > +				 TPM2_TIMEOUT_C)) {
-> >  		dev_warn(dev, "cmdReady timed out\n");
+> > +		dev_warn(dev, "TPM_LOC_STATE_x.requestAccess timed
+> out\n");
+
+
 > >  		return -ETIME;
 > >  	}
-> > --
-> > 2.9.3
-> >
-> 
-> ------------------------------------------------------------------------------
-> Check out the vibrant tech community on one of the world's most
-> engaging tech sites, SlashDot.org! http://sdm.link/slashdot
-> _______________________________________________
-> tpmdd-devel mailing list
-> tpmdd-devel@lists.sourceforge.net
-> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+ 
+
