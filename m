@@ -1,244 +1,126 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH v2 1/3] tpm_crb: map locality registers
-Date: Tue, 6 Dec 2016 20:35:57 +0200
-Message-ID: <20161206183557.ujhvc5mvlzymhwyd@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v2 2/3] tpm_crb: encapsulate
+ crb_wait_for_reg_32
+Date: Tue, 6 Dec 2016 20:38:40 +0200
+Message-ID: <20161206183840.6ajmmjmmlsngsuxp@intel.com>
 References: <20161203175213.10210-1-jarkko.sakkinen@linux.intel.com>
- <20161203175213.10210-2-jarkko.sakkinen@linux.intel.com>
- <20161203184109.u6zok4f4ssbleht4@intel.com>
- <5B8DA87D05A7694D9FA63FD143655C1B54336B91@hasmsx108.ger.corp.intel.com>
- <20161205122117.4qyi45trdoghdvis@intel.com>
- <5B8DA87D05A7694D9FA63FD143655C1B54336FE5@hasmsx108.ger.corp.intel.com>
+	<20161203175213.10210-3-jarkko.sakkinen@linux.intel.com>
+	<20161203184137.p4mk3gdldcflty5x@intel.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B54336FFE@hasmsx108.ger.corp.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B54336FE5@hasmsx108.ger.corp.intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: "Winkler, Tomas" <tomas.winkler@intel.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B54336FFE-Jy8z56yoSI8MvF1YICWikbfspsVTdybXVpNB7YpNyf8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Dec 05, 2016 at 09:31:57PM +0000, Winkler, Tomas wrote:
+On Mon, Dec 05, 2016 at 09:34:50PM +0000, Winkler, Tomas wrote:
+> > CC linux-security-module
 > > 
-> > On Mon, Dec 05, 2016 at 12:07:51PM +0000, Winkler, Tomas wrote:
-> > > > > ---
-> > > > >  drivers/char/tpm/tpm_crb.c | 96
-> > > > > ++++++++++++++++++++++++++++++----------------
-> > > > >  1 file changed, 64 insertions(+), 32 deletions(-)
-> > > > >
-> > > > > diff --git a/drivers/char/tpm/tpm_crb.c
-> > > > > b/drivers/char/tpm/tpm_crb.c index 717b6b4..8d81b66 100644
-> > > > > --- a/drivers/char/tpm/tpm_crb.c
-> > > > > +++ b/drivers/char/tpm/tpm_crb.c
-> > > > > @@ -52,18 +52,28 @@ enum crb_cancel {
-> > > > >  	CRB_CANCEL_INVOKE	= BIT(0),
-> > > > >  };
-> > > > >
-> > > > > -struct crb_control_area {
-> > > > > -	u32 req;
-> > > > > -	u32 sts;
-> > > > > -	u32 cancel;
-> > > > > -	u32 start;
-> > > > > -	u32 int_enable;
-> > > > > -	u32 int_sts;
-> > > > > -	u32 cmd_size;
-> > > > > -	u32 cmd_pa_low;
-> > > > > -	u32 cmd_pa_high;
-> > > > > -	u32 rsp_size;
-> > > > > -	u64 rsp_pa;
-> > > > > +struct crb_regs_head {
-> > > > > +	u32 loc_state;
-> > > > > +	u32 reserved1;
-> > > > > +	u32 loc_ctrl;
-> > > > > +	u32 loc_sts;
-> > > > > +	u8 reserved2[32];
-> > > > > +	u64 intf_id;
-> > > > > +	u64 ctrl_ext;
-> > > > > +} __packed;
-> > > > > +
-> > > > > +struct crb_regs_tail {
-> > > > > +	u32 ctrl_req;
-> > > > > +	u32 ctrl_sts;
-> > > > > +	u32 ctrl_cancel;
-> > > > > +	u32 ctrl_start;
-> > > > > +	u32 ctrl_int_enable;
-> > > > > +	u32 ctrl_int_sts;
-> > > > > +	u32 ctrl_cmd_size;
-> > > > > +	u32 ctrl_cmd_pa_low;
-> > > > > +	u32 ctrl_cmd_pa_high;
-> > > > > +	u32 ctrl_rsp_size;
-> > > > > +	u64 ctrl_rsp_pa;
-> > > > >  } __packed;
+> > On Sat, Dec 03, 2016 at 07:52:12PM +0200, Jarkko Sakkinen wrote:
+> > > Encapsulated crb_wait_for_reg32() so that state changes in other CRB
+> > > registers than TPM_CRB_CTRL_REQ_x can be waited.
 > > >
+> > > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> > > ---
+> > >  drivers/char/tpm/tpm_crb.c | 37 +++++++++++++++++++++++--------------
+> > >  1 file changed, 23 insertions(+), 14 deletions(-)
 > > >
-> > > Now I wonder if using  traditional offsets wouldn't be cleaner solution.
-> > 
-> > I'm not sure what you are trying to say.
-> 
-> Such as iowrite32(val, base + offset)
-
-I rather stick using structures. I do not see the point to turn things
-around.
-
-> 
-> > 
-> > > > >  enum crb_status {
-> > > > > @@ -78,7 +88,8 @@ enum crb_flags {  struct crb_priv {
-> > > > >  	unsigned int flags;
-> > > > >  	void __iomem *iobase;
-> > > > > -	struct crb_control_area __iomem *cca;
-> > > > > +	struct crb_regs_head __iomem *regs_h;
-> > > > > +	struct crb_regs_tail __iomem *regs_t;
-> > > Why just not leaving it cca, it's descriptive enough.
-> > > > >  	u8 __iomem *cmd;
-> > > > >  	u8 __iomem *rsp;
-> > > > >  	u32 cmd_size;
-> > > > > @@ -104,7 +115,7 @@ static int __maybe_unused crb_go_idle(struct
-> > > > > device
-> > > > *dev, struct crb_priv *priv)
-> > > > >  	if (priv->flags & CRB_FL_ACPI_START)
-> > > > >  		return 0;
-> > > > >
-> > > > > -	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->cca->req);
-> > > > > +	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
-> > > > >  	/* we don't really care when this settles */
-> > > > >
-> > > > >  	return 0;
-> > > > > @@ -128,21 +139,23 @@ static int __maybe_unused
-> > > > > crb_cmd_ready(struct
-> > > > device *dev,
-> > > > >  					struct crb_priv *priv)
-> > > > >  {
-> > > > >  	ktime_t stop, start;
-> > > > > +	u32 req;
-> > > > >
-> > > > >  	if (priv->flags & CRB_FL_ACPI_START)
-> > > > >  		return 0;
-> > > > >
-> > > > > -	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->cca->req);
-> > > > > +	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
-> > > > >
-> > > > >  	start = ktime_get();
-> > > > >  	stop = ktime_add(start, ms_to_ktime(TPM2_TIMEOUT_C));
-> > > > >  	do {
-> > > > > -		if (!(ioread32(&priv->cca->req) &
-> > > > CRB_CTRL_REQ_CMD_READY))
-> > > > > +		req = ioread32(&priv->regs_t->ctrl_req);
-> > > > > +		if (!(req & CRB_CTRL_REQ_CMD_READY))
-> > > > >  			return 0;
-> > > > >  		usleep_range(50, 100);
-> > > > >  	} while (ktime_before(ktime_get(), stop));
-> > > > >
-> > > > > -	if (ioread32(&priv->cca->req) & CRB_CTRL_REQ_CMD_READY) {
-> > > > > +	if (ioread32(&priv->regs_t->ctrl_req) & CRB_CTRL_REQ_CMD_READY)
-> > > > {
-> > > > >  		dev_warn(dev, "cmdReady timed out\n");
-> > > > >  		return -ETIME;
-> > > > >  	}
-> > > > > @@ -155,7 +168,7 @@ static u8 crb_status(struct tpm_chip *chip)
-> > > > >  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-> > > > >  	u8 sts = 0;
-> > > > >
-> > > > > -	if ((ioread32(&priv->cca->start) & CRB_START_INVOKE) !=
-> > > > > +	if ((ioread32(&priv->regs_t->ctrl_start) & CRB_START_INVOKE) !=
-> > > > >  	    CRB_START_INVOKE)
-> > > > >  		sts |= CRB_DRV_STS_COMPLETE;
-> > > > >
-> > > > > @@ -171,7 +184,7 @@ static int crb_recv(struct tpm_chip *chip, u8
-> > > > > *buf,
-> > > > size_t count)
-> > > > >  	if (count < 6)
-> > > > >  		return -EIO;
-> > > > >
-> > > > > -	if (ioread32(&priv->cca->sts) & CRB_CTRL_STS_ERROR)
-> > > > > +	if (ioread32(&priv->regs_t->ctrl_sts) & CRB_CTRL_STS_ERROR)
-> > > > >  		return -EIO;
-> > > > >
-> > > > >  	memcpy_fromio(buf, priv->rsp, 6); @@ -210,7 +223,7 @@ static int
-> > > > > crb_send(struct tpm_chip *chip, u8 *buf,
-> > > > size_t len)
-> > > > >  	/* Zero the cancel register so that the next command will not get
-> > > > >  	 * canceled.
-> > > > >  	 */
-> > > > > -	iowrite32(0, &priv->cca->cancel);
-> > > > > +	iowrite32(0, &priv->regs_t->ctrl_cancel);
-> > > > >
-> > > > >  	if (len > priv->cmd_size) {
-> > > > >  		dev_err(&chip->dev, "invalid command count value %zd %d\n",
-> > > > @@
-> > > > > -224,7 +237,7 @@ static int crb_send(struct tpm_chip *chip, u8
-> > > > > *buf, size_t
-> > > > len)
-> > > > >  	wmb();
-> > > > >
-> > > > >  	if (priv->flags & CRB_FL_CRB_START)
-> > > > > -		iowrite32(CRB_START_INVOKE, &priv->cca->start);
-> > > > > +		iowrite32(CRB_START_INVOKE, &priv->regs_t->ctrl_start);
-> > > > >
-> > > > >  	if (priv->flags & CRB_FL_ACPI_START)
-> > > > >  		rc = crb_do_acpi_start(chip);
-> > > > > @@ -236,7 +249,7 @@ static void crb_cancel(struct tpm_chip *chip)  {
-> > > > >  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-> > > > >
-> > > > > -	iowrite32(CRB_CANCEL_INVOKE, &priv->cca->cancel);
-> > > > > +	iowrite32(CRB_CANCEL_INVOKE, &priv->regs_t->ctrl_cancel);
-> > > > >
-> > > > >  	if ((priv->flags & CRB_FL_ACPI_START) && crb_do_acpi_start(chip))
-> > > > >  		dev_err(&chip->dev, "ACPI Start failed\n"); @@ -245,7 +258,7
-> > > > @@
-> > > > > static void crb_cancel(struct tpm_chip *chip)  static bool
-> > > > > crb_req_canceled(struct tpm_chip *chip, u8 status)  {
-> > > > >  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-> > > > > -	u32 cancel = ioread32(&priv->cca->cancel);
-> > > > > +	u32 cancel = ioread32(&priv->regs_t->ctrl_cancel);
-> > > > >
-> > > > >  	return (cancel & CRB_CANCEL_INVOKE) == CRB_CANCEL_INVOKE;  }
-> > > > @@
-> > > > > -287,6 +300,8 @@ static void __iomem *crb_map_res(struct device
-> > > > > *dev,
-> > > > struct crb_priv *priv,
-> > > > >  	if (start != new_res.start)
-> > > > >  		return (void __iomem *) ERR_PTR(-EINVAL);
-> > > > >
-> > > > > +	dev_dbg(dev, "%pr %pr", io_res, &new_res);
-> > > > > +
-> > > > >  	if (!resource_contains(io_res, &new_res))
-> > > > >  		return devm_ioremap_resource(dev, &new_res);
-> > > > >
-> > > > > @@ -322,10 +337,27 @@ static int crb_map_io(struct acpi_device
-> > > > > *device,
-> > > > struct crb_priv *priv,
-> > > > >  	if (IS_ERR(priv->iobase))
-> > > > >  		return PTR_ERR(priv->iobase);
-> > > > >
-> > > > > -	priv->cca = crb_map_res(dev, priv, &io_res, buf->control_address,
-> > > > > -				sizeof(struct crb_control_area));
-> > > > > -	if (IS_ERR(priv->cca))
-> > > > > -		return PTR_ERR(priv->cca);
-> > > > > +	/* The ACPI IO region starts at the head area and continues to include
-> > > > > +	 * the control area, as one nice sane region except for some older
-> > > > > +	 * stuff that puts the control area outside the ACPI IO region.
-> > > > > +	 */
+> > > diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+> > > index 8d81b66..f986d02 100644
+> > > --- a/drivers/char/tpm/tpm_crb.c
+> > > +++ b/drivers/char/tpm/tpm_crb.c
+> > > @@ -121,6 +121,25 @@ static int __maybe_unused crb_go_idle(struct
+> > device *dev, struct crb_priv *priv)
+> > >  	return 0;
+> > >  }
 > > >
-> > > This is not by the spec, can you be more specific, what platforms has that
-> > behavior?
-> > 
-> > Pre-Skylake (Haswell, Broadwell) does not follow the spec.
-> 
-> Okay, will check what is the issue heere
-> > > > > +	if (!(priv->flags & CRB_FL_ACPI_START)) {
-> > > > > +		if (buf->control_address == io_res.start +
-> > > > > +		    sizeof(struct crb_regs_head)) {
-> > > > > +			priv->regs_h = crb_map_res(
-> > > Why do you need to map this again it just same as iobase ?
-> > 
-> > crb_map_res() works in a way that it does ioremap only when the range is not
-> > included to iomem.
-> 
-> Right it does nothing, so why to do so, or I'm missing something?
-> Tomas
+> > > +static bool crb_wait_for_reg_32(u32 __iomem *reg, u32 mask, u32 value,
+> > > +				unsigned long timeout)
+> > > +{
+> > > +	ktime_t start;
+> > > +	ktime_t stop;
+> > > +
+> > > +	start = ktime_get();
+> > > +	stop = ktime_add(start, ms_to_ktime(timeout));
+> > > +
+> > > +	do {
+> > > +		if ((ioread32(reg) & mask) == value)
+> > > +			return true;
+> > > +
+> > > +		usleep_range(50, 100);
+> This was tuned for power management, have you tuned it for locality? 
 
-Yes, in this case using the wrapper is not necessity. I can change that
-to assignment.
+We don't want million different wait functions and the current values
+work without issues for locale.
 
 /Jarkko
+
+> > > +	} while (ktime_before(ktime_get(), stop));
+> > > +
+> > > +	return false;
+> > > +}
+> > > +
+> > >  /**
+> > >   * crb_cmd_ready - request tpm crb device to enter ready state
+> > >   *
+> > > @@ -138,24 +157,14 @@ static int __maybe_unused crb_go_idle(struct
+> > > device *dev, struct crb_priv *priv)  static int __maybe_unused
+> > crb_cmd_ready(struct device *dev,
+> > >  					struct crb_priv *priv)
+> > >  {
+> > > -	ktime_t stop, start;
+> > > -	u32 req;
+> > > -
+> > >  	if (priv->flags & CRB_FL_ACPI_START)
+> > >  		return 0;
+> > >
+> > >  	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
+> > > -
+> > > -	start = ktime_get();
+> > > -	stop = ktime_add(start, ms_to_ktime(TPM2_TIMEOUT_C));
+> > > -	do {
+> > > -		req = ioread32(&priv->regs_t->ctrl_req);
+> > > -		if (!(req & CRB_CTRL_REQ_CMD_READY))
+> > > -			return 0;
+> > > -		usleep_range(50, 100);
+> > > -	} while (ktime_before(ktime_get(), stop));
+> > > -
+> > > -	if (ioread32(&priv->regs_t->ctrl_req) & CRB_CTRL_REQ_CMD_READY)
+> > {
+> > > +	if (!crb_wait_for_reg_32(&priv->regs_t->ctrl_req,
+> > > +				 CRB_CTRL_REQ_CMD_READY /* mask */,
+> > > +				 0, /* value */
+> > > +				 TPM2_TIMEOUT_C)) {
+> > >  		dev_warn(dev, "cmdReady timed out\n");
+> > >  		return -ETIME;
+> > >  	}
+> > > --
+> > > 2.9.3
+> > >
+> > 
+> > ------------------------------------------------------------------------------
+> > Check out the vibrant tech community on one of the world's most
+> > engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+> > _______________________________________________
+> > tpmdd-devel mailing list
+> > tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+> > https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+
+------------------------------------------------------------------------------
+Developer Access Program for Intel Xeon Phi Processors
+Access to Intel Xeon Phi processor-based developer platforms.
+With one year of Intel Parallel Studio XE.
+Training and support from Colfax.
+Order your platform today.http://sdm.link/xeonphi
