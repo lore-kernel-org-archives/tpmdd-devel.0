@@ -1,31 +1,100 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [PATCH v3 0/3] Locality support for tpm_crb
-Date: Wed,  7 Dec 2016 13:49:57 +0200
-Message-ID: <20161207115001.18332-1-jarkko.sakkinen@linux.intel.com>
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Peter Huewe <peterhuewe@gmx.de>
-Cc: linux-security-module@vger.kernel.org, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: [PATCH v3 2/3] tpm_crb: encapsulate
+	crb_wait_for_reg_32
+Date: Wed,  7 Dec 2016 13:49:59 +0200
+Message-ID: <20161207115001.18332-3-jarkko.sakkinen@linux.intel.com>
+References: <20161207115001.18332-1-jarkko.sakkinen@linux.intel.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20161207115001.18332-1-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The tpm_crb driver should follow the policy of reserving and
-relinquishing the locality it uses when multiple localities are used,
-like when TXT is another locality.
+Encapsulated crb_wait_for_reg32() so that state changes in other CRB
+registers than TPM_CRB_CTRL_REQ_x can be waited.
 
-Jarkko Sakkinen (3):
-  tpm_crb: map locality registers
-  tpm_crb: encapsulate crb_wait_for_reg_32
-  tpm_crb: request and relinquish locality 0
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+---
+ drivers/char/tpm/tpm_crb.c | 37 +++++++++++++++++++++++--------------
+ 1 file changed, 23 insertions(+), 14 deletions(-)
 
- drivers/char/tpm/tpm_crb.c | 185 +++++++++++++++++++++++++++++++++------------
- 1 file changed, 137 insertions(+), 48 deletions(-)
-
+diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+index 80b9759..853bd7b 100644
+--- a/drivers/char/tpm/tpm_crb.c
++++ b/drivers/char/tpm/tpm_crb.c
+@@ -121,6 +121,25 @@ static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+ 	return 0;
+ }
+ 
++static bool crb_wait_for_reg_32(u32 __iomem *reg, u32 mask, u32 value,
++				unsigned long timeout)
++{
++	ktime_t start;
++	ktime_t stop;
++
++	start = ktime_get();
++	stop = ktime_add(start, ms_to_ktime(timeout));
++
++	do {
++		if ((ioread32(reg) & mask) == value)
++			return true;
++
++		usleep_range(50, 100);
++	} while (ktime_before(ktime_get(), stop));
++
++	return false;
++}
++
+ /**
+  * crb_cmd_ready - request tpm crb device to enter ready state
+  *
+@@ -138,24 +157,14 @@ static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+ static int __maybe_unused crb_cmd_ready(struct device *dev,
+ 					struct crb_priv *priv)
+ {
+-	ktime_t stop, start;
+-	u32 req;
+-
+ 	if (priv->flags & CRB_FL_ACPI_START)
+ 		return 0;
+ 
+ 	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
+-
+-	start = ktime_get();
+-	stop = ktime_add(start, ms_to_ktime(TPM2_TIMEOUT_C));
+-	do {
+-		req = ioread32(&priv->regs_t->ctrl_req);
+-		if (!(req & CRB_CTRL_REQ_CMD_READY))
+-			return 0;
+-		usleep_range(50, 100);
+-	} while (ktime_before(ktime_get(), stop));
+-
+-	if (ioread32(&priv->regs_t->ctrl_req) & CRB_CTRL_REQ_CMD_READY) {
++	if (!crb_wait_for_reg_32(&priv->regs_t->ctrl_req,
++				 CRB_CTRL_REQ_CMD_READY /* mask */,
++				 0, /* value */
++				 TPM2_TIMEOUT_C)) {
+ 		dev_warn(dev, "cmdReady timed out\n");
+ 		return -ETIME;
+ 	}
 -- 
-v2: 
-added sanity check for start address of the control area
-v3:
-do locality request/relinquish as part of send/recv
-check priv->regs_h before using it
-just assing the base address to regs_h instead of using crb_map_res
 2.9.3
 
+
+------------------------------------------------------------------------------
+Developer Access Program for Intel Xeon Phi Processors
+Access to Intel Xeon Phi processor-based developer platforms.
+With one year of Intel Parallel Studio XE.
+Training and support from Colfax.
+Order your platform today.http://sdm.link/xeonphi
