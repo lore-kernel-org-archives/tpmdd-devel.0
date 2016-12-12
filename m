@@ -1,54 +1,84 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 Subject: Re: [tpmdd-devel] [PATCH v3 1/3] tpm_crb: map locality registers
-Date: Mon, 12 Dec 2016 19:46:15 +0200
-Message-ID: <20161212174615.mhk44plbj5wg4zzs@intel.com>
+Date: Mon, 12 Dec 2016 19:53:06 +0200
+Message-ID: <20161212175306.6lnuh5cj7bhqxdov@intel.com>
 References: <20161207115001.18332-1-jarkko.sakkinen@linux.intel.com>
  <20161207115001.18332-2-jarkko.sakkinen@linux.intel.com>
  <5B8DA87D05A7694D9FA63FD143655C1B5433A4BD@hasmsx108.ger.corp.intel.com>
  <20161212152001.53ewps3jczs4jdld@intel.com>
- <5B8DA87D05A7694D9FA63FD143655C1B5433B524@hasmsx108.ger.corp.intel.com>
+ <20161212153108.mc5xf72npprz7wpe@intel.com>
+ <5B8DA87D05A7694D9FA63FD143655C1B5433B553@hasmsx108.ger.corp.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B5433B524@hasmsx108.ger.corp.intel.com>
+In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B5433B553@hasmsx108.ger.corp.intel.com>
 Sender: owner-linux-security-module@vger.kernel.org
 To: "Winkler, Tomas" <tomas.winkler@intel.com>
 Cc: Peter Huewe <peterhuewe@gmx.de>, open list <linux-kernel@vger.kernel.org>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Dec 12, 2016 at 03:28:01PM +0000, Winkler, Tomas wrote:
+On Mon, Dec 12, 2016 at 03:57:54PM +0000, Winkler, Tomas wrote:
+> > > On Mon, Dec 12, 2016 at 02:25:32PM +0000, Winkler, Tomas wrote:
+> > > > >
+> > > > > In order to provide access to locality registers, this commits
+> > > > > adds mapping of the head of the CRB registers, which are located right
+> > before the control area.
+> > > > >
+> > > > > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> > > > > ---
+> > > > >  drivers/char/tpm/tpm_crb.c | 89
+> > > > > +++++++++++++++++++++++++++++------------
+> > > > > -----
+> > > > >  1 file changed, 57 insertions(+), 32 deletions(-)
+> > > > >
+> > > > > diff --git a/drivers/char/tpm/tpm_crb.c
+> > > > > b/drivers/char/tpm/tpm_crb.c index
+> > > > > 717b6b4..80b9759 100644
+> > > > > --- a/drivers/char/tpm/tpm_crb.c
+> > > > > +++ b/drivers/char/tpm/tpm_crb.c
+> > > > > @@ -52,18 +52,28 @@ enum crb_cancel {
+> > > > >  	CRB_CANCEL_INVOKE	= BIT(0),
+> > > > >  };
+> > > > >
+> > > > > -struct crb_control_area {
+> > > > > -	u32 req;
+> > > > > -	u32 sts;
+> > > > > -	u32 cancel;
+> > > > > -	u32 start;
+> > > > > -	u32 int_enable;
+> > > > > -	u32 int_sts;
+> > > > > -	u32 cmd_size;
+> > > > > -	u32 cmd_pa_low;
+> > > > > -	u32 cmd_pa_high;
+> > > > > -	u32 rsp_size;
+> > > > > -	u64 rsp_pa;
+> > > > > +struct crb_regs_head {
+> > > > > +	u32 loc_state;
+> > > > > +	u32 reserved1;
+> > > > > +	u32 loc_ctrl;
+> > > > > +	u32 loc_sts;
+> > > > > +	u8 reserved2[32];
+> > > > > +	u64 intf_id;
+> > > > > +	u64 ctrl_ext;
+> > > > > +} __packed;
+> > > > > +
+> > > >
+> > > > > +struct crb_regs_tail {
+> > > > Why to change the name this is still control_area
 > > 
-> > I've tested is completley disjoint from the region pointed by the ACPI device
-> > tree (SSDT in PTT's case).
-> > 
-> > Here's example device from my x250:
-> > 
-> > Device (TPM)
-> > {
-> > Name (_HID, "MSFT0101" /* TPM 2.0 Security Device */)  // _HID: Hardware ID
-> > Name (_STR, Unicode ("TPM 2.0 Device"))  // _STR: Description String Name
-> > (CRS, ResourceTemplate () { Memory32Fixed (ReadOnly,
-> >     0x00000000,         // Address Base
-> >     0x00001000,         // Address Length
-> >     _Y00)
+> > And how would you name struct crb_regs_h then?
 > 
+> Just crb_regs
+>  
+> > In my opinion PC it makes a lot of sense to speak about registers here rather
+> > than control area now that it is extended to the full range. The PC Client
+> > Specification also speaks about registers.
 > 
-> I'm not sure what is that?
-> 
-> > Memory32Fixed (ReadOnly,
-> >     0xFED70000,         // Address Base
-> >     0x00001000,         // Address Length
-> >     )
-> 
-> But 0xFED70000 should point to CCA 
+> Right so crb_regs is to be and the nonstandard implementation of the
+> legacy platforms should be even factored out.
 
-When I implemented originally the driver I followed the MS specification
-and used the value from TPM2 ACPI table. 
-
-The driver ioremaps 00000000CCDFF000, not the address from SSDT.
-
-> Tomas
-> Thanks
+I do not see that we would stop supporting pre-Skylake platforms in the
+near future so probably won't be factored out.
 
 /Jarkko
