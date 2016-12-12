@@ -1,430 +1,244 @@
-From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v7 2/2] tpm: add securityfs support for TPM
-	2.0 firmware event log
-Date: Sun, 11 Dec 2016 00:35:33 -0500
-Message-ID: <1481434533-3453-3-git-send-email-nayna@linux.vnet.ibm.com>
-References: <1481434533-3453-1-git-send-email-nayna@linux.vnet.ibm.com>
+From: "Winkler, Tomas" <tomas.winkler@intel.com>
+Subject: RE: [tpmdd-devel] [PATCH v3 1/3] tpm_crb: map locality registers
+Date: Mon, 12 Dec 2016 14:25:32 +0000
+Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B5433A4BD@hasmsx108.ger.corp.intel.com>
+References: <20161207115001.18332-1-jarkko.sakkinen@linux.intel.com>
+ <20161207115001.18332-2-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1481434533-3453-1-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Content-Transfer-Encoding: 8BIT
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20161207115001.18332-2-jarkko.sakkinen@linux.intel.com>
+Content-Language: en-US
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>
+Cc: open list <linux-kernel@vger.kernel.org>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Unlike the device driver support for TPM 1.2, the TPM 2.0 does
-not support the securityfs pseudo files for displaying the
-firmware event log.
+> 
+> In order to provide access to locality registers, this commits adds mapping of
+> the head of the CRB registers, which are located right before the control area.
+> 
+> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> ---
+>  drivers/char/tpm/tpm_crb.c | 89 +++++++++++++++++++++++++++++------------
+> -----
+>  1 file changed, 57 insertions(+), 32 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c index
+> 717b6b4..80b9759 100644
+> --- a/drivers/char/tpm/tpm_crb.c
+> +++ b/drivers/char/tpm/tpm_crb.c
+> @@ -52,18 +52,28 @@ enum crb_cancel {
+>  	CRB_CANCEL_INVOKE	= BIT(0),
+>  };
+> 
+> -struct crb_control_area {
+> -	u32 req;
+> -	u32 sts;
+> -	u32 cancel;
+> -	u32 start;
+> -	u32 int_enable;
+> -	u32 int_sts;
+> -	u32 cmd_size;
+> -	u32 cmd_pa_low;
+> -	u32 cmd_pa_high;
+> -	u32 rsp_size;
+> -	u64 rsp_pa;
+> +struct crb_regs_head {
+> +	u32 loc_state;
+> +	u32 reserved1;
+> +	u32 loc_ctrl;
+> +	u32 loc_sts;
+> +	u8 reserved2[32];
+> +	u64 intf_id;
+> +	u64 ctrl_ext;
+> +} __packed;
+> +
 
-This patch enables support for providing the TPM 2.0 event log in
-binary form. TPM 2.0 event log supports a crypto agile format that
-records multiple digests, which is different from TPM 1.2. This
-patch enables the tpm_bios_log_setup for TPM 2.0  and adds the
-event log parser which understand the TPM 2.0 crypto agile format.
+> +struct crb_regs_tail {
+Why to change the name this is still control_area 
+> +	u32 ctrl_req;
+> +	u32 ctrl_sts;
+> +	u32 ctrl_cancel;
+> +	u32 ctrl_start;
+> +	u32 ctrl_int_enable;
+> +	u32 ctrl_int_sts;
+> +	u32 ctrl_cmd_size;
+> +	u32 ctrl_cmd_pa_low;
+> +	u32 ctrl_cmd_pa_high;
+> +	u32 ctrl_rsp_size;
+> +	u64 ctrl_rsp_pa;
+>  } __packed;
+> 
+>  enum crb_status {
+> @@ -78,7 +88,8 @@ enum crb_flags {
+>  struct crb_priv {
+>  	unsigned int flags;
+>  	void __iomem *iobase;
+> -	struct crb_control_area __iomem *cca;
+> +	struct crb_regs_head __iomem *regs_h;
+> +	struct crb_regs_tail __iomem *regs_t;
 
-Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
----
- drivers/char/tpm/Makefile                          |   2 +-
- .../char/tpm/{tpm_eventlog.c => tpm1_eventlog.c}   |  35 ++--
- drivers/char/tpm/tpm2_eventlog.c                   | 203 +++++++++++++++++++++
- drivers/char/tpm/tpm_eventlog.h                    |  70 +++++++
- 4 files changed, 295 insertions(+), 15 deletions(-)
- rename drivers/char/tpm/{tpm_eventlog.c => tpm1_eventlog.c} (95%)
- create mode 100644 drivers/char/tpm/tpm2_eventlog.c
+Same here, why to change the name, let's keep it cca it will reduce the size of patch and make it more back portable. 
 
-diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
-index a05b1eb..3d386a8 100644
---- a/drivers/char/tpm/Makefile
-+++ b/drivers/char/tpm/Makefile
-@@ -3,7 +3,7 @@
- #
- obj-$(CONFIG_TCG_TPM) += tpm.o
- tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o \
--		tpm_eventlog.o
-+		tpm1_eventlog.o tpm2_eventlog.o
- tpm-$(CONFIG_ACPI) += tpm_ppi.o tpm_acpi.o
- tpm-$(CONFIG_OF) += tpm_of.o
- obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
-diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm1_eventlog.c
-similarity index 95%
-rename from drivers/char/tpm/tpm_eventlog.c
-rename to drivers/char/tpm/tpm1_eventlog.c
-index 11bb113..9a8605e 100644
---- a/drivers/char/tpm/tpm_eventlog.c
-+++ b/drivers/char/tpm/tpm1_eventlog.c
-@@ -390,9 +390,6 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
- 	unsigned int cnt;
- 	int rc = 0;
- 
--	if (chip->flags & TPM_CHIP_FLAG_TPM2)
--		return 0;
--
- 	rc = tpm_read_log(chip);
- 	if (rc)
- 		return rc;
-@@ -407,7 +404,13 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
- 	cnt++;
- 
- 	chip->bin_log_seqops.chip = chip;
--	chip->bin_log_seqops.seqops = &tpm_binary_b_measurements_seqops;
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+		chip->bin_log_seqops.seqops =
-+			&tpm2_binary_b_measurements_seqops;
-+	else
-+		chip->bin_log_seqops.seqops =
-+			&tpm_binary_b_measurements_seqops;
-+
- 
- 	chip->bios_dir[cnt] =
- 	    securityfs_create_file("binary_bios_measurements",
-@@ -418,17 +421,21 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
- 		goto err;
- 	cnt++;
- 
--	chip->ascii_log_seqops.chip = chip;
--	chip->ascii_log_seqops.seqops = &tpm_ascii_b_measurements_seqops;
-+	if (!(chip->flags & TPM_CHIP_FLAG_TPM2)) {
- 
--	chip->bios_dir[cnt] =
--	    securityfs_create_file("ascii_bios_measurements",
--				   0440, chip->bios_dir[0],
--				   (void *)&chip->ascii_log_seqops,
--				   &tpm_bios_measurements_ops);
--	if (IS_ERR(chip->bios_dir[cnt]))
--		goto err;
--	cnt++;
-+		chip->ascii_log_seqops.chip = chip;
-+		chip->ascii_log_seqops.seqops =
-+			&tpm_ascii_b_measurements_seqops;
-+
-+		chip->bios_dir[cnt] =
-+			securityfs_create_file("ascii_bios_measurements",
-+					       0440, chip->bios_dir[0],
-+					       (void *)&chip->ascii_log_seqops,
-+					       &tpm_bios_measurements_ops);
-+		if (IS_ERR(chip->bios_dir[cnt]))
-+			goto err;
-+		cnt++;
-+	}
- 
- 	return 0;
- 
-diff --git a/drivers/char/tpm/tpm2_eventlog.c b/drivers/char/tpm/tpm2_eventlog.c
-new file mode 100644
-index 0000000..63690d3
---- /dev/null
-+++ b/drivers/char/tpm/tpm2_eventlog.c
-@@ -0,0 +1,203 @@
-+/*
-+ * Copyright (C) 2016 IBM Corporation
-+ *
-+ * Authors:
-+ *      Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-+ *
-+ * Access to TPM 2.0 event log as written by Firmware.
-+ * It assumes that writer of event log has followed TCG Specification
-+ * for Family "2.0" and written the event data in little endian.
-+ * With that, it doesn't need any endian conversion for structure
-+ * content.
-+ *
-+ * This program is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU General Public License
-+ * as published by the Free Software Foundation; either version
-+ * 2 of the License, or (at your option) any later version.
-+ */
-+
-+#include <linux/seq_file.h>
-+#include <linux/fs.h>
-+#include <linux/security.h>
-+#include <linux/module.h>
-+#include <linux/slab.h>
-+
-+#include "tpm.h"
-+#include "tpm_eventlog.h"
-+
-+static int calc_tpm2_event_size(struct tcg_pcr_event2 *event,
-+		struct tcg_pcr_event *event_header)
-+{
-+	struct tcg_efi_specid_event *efispecid;
-+	struct tcg_event_field *event_field;
-+	void *marker;
-+	void *marker_start;
-+	int i;
-+	int j;
-+	u16 halg;
-+	u32 halg_size;
-+	size_t size;
-+
-+	/*
-+	 * TPM 2.0 supports extend to multiple PCR Banks. This implies
-+	 * event log also has multiple digest values, one for each PCR Bank.
-+	 * This is called Crypto Agile Log Entry Format.
-+	 * Below code implements the procedure defined in TCG EFI Protocol
-+	 * Specification Family "2.0" to parse the event log in Crypto Agile
-+	 * Log Entry Format.
-+	 */
-+
-+	marker = event;
-+	marker_start = marker;
-+	marker = marker + sizeof(event->pcr_idx) + sizeof(event->event_type)
-+		+ sizeof(event->digests.count);
-+
-+	efispecid = (struct tcg_efi_specid_event *) event_header->event;
-+
-+	for (i = 0; (i < event->digests.count) && (i < TPM2_ACTIVE_PCR_BANKS);
-+	     i++) {
-+		halg_size = sizeof(event->digests.digests[i].alg_id);
-+		memcpy(&halg, marker, halg_size);
-+		marker = marker + halg_size;
-+		for (j = 0; (j < efispecid->num_algs); j++) {
-+			if (halg == efispecid->digest_sizes[j].alg_id) {
-+				marker = marker +
-+					efispecid->digest_sizes[j].digest_size;
-+				break;
-+			}
-+		}
-+	}
-+
-+	event_field = (struct tcg_event_field *) marker;
-+	marker = marker + sizeof(event_field->event_size)
-+		+ event_field->event_size;
-+	size = marker - marker_start;
-+
-+	if ((event->event_type == 0) && (event_field->event_size == 0))
-+		return 0;
-+
-+	return size;
-+}
-+
-+static void *tpm2_bios_measurements_start(struct seq_file *m, loff_t *pos)
-+{
-+	struct tpm_chip *chip = m->private;
-+	struct tpm_bios_log *log = &chip->log;
-+	void *addr = log->bios_event_log;
-+	void *limit = log->bios_event_log_end;
-+	struct tcg_pcr_event *event_header;
-+	struct tcg_pcr_event2 *event;
-+	int i;
-+	size_t size;
-+
-+	event_header = addr;
-+	size = sizeof(struct tcg_pcr_event) - sizeof(event_header->event)
-+		+ event_header->event_size;
-+
-+	if (*pos == 0) {
-+		if (addr + size < limit) {
-+			if ((event_header->event_type == 0) &&
-+					(event_header->event_size == 0))
-+				return NULL;
-+			return SEQ_START_TOKEN;
-+		}
-+	}
-+
-+	if (*pos > 0) {
-+		addr += size;
-+		event = addr;
-+		size = calc_tpm2_event_size(event, event_header);
-+		if ((addr + size >=  limit) || (size == 0))
-+			return NULL;
-+	}
-+
-+	for (i = 0; i < (*pos - 1); i++) {
-+		event = addr;
-+		size = calc_tpm2_event_size(event, event_header);
-+
-+		if ((addr + size >= limit) || (size == 0))
-+			return NULL;
-+		addr += size;
-+	}
-+
-+	return addr;
-+}
-+
-+static void *tpm2_bios_measurements_next(struct seq_file *m, void *v,
-+		loff_t *pos)
-+{
-+	struct tcg_pcr_event *event_header;
-+	struct tcg_pcr_event2 *event;
-+	struct tpm_chip *chip = m->private;
-+	struct tpm_bios_log *log = &chip->log;
-+	void *limit = log->bios_event_log_end;
-+	void *marker;
-+	size_t event_size;
-+
-+	event_header = log->bios_event_log;
-+
-+	if (v == SEQ_START_TOKEN) {
-+		event_size = sizeof(struct tcg_pcr_event)
-+			- sizeof(event_header->event)
-+			+ event_header->event_size;
-+		marker = event_header;
-+	} else {
-+		event = v;
-+		event_size = calc_tpm2_event_size(event, event_header);
-+		if (event_size == 0)
-+			return NULL;
-+		marker =  event;
-+	}
-+
-+	marker = marker + event_size;
-+	if (marker >= limit)
-+		return NULL;
-+	v = marker;
-+	event = v;
-+
-+	event_size = calc_tpm2_event_size(event, event_header);
-+	if (((v + event_size) >= limit) || (event_size == 0))
-+		return NULL;
-+
-+	(*pos)++;
-+	return v;
-+}
-+
-+static void tpm2_bios_measurements_stop(struct seq_file *m, void *v)
-+{
-+}
-+
-+static int tpm2_binary_bios_measurements_show(struct seq_file *m, void *v)
-+{
-+	struct tpm_chip *chip = m->private;
-+	struct tpm_bios_log *log = &chip->log;
-+	struct tcg_pcr_event *event_header = log->bios_event_log;
-+	struct tcg_pcr_event2 *event = v;
-+	void *temp_ptr;
-+	size_t size;
-+
-+	if (v == SEQ_START_TOKEN) {
-+		size = sizeof(struct tcg_pcr_event)
-+			- sizeof(event_header->event)
-+			+ event_header->event_size;
-+
-+		temp_ptr = event_header;
-+
-+		if (size > 0)
-+			seq_write(m, temp_ptr, size);
-+	} else {
-+		size = calc_tpm2_event_size(event, event_header);
-+		temp_ptr = event;
-+		if (size > 0)
-+			seq_write(m, temp_ptr, size);
-+	}
-+
-+	return 0;
-+}
-+
-+const struct seq_operations tpm2_binary_b_measurements_seqops = {
-+	.start = tpm2_bios_measurements_start,
-+	.next = tpm2_bios_measurements_next,
-+	.stop = tpm2_bios_measurements_stop,
-+	.show = tpm2_binary_bios_measurements_show,
-+};
-diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
-index 1660d74..6886a11 100644
---- a/drivers/char/tpm/tpm_eventlog.h
-+++ b/drivers/char/tpm/tpm_eventlog.h
-@@ -2,9 +2,12 @@
- #ifndef __TPM_EVENTLOG_H__
- #define __TPM_EVENTLOG_H__
- 
-+#include <crypto/hash_info.h>
-+
- #define TCG_EVENT_NAME_LEN_MAX	255
- #define MAX_TEXT_EVENT		1000	/* Max event string length */
- #define ACPI_TCPA_SIG		"TCPA"	/* 0x41504354 /'TCPA' */
-+#define TPM2_ACTIVE_PCR_BANKS	3
- 
- #ifdef CONFIG_PPC64
- #define do_endian_conversion(x) be32_to_cpu(x)
-@@ -73,6 +76,73 @@ enum tcpa_pc_event_ids {
- 	HOST_TABLE_OF_DEVICES,
- };
- 
-+/*
-+ * All the structures related to TPM 2.0 Event Log are taken from TCG EFI
-+ * Protocol Specification, Family "2.0". Document is available on link
-+ * http://www.trustedcomputinggroup.org/tcg-efi-protocol-specification/ .
-+ * Information is also available on TCG PC Client Platform Firmware Profile
-+ * Specification, Family "2.0".
-+ * Detailed digest structures for TPM 2.0 are defined in document
-+ * Trusted Platform Module Library Part 2: Structures, Family "2.0".
-+ */
-+
-+/* TPM 2.0 Event log header algorithm spec. */
-+struct tcg_efi_specid_event_algs {
-+	u16 alg_id;
-+	u16 digest_size;
-+} __packed;
-+
-+/* TPM 2.0 Event log header data. */
-+struct tcg_efi_specid_event {
-+	u8 signature[16];
-+	u32 platform_class;
-+	u8 spec_version_minor;
-+	u8 spec_version_major;
-+	u8 spec_errata;
-+	u8 uintnsize;
-+	u32 num_algs;
-+	struct tcg_efi_specid_event_algs digest_sizes[TPM2_ACTIVE_PCR_BANKS];
-+	u8 vendor_info_size;
-+	u8 vendor_info[0];
-+} __packed;
-+
-+/* TPM 2.0 Event Log Header. */
-+struct tcg_pcr_event {
-+	u32 pcr_idx;
-+	u32 event_type;
-+	u8 digest[20];
-+	u32 event_size;
-+	u8 event[0];
-+} __packed;
-+
-+/* TPM 2.0 Crypto agile algorithm and respective digest. */
-+struct tpmt_ha {
-+	u16 alg_id;
-+	u8 digest[SHA384_DIGEST_SIZE];
-+} __packed;
-+
-+/* TPM 2.0 Crypto agile digests list. */
-+struct tpml_digest_values {
-+	u32 count;
-+	struct tpmt_ha digests[TPM2_ACTIVE_PCR_BANKS];
-+} __packed;
-+
-+/* TPM 2.0 Event field structure. */
-+struct tcg_event_field {
-+	u32 event_size;
-+	u8 event[0];
-+} __packed;
-+
-+/* TPM 2.0 Crypto agile log entry format. */
-+struct tcg_pcr_event2 {
-+	u32 pcr_idx;
-+	u32 event_type;
-+	struct tpml_digest_values digests;
-+	struct tcg_event_field event;
-+} __packed;
-+
-+extern const struct seq_operations tpm2_binary_b_measurements_seqops;
-+
- #if defined(CONFIG_ACPI)
- int tpm_read_log_acpi(struct tpm_chip *chip);
- #else
--- 
-2.5.0
+>  	u8 __iomem *cmd;
+>  	u8 __iomem *rsp;
+>  	u32 cmd_size;
+> @@ -104,7 +115,7 @@ static int __maybe_unused crb_go_idle(struct device
+> *dev, struct crb_priv *priv)
+>  	if (priv->flags & CRB_FL_ACPI_START)
+>  		return 0;
+> 
+> -	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->cca->req);
+> +	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
+>  	/* we don't really care when this settles */
+> 
+>  	return 0;
+> @@ -128,21 +139,23 @@ static int __maybe_unused crb_cmd_ready(struct
+> device *dev,
+>  					struct crb_priv *priv)
+>  {
+>  	ktime_t stop, start;
+> +	u32 req;
+> 
+>  	if (priv->flags & CRB_FL_ACPI_START)
+>  		return 0;
+> 
+> -	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->cca->req);
+> +	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
+> 
+>  	start = ktime_get();
+>  	stop = ktime_add(start, ms_to_ktime(TPM2_TIMEOUT_C));
+>  	do {
+> -		if (!(ioread32(&priv->cca->req) &
+> CRB_CTRL_REQ_CMD_READY))
+> +		req = ioread32(&priv->regs_t->ctrl_req);
+> +		if (!(req & CRB_CTRL_REQ_CMD_READY))
+>  			return 0;
+>  		usleep_range(50, 100);
+>  	} while (ktime_before(ktime_get(), stop));
+> 
+> -	if (ioread32(&priv->cca->req) & CRB_CTRL_REQ_CMD_READY) {
+> +	if (ioread32(&priv->regs_t->ctrl_req) & CRB_CTRL_REQ_CMD_READY)
+> {
+>  		dev_warn(dev, "cmdReady timed out\n");
+>  		return -ETIME;
+>  	}
+> @@ -155,7 +168,7 @@ static u8 crb_status(struct tpm_chip *chip)
+>  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+>  	u8 sts = 0;
+> 
+> -	if ((ioread32(&priv->cca->start) & CRB_START_INVOKE) !=
+> +	if ((ioread32(&priv->regs_t->ctrl_start) & CRB_START_INVOKE) !=
+>  	    CRB_START_INVOKE)
+>  		sts |= CRB_DRV_STS_COMPLETE;
+> 
+> @@ -171,7 +184,7 @@ static int crb_recv(struct tpm_chip *chip, u8 *buf,
+> size_t count)
+>  	if (count < 6)
+>  		return -EIO;
+> 
+> -	if (ioread32(&priv->cca->sts) & CRB_CTRL_STS_ERROR)
+> +	if (ioread32(&priv->regs_t->ctrl_sts) & CRB_CTRL_STS_ERROR)
+>  		return -EIO;
+> 
+>  	memcpy_fromio(buf, priv->rsp, 6);
+> @@ -210,7 +223,7 @@ static int crb_send(struct tpm_chip *chip, u8 *buf,
+> size_t len)
+>  	/* Zero the cancel register so that the next command will not get
+>  	 * canceled.
+>  	 */
+> -	iowrite32(0, &priv->cca->cancel);
+> +	iowrite32(0, &priv->regs_t->ctrl_cancel);
+> 
+>  	if (len > priv->cmd_size) {
+>  		dev_err(&chip->dev, "invalid command count value %zd %d\n",
+> @@ -224,7 +237,7 @@ static int crb_send(struct tpm_chip *chip, u8 *buf,
+> size_t len)
+>  	wmb();
+> 
+>  	if (priv->flags & CRB_FL_CRB_START)
+> -		iowrite32(CRB_START_INVOKE, &priv->cca->start);
+> +		iowrite32(CRB_START_INVOKE, &priv->regs_t->ctrl_start);
+> 
+>  	if (priv->flags & CRB_FL_ACPI_START)
+>  		rc = crb_do_acpi_start(chip);
+> @@ -236,7 +249,7 @@ static void crb_cancel(struct tpm_chip *chip)  {
+>  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+> 
+> -	iowrite32(CRB_CANCEL_INVOKE, &priv->cca->cancel);
+> +	iowrite32(CRB_CANCEL_INVOKE, &priv->regs_t->ctrl_cancel);
+> 
+>  	if ((priv->flags & CRB_FL_ACPI_START) && crb_do_acpi_start(chip))
+>  		dev_err(&chip->dev, "ACPI Start failed\n"); @@ -245,7 +258,7
+> @@ static void crb_cancel(struct tpm_chip *chip)  static bool
+> crb_req_canceled(struct tpm_chip *chip, u8 status)  {
+>  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+> -	u32 cancel = ioread32(&priv->cca->cancel);
+> +	u32 cancel = ioread32(&priv->regs_t->ctrl_cancel);
+> 
+>  	return (cancel & CRB_CANCEL_INVOKE) == CRB_CANCEL_INVOKE;  }
+> @@ -322,10 +335,22 @@ static int crb_map_io(struct acpi_device *device,
+> struct crb_priv *priv,
+>  	if (IS_ERR(priv->iobase))
+>  		return PTR_ERR(priv->iobase);
+> 
+> -	priv->cca = crb_map_res(dev, priv, &io_res, buf->control_address,
+> -				sizeof(struct crb_control_area));
+> -	if (IS_ERR(priv->cca))
+> -		return PTR_ERR(priv->cca);
+> +	/* The ACPI IO region starts at the head area and continues to include
+> +	 * the control area, as one nice sane region except for some older
+> +	 * stuff that puts the control area outside the ACPI IO region.
 
 
-------------------------------------------------------------------------------
-Developer Access Program for Intel Xeon Phi Processors
-Access to Intel Xeon Phi processor-based developer platforms.
-With one year of Intel Parallel Studio XE.
-Training and support from Colfax.
-Order your platform today.http://sdm.link/xeonphi
+This is not explained correctly.  BDW and older platforms implement  only a PC subset of the spec. 
+On those platforms there are only CCA registers, other registers are not implemented. 
+
+> +	 */
+> +	if (!(priv->flags & CRB_FL_ACPI_START)) {
+> +		if (buf->control_address == io_res.start +
+> +		    sizeof(*priv->regs_h))
+> +			priv->regs_h = priv->iobase;
+> +		else
+> +			dev_warn(dev, FW_BUG "Bad ACPI memory layout");
+> +	}
+> +
+> +	priv->regs_t = crb_map_res(dev, priv, &io_res, buf->control_address,
+> +				   sizeof(struct crb_regs_tail));
+> +	if (IS_ERR(priv->regs_t))
+> +		return PTR_ERR(priv->regs_t);
+> 
+>  	/*
+>  	 * PTT HW bug w/a: wake up the device to access @@ -335,10 +360,10
+> @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+>  	if (ret)
+>  		return ret;
+> 
+> -	pa_high = ioread32(&priv->cca->cmd_pa_high);
+> -	pa_low  = ioread32(&priv->cca->cmd_pa_low);
+> +	pa_high = ioread32(&priv->regs_t->ctrl_cmd_pa_high);
+> +	pa_low  = ioread32(&priv->regs_t->ctrl_cmd_pa_low);
+>  	cmd_pa = ((u64)pa_high << 32) | pa_low;
+> -	cmd_size = ioread32(&priv->cca->cmd_size);
+> +	cmd_size = ioread32(&priv->regs_t->ctrl_cmd_size);
+> 
+>  	dev_dbg(dev, "cmd_hi = %X cmd_low = %X cmd_size %X\n",
+>  		pa_high, pa_low, cmd_size);
+> @@ -349,9 +374,9 @@ static int crb_map_io(struct acpi_device *device, struct
+> crb_priv *priv,
+>  		goto out;
+>  	}
+> 
+> -	memcpy_fromio(&rsp_pa, &priv->cca->rsp_pa, 8);
+> +	memcpy_fromio(&rsp_pa, &priv->regs_t->ctrl_rsp_pa, 8);
+>  	rsp_pa = le64_to_cpu(rsp_pa);
+> -	rsp_size = ioread32(&priv->cca->rsp_size);
+> +	rsp_size = ioread32(&priv->regs_t->ctrl_rsp_size);
+> 
+>  	if (cmd_pa != rsp_pa) {
+>  		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa, rsp_size);
+> --
+> 2.9.3
+
