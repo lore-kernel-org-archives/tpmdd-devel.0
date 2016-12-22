@@ -1,150 +1,83 @@
-From: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
-Subject: Re: [PATCH] tpm,
- tpm_crb: Handle 64-bit resource in crb_check_resource()
-Date: Tue, 20 Dec 2016 00:19:27 -0600
-Message-ID: <5858CD6F.5000909@codeaurora.org>
-References: <1482121253-924-1-git-send-email-anjiandi@codeaurora.org>
-	<20161219135624.2e7okpswnbqbvic7@intel.com>
+From: James Bottomley <James.Bottomley@HansenPartnership.com>
+Subject: [RFC 0/1] TPM2 engine support for openssl
+Date: Wed, 21 Dec 2016 20:55:26 -0800
+Message-ID: <1482382526.2350.57.camel@HansenPartnership.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20161219135624.2e7okpswnbqbvic7-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Return-path: <trousers-tech-bounces@lists.sourceforge.net>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/trousers-tech>,
+	<mailto:trousers-tech-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=trousers-tech>
+List-Post: <mailto:trousers-tech@lists.sourceforge.net>
+List-Help: <mailto:trousers-tech-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/trousers-tech>,
+	<mailto:trousers-tech-request@lists.sourceforge.net?subject=subscribe>
+Errors-To: trousers-tech-bounces@lists.sourceforge.net
+To: tpmdd-devel@lists.sourceforge.net, trousers-tech@lists.sourceforge.net, ibmtpm20tss-users@lists.sourceforge.net, openssl-dev@openssl.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 12/19/16 07:56, Jarkko Sakkinen wrote:
-> On Sun, Dec 18, 2016 at 10:20:53PM -0600, Jiandi An wrote:
->> crb_check_resource() in TPM CRB driver calls
->> acpi_dev_resource_memory() which only handles 32-bit resources.
->> Adding a call to acpi_dev_resource_address_space() in TPM CRB
->> driver which handles 64-bit resources.
->>
->> Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
-> 
-> 1. Is there a platform in existence where this change fixes a problem?
-> 2. What is difference between "memory" and "address space" conceptually?
->    Just wondering why 32-bit stuff is "memory" and 64-bit stuff is
->    "address space". Could there be a one function that would work both
->    for 32-bit and 64-bit cases?
->    
-> Yeah, I do not know this API too well. That's why I'm asking.
-> 
-> /Jarkko
-> 
-> 
-> If this is the right thing it also needs to be done in tpm_tis.
-> 
-> I will point out that this driver only works with memory, so using a
-> generic decoder without checking for IO maps may not be correct..
-> 
-> Jason
-> 
+This is a basic RFC to show that it's possible to get TPM2 to act as an
+engine for openssl as well as TPM1.2.  The format follows as closely as
+possible what happens in TPM1.2.  The file format is full blown ASN.1
+because we have to include both a public and private key blob.  I chose
+to use TSS2 KEY BLOB as the guards to distinguish it from the TPM1.2
+file.
 
-Hi Jarkko and Jason,
+TPM2 has significant limitations over TPM1.2 in what it will sign:
+basically it must recognise the signature algorithm (that's why all the
+signature parsing in the rsa_priv_enc() routine).  There's also another
+problem in that a primary asymmetric key of the SPS must be provisioned
+every time we perform this operation (which is time consuming and
+annoying).  I think we need to do something about this under Linux, but
+I'll take that off the openssl list because they likely won't be
+interested.
 
-Thanks for your comments.
-I am a developer at Qualcomm and we are trying to enable TPM CRB driver
-on ARM64 for Qualcomm Centriq 2400.  Spec changes to ACPI table for TPM 2.0
-have been submitted and approved by TCG and are currently in the 60 day waiting
-period for release.  I have a series of patches that do this TPM CRB driver
-enablement for ARM64 that I'll be submitting.
+The authority handling is missing at the moment, but I'll add that
+shortly.  We should probably discuss how policy based authorisation
+should be handled: I think as extensions to the key ASN.1 file.
 
-But first, for our platform the control area buffer address is greater than 32-bit.
-It is memory with no IO effects.  I ran into this issue first when I use
-QWordMemory in ACPI ASL to describe the resource.  MemoryRangeType is specified as
-AddressRangeMemory. 
+Because of the signature recognition problem, you have to test this out
+with x509 certificates:
 
-The QWordMemory macro evaluates to a buffer which contains a 64-bit memory
-resource descriptor, which describes a range of memory addresses.  It is
-a QWord Address Space Descriptor.  acpi_dev_resource_address_space()
-handles the 64-bit memory described using QWordMemory macro in ACPI ASL.
+openssl genrsa 2048 > tmp.key
+create_tpm2_key -w tmp.key tmp.bin
+openssl req -new -engine tpm2 -key tmp.bin -keyform e > tmp.csr
+openssl x509 -req -engine tpm2 -in tmp.csr -signkey tmp.bin -keyform e -out tmp.crt
+openssl x509 -text -in tmp.crt
+ 
+The last step will validate you've got a genuine x509 self signed
+certificate with the key from the TPM.
 
-The Memory32Fixed macro evaluates to a buffer which contains a 32-bit memory
-descriptor, which describes a fixed range of memory addresses.
-acpi_dev_resource_memory() handles the 32-bit memory described using Memory32Fixed
-in ACPI ASL.
+This kit is constructed using the IBM TSS2:
 
-I did not see a specific acpi_dev_resource_ service that handles 64-bit resource
-address and doesn't use the generic acpi_decode_space() decoder.
+https://sourceforge.net/projects/ibmtpm20tss/
 
-I do have a question about having to specify _CRS method in ACPI ASL.
-When I was doing early prototyping for this enablement work on ARM64 back
-during the time with 4.5 kernel, it was before the introduction of the following
-two patches:
-commit 1bd047be37d95bf65a219f4931215f71878ac060
-tpm_crb: Use devm_ioremap_resource
-commit 51dd43dff74b0547ad844638f6910ca29c956819
-tpm_tis: Use devm_ioremap_resource
+And, at the moment, it's only been validated on a software TPM2.
 
-The control area buffer is specified in the TPM2.0 static ACPI table.  TPM
-CRB driver maps the control area address and reads out cmd and rsp buffer
-addresses and maps them.  There is no requirement in the TCG TPM ACPI spec
-for specifying _CRS to describe the control area buffer.  When I rebased
-the early prototype for CRB driver ARM64 enablement to the latest kernel,
-I hit this issue where I have to specify _CRS method.  So in _CRS method
-I specify the same control area address that's in the TPM2.0 static ACPI table.
+James
 
-I see the _CRS requirement in the CRB driver is for resource synchronization
-between the TIS and CRB drivers to support force mode in TIS. Could I get some
-background on that so I could be more careful not breaking TIS while making
-changes to CRB driver for ARM64 enablement?
+---
 
-Thanks in advance.
+James Bottomley (1):
+  add TPM2 version of create_tpm2_key and libtpm2.so engine
 
->> ---
->>  drivers/char/tpm/tpm_crb.c | 8 +++++---
->>  1 file changed, 5 insertions(+), 3 deletions(-)
->>
->> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
->> index 717b6b4..86f355b 100644
->> --- a/drivers/char/tpm/tpm_crb.c
->> +++ b/drivers/char/tpm/tpm_crb.c
->> @@ -264,10 +264,12 @@ static bool crb_req_canceled(struct tpm_chip *chip, u8 status)
->>  static int crb_check_resource(struct acpi_resource *ares, void *data)
->>  {
->>  	struct resource *io_res = data;
->> -	struct resource res;
->> +	struct resource_win win;
->> +	struct resource *res = &(win.res);
->>  
->> -	if (acpi_dev_resource_memory(ares, &res)) {
->> -		*io_res = res;
->> +	if (acpi_dev_resource_memory(ares, res) ||
->> +	    acpi_dev_resource_address_space(ares, &win)) {
->> +		*io_res = *res;
->>  		io_res->name = NULL;
->>  	}
->>  
->> -- 
->> Jiandi An
->> Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
->> Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
->>
-> 
-> ------------------------------------------------------------------------------
-> Check out the vibrant tech community on one of the world's most 
-> engaging tech sites, SlashDot.org! http://sdm.link/slashdot
-> _______________________________________________
-> tpmdd-devel mailing list
-> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-> 
-
+ Makefile.am       |  12 +-
+ create_tpm2_key.c | 381 ++++++++++++++++++++++++++++++++++++++++++
+ e_tpm2.c          | 482 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ tpm2-asn.h        |  35 ++++
+ tpm2-common.c     | 172 +++++++++++++++++++
+ tpm2-common.h     |  10 ++
+ 6 files changed, 1090 insertions(+), 2 deletions(-)
+ create mode 100644 create_tpm2_key.c
+ create mode 100644 e_tpm2.c
+ create mode 100644 tpm2-asn.h
+ create mode 100644 tpm2-common.c
+ create mode 100644 tpm2-common.h
 
 -- 
-Jiandi An
-Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
-Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
+2.6.6
+
 
 ------------------------------------------------------------------------------
 Developer Access Program for Intel Xeon Phi Processors
