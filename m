@@ -1,13 +1,11 @@
 From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [RFC 0/1] TPM2 engine support for openssl
-Date: Thu, 22 Dec 2016 08:42:10 -0800
-Message-ID: <1482424930.2415.35.camel@HansenPartnership.com>
-References: <1482382526.2350.57.camel@HansenPartnership.com>
+Subject: Proposal for the ASN.1 form of TPM1.2 and TPM2 keys
+Date: Fri, 23 Dec 2016 10:06:03 -0800
+Message-ID: <1482516363.2501.34.camel@HansenPartnership.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1482382526.2350.57.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -16,48 +14,62 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, trousers-tech-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, ibmtpm20tss-users-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: openssl-dev-MCmKBN63+BlAfugRpC6u6w@public.gmane.org, gnutls-devel-f8S/fY/i+OXSWulAQ3bEYg@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, trousers-tech-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: David Woodhouse <dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-[openssl-dev cut; they're likely not interested in this]
-On Wed, 2016-12-21 at 20:55 -0800, James Bottomley wrote:
-> There's also another problem in that a primary asymmetric key of the 
-> SPS must be provisioned every time we perform this operation (which 
-> is time consuming and annoying).  I think we need to do something 
-> about this under Linux, but I'll take that off the openssl list 
-> because they likely won't be interested.
-
-I talked to Microsoft about what they do.  Apparently there is an
-unpublished TPM 2.0 provisioning guide which specifies how the SRK
-should be handled, and a published one for the EK:
-
-http://www.trustedcomputinggroup.org/wp-content/uploads/Credential_Profile_EK_V2.0_R14_published.pdf
-
-the SRK template is identical to the EK one except that
-
-userWithAuth = 1
-adminWithPolicy = 0
-noDA = 1
-authPolicy = empty policy
-
-The persistent handles for these two are EK: 0x81010001; SRK:
-0x81000001.  Conventionally the SRK is provisioned with empty auth.
-
-I think as part of our tpm2 take ownership, we should provision the
-owner and lockout auth and create these two primary objects if they
-don't already exist.
-
-That would mean I can get rid of the primary object stuff in my tpm2
-engine code and simply look for the well known handle.
-
-James
-
-
-
-
-------------------------------------------------------------------------------
-Developer Access Program for Intel Xeon Phi Processors
-Access to Intel Xeon Phi processor-based developer platforms.
-With one year of Intel Parallel Studio XE.
-Training and support from Colfax.
-Order your platform today.http://sdm.link/intel
+VGhlIHJlYXNvbiB0aGlzIGNvbWVzIGFib3V0IGlzIGJlY2F1c2Ugd2UgYWxyZWFkeSBoYXZlIGEg
+c3RhbmRhcmQgZm9ybQpmb3IgVFBNIDEuMiBrZXlzIGhlcmU6CgpodHRwOi8vZGF2aWQud29vZGhv
+dS5zZS9kcmFmdC13b29kaG91c2UtY2VydC1iZXN0LXByYWN0aWNlLmh0bWwjaWRlbnQtdHBtCgpI
+b3dldmVyLCBzaW5jZSBJJ20gd29ya2luZyBvbiBUUE0yIGVuYWJsaW5nIGZvciBvcGVuc3NsIGFu
+ZCBnbnV0bHMsIEkKbmVlZCB0byBjb21lIHVwIHdpdGggYSBuZXcga2V5IGZvcm1hdCBiZWNhdXNl
+IFRQTTIgcmVxdWlyZXMgc29tZSBleHRyYQpwYXJhbWV0ZXJzIGFuZCB0aGUgb3JpZ2luYWwgVFNT
+IEtFWSBCTE9CLCBiZWluZyBhIHNpbmdsZQpBU04xX09DVEVUX1NUUklORyBpc24ndCBleHBhbmRh
+YmxlLgoKQXMgYSBkaWdyZXNzaW9uLCB0aGUgZXh0cmEgcGFyYW1ldGVycyB0aGF0IFRQTTIgbmVl
+ZHMgYXJlOgoKICAgMS4gQSBwdWJsaWMga2V5IGJsb2IuIMKgSW4gVFBNMTIgdGhlIGtleSBjb21w
+bGV4IHdhcyBhIGpvaW50CiAgICAgIHB1YmxpYy9wcml2YXRlIHBhcnQuIMKgSW4gVFBNMiwgdGhl
+IHB1YmxpYyBhbmQgcHJpdmF0ZSBrZXkgc3RydWN0dXJlcwogICAgICBoYXZlIHZhcmlhYmxlIGxl
+bmd0aCBhbmQgYXJlIHN1cHBsaWVkIHNlcGFyYXRlbHkuCiAgIDIuIGEgYm9vbGVhbiBmb3IgZW1w
+dHlBdXRoLiDCoEluIFRQTTEyIHRoZXJlJ3MgYSB3YXkgdG8gdGVsbCBpZiBhCiAgICAgIHN0cnVj
+dHVyZSBoYXMgbm8gYXV0aG9yaXphdGlvbi4gwqBJbiBUUE0yIHRoZXJlJ3Mgbm8gc3VjaCB0aGlu
+ZyBhcyBubwogICAgICBhdXRob3JpemF0aW9uLCBidXQgdGhlcmUncyBhIGNvbnZlbnRpb25hbCBl
+bXB0eSBhdXRob3JpemF0aW9uIHRvCiAgICAgIHJlcGxhY2UgaXQgYnV0IG5vIHdheSBvZiBxdWVy
+eWluZyB3aGV0aGVyIGFueSBnaXZlbiBrZXkgaXMgdXNpbmcgaXQsCiAgICAgIHNvIHdlIG5lZWQg
+dG8ga25vdyBleHBsaWNpdGx5IHdoZXRoZXIgdG8gcHJvbXB0IGZvciBhIHBhc3N3b3JkIG9yCiAg
+ICAgIG5vdC4KICAgMy4gVGhlcmUgYXJlIGRpZmZlcmVudCBmb3JtcyBhIFRQTSBwcml2YXRlIGtl
+eSBjb3VsZCBiZSBpbi4gwqBPbmUgaXMKICAgICAgc3ltbWV0cmljYWxseSBlbmNyeXB0ZWQgd2l0
+aCBhIFRQTSBwcml2YXRlIGtleSwgd2hpY2ggbWFrZXMgaXQKICAgICAgbG9hZGFibGUsIG1lYW5p
+bmcgaXQgbXVzdCBiZSBwcm9kdWNlZCBvbiB0aGUgVFBNIGl0c2VsZiBhbmQgdGhlCiAgICAgIG90
+aGVyIGlzIGFzeW1tZXRyaWNhbGx5IGVuY3J5cHRlZCBtZWFuaW5nIGl0IGNhbiBiZSBwcm9kdWNl
+ZCBhd2F5CiAgICAgIGZyb20gdGhlIFRQTSBidXQgbXVzdCBiZSBpbXBvcnRlZCBiZWZvcmUgYmVp
+bmcgbG9hZGVkLgoKSSB0aGluayB0aGVyZSdzIHZhbHVlIGluIGhhdmluZyBhIHVuaXZlcnNhbCBz
+dHJ1Y3R1cmUgZm9yIHRoZSBrZXkKcmVwcmVzZW50YXRpb25zLCBzbyBJJ20gcHJvcG9zaW5nIGFu
+IEFTTjEgcmVwcmVzZW50YXRpb24gdGhhdCB3aWxsIHdvcmsKZm9yIGJvdGggVFBNMS4yIGFuZCBU
+UE0yIGtleXMuICBJJ2QgYWxzbyBsaWtlIGl0IHRvIGJlIHNlbGYgZGVzY3JpYmluZywKc28gSSB0
+aGluayB3ZSBzaG91bGQgdXNlIGFuIE9JRCBhcyB0aGUgaW5pdGlhbCBwYXJhbWV0ZXIgb2YgdGhl
+CnNlcXVlbmNlLiAgV2l0aCB0aGF0LCBJIHRoaW5rIHRoZSBmb3JtYXQgdGhhdCB3b3JrcyBpcwoK
+VFBNS2V5IDo6PSBTRVFVRU5DRSB7Cgl0eXBlCQlPQkpFQ1QgSURFTlRJRklFUgoJdmVyc2lvbgkJ
+WzBdIElNUExJQ0lUIElOVEVHRVIgT1BUSU9OQUwKCWVtcHR5QXV0aAlbMV0gSU1QTElDSVQgQk9P
+TEVBTiBPUFRJT05BTAoJcGFyZW50CQlbMl0gSU1QTElDSVQgSU5URUdFUiBPUFRJT05BTAoJcHVi
+bGljS2V5CVszXSBJTVBMSUNJVCBPQ1RFVCBTVFJJTkcgT1BUSU9OQUwKCXByaXZhdGVLZXkJT0NU
+RVQgU1RSSU5HCn0KCldoZXJlIFRQTTEyIGtleXMgd291bGQgaGF2ZSBhIFRQTTEyS2V5IHR5cGUg
+YW5kIHVzZSBubyBvcHRpb25hbCBmaWVsZHMKKG1lYW5pbmcgb25seSBwcml2YXRlS2V5KSBhbmQg
+VFBNMiBrZXlzIHdvdWxkIGhhdmUgdHlwZSBUUE0yTG9hZGFibGVLZXkKb3IgVFBNMkltcG9ydGFi
+bGVLZXkgdHlwZSBhbmQgdGhlbiBtYWtlIHVzZSBvZiBhbGwgdGhlIG9wdGlvbmFsIGZpZWxkcwoo
+ZXhjZXB0IHZlcnNpb24pLgoKVmVyc2lvbiBpcyB0aGVyZSBmb3IgZnV0dXJlIGV4cGFuc2lvbiwg
+YnV0IGlzIHVudXNlZCBpbiB0aGUgaW5pdGlhbAppbmNhcm5hdGlvbi4KCkknbSB0b3JuIG9uIHdo
+ZXJlIHRvIGdldCB0aGUgT0lEcyBmcm9tLiAgU2luY2UgdGhpcyBpcyBhIFRQTSBrZXksIGl0Cm1p
+Z2h0IG1ha2Ugc2Vuc2UgdG8gdXNlIHRoZSBUQ0cgT0lEICgyLjIzLjEzMykgYW5kIGp1c3QgYWRk
+IHNvbWV0aGluZwp0aGV5IGhhdmVuJ3QgYWxyZWFkeSB1c2VkLCBsaWtlIDEwIGZvciBrZXkgZm9y
+bWF0cywgb3Igd2UgY291bGQgZ28gd2l0aAphIHBrY3MgT0lEICgxLjIuODQwLjExMzU0OS4xKQoK
+SWYgd2UgY2FuIGFncmVlIG9uIHRoaXMsIHdlIGNhbiB1cGRhdGUgRGF2aWQncyBkb2N1bWVudCBh
+bmQgbWFrZSBpdCBhCmZvcm1hbCBSRkMuCgpUaG91Z2h0cz8KCkphbWVzCgoKLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tCkRldmVsb3BlciBBY2Nlc3MgUHJvZ3JhbSBmb3IgSW50ZWwgWGVvbiBQaGkgUHJv
+Y2Vzc29ycwpBY2Nlc3MgdG8gSW50ZWwgWGVvbiBQaGkgcHJvY2Vzc29yLWJhc2VkIGRldmVsb3Bl
+ciBwbGF0Zm9ybXMuCldpdGggb25lIHllYXIgb2YgSW50ZWwgUGFyYWxsZWwgU3R1ZGlvIFhFLgpU
+cmFpbmluZyBhbmQgc3VwcG9ydCBmcm9tIENvbGZheC4KT3JkZXIgeW91ciBwbGF0Zm9ybSB0b2Rh
+eS5odHRwOi8vc2RtLmxpbmsvaW50ZWwKX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
+X19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3Rz
+LnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0
+aW5mby90cG1kZC1kZXZlbAo=
