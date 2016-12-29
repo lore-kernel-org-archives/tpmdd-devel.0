@@ -1,84 +1,114 @@
-From: Erwann Abalea <Erwann.Abalea@docusign.com>
+From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 Subject: Re: [gnutls-devel] Proposal for the ASN.1 form of
  TPM1.2 and TPM2 keys
-Date: Tue, 27 Dec 2016 15:35:45 +0000
-Message-ID: <230FF510-B616-4D1F-8CC5-5F2877A1FFB4@docusign.com>
+Date: Thu, 29 Dec 2016 15:57:17 -0800
+Message-ID: <1483055837.2561.51.camel@HansenPartnership.com>
 References: <1482516363.2501.34.camel@HansenPartnership.com>
- <CAJU7zaKjXhKJ-3PJD6XrLW2hTixEqL0B56epbqG3trw3jmXjVg@mail.gmail.com>
- <1482596030.2316.4.camel@HansenPartnership.com>
- <CAJU7za+PdjfKqtrEoJMhUK6Mm9Hsa98G8RGNRx-qMFwenMG9yg@mail.gmail.com>
- <1482691491.3394.8.camel@HansenPartnership.com>
-Reply-To: openssl-dev@openssl.org
+	<CAJU7zaKjXhKJ-3PJD6XrLW2hTixEqL0B56epbqG3trw3jmXjVg@mail.gmail.com>
+	<1482596030.2316.4.camel@HansenPartnership.com>
+	<CAJU7za+PdjfKqtrEoJMhUK6Mm9Hsa98G8RGNRx-qMFwenMG9yg@mail.gmail.com>
+	<1482691491.3394.8.camel@HansenPartnership.com>
+	<CAJU7zaL2WGnBgCnx_EQ7wNnaYpaUK8BfbX40Gm85zamnFYfhgA@mail.gmail.com>
+	<1482709652.3394.15.camel@HansenPartnership.com>
+	<F37418F5-0ECC-4F8B-981A-2ED74FAADA51@gmail.com>
+	<1482776020.2430.19.camel@HansenPartnership.com>
+	<671CBF50-E114-4FD1-995A-523C7B63F8D5@gmail.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <openssl-dev-bounces@openssl.org>
-In-Reply-To: <1482691491.3394.8.camel@HansenPartnership.com>
-Content-Language: en-US
-Content-ID: <74E2D3A3278D78488DAD1ABE145E3AD8@namprd04.prod.outlook.com>
-List-Unsubscribe: <https://mta.openssl.org/mailman/options/openssl-dev>,
- <mailto:openssl-dev-request@openssl.org?subject=unsubscribe>
-List-Archive: <http://mta.openssl.org/pipermail/openssl-dev/>
-List-Post: <mailto:openssl-dev@openssl.org>
-List-Help: <mailto:openssl-dev-request@openssl.org?subject=help>
-List-Subscribe: <https://mta.openssl.org/mailman/listinfo/openssl-dev>,
- <mailto:openssl-dev-request@openssl.org?subject=subscribe>
-Errors-To: openssl-dev-bounces@openssl.org
-Sender: "openssl-dev" <openssl-dev-bounces@openssl.org>
-To: "openssl-dev@openssl.org" <openssl-dev@openssl.org>
-Cc: "trousers-tech@lists.sourceforge.net" <trousers-tech@lists.sourceforge.net>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, David Woodhouse <dwmw2@infradead.org>, Nikos Mavrogiannopoulos <nmav@gnutls.org>, GnuTLS development list <gnutls-devel@lists.gnutls.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <671CBF50-E114-4FD1-995A-523C7B63F8D5-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Nikos Mavrogianopoulos <n.mavrogiannopoulos-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Nikos Mavrogiannopoulos <nmav-c5N7Ur/I1ocdnm+yROfE0A@public.gmane.org>
+Cc: trousers-tech-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, David Woodhouse <dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org>, openssl-dev-MCmKBN63+BlAfugRpC6u6w@public.gmane.org, GnuTLS development list <gnutls-devel-f8S/fY/i+OXSWulAQ3bEYg@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Qm9uam91ciwNCg0KPiBMZSAyNSBkw6ljLiAyMDE2IMOgIDE5OjQ0LCBKYW1lcyBCb3R0b21sZXkg
-PEphbWVzLkJvdHRvbWxleUBIYW5zZW5QYXJ0bmVyc2hpcC5jb20+IGEgw6ljcml0IDoNCj4gDQo+
-IE9uIFN1biwgMjAxNi0xMi0yNSBhdCAxMDoxOCArMDEwMCwgTmlrb3MgTWF2cm9naWFubm9wb3Vs
-b3Mgd3JvdGU6DQo+PiBPbiBTYXQsIERlYyAyNCwgMjAxNiBhdCA1OjEzIFBNLCBKYW1lcyBCb3R0
-b21sZXkNCj4+IDxKYW1lcy5Cb3R0b21sZXlAaGFuc2VucGFydG5lcnNoaXAuY29tPiB3cm90ZToN
-Cj4+IA0KPj4+IEkgdGhpbmssIHNpbmNlIGl0J3MgYSBrZXkgZm9ybWF0LCB0aGUgdHdvIGFib3Zl
-IGFyZSB0aGUgcG90ZW50aWFsIA0KPj4+IG9uZXMuICBJdCB3b3VsZCBiZSBUQ0cgaWYgdGhleSB3
-YW50IHRvIHRha2UgaXQgaW50byB0aGVpciBzdGFuZGFyZCwNCj4+PiBvdGhlcndpc2UgUEtDUyBp
-cyBSU0EgSW5jLg0KPj4gDQo+PiBJIHdvdWxkbid0IGV4cGVjdCBSU0EgaW5jIHRvIGJlIGludm9s
-dmVkIGludG8gdGhpcyBhcyBwYXJ0IG9mIFBLQ1MuDQo+PiBUaGV5IGFyZSBkZWFkIGxvbmcgdGlt
-ZSBhZ28gYW5kIGhhdmUgbW92ZWQgdG8gSUVURi4NCj4gDQo+IEkgdGhpbmsgSSBzaG91bGQgZ2l2
-ZSBUQ0cgZmlyc3QgY3JhY2sgYXQgd2FudGluZyB0byBvd24gdGhlIE9JRC4gIFRoZQ0KPiBJRVRG
-IG9uZXMgYXJlIGVhc3k6IG9uY2UgeW91IGNvZGlmeSBpdCBpbiBhbiBSRkMsIHRoZSBvaWQgcmVn
-aXN0cnkgYXV0bw0KPiBleHRyYWN0cyBpdC4NCg0KV2hpY2ggT0lEIHJlZ2lzdHJ5IGFyZSB5b3Ug
-dGFsa2luZyBhYm91dD8NCg0KPj4+PiBIb3dldmVyLCBJJ20gbm90IHN1cmUgaG93IGV4cGFuZGFi
-bGUgaXMgQVNOLjEgdXNpbmcgdmVyc2lvbg0KPj4+PiBmaWVsZHMgKEkndmUgc2VlbiBubyBzdHJ1
-Y3R1cmUgYmVpbmcgYWJsZSB0byBiZSByZS11c2VkIHVzaW5nIGENCj4+Pj4gZGlmZmVyZW50IHZl
-cnNpb24pLiBBbiBhbHRlcm5hdGl2ZSBhcHByb2FjaCB3b3VsZCB0byBhbGxvdyBmb3IgDQo+Pj4+
-IGZ1dHVyZSBleHRlbnNpb25zLCBpLmUuLCBzb21ldGhpbmcgbGlrZSB0aGUgUEtJWCBFeHRlbnNp
-b24gZmllbGQsIA0KPj4+PiB3aGljaCBpcyBhbiBPSUQrZGF0YS4NCj4+PiANCj4+PiBBcyBsb25n
-IGFzIHRoZSBleHBhbnNpb24gZmllbGRzIGFyZSBvcHRpb25hbCwgaXQgd29ya3MgbmljZWx5LiAN
-Cj4+PiBYNTA5IGFuZCBYNTA5djMgYXJlIGV4YW1wbGVzIG9mIHZlcnNpb24gZXhwYW5kZWQgQVNO
-LjENCj4+IA0KPj4gT25seSBpZiB0aGV5IGFyZSBkZWZpbmVkIGluIHRoZSBzdHJ1Y3R1cmUgZWFy
-bHkuIE90aGVyd2lzZSB0aGUgZWFybHkNCj4+IHZlcnNpb25zIG9mIHRoZSBpbXBsZW1lbnRhdGlv
-bnMgd291bGRuJ3QgY29wZSB3aXRoIGV4dGVuc2lvbnMuIFRvIA0KPj4gbWFrZSBpdCBlYXJseSBl
-eHRlbmRhYmxlIHlvdSdkIGhhdmUgdG8gdXNlIHNvbWV0aGluZyBsaWxrZQ0KPj4gDQo+PiBUUE1L
-ZXkgOjo9IFNFUVVFTkNFIHsNCj4+ICAgICAgICB0eXBlICAgICAgICAgICAgT0JKRUNUIElERU5U
-SUZJRVINCj4+ICAgICAgICB2ZXJzaW9uICAgICAgICAgWzBdIElNUExJQ0lUIElOVEVHRVIgT1BU
-SU9OQUwNCj4+ICAgICAgICBlbXB0eUF1dGggICAgICAgWzFdIElNUExJQ0lUIEJPT0xFQU4gT1BU
-SU9OQUwNCj4+ICAgICAgICBwYXJlbnQgICAgICAgICAgWzJdIElNUExJQ0lUIElOVEVHRVIgT1BU
-SU9OQUwNCj4+ICAgICAgICBwdWJsaWNLZXkgICAgICAgWzNdIElNUExJQ0lUIE9DVEVUIFNUUklO
-RyBPUFRJT05BTA0KPj4gICAgICAgIHByaXZhdGVLZXkgICAgICBPQ1RFVCBTVFJJTkcNCj4+ICAg
-ICAgICAgZXh0ZW5zaW9ucyAgICAgIFs0XSAgRVhQTElDSVQgRXh0ZW5zaW9ucyBPUFRJT05BTA0K
-Pj4gfQ0KPiANCj4gQWN0dWFsbHksIHRoYXQncyB0aGUgdXRpbGl0eSBvZiBBU04uMSwgb25jZSB5
-b3UgdXNlIHRhZ2dpbmcsIHlvdSBkb24ndA0KPiBoYXZlIHRvIGRvIHRoaXMuICBUaGUgc3RydWN0
-dXJlIGFib3ZlIGlzIGlkZW50aWNhbCB0bzoNCj4gDQo+IFRQTUtleSA6Oj0gU0VRVUVOQ0Ugew0K
-PiAgICAgICAgdHlwZSAgICAgICAgICAgIE9CSkVDVCBJREVOVElGSUVSDQo+ICAgICAgICB2ZXJz
-aW9uICAgICAgICAgWzBdIElNUExJQ0lUIElOVEVHRVIgT1BUSU9OQUwNCj4gICAgICAgIGVtcHR5
-QXV0aCAgICAgICBbMV0gSU1QTElDSVQgQk9PTEVBTiBPUFRJT05BTA0KPiAgICAgICAgcGFyZW50
-ICAgICAgICAgIFsyXSBJTVBMSUNJVCBJTlRFR0VSIE9QVElPTkFMDQo+ICAgICAgICBwdWJsaWNL
-ZXkgICAgICAgWzNdIElNUExJQ0lUIE9DVEVUIFNUUklORyBPUFRJT05BTA0KPiAgICAgICAgcHJp
-dmF0ZUtleSAgICAgIE9DVEVUIFNUUklORw0KPiB9DQoNClRoZXNlIHN0cnVjdHVyZXMgY2FuIGJl
-IGNvbnNpZGVyZWQgaWRlbnRpY2FsIGlmIGFuZCBvbmx5IGlmIG9uZSB0aGUgZm9sbG93aW5nIGNv
-bmRpdGlvbnMgaXMgdHJ1ZToNCiAtIHRoZXnigJlyZSBkZWZpbmVkIGluIGEgbW9kdWxlIGRlY2xh
-cmVkIHdpdGggwqsgRVhURU5TSUJJTElUWSBJTVBMSUVEIMK7DQogLSB0aGV5IGJvdGggaW5jbHVk
-ZSB0aGUgZXh0ZW5zaWJpbGl0eSBtYXJrZXIgKGkuZS4gdGhleeKAmXJlIHNsaWdodGx5IG1vZGlm
-aWVkKQ0KDQpJZiB5b3UgcGxhbiB0byB1c2UgQkVSLCBDRVIgb3IgREVSIChhbmQgb25seSB0aGVz
-ZSksIHRoZW4gdGhlIHBhcnNlciBNVVNUIGlnbm9yZSB0aGUgZXh0ZW5zaWJpbGl0eSBtYXJrZXJz
-IChwcmVzZW50IG9yIG5vdCksIGFuZCB3b3JrIGFzIGlmIHRoZXnigJlyZSBwcmVzZW50LiBCdXQg
-dGhhdCB3b27igJl0IGNoYW5nZSB0aGUgQVNOLjEgZGVmaW5pdGlvbiwgb25seSB0aGUgZGVjb2Rl
-ciBiZWhhdmlvdXIuDQoNCkNvcmRpYWxlbWVudCwNCkVyd2FubiBBYmFsZWENCg0KLS0gCm9wZW5z
-c2wtZGV2IG1haWxpbmcgbGlzdApUbyB1bnN1YnNjcmliZTogaHR0cHM6Ly9tdGEub3BlbnNzbC5v
-cmcvbWFpbG1hbi9saXN0aW5mby9vcGVuc3NsLWRldgo=
+On Mon, 2016-12-26 at 21:13 +0100, Nikos Mavrogianopoulos wrote:
+> My comment was on the claim of extendability of the format which as I
+> explained it is simply not true. As for example I already gave the
+> key usage extension. I am fine however with a non extendable format
+> as you proposed. 
+
+OK, so I think the version is now superfluous, since if anything gets
+added it can be recognised by the tag and things not ready to parse
+that tag can reject it.
+
+That makes the final form
+
+ TPMKey ::= SEQUENCE {
+	type		OBJECT IDENTIFIER
+	emptyAuth	[0] EXPLICIT BOOLEAN OPTIONAL
+	parent		[1] EXPLICIT INTEGER OPTIONAL
+	pubkey		[2] EXPLICIT OCTET STRING OPTIONAL
+	privkey		OCTET STRING
+ }
+
+I'll code the v2 patch using this form.
+
+James
+
+> On December 26, 2016 7:13:40 PM GMT+01:00, James Bottomley <
+> James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org> wrote:
+> > On Mon, 2016-12-26 at 08:18 +0100, Nikos Mavrogianopoulos wrote:
+> > > I'd like both backwards and forward compatibility actually,
+> > > exactly
+> > > like x509. If an informational field is added like the key usage
+> > > that
+> > > I mentioned, I doubt you'd like all the previous consumers
+> > > incompatible.
+> > 
+> > OK, so there's a fundamental difference between a v3 X509
+> > certificate
+> > and a TPM key: An X509 certificate is a signature over a set of v1
+> > TBS
+> > data, a public key and a bundle of attributes.  To verify the
+> > certificate or extract the key, you don't need to know what the
+> > attributes are, so you can still "use" the certificate in that
+> > form. 
+> > However, you can't get the v1 tool to obey the v3 constraints on
+> > the
+> > certificate because it doesn't understand them.
+> > 
+> > The ASN.1 description of a TPM key contains the actual binary
+> > representation of the key plus a set of information which explains
+> > to
+> > the consuming code how to use the key.  Since I can't think of a
+> > way of
+> > making use of the key without understanding all of the information
+> > about how to use it, I think it is beneficial that v1 consumers
+> > don't
+> > try to use v2 key information because the resulting failure will
+> > excite
+> > the TPM's dictionary attack protection.
+> > 
+> > I gave an example of one such extension: policy authorisations, but
+> > they're definitely of the "if you don't understand these, you can't
+> > use
+> > the key" variety.  Perhaps if you can give an example of a
+> > potentially
+> > compatible extensions it would help me to see your point and give
+> > us a
+> > means of moving forwards.
+> > 
+> > Thanks,
+> > 
+> > James
+> > 
+> > >  For other extensions which make the structure totally
+> > > incompatible
+> > > you can use the critical flag. Anyway even the original struct is
+> > > OK,
+> > > it is exactly like any other key structs we have.
+> 
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most 
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
