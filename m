@@ -1,113 +1,62 @@
-From: James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: TPM 2.0 device driver blocking open
-Date: Fri, 30 Dec 2016 10:46:49 -0800
-Message-ID: <1483123609.2712.1.camel@linux.vnet.ibm.com>
-References: <o45vtc$ur$1@blaine.gmane.org>
-	<1483114928.2442.28.camel@linux.vnet.ibm.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1483114928.2442.28.camel-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+From: Nayna Jain <nayna@linux.vnet.ibm.com>
+Subject: [PATCH v2 0/2] tpm: enhance TPM 2.0 extend function to support multiple PCR banks
+Date: Fri, 30 Dec 2016 14:02:28 -0500
+Message-ID: <1483124550-9529-1-git-send-email-nayna@linux.vnet.ibm.com>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Sender: owner-linux-security-module@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, Nayna Jain <nayna@linux.vnet.ibm.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, 2016-12-30 at 08:22 -0800, James Bottomley wrote:
-> On Fri, 2016-12-30 at 10:53 -0500, Ken Goldman wrote:
-> > Is there any way to change it.  I didn't set O_NOBLOCK.  Is there 
-> > perhaps an ioctl()?
-> > Is this something that should be added?
-> 
-> I think for the 2.0 model of every application getting direct access,
-> we should make it so that every open gets a separate read/write 
-> stream to the tpm which we send in via the locked version of 
-> tpm_transmit() and just let the chip->tpm_mutex sort out the
-> accesses.
-> 
-> I can code up a patch if no-one's already done it.
+IMA extends its hash measurements in the TPM PCRs, based on policy.
+The existing in-kernel TPM extend function extends only the SHA1
+PCR bank. TPM 2.0 defines multiple PCR banks, to support different
+hash algorithms. The TCG TPM 2.0 Specification[1] recommends
+extending all active PCR banks to prevent malicious users from
+setting unused PCR banks with fake measurements and quoting them.
+This patch set adds support for extending all active PCR banks,
+as recommended.
 
-Just FYI this is the temporary hack I'm using to fix my multiple access
-problem while Jarkko is working on the RM as the final solution.  All
-it does is block a second and subsequent open until the first one
-completes.
+The first patch implements the TPM 2.0 capability to retrieve
+the list of active PCR banks.
 
-James
+The second patch modifies the tpm_pcr_extend() and tpm2_pcr_extend()
+interface to support extending multiple PCR banks. The existing
+tpm_pcr_extend() interface expects only a SHA1 digest. Hence, to
+extend all active PCR banks with differing digest sizes for TPM 2.0,
+the SHA1 digest is padded with 0's as needed.
 
----
+This approach is taken to maintain backwards compatibility for IMA
+in order to continue working with both TPM 1.2 and TPM 2.0 without
+any changes and still comply with TCG TPM 2.0 Specification[1].
 
-diff --git a/drivers/char/tpm/tpm-dev.c b/drivers/char/tpm/tpm-dev.c
-index 912ad30..cce67d5 100644
---- a/drivers/char/tpm/tpm-dev.c
-+++ b/drivers/char/tpm/tpm-dev.c
-@@ -51,23 +51,44 @@ static void timeout_work(struct work_struct *work)
- 	mutex_unlock(&priv->buffer_mutex);
- }
- 
-+static int tpm_open_lock(struct tpm_chip *chip, int lock)
-+{
-+	static DECLARE_COMPLETION(wait);
-+
-+	if (lock) {
-+		while (test_and_set_bit(0, &chip->is_open)) {
-+			int ret;
-+
-+			dev_dbg(&chip->dev, "Another process owns this TPM\n");
-+			ret = wait_for_completion_interruptible(&wait);
-+			if (ret)
-+				return ret;
-+		}
-+	} else {
-+		clear_bit(0, &chip->is_open);
-+		complete(&wait);
-+	}
-+
-+	return 0;
-+}
-+
- static int tpm_open(struct inode *inode, struct file *file)
- {
- 	struct tpm_chip *chip =
- 		container_of(inode->i_cdev, struct tpm_chip, cdev);
- 	struct file_priv *priv;
-+	int ret;
- 
- 	/* It's assured that the chip will be opened just once,
- 	 * by the check of is_open variable, which is protected
- 	 * by driver_lock. */
--	if (test_and_set_bit(0, &chip->is_open)) {
--		dev_dbg(&chip->dev, "Another process owns this TPM\n");
--		return -EBUSY;
--	}
-+	ret = tpm_open_lock(chip, 1);
-+	if (ret)
-+		return ret;
- 
- 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
- 	if (priv == NULL) {
--		clear_bit(0, &chip->is_open);
-+		tpm_open_lock(chip, 0);
- 		return -ENOMEM;
- 	}
- 
-@@ -173,7 +194,7 @@ static int tpm_release(struct inode *inode, struct file *file)
- 	flush_work(&priv->work);
- 	file->private_data = NULL;
- 	atomic_set(&priv->data_pending, 0);
--	clear_bit(0, &priv->chip->is_open);
-+	tpm_open_lock(priv->chip, 0);
- 	kfree(priv);
- 	return 0;
- }
+[1] TPM 2.0 Specification referred here is "TCG PC Client Specific
+Platform Firmware Profile for TPM 2.0"
 
+Changelog v2:
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most 
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+- Patch "tpm: implement TPM 2.0 capability to get active PCR banks"
+  - defined structs definition in tpm2-cmd.c.
+  - no_of_active_banks field is removed. Instead, constant
+  TPM2_MAX_PCR_BANKS is defined.
+  - renamed tpm2_get_active_pcr_banks() to tpm2_get_pcr_allocation()
+  - removed generic function tpm2_get_capability().
+
+- Patch "tpm: enchance TPM 2.0 PCR extend to support multiple banks"
+ - Removed tpm2.h, and defined structs common for extend and event log
+  in tpm_eventlog.h
+ - uses tpm_buf in tpm2_pcr_extend().
+
+Nayna Jain (2):
+  tpm: implement TPM 2.0 capability to get active PCR banks
+  tpm: enhance TPM 2.0 PCR extend to support multiple banks
+
+ drivers/char/tpm/tpm-interface.c |  16 ++++-
+ drivers/char/tpm/tpm.h           |   8 ++-
+ drivers/char/tpm/tpm2-cmd.c      | 146 +++++++++++++++++++++++++++++++--------
+ drivers/char/tpm/tpm_eventlog.h  |  15 ++++
+ 4 files changed, 153 insertions(+), 32 deletions(-)
+
+-- 
+2.5.0
+
