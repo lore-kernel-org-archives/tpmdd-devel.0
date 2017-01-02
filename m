@@ -1,43 +1,53 @@
-From: James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: TPM 2.0 device driver blocking open
-Date: Mon, 02 Jan 2017 08:25:48 -0800
-Message-ID: <1483374348.2458.4.camel@linux.vnet.ibm.com>
-References: <o45vtc$ur$1@blaine.gmane.org>
-	<9F48E1A823B03B4790B7E6E69430724DC7C1378B@exch2010c.sit.fraunhofer.de>
+From: James Bottomley <James.Bottomley@HansenPartnership.com>
+Subject: Re: [tpmdd-devel] [PATCH RFC 0/4] RFC: in-kernel resource manager
+Date: Mon, 02 Jan 2017 08:36:20 -0800
+Message-ID: <1483374980.2458.13.camel@HansenPartnership.com>
+References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <9F48E1A823B03B4790B7E6E69430724DC7C1378B-pTbww/UJF9iZbMGAS439G2SU2VBt9E6NG9Ur7JDdleE@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Fuchs, Andreas" <andreas.fuchs-iXjGqz/onsDSyEMIgutvibNAH6kLmebB@public.gmane.org>, Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net
+Cc: linux-security-module@vger.kernel.org, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, 2017-01-02 at 15:15 +0000, Fuchs, Andreas wrote:
-> That's why current TSS 2.0 and TSS 1.2 assumed a resource-manager in 
-> UserSpace
+On Mon, 2017-01-02 at 15:22 +0200, Jarkko Sakkinen wrote:
+> This patch set adds support for TPM spaces that provide a context
+> for isolating and swapping transient objects. This patch set does
+> not yet include support for isolating policy and HMAC sessions but
+> it is trivial to add once the basic approach is settled (and that's
+> why I created an RFC patch set).
 
-We already discussed this at Plumbers.  the problem is that the kernel
-itself needs access to the TPM (in both Linux and Windows as far as I
-can tell).  If you put the RM in User Space, the kernel would either
-not have access or have some dependency on a user space process which
-is never a good idea.
+The approach looks fine to me.  The only basic query I have is about
+the default: shouldn't it be with resource manager on rather than off? 
+ I can't really think of a use case that wants the RM off (even if
+you're running your own, having another doesn't hurt anything, and it's
+still required to share with in-kernel uses).
 
->  as signle owner of /dev/tpm0 (enforced by single-open-/dev/tpm0).
-> Only alternative would be a RM inside the Kernel.
+> There's a test script for trying out TPM spaces in
+> 
+>   git://git.infradead.org/users/jjs/tpm2-scripts.git
+> 
+> A simple smoke test can be run by
+> 
+>   sudo python -m unittest -v tpm2_smoke.SpaceTest   
 
-Right, so that's what we now have with Jarkko's just posted patches.
+I've also added an enabling patch to the tss
+
+https://build.opensuse.org/package/view_file/home:jejb1:Tumbleweed/tss2/0002-tssProperties-add-TPM_USE_RESOURCE_MANAGER.patch?expand=1
+
+And with that, I've TPM 2 enabled both gnome-keyring and openssl:
+
+https://build.opensuse.org/package/show/home:jejb1:Tumbleweed/gnome-keyring
+https://build.opensuse.org/package/show/home:jejb1:Tumbleweed/openssl_tpm_engine
+
+I'm running them in production on my day to day laptop and so far
+everything's working nicely (better than 1.2, in fact, since tcsd
+periodically crashes necessitating a restart of everything).
+
+So you can definitely add my Tested-By.
 
 James
 
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most 
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
