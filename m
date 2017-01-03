@@ -1,60 +1,64 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
-Date: Tue, 3 Jan 2017 14:54:45 -0700
-Message-ID: <20170103215445.GD29656@obsidianresearch.com>
+From: James Bottomley <James.Bottomley@HansenPartnership.com>
+Subject: Re: [tpmdd-devel] [PATCH RFC 0/4] RFC: in-kernel resource manager
+Date: Tue, 03 Jan 2017 14:03:43 -0800
+Message-ID: <1483481023.2464.27.camel@HansenPartnership.com>
 References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
-	<1483374980.2458.13.camel@HansenPartnership.com>
-	<20170102193320.trawto65nkjccbao@intel.com>
-	<1483393248.2458.32.camel@HansenPartnership.com>
-	<1483421218.19261.4.camel@linux.vnet.ibm.com>
+         <1483374980.2458.13.camel@HansenPartnership.com>
+         <20170103213234.GB29656@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1483421218.19261.4.camel-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170103213234.GB29656@obsidianresearch.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jan 02, 2017 at 09:26:58PM -0800, James Bottomley wrote:
-
-> OK, so I put a patch together that does this (see below). It all works
-> nicely (with a udev script that sets the resource manager device to
-> 0666):
+On Tue, 2017-01-03 at 14:32 -0700, Jason Gunthorpe wrote:
+> On Mon, Jan 02, 2017 at 08:36:20AM -0800, James Bottomley wrote:
+> > On Mon, 2017-01-02 at 15:22 +0200, Jarkko Sakkinen wrote:
+> > > This patch set adds support for TPM spaces that provide a context
+> > > for isolating and swapping transient objects. This patch set does
+> > > not yet include support for isolating policy and HMAC sessions 
+> > > but it is trivial to add once the basic approach is settled (and
+> > > that's why I created an RFC patch set).
+> > 
+> > The approach looks fine to me.  The only basic query I have is 
+> > about the default: shouldn't it be with resource manager on rather 
+> > than off?  I can't really think of a use case that wants the RM off 
+> > (even if you're running your own, having another doesn't hurt 
+> > anything, and it's still required to share with in-kernel uses).
 > 
-> jejb@jarvis:~> ls -l /dev/tpm*
-> crw------- 1 root root  10,   224 Jan  2 20:54 /dev/tpm0
-> crw-rw-rw- 1 root root 246, 65536 Jan  2 20:54 /dev/tpm0rm
+> I haven't looked too closely at TPM 2.0 stuff, but at least for 1.2 
+> we should have a kernel white-list of allowed commands within a RM
+> context, so having the RM on by default would break all of the user
+> space.
 > 
-> I've modified the tss to connect to /dev/tpm0rm by default and it all
-> seems to work.
+> I really think the only way forward here is a new char dev that is
+> safe for unprivileged/concurrent use and migrate the user space stack
+> to use it instead.
+
+That's effectively what /dev/tpms0 would be, with /dev/tpm0 giving full
+fledged access.
+
+> > And with that, I've TPM 2 enabled both gnome-keyring and openssl:
+> > 
+> > https://build.opensuse.org/package/show/home:jejb1:Tumbleweed/gnome
+> > -keyring
+> > https://build.opensuse.org/package/show/home:jejb1:Tumbleweed/opens
+> > sl_tpm_engine
+>  
+> > I'm running them in production on my day to day laptop and so far
+> > everything's working nicely (better than 1.2, in fact, since tcsd
+> > periodically crashes necessitating a restart of everything).
 > 
-> The patch applies on top of your tabrm branch, by the way.
+> You granted your unprivileged user access to /dev/tpm0 then? FYI I
+> think that is a dangerous idea..
 
-If we are making a new /dev/ node we should think more carefully about
-the design.
+No, I granted access to the resource manager device (I'm running with a
+combination of Jarkko's and my patches).
 
-- Do we need a cdev node for every chip? What about just '/dev/tpm' and
-  we encode the chip number in the message. Since the exclusive
-  locking is gone this is very doable.
-- Should we get rid of the read/write protocol and use ioctl instead?
-  As I understand it ioctl is more usable with seccomp and related
-  schemes? I could see passing a TPM FD into a sandbox and wanting the
-  sandbox only able to do do decrypt/encrypt operations, for instance.
-- Something to identify tpm chips and help match key data with the
-  proper chip.
+James
 
-Jason
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most 
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
