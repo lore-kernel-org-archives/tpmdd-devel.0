@@ -1,17 +1,17 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
-Date: Tue, 03 Jan 2017 08:36:10 -0800
-Message-ID: <1483461370.2464.19.camel@HansenPartnership.com>
-References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
-	<1483374980.2458.13.camel@HansenPartnership.com>
-	<20170102193320.trawto65nkjccbao@intel.com>
-	<1483393248.2458.32.camel@HansenPartnership.com>
-	<20170103135121.4kh3jld5gaq3ptj4@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm,
+ tpm_crb: Handle 64-bit resource in crb_check_resource()
+Date: Tue, 3 Jan 2017 19:11:49 +0200
+Message-ID: <20170103171149.pwrbhy5uw4cqvwn4@intel.com>
+References: <1482121253-924-1-git-send-email-anjiandi@codeaurora.org>
+	<20161219135624.2e7okpswnbqbvic7@intel.com>
+	<5858CD6F.5000909@codeaurora.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170103135121.4kh3jld5gaq3ptj4-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <5858CD6F.5000909-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,106 +20,32 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, 2017-01-03 at 15:51 +0200, Jarkko Sakkinen wrote:
-> On Mon, Jan 02, 2017 at 01:40:48PM -0800, James Bottomley wrote:
-> > On Mon, 2017-01-02 at 21:33 +0200, Jarkko Sakkinen wrote:
-> > > On Mon, Jan 02, 2017 at 08:36:20AM -0800, James Bottomley wrote:
-> > > > On Mon, 2017-01-02 at 15:22 +0200, Jarkko Sakkinen wrote:
-> > > > > This patch set adds support for TPM spaces that provide a 
-> > > > > context for isolating and swapping transient objects. This 
-> > > > > patch set does not yet include support for isolating policy 
-> > > > > and HMAC sessions but it is trivial to add once the basic 
-> > > > > approach is settled (and that's why I created an RFC patch
-> > > > > set).
-> > > > 
-> > > > The approach looks fine to me.  The only basic query I have is 
-> > > > about the default: shouldn't it be with resource manager on 
-> > > > rather than off?  I can't really think of a use case that wants 
-> > > > the RM off (even if you're running your own, having another 
-> > > > doesn't hurt anything, and it's still required to share with in
-> > > > -kernel uses).
-> > > 
-> > > This is a valid question and here's a longish explanation.
-> > > 
-> > > In TPM2_GetCapability and maybe couple of other commands you can 
-> > > get handles in the response body. I do not want to have special 
-> > > cases in the kernel for response bodies because there is no a 
-> > > generic way to do the substitution. What's worse, new commands in 
-> > > the standard future revisions could have such commands requiring 
-> > > special cases. In addition, vendor specific commans could have 
-> > > handles in the response bodies.
-> > 
-> > OK, in general I buy this ... what you're effectively saying is 
-> > that we need a non-RM interface for certain management type
-> > commands.
+On Tue, Dec 20, 2016 at 12:19:27AM -0600, Jiandi An wrote:
+> The control area buffer is specified in the TPM2.0 static ACPI table.  TPM
+> CRB driver maps the control area address and reads out cmd and rsp buffer
+> addresses and maps them.  There is no requirement in the TCG TPM ACPI spec
+> for specifying _CRS to describe the control area buffer.  When I rebased
+> the early prototype for CRB driver ARM64 enablement to the latest kernel,
+> I hit this issue where I have to specify _CRS method.  So in _CRS method
+> I specify the same control area address that's in the TPM2.0 static ACPI table.
 > 
-> Not only that.
-> 
-> Doing virtualization for commands like GetCapability is just a better
-> fit for doing in the user space. You could have a thin translation 
-> layer in your TSS library for example to handle these specific
-> messages.
+> I see the _CRS requirement in the CRB driver is for resource synchronization
+> between the TIS and CRB drivers to support force mode in TIS. Could I get some
+> background on that so I could be more careful not breaking TIS while making
+> changes to CRB driver for ARM64 enablement?
 
-Yes, we could do it that way too.  To be honest I can't see much use
-for getting the transient handles and all the other handles you'd be
-interested in aren't virtualized.
+At least couple of reasons:
 
-> > However, let me expand a bit on why I'm fretting about the non-RM 
-> > use case.  Right at the moment, we have a single TPM device which 
-> > you use for access to the kernel TPM.  The current tss2 just makes 
-> > direct use of this, meaning it has to have 0666 permissions.  This 
-> > means that any local user can simply DoS the TPM by running us out 
-> > of transient resources if they don't activate the RM.  If they get 
-> > a connection always via the RM, this isn't a worry.  Perhaps the 
-> > best way of fixing this is to expose two separate device nodes: one 
-> > raw to the TPM which we could keep at 0600 and one with an always 
-> > RM connection which we can set to 0666.  That would mean that 
-> > access to the non-RM connection is either root only or governed by
-> > a system set ACL.
-> 
-> I'm not sure about this. Why you couldn't have a very thin daemon 
-> that prepares the file descriptor and sends it through UDS socket to 
-> a client.
+- _CRS is required to access locality registers (check my patch set
+  that is waiting for review/testing).
+- On x86 and PTT _CRS always exists and that's the only platform
+  where this driver has been used so far.
 
-So I'm a bit soured on daemons from the trousers experience: tcsd
-crashed regularly and when it did it took all the TPM connections down
-irrecoverably.  I'm not saying we can't write a stateless daemon to fix
-most of the trousers issues, but I think it's valuable first to ask the
-question, "can we manage without a daemon at all?"  I actually think
-the answer is "yes", so I'm interested in seeing how far that line of
-research gets us.
-
->   The non-RFC version will also have whitelisting ioctl for
-> further restricting the file descriptor to only specific TPM
-> commands.
-> 
-> This is also architecture I preseted in my LSS presentation and I 
-> think it makes sense especially when I add the whitelisting to the
-> pack.
-
-Do you have a link to the presentation?  The Plumbers etherpad doesn't
-contain it.  I've been trying to work out whether a properly set up TPM
-actually does need any protections at all.  As far as I can tell, once
-you've set all the hierarchy authorities and the lockout one, you're
-pretty well protected.
-
-> > James
-> 
-> I'm more dilated to keep things way they are now. I'll stick to that 
-> at least with the first non-RFC version and hopefully get the tpm2
-> -space.c part reviewed as I split that stuff to a separate commit.
-
-Sure, we need the patch in an acceptable form first.  I'll keep
-worrying about the systems implications, but I can layer playing with
-those on top of what you do.
-
-James
-
-
+/Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
