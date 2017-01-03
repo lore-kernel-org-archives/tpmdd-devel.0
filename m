@@ -1,17 +1,18 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 0/2] tpm: enhance TPM 2.0 extend
- function to support multiple PCR banks
-Date: Tue, 3 Jan 2017 15:55:57 +0200
-Message-ID: <20170103135557.tbscbmxxgaiylisk@intel.com>
-References: <1483124550-9529-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<20170102221550.pck4fwir77zss6lz@intel.com>
-	<1483446469.2900.30.camel@linux.vnet.ibm.com>
+From: James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
+Date: Tue, 03 Jan 2017 08:14:55 -0800
+Message-ID: <1483460095.2464.6.camel@linux.vnet.ibm.com>
+References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
+	<1483374980.2458.13.camel@HansenPartnership.com>
+	<20170102193320.trawto65nkjccbao@intel.com>
+	<1483393248.2458.32.camel@HansenPartnership.com>
+	<1483421218.19261.4.camel@linux.vnet.ibm.com>
+	<20170103134100.stgxkmzbckon4jfb@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1483446469.2900.30.camel-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <20170103134100.stgxkmzbckon4jfb-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,53 +21,85 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jan 03, 2017 at 07:27:49AM -0500, Mimi Zohar wrote:
-> On Tue, 2017-01-03 at 00:15 +0200, Jarkko Sakkinen wrote:
-> > On Fri, Dec 30, 2016 at 02:02:28PM -0500, Nayna Jain wrote:
-> > > IMA extends its hash measurements in the TPM PCRs, based on policy.
-> > > The existing in-kernel TPM extend function extends only the SHA1
-> > > PCR bank. TPM 2.0 defines multiple PCR banks, to support different
-> > > hash algorithms. The TCG TPM 2.0 Specification[1] recommends
-> > > extending all active PCR banks to prevent malicious users from
-> > > setting unused PCR banks with fake measurements and quoting them.
-> > > This patch set adds support for extending all active PCR banks,
-> > > as recommended.
-> 
-> For this reason, the change is needed whether we're extending the SHA1
-> bank or any of the other TPM 2.0 banks.
-> 
-> > > The first patch implements the TPM 2.0 capability to retrieve
-> > > the list of active PCR banks.
+On Tue, 2017-01-03 at 15:41 +0200, Jarkko Sakkinen wrote:
+> On Mon, Jan 02, 2017 at 09:26:58PM -0800, James Bottomley wrote:
+> > On Mon, 2017-01-02 at 13:40 -0800, James Bottomley wrote:
+> > > On Mon, 2017-01-02 at 21:33 +0200, Jarkko Sakkinen wrote:
+> > > > On Mon, Jan 02, 2017 at 08:36:20AM -0800, James Bottomley
+> > > > wrote:
+> > > > > On Mon, 2017-01-02 at 15:22 +0200, Jarkko Sakkinen wrote:
+> > > > > > This patch set adds support for TPM spaces that provide a 
+> > > > > > context for isolating and swapping transient objects. This 
+> > > > > > patch set does not yet include support for isolating policy 
+> > > > > > and HMAC sessions but it is trivial to add once the basic
+> > > > > > approach is settled (and that's why I created an RFC patch
+> > > > > > set).
+> > > > > 
+> > > > > The approach looks fine to me.  The only basic query I have 
+> > > > > is about the default: shouldn't it be with resource manager 
+> > > > > on rather than off?  I can't really think of a use case that
+> > > > > wants the RM off (even if you're running your own, having 
+> > > > > another doesn't hurt anything, and it's still required to 
+> > > > > share with in-kernel uses).
+> > > > 
+> > > > This is a valid question and here's a longish explanation.
+> > > > 
+> > > > In TPM2_GetCapability and maybe couple of other commands you 
+> > > > can get handles in the response body. I do not want to have 
+> > > > special cases in the kernel for response bodies because there 
+> > > > is no a generic way to do the substitution. What's worse, new 
+> > > > commands in the standard future revisions could have such 
+> > > > commands requiring special cases. In addition, vendor specific 
+> > > > commans could have handles in the response bodies.
 > > > 
-> > > The second patch modifies the tpm_pcr_extend() and tpm2_pcr_extend()
-> > > interface to support extending multiple PCR banks. The existing
-> > > tpm_pcr_extend() interface expects only a SHA1 digest. Hence, to
-> > > extend all active PCR banks with differing digest sizes for TPM 2.0,
-> > > the SHA1 digest is padded with 0's as needed.
+> > > OK, in general I buy this ... what you're effectively saying is 
+> > > that we need a non-RM interface for certain management type
+> > > commands.
 > > > 
-> > > This approach is taken to maintain backwards compatibility for IMA
-> > > in order to continue working with both TPM 1.2 and TPM 2.0 without
-> > > any changes and still comply with TCG TPM 2.0 Specification[1].
+> > > However, let me expand a bit on why I'm fretting about the non-RM 
+> > > use case.  Right at the moment, we have a single TPM device which 
+> > > you use for access to the kernel TPM.  The current tss2 just 
+> > > makes direct use of this, meaning it has to have 0666 
+> > > permissions.  This means that any local user can simply DoS the 
+> > > TPM by running us out of transient resources if they don't 
+> > > activate the RM.  If they get a connection always via the RM, 
+> > > this isn't a worry.  Perhaps the best way of fixing this is to 
+> > > expose two separate device nodes: one raw to the TPM which we 
+> > > could keep at 0600 and one with an always RM connection
+> > > which we can set to 0666.  That would mean that access to the non
+> > > -RM connection is either root only or governed by a system set
+> > > ACL.
 > > 
-> > What is the plan to improve IMA so that it can use better hash
-> > algorithms? For me this zero padding sounds like a hack.
+> > OK, so I put a patch together that does this (see below). It all 
+> > works nicely (with a udev script that sets the resource manager 
+> > device to 0666):
 > 
-> In one case, we'll be padding the SHA1 hash, while in the other cases we
-> would be truncating the hash.   Unfortunately, the need to extend
-> multiple banks doesn't go away when IMA supports larger digests.
-> 
-> Nayna, could you remove this [unnecessary] paragraph?
+> This is not yet a comment about this suggestion but I guess one thing
+> is clear: the stuff in tpm2-space.c and tpm-interface.c changes are 
+> the thing that we can mostly agree on and the area of argumentation 
+> is the user space interface to it?
 
-OK, I think I got it. I'll try to test these patches before further
-reviewing. Thank you.
+Agreed.  As I've already said, the space and interface code is working
+well for me in production on my laptop.
 
-> Mimi
+> Just thinking how to split up the non-RFC patch set. This was also 
+> what Jason suggested if I understood his remark correctly.
 
-/Jarkko
+SUre ... let's get agreement on how we move forward first.  How the
+patch is activated by the user has to be sorted out as well before it
+can go in, but it doesn't have to be the first thing we do.  I'm happy
+to continue playing with the interfaces to see what works and what
+doesn't.  My main current feedback is that I think separate devices
+works way better than an ioctl becuase the separate devices approach
+allows differing system policies for who accesses the RM backed TPM vs
+who accesses the raw one.
+
+James
+
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
