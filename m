@@ -1,64 +1,70 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
-Date: Tue, 3 Jan 2017 14:32:34 -0700
-Message-ID: <20170103213234.GB29656@obsidianresearch.com>
+From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Subject: Re: [tpmdd-devel] [PATCH RFC 0/4] RFC: in-kernel resource manager
+Date: Tue, 3 Jan 2017 14:47:02 -0700
+Message-ID: <20170103214702.GC29656@obsidianresearch.com>
 References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
-	<1483374980.2458.13.camel@HansenPartnership.com>
+ <1483374980.2458.13.camel@HansenPartnership.com>
+ <20170102193320.trawto65nkjccbao@intel.com>
+ <1483393248.2458.32.camel@HansenPartnership.com>
+ <20170103135121.4kh3jld5gaq3ptj4@intel.com>
+ <1483461370.2464.19.camel@HansenPartnership.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1483374980.2458.13.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+In-Reply-To: <1483461370.2464.19.camel@HansenPartnership.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: James Bottomley <James.Bottomley@HansenPartnership.com>
+Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jan 02, 2017 at 08:36:20AM -0800, James Bottomley wrote:
-> On Mon, 2017-01-02 at 15:22 +0200, Jarkko Sakkinen wrote:
-> > This patch set adds support for TPM spaces that provide a context
-> > for isolating and swapping transient objects. This patch set does
-> > not yet include support for isolating policy and HMAC sessions but
-> > it is trivial to add once the basic approach is settled (and that's
-> > why I created an RFC patch set).
+On Tue, Jan 03, 2017 at 08:36:10AM -0800, James Bottomley wrote:
+
+> > I'm not sure about this. Why you couldn't have a very thin daemon 
+> > that prepares the file descriptor and sends it through UDS socket to 
+> > a client.
 > 
-> The approach looks fine to me.  The only basic query I have is about
-> the default: shouldn't it be with resource manager on rather than off? 
->  I can't really think of a use case that wants the RM off (even if
-> you're running your own, having another doesn't hurt anything, and it's
-> still required to share with in-kernel uses).
+> So I'm a bit soured on daemons from the trousers experience: tcsd
+> crashed regularly and when it did it took all the TPM connections down
+> irrecoverably.  I'm not saying we can't write a stateless daemon to fix
+> most of the trousers issues, but I think it's valuable first to ask the
+> question, "can we manage without a daemon at all?"  I actually think
+> the answer is "yes", so I'm interested in seeing how far that line of
+> research gets us.
 
-I haven't looked too closely at TPM 2.0 stuff, but at least for 1.2 we
-should have a kernel white-list of allowed commands within a RM
-context, so having the RM on by default would break all of the user
-space.
+There is clearly no need for a daemon to be involved when working on
+simple tasks like key load and key sign/enc/dec actions, adding such a
+thing only increases the complexity.
 
-I really think the only way forward here is a new char dev that is
-safe for unprivileged/concurrent use and migrate the user space stack
-to use it instead.
+If we discover a reason to have a daemon down the road then it should
+work in some way where the user space can call out to the daemon over
+a different path than the kernel. (eg dbus or something)
 
-> And with that, I've TPM 2 enabled both gnome-keyring and openssl:
-> 
-> https://build.opensuse.org/package/show/home:jejb1:Tumbleweed/gnome-keyring
-> https://build.opensuse.org/package/show/home:jejb1:Tumbleweed/openssl_tpm_engine
- 
-> I'm running them in production on my day to day laptop and so far
-> everything's working nicely (better than 1.2, in fact, since tcsd
-> periodically crashes necessitating a restart of everything).
+> Do you have a link to the presentation?  The Plumbers etherpad doesn't
+> contain it.  I've been trying to work out whether a properly set up TPM
+> actually does need any protections at all.  As far as I can tell, once
+> you've set all the hierarchy authorities and the lockout one, you're
+> pretty well protected.
 
-You granted your unprivileged user access to /dev/tpm0 then? FYI I
-think that is a dangerous idea..
+I think we should also consider TPM 1.2 support in all of this, it is
+still a very popular peice of hardware and it is equally able to
+support a RM.
+
+So, in general, I'd prefer to see the unprivileged char dev hard
+prevented by the kernel from doing certain things:
+
+- Wipe the TPM
+- Manipulate the SRK, nvram, tpm flags, change passwords etc
+- Read back the EK
+- Write to PCRs
+- etc.
+
+Even if TPM 2 has a stronger password based model, I still think the
+kernel should hard prevent those sorts of actions even if the user
+knows the TPM password.
+
+Realistically people in less senstive environments will want to use
+the well known TPM passwords and still have reasonable safety in their
+unprivileged accounts.
 
 Jason
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most 
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
