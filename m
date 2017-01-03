@@ -1,16 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 1/2] tpm: implement TPM 2.0 capability
- to get active PCR banks
-Date: Tue, 3 Jan 2017 20:52:36 +0200
-Message-ID: <20170103185236.g4a4wu66ivmtoqad@intel.com>
+Subject: Re: [PATCH v2 2/2] tpm: enhance TPM 2.0 PCR extend to
+ support multiple banks
+Date: Tue, 3 Jan 2017 20:54:13 +0200
+Message-ID: <20170103185413.tyoaxnqnlp25wik3@intel.com>
 References: <1483124550-9529-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1483124550-9529-2-git-send-email-nayna@linux.vnet.ibm.com>
+	<1483124550-9529-3-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1483124550-9529-2-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1483124550-9529-3-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,180 +23,224 @@ To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Dec 30, 2016 at 02:02:29PM -0500, Nayna Jain wrote:
-> This patch implements the TPM 2.0 capability TPM_CAP_PCRS to
-> retrieve the active PCR banks from the TPM. This is needed
-> to enable extending all active banks as recommended by TPM 2.0
-> TCG Specification.
+On Fri, Dec 30, 2016 at 02:02:30PM -0500, Nayna Jain wrote:
+> The current TPM 2.0 device driver extends only the SHA1 PCR bank
+> but the TCG Specification[1] recommends extending all active PCR
+> banks, to prevent malicious users from setting unused PCR banks with
+> fake measurements and quoting them.
+> 
+> The existing in-kernel interface(tpm_pcr_extend()) expects only a
+> SHA1 digest.  To extend all active PCR banks with differing
+> digest sizes, the SHA1 digest is padded with trailing 0's as needed.
+> 
+> [1] TPM 2.0 Specification referred here is "TCG PC Client Specific
+> Platform Firmware Profile for TPM 2.0"
 > 
 > Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> ---
->  drivers/char/tpm/tpm.h      |  5 +++
->  drivers/char/tpm/tpm2-cmd.c | 79 +++++++++++++++++++++++++++++++++++++++++++++
->  2 files changed, 84 insertions(+)
-> 
-> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> index 1ae9768..3d8121e 100644
-> --- a/drivers/char/tpm/tpm.h
-> +++ b/drivers/char/tpm/tpm.h
-> @@ -43,6 +43,7 @@ enum tpm_const {
->  	TPM_NUM_DEVICES = 65536,
->  	TPM_RETRY = 50,		/* 5 seconds */
->  	TPM_NUM_EVENT_LOG_FILES = 3,
-> +	TPM2_MAX_PCR_BANKS = 7,
 
-Remove and use ARRAY_SIZE().
-
->  };
->  
->  enum tpm_timeout {
-> @@ -127,6 +128,7 @@ enum tpm2_permanent_handles {
->  };
->  
->  enum tpm2_capabilities {
-> +	TPM2_CAP_PCRS		= 5,
->  	TPM2_CAP_TPM_PROPERTIES = 6,
->  };
->  
-> @@ -187,6 +189,8 @@ struct tpm_chip {
->  
->  	const struct attribute_group *groups[3];
->  	unsigned int groups_cnt;
-> +
-> +	enum tpm2_algorithms active_banks[TPM2_MAX_PCR_BANKS];
-
-u16
-
->  #ifdef CONFIG_ACPI
->  	acpi_handle acpi_dev_handle;
->  	char ppi_version[TPM_PPI_VERSION_LEN + 1];
-> @@ -545,4 +549,5 @@ int tpm2_auto_startup(struct tpm_chip *chip);
->  void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
->  unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
->  int tpm2_probe(struct tpm_chip *chip);
-> +ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip);
->  #endif
-> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-> index 6eda239..dd03fd8 100644
-> --- a/drivers/char/tpm/tpm2-cmd.c
-> +++ b/drivers/char/tpm/tpm2-cmd.c
-> @@ -83,6 +83,25 @@ struct tpm2_get_tpm_pt_out {
->  	__be32	value;
->  } __packed;
->  
-> +struct tpm2_tpms_pcr_selection {
-> +	__be16  hash_alg;
-> +	u8  size_of_select;
-> +	u8  pcr_select[3];
-> +} __packed;
-> +
-> +struct tpm2_getcap_in {
-> +	__be32	cap_id;
-> +	__be32	property_id;
-> +	__be32	property_cnt;
-> +} __packed;
-> +
-> +struct tpm2_getcap_out {
-> +	u8	more_data;
-> +	__be32  subcap_id;
-> +	__be32  count;
-> +	char	cap_data[0];
-> +} __packed;
-> +
-
-Use tpm_buf and remove tpm2_getcap_in.
-Remove tpm2_getcap_out.
-Remove alignment.
-
->  struct tpm2_get_random_in {
->  	__be16	size;
->  } __packed;
-> @@ -100,6 +119,8 @@ union tpm2_cmd_params {
->  	struct	tpm2_pcr_extend_in	pcrextend_in;
->  	struct	tpm2_get_tpm_pt_in	get_tpm_pt_in;
->  	struct	tpm2_get_tpm_pt_out	get_tpm_pt_out;
-> +	struct	tpm2_getcap_in		getcap_in;
-> +	struct	tpm2_getcap_out		getcap_out;
-
-Do not put anything into this union. It is deprecated.
-
->  	struct	tpm2_get_random_in	getrandom_in;
->  	struct	tpm2_get_random_out	getrandom_out;
->  };
-> @@ -993,8 +1014,66 @@ int tpm2_auto_startup(struct tpm_chip *chip)
->  		}
->  	}
->  
-> +	rc = tpm2_get_pcr_allocation(chip);
-> +
->  out:
->  	if (rc > 0)
->  		rc = -ENODEV;
->  	return rc;
->  }
-> +
-> +#define TPM2_GETCAP_IN_SIZE \
-> +	(sizeof(struct tpm_input_header) + sizeof(struct tpm2_getcap_in))
-> +
-> +static const struct tpm_input_header tpm2_getcap_header = {
-> +	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
-> +	.length = cpu_to_be32(TPM2_GETCAP_IN_SIZE),
-> +	.ordinal = cpu_to_be32(TPM2_CC_GET_CAPABILITY)
-> +};
-> +
-> +/**
-> + * tpm2_get_pcr_allocation() - get TPM active PCR banks.
-> + *
-> + * @chip: TPM chip to use.
-> + *
-> + * Return: Same as with tpm_transmit_cmd.
-> + */
-> +ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
-> +{
-> +	struct tpm2_cmd cmd;
-> +	struct tpm2_tpms_pcr_selection pcr_selection;
-> +	void *marker;
-> +	unsigned int count = 0;
-> +	int rc;
-> +	int i;
-> +
-> +	cmd.header.in = tpm2_getcap_header;
-> +	cmd.params.getcap_in.cap_id = cpu_to_be32(TPM2_CAP_PCRS);
-> +	cmd.params.getcap_in.property_id = cpu_to_be32(0);
-> +	cmd.params.getcap_in.property_cnt = cpu_to_be32(1);
-> +
-> +	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0,
-> +			      "get tpm pcr allocation");
-> +	if (rc < 0)
-> +		goto out;
-> +
-> +	count = be32_to_cpu(cmd.params.getcap_out.count);
-> +	if (count > TPM2_MAX_PCR_BANKS) {
-> +		dev_err(&chip->dev,
-> +			"%s: Error: Invalid active PCR banks count\n",
-
-"Error:" is redundant.
-
-> +			__func__);
-> +		return -ENODEV;
-> +	}
-> +
-> +	marker = &cmd.params.getcap_out.cap_data;
-> +	for (i = 0; i < count; i++) {
-> +		memcpy(&pcr_selection, marker, sizeof(pcr_selection));
-> +		chip->active_banks[i] = be16_to_cpu(pcr_selection.hash_alg);
-> +		marker = marker + sizeof(struct tpm2_tpms_pcr_selection);
-> +	}
-> +
-> +out:
-> +	if (count < TPM2_MAX_PCR_BANKS)
-> +		chip->active_banks[count] = 0;
-> +	return rc;
-> +}
-> -- 
-> 2.5.0
+You have to fix the kbuild errors.
 
 /Jarkko
+
+> ---
+>  drivers/char/tpm/tpm-interface.c | 16 +++++++++-
+>  drivers/char/tpm/tpm.h           |  3 +-
+>  drivers/char/tpm/tpm2-cmd.c      | 67 ++++++++++++++++++++++------------------
+>  drivers/char/tpm/tpm_eventlog.h  | 15 +++++++++
+>  4 files changed, 69 insertions(+), 32 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index 769d8b0..04aee1c 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -7,6 +7,7 @@
+>   * Dave Safford <safford-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
+>   * Reiner Sailer <sailer-aZOuKsOsJu3MbYB6QlFGEg@public.gmane.org>
+>   * Kylene Hall <kjhall-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+> + * Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+>   *
+>   * Maintained by: <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+>   *
+> @@ -756,6 +757,7 @@ static const struct tpm_input_header pcrextend_header = {
+>  int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
+>  {
+>  	struct tpm_cmd_t cmd;
+> +	int i;
+>  	int rc;
+>  	struct tpm_chip *chip;
+>  
+> @@ -764,7 +766,19 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
+>  		return -ENODEV;
+>  
+>  	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+> -		rc = tpm2_pcr_extend(chip, pcr_idx, hash);
+> +		struct tpml_digest_values d_values;
+> +
+> +		memset(&d_values, 0, sizeof(d_values));
+> +
+> +		for (i = 0; (chip->active_banks[i] != 0) &&
+> +		     (i < TPM2_MAX_PCR_BANKS); i++) {
+> +			d_values.digests[i].alg_id = chip->active_banks[i];
+> +			memcpy(d_values.digests[i].digest, hash,
+> +			       TPM_DIGEST_SIZE);
+> +			d_values.count++;
+> +		}
+> +
+> +		rc = tpm2_pcr_extend(chip, pcr_idx, &d_values);
+>  		tpm_put_ops(chip);
+>  		return rc;
+>  	}
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 3d8121e..1d44a52 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -534,7 +534,8 @@ static inline void tpm_add_ppi(struct tpm_chip *chip)
+>  #endif
+>  
+>  int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf);
+> -int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash);
+> +int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx,
+> +		    struct tpml_digest_values *digests);
+>  int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max);
+>  int tpm2_seal_trusted(struct tpm_chip *chip,
+>  		      struct trusted_key_payload *payload,
+> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+> index dd03fd8..93d07bf 100644
+> --- a/drivers/char/tpm/tpm2-cmd.c
+> +++ b/drivers/char/tpm/tpm2-cmd.c
+> @@ -64,9 +64,7 @@ struct tpm2_pcr_extend_in {
+>  	__be32				pcr_idx;
+>  	__be32				auth_area_size;
+>  	struct tpm2_null_auth_area	auth_area;
+> -	__be32				digest_cnt;
+> -	__be16				hash_alg;
+> -	u8				digest[TPM_DIGEST_SIZE];
+> +	struct tpml_digest_values       digests;
+>  } __packed;
+>  
+>  struct tpm2_get_tpm_pt_in {
+> @@ -311,46 +309,55 @@ int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
+>  	return rc;
+>  }
+>  
+> -#define TPM2_GET_PCREXTEND_IN_SIZE \
+> -	(sizeof(struct tpm_input_header) + \
+> -	 sizeof(struct tpm2_pcr_extend_in))
+> -
+> -static const struct tpm_input_header tpm2_pcrextend_header = {
+> -	.tag = cpu_to_be16(TPM2_ST_SESSIONS),
+> -	.length = cpu_to_be32(TPM2_GET_PCREXTEND_IN_SIZE),
+> -	.ordinal = cpu_to_be32(TPM2_CC_PCR_EXTEND)
+> -};
+> -
+>  /**
+>   * tpm2_pcr_extend() - extend a PCR value
+>   *
+>   * @chip:	TPM chip to use.
+>   * @pcr_idx:	index of the PCR.
+> - * @hash:	hash value to use for the extend operation.
+> + * @digests:	list of pcr banks and corresponding hash values to be extended.
+>   *
+>   * Return: Same as with tpm_transmit_cmd.
+>   */
+> -int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash)
+> +int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx,
+> +		    struct tpml_digest_values *digests)
+>  {
+> -	struct tpm2_cmd cmd;
+> +	struct tpm_buf buf;
+> +	struct tpm2_null_auth_area auth_area;
+>  	int rc;
+> +	int i;
+> +	int j;
+> +
+> +	tpm_buf_init(&buf, TPM2_ST_SESSIONS, TPM2_CC_PCR_EXTEND);
+> +	tpm_buf_append_u32(&buf, pcr_idx);
+> +
+> +	auth_area.handle = cpu_to_be32(TPM2_RS_PW);
+> +	auth_area.nonce_size = 0;
+> +	auth_area.attributes = 0;
+> +	auth_area.auth_size = 0;
+> +
+> +	tpm_buf_append_u32(&buf, sizeof(struct tpm2_null_auth_area));
+> +	tpm_buf_append(&buf, (const unsigned char *)&auth_area,
+> +		       sizeof(auth_area));
+> +	tpm_buf_append_u32(&buf, digests->count);
+> +
+> +	for (i = 0; i < digests->count; i++) {
+> +		for (j = 0; j < ARRAY_SIZE(tpm2_hash_map); j++) {
+> +			if (digests->digests[i].alg_id !=
+> +			    tpm2_hash_map[j].tpm_id)
+> +				continue;
+> +
+> +			tpm_buf_append_u16(&buf, digests->digests[i].alg_id);
+> +			tpm_buf_append(&buf, (const unsigned char
+> +					      *)&digests->digests[i].digest,
+> +			       hash_digest_size[tpm2_hash_map[j].crypto_id]);
+> +		}
+> +	}
+>  
+> -	cmd.header.in = tpm2_pcrextend_header;
+> -	cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(pcr_idx);
+> -	cmd.params.pcrextend_in.auth_area_size =
+> -		cpu_to_be32(sizeof(struct tpm2_null_auth_area));
+> -	cmd.params.pcrextend_in.auth_area.handle =
+> -		cpu_to_be32(TPM2_RS_PW);
+> -	cmd.params.pcrextend_in.auth_area.nonce_size = 0;
+> -	cmd.params.pcrextend_in.auth_area.attributes = 0;
+> -	cmd.params.pcrextend_in.auth_area.auth_size = 0;
+> -	cmd.params.pcrextend_in.digest_cnt = cpu_to_be32(1);
+> -	cmd.params.pcrextend_in.hash_alg = cpu_to_be16(TPM2_ALG_SHA1);
+> -	memcpy(cmd.params.pcrextend_in.digest, hash, TPM_DIGEST_SIZE);
+> -
+> -	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0,
+> +	rc = tpm_transmit_cmd(chip, buf.data, tpm_buf_length(&buf), 0,
+>  			      "attempting extend a PCR value");
+>  
+> +	tpm_buf_destroy(&buf);
+> +
+>  	return rc;
+>  }
+>  
+> diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
+> index 1660d74..7d97b51 100644
+> --- a/drivers/char/tpm/tpm_eventlog.h
+> +++ b/drivers/char/tpm/tpm_eventlog.h
+> @@ -2,9 +2,12 @@
+>  #ifndef __TPM_EVENTLOG_H__
+>  #define __TPM_EVENTLOG_H__
+>  
+> +#include <crypto/hash_info.h>
+> +
+>  #define TCG_EVENT_NAME_LEN_MAX	255
+>  #define MAX_TEXT_EVENT		1000	/* Max event string length */
+>  #define ACPI_TCPA_SIG		"TCPA"	/* 0x41504354 /'TCPA' */
+> +#define TPM2_ACTIVE_PCR_BANKS	3
+>  
+>  #ifdef CONFIG_PPC64
+>  #define do_endian_conversion(x) be32_to_cpu(x)
+> @@ -73,6 +76,18 @@ enum tcpa_pc_event_ids {
+>  	HOST_TABLE_OF_DEVICES,
+>  };
+>  
+> +/* TPM 2.0 Crypto agile algorithm and respective digest. */
+> +struct tpmt_ha {
+> +	u16 alg_id;
+> +	u8 digest[SHA384_DIGEST_SIZE];
+> +} __packed;
+> +
+> +/* TPM 2.0 Crypto agile digests list. */
+> +struct tpml_digest_values {
+> +	u32 count;
+> +	struct tpmt_ha digests[TPM2_ACTIVE_PCR_BANKS];
+> +} __packed;
+> +
+>  #if defined(CONFIG_ACPI)
+>  int tpm_read_log_acpi(struct tpm_chip *chip);
+>  #else
+> -- 
+> 2.5.0
+> 
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
