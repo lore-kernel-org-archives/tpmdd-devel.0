@@ -1,56 +1,37 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH RFC 1/4] tpm: migrate struct tpm_buf to struct tpm_chip
-Date: Tue, 3 Jan 2017 02:57:37 +0200
-Message-ID: <20170103005737.t2qrc32xzdnvqy4b@intel.com>
+Subject: Re: [PATCH RFC 4/4] tpm: add the infrastructure for TPM space for
+ TPM 2.0
+Date: Tue, 3 Jan 2017 02:37:30 +0200
+Message-ID: <20170103003730.he32vl55kkta2q64@intel.com>
 References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
- <20170102132213.22880-2-jarkko.sakkinen@linux.intel.com>
- <20170102210101.GA5544@obsidianresearch.com>
+ <20170102132213.22880-5-jarkko.sakkinen@linux.intel.com>
+ <20170102210953.GB5544@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170102210101.GA5544@obsidianresearch.com>
-Sender: owner-linux-security-module@vger.kernel.org
+In-Reply-To: <20170102210953.GB5544@obsidianresearch.com>
+Sender: linux-kernel-owner@vger.kernel.org
 To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jan 02, 2017 at 02:01:01PM -0700, Jason Gunthorpe wrote:
-> On Mon, Jan 02, 2017 at 03:22:07PM +0200, Jarkko Sakkinen wrote:
-> > Since there is only one thread using TPM chip at a time to transmit data
-> > we can migrate struct tpm_buf to struct tpm_chip. This makes the use of
-> > it more fail safe as the buffer is allocated from heap when the device
-> > is created and not for every transaction.
+On Mon, Jan 02, 2017 at 02:09:53PM -0700, Jason Gunthorpe wrote:
+> On Mon, Jan 02, 2017 at 03:22:10PM +0200, Jarkko Sakkinen wrote:
+> > Added a ioctl for creating a TPM space. The space is isolated from the
+> > other users of the TPM. Only a process holding the file with the handle
+> > can access the objects and only objects that are created through that
+> > file handle can be accessed.
 > 
-> Eh? What? I don't think that is the case..
+> I don't understand this comment. /dev/tpmX is forced to be
+> single-process-open, so how can there ever be more than 1 FD for it?
 > 
-> We don't serialize until we hit tramsit_cmd at which point the buffer
-> is already being used and cannot be shared between threads.
-
-There is a regression in the patch. All functions that use 'tr_buf'
-should take tpm_mutex first and use TPM_TRANSMIT_UNLOCKED. There's
-also a similar regression in TPM space patch that I have to correct.
-
-> Why would the resource manager need a single global tpm buffer? That
-> seems like a big regression from where we have been going. I don't
-> think this is a good idea to go down this road.
-
-What? 'tr_buf' is not specifically for resource manager. This commit
-makes creating TPM commands more fail-safe because there is no need
-to allocate page for every transmit.
-
-For RM decorations this is really important because I rather would have
-them fail as rarely as possible. If this would become a scalability
-issue then the granularity could be reconsidered.
-
-> > -	tpm_buf_append(buf, (u8 *) &value2, 4);
-> > +	tpm_buf_append(buf, (u8 *)&value2, 4);
+> Since the space is tied to that single fd these patches just create a
+> way for the single user-space process to auto-cleanup if it crashes?
 > 
-> Please try and avoid this sort of churn in patches that change things..
+> Is that the entire intent of this design? I guess it is OK as a
+> stepping point..
 
-It wasn't there on purpose. I do not know how these slipped. I can
-clean these up.
-
-> Jason
+is_open is cleared in tpm_ioc_new_space.
 
 /Jarkko
