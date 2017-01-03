@@ -1,17 +1,17 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
-Date: Tue, 3 Jan 2017 15:51:21 +0200
-Message-ID: <20170103135121.4kh3jld5gaq3ptj4@intel.com>
-References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
-	<1483374980.2458.13.camel@HansenPartnership.com>
-	<20170102193320.trawto65nkjccbao@intel.com>
-	<1483393248.2458.32.camel@HansenPartnership.com>
+Subject: Re: [PATCH v2 0/2] tpm: enhance TPM 2.0 extend
+ function to support multiple PCR banks
+Date: Tue, 3 Jan 2017 15:55:57 +0200
+Message-ID: <20170103135557.tbscbmxxgaiylisk@intel.com>
+References: <1483124550-9529-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<20170102221550.pck4fwir77zss6lz@intel.com>
+	<1483446469.2900.30.camel@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1483393248.2458.32.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+In-Reply-To: <1483446469.2900.30.camel-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,70 +20,51 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jan 02, 2017 at 01:40:48PM -0800, James Bottomley wrote:
-> On Mon, 2017-01-02 at 21:33 +0200, Jarkko Sakkinen wrote:
-> > On Mon, Jan 02, 2017 at 08:36:20AM -0800, James Bottomley wrote:
-> > > On Mon, 2017-01-02 at 15:22 +0200, Jarkko Sakkinen wrote:
-> > > > This patch set adds support for TPM spaces that provide a context
-> > > > for isolating and swapping transient objects. This patch set does
-> > > > not yet include support for isolating policy and HMAC sessions 
-> > > > but it is trivial to add once the basic approach is settled (and
-> > > > that's why I created an RFC patch set).
-> > > 
-> > > The approach looks fine to me.  The only basic query I have is 
-> > > about the default: shouldn't it be with resource manager on rather 
-> > > than off?  I can't really think of a use case that wants the RM off 
-> > > (even if you're running your own, having another doesn't hurt 
-> > > anything, and it's still required to share with in-kernel uses).
-> > 
-> > This is a valid question and here's a longish explanation.
-> > 
-> > In TPM2_GetCapability and maybe couple of other commands you can get
-> > handles in the response body. I do not want to have special cases in 
-> > the kernel for response bodies because there is no a generic way to 
-> > do the substitution. What's worse, new commands in the standard 
-> > future revisions could have such commands requiring special cases. In
-> > addition, vendor specific commans could have handles in the response
-> > bodies.
+On Tue, Jan 03, 2017 at 07:27:49AM -0500, Mimi Zohar wrote:
+> On Tue, 2017-01-03 at 00:15 +0200, Jarkko Sakkinen wrote:
+> > On Fri, Dec 30, 2016 at 02:02:28PM -0500, Nayna Jain wrote:
+> > > IMA extends its hash measurements in the TPM PCRs, based on policy.
+> > > The existing in-kernel TPM extend function extends only the SHA1
+> > > PCR bank. TPM 2.0 defines multiple PCR banks, to support different
+> > > hash algorithms. The TCG TPM 2.0 Specification[1] recommends
+> > > extending all active PCR banks to prevent malicious users from
+> > > setting unused PCR banks with fake measurements and quoting them.
+> > > This patch set adds support for extending all active PCR banks,
+> > > as recommended.
 > 
-> OK, in general I buy this ... what you're effectively saying is that we
-> need a non-RM interface for certain management type commands.
+> For this reason, the change is needed whether we're extending the SHA1
+> bank or any of the other TPM 2.0 banks.
+> 
+> > > The first patch implements the TPM 2.0 capability to retrieve
+> > > the list of active PCR banks.
+> > > 
+> > > The second patch modifies the tpm_pcr_extend() and tpm2_pcr_extend()
+> > > interface to support extending multiple PCR banks. The existing
+> > > tpm_pcr_extend() interface expects only a SHA1 digest. Hence, to
+> > > extend all active PCR banks with differing digest sizes for TPM 2.0,
+> > > the SHA1 digest is padded with 0's as needed.
+> > > 
+> > > This approach is taken to maintain backwards compatibility for IMA
+> > > in order to continue working with both TPM 1.2 and TPM 2.0 without
+> > > any changes and still comply with TCG TPM 2.0 Specification[1].
+> > 
+> > What is the plan to improve IMA so that it can use better hash
+> > algorithms? For me this zero padding sounds like a hack.
+> 
+> In one case, we'll be padding the SHA1 hash, while in the other cases we
+> would be truncating the hash.   Unfortunately, the need to extend
+> multiple banks doesn't go away when IMA supports larger digests.
+> 
+> Nayna, could you remove this [unnecessary] paragraph?
 
-Not only that.
+OK, I think I got it. I'll try to test these patches before further
+reviewing. Thank you.
 
-Doing virtualization for commands like GetCapability is just a better
-fit for doing in the user space. You could have a thin translation layer
-in your TSS library for example to handle these specific messages.
-
-> However, let me expand a bit on why I'm fretting about the non-RM use
-> case.  Right at the moment, we have a single TPM device which you use
-> for access to the kernel TPM.  The current tss2 just makes direct use
-> of this, meaning it has to have 0666 permissions.  This means that any
-> local user can simply DoS the TPM by running us out of transient
-> resources if they don't activate the RM.  If they get a connection
-> always via the RM, this isn't a worry.  Perhaps the best way of fixing
-> this is to expose two separate device nodes: one raw to the TPM which
-> we could keep at 0600 and one with an always RM connection which we can
-> set to 0666.  That would mean that access to the non-RM connection is
-> either root only or governed by a system set ACL.
-
-I'm not sure about this. Why you couldn't have a very thin daemon that
-prepares the file descriptor and sends it through UDS socket to a
-client.  The non-RFC version will also have whitelisting ioctl for
-further restricting the file descriptor to only specific TPM commands.
-
-This is also architecture I preseted in my LSS presentation and I think
-it makes sense especially when I add the whitelisting to the pack.
-
-> James
-
-I'm more dilated to keep things way they are now. I'll stick to that at
-least with the first non-RFC version and hopefully get the tpm2-space.c
-part reviewed as I split that stuff to a separate commit.
+> Mimi
 
 /Jarkko
 
