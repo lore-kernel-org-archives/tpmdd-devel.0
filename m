@@ -1,18 +1,21 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH RFC 1/4] tpm: migrate struct tpm_buf to
-	struct tpm_chip
-Date: Tue, 3 Jan 2017 12:13:28 -0700
-Message-ID: <20170103191328.GB26706@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
+Date: Tue, 3 Jan 2017 21:14:56 +0200
+Message-ID: <20170103191456.vpl6ny7rbgu3yigx@intel.com>
 References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
-	<20170102132213.22880-2-jarkko.sakkinen@linux.intel.com>
-	<20170102210101.GA5544@obsidianresearch.com>
-	<20170103005737.t2qrc32xzdnvqy4b@intel.com>
+	<1483374980.2458.13.camel@HansenPartnership.com>
+	<20170102193320.trawto65nkjccbao@intel.com>
+	<1483393248.2458.32.camel@HansenPartnership.com>
+	<1483421218.19261.4.camel@linux.vnet.ibm.com>
+	<20170103134100.stgxkmzbckon4jfb@intel.com>
+	<1483460095.2464.6.camel@linux.vnet.ibm.com>
+	<20170103183602.ar5typcvy2rx7cjs@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170103005737.t2qrc32xzdnvqy4b-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20170103183602.ar5typcvy2rx7cjs-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,54 +24,96 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+To: James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jan 03, 2017 at 02:57:37AM +0200, Jarkko Sakkinen wrote:
-> On Mon, Jan 02, 2017 at 02:01:01PM -0700, Jason Gunthorpe wrote:
-> > On Mon, Jan 02, 2017 at 03:22:07PM +0200, Jarkko Sakkinen wrote:
-> > > Since there is only one thread using TPM chip at a time to transmit data
-> > > we can migrate struct tpm_buf to struct tpm_chip. This makes the use of
-> > > it more fail safe as the buffer is allocated from heap when the device
-> > > is created and not for every transaction.
+On Tue, Jan 03, 2017 at 08:36:02PM +0200, Jarkko Sakkinen wrote:
+> On Tue, Jan 03, 2017 at 08:14:55AM -0800, James Bottomley wrote:
+> > On Tue, 2017-01-03 at 15:41 +0200, Jarkko Sakkinen wrote:
+> > > On Mon, Jan 02, 2017 at 09:26:58PM -0800, James Bottomley wrote:
+> > > > On Mon, 2017-01-02 at 13:40 -0800, James Bottomley wrote:
+> > > > > On Mon, 2017-01-02 at 21:33 +0200, Jarkko Sakkinen wrote:
+> > > > > > On Mon, Jan 02, 2017 at 08:36:20AM -0800, James Bottomley
+> > > > > > wrote:
+> > > > > > > On Mon, 2017-01-02 at 15:22 +0200, Jarkko Sakkinen wrote:
+> > > > > > > > This patch set adds support for TPM spaces that provide a 
+> > > > > > > > context for isolating and swapping transient objects. This 
+> > > > > > > > patch set does not yet include support for isolating policy 
+> > > > > > > > and HMAC sessions but it is trivial to add once the basic
+> > > > > > > > approach is settled (and that's why I created an RFC patch
+> > > > > > > > set).
+> > > > > > > 
+> > > > > > > The approach looks fine to me.  The only basic query I have 
+> > > > > > > is about the default: shouldn't it be with resource manager 
+> > > > > > > on rather than off?  I can't really think of a use case that
+> > > > > > > wants the RM off (even if you're running your own, having 
+> > > > > > > another doesn't hurt anything, and it's still required to 
+> > > > > > > share with in-kernel uses).
+> > > > > > 
+> > > > > > This is a valid question and here's a longish explanation.
+> > > > > > 
+> > > > > > In TPM2_GetCapability and maybe couple of other commands you 
+> > > > > > can get handles in the response body. I do not want to have 
+> > > > > > special cases in the kernel for response bodies because there 
+> > > > > > is no a generic way to do the substitution. What's worse, new 
+> > > > > > commands in the standard future revisions could have such 
+> > > > > > commands requiring special cases. In addition, vendor specific 
+> > > > > > commans could have handles in the response bodies.
+> > > > > 
+> > > > > OK, in general I buy this ... what you're effectively saying is 
+> > > > > that we need a non-RM interface for certain management type
+> > > > > commands.
+> > > > > 
+> > > > > However, let me expand a bit on why I'm fretting about the non-RM 
+> > > > > use case.  Right at the moment, we have a single TPM device which 
+> > > > > you use for access to the kernel TPM.  The current tss2 just 
+> > > > > makes direct use of this, meaning it has to have 0666 
+> > > > > permissions.  This means that any local user can simply DoS the 
+> > > > > TPM by running us out of transient resources if they don't 
+> > > > > activate the RM.  If they get a connection always via the RM, 
+> > > > > this isn't a worry.  Perhaps the best way of fixing this is to 
+> > > > > expose two separate device nodes: one raw to the TPM which we 
+> > > > > could keep at 0600 and one with an always RM connection
+> > > > > which we can set to 0666.  That would mean that access to the non
+> > > > > -RM connection is either root only or governed by a system set
+> > > > > ACL.
+> > > > 
+> > > > OK, so I put a patch together that does this (see below). It all 
+> > > > works nicely (with a udev script that sets the resource manager 
+> > > > device to 0666):
+> > > 
+> > > This is not yet a comment about this suggestion but I guess one thing
+> > > is clear: the stuff in tpm2-space.c and tpm-interface.c changes are 
+> > > the thing that we can mostly agree on and the area of argumentation 
+> > > is the user space interface to it?
 > > 
-> > Eh? What? I don't think that is the case..
+> > Agreed.  As I've already said, the space and interface code is working
+> > well for me in production on my laptop.
 > > 
-> > We don't serialize until we hit tramsit_cmd at which point the buffer
-> > is already being used and cannot be shared between threads.
+> > > Just thinking how to split up the non-RFC patch set. This was also 
+> > > what Jason suggested if I understood his remark correctly.
+> > 
+> > SUre ... let's get agreement on how we move forward first.  How the
+> > patch is activated by the user has to be sorted out as well before it
+> > can go in, but it doesn't have to be the first thing we do.  I'm happy
+> > to continue playing with the interfaces to see what works and what
+> > doesn't.  My main current feedback is that I think separate devices
+> > works way better than an ioctl becuase the separate devices approach
+> > allows differing system policies for who accesses the RM backed TPM vs
+> > who accesses the raw one.
 > 
-> There is a regression in the patch. All functions that use 'tr_buf'
-> should take tpm_mutex first and use TPM_TRANSMIT_UNLOCKED. There's
-> also a similar regression in TPM space patch that I have to correct.
+> I think I see your point. I would rather name the device as tpms0 but
+> otherwise I think we could do it in the way you suggest...
 
-No, you can't steal TPM_TRANSMIT_UNLOCKED and tpm_mutex for this, that
-is to allow a chain of commands to execute atomicly, so a new lock is
-needed just for the tr_buf.
+I think one more stronger argument for tpms0 is that it keeps tpm0
+intact. Those who don't care about tpms0 don't have to worry about it
+causing regressions. Also it makes it cleaner to put the whole feature
+under a compilation flag, which would make to me because that gives
+distributions a choice to not enable in-kernel RM when it first hits the
+mainline.
 
-> > Why would the resource manager need a single global tpm buffer? That
-> > seems like a big regression from where we have been going. I don't
-> > think this is a good idea to go down this road.
-> 
-> What? 'tr_buf' is not specifically for resource manager. This commit
-> makes creating TPM commands more fail-safe because there is no need
-> to allocate page for every transmit.
-
-That doesn't seem all that important, honestly. There kernel does not
-fail single page allocations without a lot of duress.
-
-> For RM decorations this is really important because I rather would have
-> them fail as rarely as possible. If this would become a scalability
-> issue then the granularity could be reconsidered.
-
-Why? The RM design already seems to have the prepare/commit/abort
-kind of model so it can already fail. What does it matter if the
-caller can fail before getting that far?
-
-It seems like alot of dangerous churn to introduce a new locking model
-without a really good reason...
-
-Jason
+/Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
