@@ -1,120 +1,68 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
-Date: Tue, 03 Jan 2017 14:39:58 -0800
-Message-ID: <1483483198.2464.44.camel@HansenPartnership.com>
-References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
-	<1483374980.2458.13.camel@HansenPartnership.com>
-	<20170102193320.trawto65nkjccbao@intel.com>
-	<1483393248.2458.32.camel@HansenPartnership.com>
-	<20170103135121.4kh3jld5gaq3ptj4@intel.com>
-	<1483461370.2464.19.camel@HansenPartnership.com>
-	<20170103214702.GC29656@obsidianresearch.com>
+From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Subject: Re: [tpmdd-devel] [PATCH 1/1] add TPM2 version of
+ create_tpm2_key and libtpm2.so engine
+Date: Tue, 3 Jan 2017 16:11:26 -0700
+Message-ID: <20170103231126.GE29656@obsidianresearch.com>
+References: <1483224485.2518.20.camel@HansenPartnership.com>
+	<1483224763.2518.24.camel@HansenPartnership.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170103214702.GC29656-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Return-path: <trousers-tech-bounces@lists.sourceforge.net>
+Content-Disposition: inline
+In-Reply-To: <1483224763.2518.24.camel@HansenPartnership.com>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/trousers-tech>,
+	<mailto:trousers-tech-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=trousers-tech>
+List-Post: <mailto:trousers-tech@lists.sourceforge.net>
+List-Help: <mailto:trousers-tech-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/trousers-tech>,
+	<mailto:trousers-tech-request@lists.sourceforge.net?subject=subscribe>
+Errors-To: trousers-tech-bounces@lists.sourceforge.net
+To: James Bottomley <James.Bottomley@HansenPartnership.com>
+Cc: trousers-tech@lists.sourceforge.net, tpmdd-devel@lists.sourceforge.net, ibmtpm20tss-users@lists.sourceforge.net, openssl-dev@openssl.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, 2017-01-03 at 14:47 -0700, Jason Gunthorpe wrote:
-> On Tue, Jan 03, 2017 at 08:36:10AM -0800, James Bottomley wrote:
-> 
-> > > I'm not sure about this. Why you couldn't have a very thin daemon
-> > > that prepares the file descriptor and sends it through UDS socket 
-> > > to a client.
-> > 
-> > So I'm a bit soured on daemons from the trousers experience: tcsd
-> > crashed regularly and when it did it took all the TPM connections 
-> > down irrecoverably.  I'm not saying we can't write a stateless 
-> > daemon to fix most of the trousers issues, but I think it's 
-> > valuable first to ask the question, "can we manage without a daemon 
-> > at all?"  I actually think the answer is "yes", so I'm interested 
-> > in seeing how far that line of research gets us.
-> 
-> There is clearly no need for a daemon to be involved when working on
-> simple tasks like key load and key sign/enc/dec actions, adding such 
-> a thing only increases the complexity.
-> 
-> If we discover a reason to have a daemon down the road then it should
-> work in some way where the user space can call out to the daemon over
-> a different path than the kernel. (eg dbus or something)
+On Sat, Dec 31, 2016 at 02:52:43PM -0800, James Bottomley wrote:
+> This patch adds RSA signing for TPM2 keys.  There's a limitation to the
+> way TPM2 does signing: it must recognise the OID for the signature. 
+>  That fails for the MD5-SHA1 signatures of the TLS/SSL certificate
+> verification protocol, so I'm using RSA_Decrypt for both signing
+> (encryption) and decryption ... meaning that this only works with TPM
+> decryption keys.  It is possible to use the prior code, which preserved
+> the distinction of signing and decryption keys, but only at the expense
+> of not being able to support SSL or TLS lower than 1.2
 
-Agreed ... I think the only reason I can currently see for needing a
-daemon is if we need it to sort out access security (which I'm hoping
-we don't).
+[Note, I haven't looked closely at TPM2, but TPM1.2 has a concept of
+ key usage, and I assume that is carried over in the below comments]
 
-> > Do you have a link to the presentation?  The Plumbers etherpad 
-> > doesn't contain it.  I've been trying to work out whether a 
-> > properly set up TPM actually does need any protections at all.  As 
-> > far as I can tell, once you've set all the hierarchy authorities 
-> > and the lockout one, you're pretty well protected.
-> 
-> I think we should also consider TPM 1.2 support in all of this, it is
-> still a very popular peice of hardware and it is equally able to
-> support a RM.
+I think it is very important to natively support the sign-only key
+usage restriction. TPM1.2 goes so far as to declare keys that can be
+used for arbitary decrypt as 'legacy do not use'.
 
-I've been running with the openssl and gnome-keyring patches in 1.2 for
-months now.  The thing about 1.2 is that the volatile store is much
-larger, so there's a lot less of a need for a RM.  It's only a
-requirement in 2.0 because most shipping TPMs only seem to have room
-for about 3 objects.
+IMHO the best way to do this is to look at the sign operation openssl
+is trying to do and see if it can be sent down the sign path to the
+TPM. Only if that fails should the decrypt path be used.
 
-> So, in general, I'd prefer to see the unprivileged char dev hard
-> prevented by the kernel from doing certain things:
-> 
-> - Wipe the TPM
-> - Manipulate the SRK, nvram, tpm flags, change passwords etc
-> - Read back the EK
+For TPM1.2 you could create a sign-only key with the
+TPM_SS_RSASSAPKCS1v15_DER mode and feed it arbitary NIDs - the TPM did
+not check the data to sign, AFAIK.
 
-These are all things that the TPM itself is capable of enforcing a
-policy for.  I think we should aim for correct setup of the TPM in the
-first place so it enforces the policy in a standard manner rather than
-having an artificial policy enforcement in the kernel.
+Ideally the user should be able to setup a sign-only key and the
+correct SSL negotiation parameters and have a working system, eg a
+sign-only key used with TLS 1.3 and ephemeral keyx should work.
 
-> - Write to PCRs
+> +	/* this is slightly paradoxical that we're doing a Decrypt
+> +	 * operation: the only material difference between decrypt and
+> +	 * encrypt is where the padding is applied or checked, so if
+> +	 * you apply your own padding up to the RSA block size and use
+> +	 * TPM_ALG_NULL, which means no padding check, a decrypt
+> +	 * operation effectively becomes an encrypt */
 
-The design of a TPM is mostly that it's up to user space to deal with
-this.  Userspace can, of course, kill the TPM ability to quote and seal
-to PCRs by inappropriately extending them.  However, there are a lot of
-responsible applications that want to use PCRs in userspace; for
-instance cloud boot and attestation.  We don't really want to restrict
-their ability arbitrarily.
+IIRC this duality is exactly why key usage exists, and why good crypto
+practice has been to forbid decrypt/encrypt on the same key.
 
-> - etc.
-
-> 
-> Even if TPM 2 has a stronger password based model, I still think the
-> kernel should hard prevent those sorts of actions even if the user
-> knows the TPM password.
-
-That would make us different from TPM1.2: there, if you know the owner
-authorisation, trousers will pretty much let you do anything.
-
-> Realistically people in less senstive environments will want to use
-> the well known TPM passwords and still have reasonable safety in 
-> their unprivileged accounts.
-
-Can we not do most of this with localities?  In theory locality 0 is
-supposed to be only the bios and the boot manager and the OS gets to
-access 1-3.  We could reserve one for the internal kernel and still
-have a couple for userspace (I'll have to go back and check numbers; I
-seem to remember there were odd restrictions on which PCR you can reset
-and extend in which locality).  If we have two devices (one for each
-locality) we could define a UNIX ACL on the devices to achieve what you
-want.
-
-James
-
+Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
