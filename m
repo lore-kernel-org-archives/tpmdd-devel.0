@@ -1,7 +1,7 @@
 From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
 Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
-Date: Tue, 3 Jan 2017 17:21:28 -0500
-Message-ID: <o4h852$760$2@blaine.gmane.org>
+Date: Tue, 3 Jan 2017 17:22:41 -0500
+Message-ID: <o4h87a$760$3@blaine.gmane.org>
 References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
 	<1483374980.2458.13.camel@HansenPartnership.com>
 	<20170102193320.trawto65nkjccbao@intel.com>
@@ -23,21 +23,18 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
 On 1/3/2017 4:47 PM, Jason Gunthorpe wrote:
 >
 > I think we should also consider TPM 1.2 support in all of this, it is
-> still a very popular piece of hardware and it is equally able to
+> still a very popular peice of hardware and it is equally able to
 > support a RM.
 
-I suspect that TPM 2.0 and TPM 1.2 are so different that there may be 
-little or no code in common.
+I suspect that TPM 2.0 is different enough from 1.2 that there may be 
+little common code.
 
-My immediate need is for a 2.0 resource manager, since it's a gap in the 
-technology, while 1.2 does have tcsd.
-
+My immediate need is for 2.0, since 1.2 does have tcsd.
 
 
 
