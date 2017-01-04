@@ -1,75 +1,95 @@
-From: "Dr. Greg Wettstein" <greg@wind.enjellic.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC 0/4] RFC: in-kernel resource manager
-Date: Wed, 4 Jan 2017 10:12:41 -0600
-Message-ID: <201701041612.v04GCfPK031525@wind.enjellic.com>
-References: <kgoldman@us.ibm.com>
-Reply-To: greg@enjellic.com
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: Ken Goldman <kgoldman@us.ibm.com>
-       "Re: [tpmdd-devel] [PATCH RFC 0/4] RFC: in-kernel resource manager" (Jan  3,  5:21pm)
-Sender: linux-kernel-owner@vger.kernel.org
-To: Ken Goldman <kgoldman@us.ibm.com>, linux-kernel@vger.kernel.org
-Cc: linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.netlinux-security-module@vger.kernel.org
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
+Date: Wed, 4 Jan 2017 09:55:51 -0700
+Message-ID: <20170104165550.GB783@obsidianresearch.com>
+References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
+	<1483374980.2458.13.camel@HansenPartnership.com>
+	<20170102193320.trawto65nkjccbao@intel.com>
+	<1483393248.2458.32.camel@HansenPartnership.com>
+	<1483421218.19261.4.camel@linux.vnet.ibm.com>
+	<20170103215445.GD29656@obsidianresearch.com>
+	<20170104125810.3qkkfe72cnb76ige@intel.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20170104125810.3qkkfe72cnb76ige-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Jan 3,  5:21pm, Ken Goldman wrote:
-} Subject: Re: [tpmdd-devel] [PATCH RFC 0/4] RFC: in-kernel resource manager
+On Wed, Jan 04, 2017 at 02:58:10PM +0200, Jarkko Sakkinen wrote:
+> On Tue, Jan 03, 2017 at 02:54:45PM -0700, Jason Gunthorpe wrote:
+> > On Mon, Jan 02, 2017 at 09:26:58PM -0800, James Bottomley wrote:
+> > 
+> > > OK, so I put a patch together that does this (see below). It all works
+> > > nicely (with a udev script that sets the resource manager device to
+> > > 0666):
+> > > 
+> > > jejb@jarvis:~> ls -l /dev/tpm*
+> > > crw------- 1 root root  10,   224 Jan  2 20:54 /dev/tpm0
+> > > crw-rw-rw- 1 root root 246, 65536 Jan  2 20:54 /dev/tpm0rm
+> > > 
+> > > I've modified the tss to connect to /dev/tpm0rm by default and it all
+> > > seems to work.
+> > > 
+> > > The patch applies on top of your tabrm branch, by the way.
+> > 
+> > If we are making a new /dev/ node we should think more carefully about
+> > the design.
+> > 
+> > - Do we need a cdev node for every chip? What about just '/dev/tpm' and
+> >   we encode the chip number in the message. Since the exclusive
+> >   locking is gone this is very doable.
+> 
+> What about backwards compatiblity? Or would this be just for /dev/tpms?
+> We can consider this.
 
-Good morning, I hope this note finds the day going well for everyone.
+Yes, just for the new char dev.
 
-> On 1/3/2017 4:47 PM, Jason Gunthorpe wrote:
-> >
-> > I think we should also consider TPM 1.2 support in all of this, it is
-> > still a very popular piece of hardware and it is equally able to
-> > support a RM.
+> > - Should we get rid of the read/write protocol and use ioctl instead?
+> >   As I understand it ioctl is more usable with seccomp and related
+> >   schemes? I could see passing a TPM FD into a sandbox and wanting the
+> >   sandbox only able to do do decrypt/encrypt operations, for instance.
+> 
+> Are you suggesting that command/response transaction would be handled
+> by ioctl instead of read/write pair. Would make sense looking at how
+> read/write is managed now (it is more or less of a hack because it
+> actually is a transction).
 
-> I suspect that TPM 2.0 and TPM 1.2 are so different that there may
-> be little or no code in common.
->
-> My immediate need is for a 2.0 resource manager, since it's a gap in
-> the technology, while 1.2 does have tcsd.
+Yes.
 
-In the FWIW department.
+> > - Something to identify tpm chips and help match key data with the
+> >   proper chip.
+> 
+> Hey, here's what I propose. I take some of the ideas (not all there
+> have been so many) and bake a v2 of the RFC. Lets see where we are
+> at then. I won't add any reviewed/tested-by's before we are in the
+> same line with "big ideas" nor do I create a non-RFC patch set.
 
-I influence architecture and engineering for a company which builds
-deterministically modeled and attested computing platforms for high
-security assurance environments.  This entity actually builds systems
-based on TPM1.2 and TPM2 hardware.  TPM2 prototypes were being
-developed based on the simulator which came out of Ken's lab as soon
-as it was first made available.
+Usually with something like this there will be lots of dicussion
+around the uapi portion - that is the portion we have to reatin
+backwards compatability with forever - so there is a natural need to
+make sure it is sane.
 
-The kernel needs a resource manager.  Everyone needs to think VERY
-hard and VERY, VERY carefully about what gets put into the kernel.  In
-making a decision, put the ABSOLUTE smallest amount of code into the
-kernel which allows various 'TPM2 personalities' to be implemented in
-userspace and functionally verified and protected by the physical
-instance.  The emergence of commodity TEE's (SGX, et.al) should be in
-the back of everyone's mind as a factor in the roadmap.
+This is why I'm so cautious to limit what is possible because it is
+easier to add new stuff then take stuff away.
 
-Repeat incessantly to oneself, TPM1.2 and TPM2 are only similar by
-virtue of sharing three ASCII characters.
+So design your patch set to keep the uapi stuff as distinct and
+well-described as possible - the other parts are much easier to review
+and agree on.
 
-DO NOT rush this process.  If we do not get this right we will
-ultimately end up trying to shove something which is conceptually
-worse then tss/tscd into the kernel.
+Jason
 
-Repeat incesssantly to oneself, policy does not belong in the kernel.
-
-Pay homage to Ken, his TSS2 and TPM2 simulator work are beyond
-excellent...
-
-Greg
-
-}-- End of excerpt from Ken Goldman
-
-As always,
-Dr. G.W. Wettstein, Ph.D.   Enjellic Systems Development, LLC.
-4206 N. 19th Ave.           Specializing in information infra-structure
-Fargo, ND  58102            development.
-PH: 701-281-1686
-FAX: 701-281-3949           EMAIL: greg@enjellic.com
 ------------------------------------------------------------------------------
-"... you should really focus more on simplifying your life.  I
- actually spend most of my time finding ways to de-clog my brain."
-                                -- Sarah Wettstein
-                                   At the lake
+Check out the vibrant tech community on one of the world's most 
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
