@@ -1,95 +1,76 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC 0/4] RFC: in-kernel resource manager
-Date: Wed, 4 Jan 2017 15:00:46 +0200
-Message-ID: <20170104130046.u5isqy3z2nptdpgk@intel.com>
-References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
- <1483374980.2458.13.camel@HansenPartnership.com>
- <20170102193320.trawto65nkjccbao@intel.com>
- <1483393248.2458.32.camel@HansenPartnership.com>
- <1483421218.19261.4.camel@linux.vnet.ibm.com>
- <649a9342-f1a5-ca63-90e3-efec1e537908@kernel.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v7 2/2] tpm: add securityfs support for
+ TPM 2.0 firmware event log
+Date: Wed, 4 Jan 2017 15:01:18 +0200
+Message-ID: <20170104130118.2brkojj65vjhzca3@intel.com>
+References: <1481434533-3453-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1481434533-3453-3-git-send-email-nayna@linux.vnet.ibm.com>
+	<20170102221148.gy3mlubrgs4gm6ey@intel.com>
+	<586B5526.9090703@linux.vnet.ibm.com>
+	<20170103133309.lt5k4c37rjq5vcbq@intel.com>
+	<586CB46E.8050207@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <649a9342-f1a5-ca63-90e3-efec1e537908@kernel.org>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Andy Lutomirski <luto@kernel.org>
-Cc: James Bottomley <jejb@linux.vnet.ibm.com>, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, open list <linux-kernel@vger.kernel.org>
+In-Reply-To: <586CB46E.8050207-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jan 03, 2017 at 09:47:21PM -0800, Andy Lutomirski wrote:
-> On 01/02/2017 09:26 PM, James Bottomley wrote:
-> > On Mon, 2017-01-02 at 13:40 -0800, James Bottomley wrote:
-> > > On Mon, 2017-01-02 at 21:33 +0200, Jarkko Sakkinen wrote:
-> > > > On Mon, Jan 02, 2017 at 08:36:20AM -0800, James Bottomley wrote:
-> > > > > On Mon, 2017-01-02 at 15:22 +0200, Jarkko Sakkinen wrote:
-> > > > > > This patch set adds support for TPM spaces that provide a
-> > > > > > context for isolating and swapping transient objects. This
-> > > > > > patch set does not yet include support for isolating policy and
-> > > > > > HMAC sessions but it is trivial to add once the basic approach
-> > > > > > is settled (and that's why I created an RFC patch set).
+On Wed, Jan 04, 2017 at 02:08:06PM +0530, Nayna wrote:
+> 
+> 
+> On 01/03/2017 07:03 PM, Jarkko Sakkinen wrote:
+> > On Tue, Jan 03, 2017 at 01:09:18PM +0530, Nayna wrote:
+> > > 
+> > > 
+> > > On 01/03/2017 03:42 AM, Jarkko Sakkinen wrote:
+> > > > On Sun, Dec 11, 2016 at 12:35:33AM -0500, Nayna Jain wrote:
+> > > > > Unlike the device driver support for TPM 1.2, the TPM 2.0 does
+> > > > > not support the securityfs pseudo files for displaying the
+> > > > > firmware event log.
 > > > > > 
-> > > > > The approach looks fine to me.  The only basic query I have is
-> > > > > about the default: shouldn't it be with resource manager on
-> > > > > rather than off?  I can't really think of a use case that wants
-> > > > > the RM off (even if you're running your own, having another
-> > > > > doesn't hurt anything, and it's still required to share with in
-> > > > > -kernel uses).
+> > > > > This patch enables support for providing the TPM 2.0 event log in
+> > > > > binary form. TPM 2.0 event log supports a crypto agile format that
+> > > > > records multiple digests, which is different from TPM 1.2. This
+> > > > > patch enables the tpm_bios_log_setup for TPM 2.0  and adds the
+> > > > > event log parser which understand the TPM 2.0 crypto agile format.
+> > > > > 
+> > > > > Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 > > > > 
-> > > > This is a valid question and here's a longish explanation.
+> > > > There is something fundamentally wrong in this commit.
 > > > > 
-> > > > In TPM2_GetCapability and maybe couple of other commands you can
-> > > > get handles in the response body. I do not want to have special
-> > > > cases in the kernel for response bodies because there is no a
-> > > > generic way to do the substitution. What's worse, new commands in
-> > > > the standard future revisions could have such commands requiring
-> > > > special cases. In addition, vendor specific commans could have
-> > > > handles in the response bodies.
+> > > > You must not allow this feature unless CONFIG_OF is set. It is the only
+> > > > interface where the supply path of the event log is well defined on
+> > > > platforms that include a TPM 2.0 chip.
 > > > 
-> > > OK, in general I buy this ... what you're effectively saying is that
-> > > we need a non-RM interface for certain management type commands.
-> > > 
-> > > However, let me expand a bit on why I'm fretting about the non-RM use
-> > > case.  Right at the moment, we have a single TPM device which you use
-> > > for access to the kernel TPM.  The current tss2 just makes direct use
-> > > of this, meaning it has to have 0666 permissions.  This means that
-> > > any local user can simply DoS the TPM by running us out of transient
-> > > resources if they don't activate the RM.  If they get a connection
-> > > always via the RM, this isn't a worry.  Perhaps the best way of
-> > > fixing this is to expose two separate device nodes: one raw to the
-> > > TPM which we could keep at 0600 and one with an always RM connection
-> > > which we can set to 0666.  That would mean that access to the non-RM
-> > > connection is either root only or governed by a system set ACL.
+> > > As per current implementation, if ACPI with TPM 2.0 doesn't support event
+> > > log, tpm_read_log_acpi() is expected to return rc and tpm_bios_log_setup
+> > > will not create securityfs. This is inline with our design for TPM 1.2 event
+> > > log.
 > > 
-> > OK, so I put a patch together that does this (see below). It all works
-> > nicely (with a udev script that sets the resource manager device to
-> > 0666):
-> > 
-> > jejb@jarvis:~> ls -l /dev/tpm*
-> > crw------- 1 root root  10,   224 Jan  2 20:54 /dev/tpm0
-> > crw-rw-rw- 1 root root 246, 65536 Jan  2 20:54 /dev/tpm0rm
-> > 
-> > I've modified the tss to connect to /dev/tpm0rm by default and it all
-> > seems to work.
-> > 
-> > The patch applies on top of your tabrm branch, by the way.
+> > At minimum you must have a check for TPM_CHIP_FLAG_TPM2 in the beginning
+> > of tpm_read_log_acpi. It is wrong to even try to open TCPA in this case.
 > 
-> Conceptually I like this a *lot* better.  I believe that this effectively
-> solves my major gripe with the TPM 1.2 ecosystem.
-> 
-> However, can this be taken just a little farther?  IMO the tpm0rm (or tpms0
-> or whatever) node should also restrict commands that can be sent (perhaps by
-> in-kernel whitelist?) to those that shouldn't be restricted to the owner (by
-> which I probably mean the Owner, the Platform, etc)? For example, someone
-> with tpm0rm open should not be able to change key hierarchy passwords, write
-> to NV memory, clear hierarchies, etc.
+> Sure, will add this check and return -ENODEV if check passes.
 
-Yes. This was already discussed in Linux Plumbers. It is trivial to have
-that. I just left it out from this RFC patch set to get something not
-too complicated out quickly. Whitelist is coming to the non-RFC version.
+Yeah, this is acceptable for me.
 
-> Hmm.  Maybe there should be a way to allocate NV slots to users.
-> /dev/tpm/nv0?  I don't really like that idea, though.
+> Thanks & Regards,
+>     - Nayna
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most 
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
