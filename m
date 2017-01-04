@@ -1,20 +1,12 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
-Date: Wed, 4 Jan 2017 09:55:51 -0700
-Message-ID: <20170104165550.GB783@obsidianresearch.com>
-References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
-	<1483374980.2458.13.camel@HansenPartnership.com>
-	<20170102193320.trawto65nkjccbao@intel.com>
-	<1483393248.2458.32.camel@HansenPartnership.com>
-	<1483421218.19261.4.camel@linux.vnet.ibm.com>
-	<20170103215445.GD29656@obsidianresearch.com>
-	<20170104125810.3qkkfe72cnb76ige@intel.com>
+From: "Maciej S. Szmigiero" <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
+Subject: [RESEND][RFC] tpm_tis: broken on TPMs with a static
+	burst count
+Date: Wed, 4 Jan 2017 18:47:52 +0100
+Message-ID: <77221b3a-40b3-f5db-e821-10e258f869dc@maciej.szmigiero.name>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170104125810.3qkkfe72cnb76ige-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,72 +15,75 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, linux-kernel <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jan 04, 2017 at 02:58:10PM +0200, Jarkko Sakkinen wrote:
-> On Tue, Jan 03, 2017 at 02:54:45PM -0700, Jason Gunthorpe wrote:
-> > On Mon, Jan 02, 2017 at 09:26:58PM -0800, James Bottomley wrote:
-> > 
-> > > OK, so I put a patch together that does this (see below). It all works
-> > > nicely (with a udev script that sets the resource manager device to
-> > > 0666):
-> > > 
-> > > jejb@jarvis:~> ls -l /dev/tpm*
-> > > crw------- 1 root root  10,   224 Jan  2 20:54 /dev/tpm0
-> > > crw-rw-rw- 1 root root 246, 65536 Jan  2 20:54 /dev/tpm0rm
-> > > 
-> > > I've modified the tss to connect to /dev/tpm0rm by default and it all
-> > > seems to work.
-> > > 
-> > > The patch applies on top of your tabrm branch, by the way.
-> > 
-> > If we are making a new /dev/ node we should think more carefully about
-> > the design.
-> > 
-> > - Do we need a cdev node for every chip? What about just '/dev/tpm' and
-> >   we encode the chip number in the message. Since the exclusive
-> >   locking is gone this is very doable.
-> 
-> What about backwards compatiblity? Or would this be just for /dev/tpms?
-> We can consider this.
+(Resending as no reply received, this time with CCs to TPM maintainers and
+author of the original commit).
 
-Yes, just for the new char dev.
+Hi all,
 
-> > - Should we get rid of the read/write protocol and use ioctl instead?
-> >   As I understand it ioctl is more usable with seccomp and related
-> >   schemes? I could see passing a TPM FD into a sandbox and wanting the
-> >   sandbox only able to do do decrypt/encrypt operations, for instance.
-> 
-> Are you suggesting that command/response transaction would be handled
-> by ioctl instead of read/write pair. Would make sense looking at how
-> read/write is managed now (it is more or less of a hack because it
-> actually is a transction).
+Commit 1107d065fdf1 (tpm_tis: Introduce intermediate layer for TPM access)
+broke TPM support on ThinkPad X61S (and likely also on other machines which
+use TPMs with a static burst count).
 
-Yes.
+It looks like tpm_tis code before this commit had spun on TPM_STS_DATA_AVAIL |
+TPM_STS_VALID status bits in the read case and TPM_STS_VALID in the write case
+when it got a zero burst count.
 
-> > - Something to identify tpm chips and help match key data with the
-> >   proper chip.
-> 
-> Hey, here's what I propose. I take some of the ideas (not all there
-> have been so many) and bake a v2 of the RFC. Lets see where we are
-> at then. I won't add any reviewed/tested-by's before we are in the
-> same line with "big ideas" nor do I create a non-RFC patch set.
+I have attached a patch against current code (linux-tpmdd tree) that brings
+back this old behavior.
+With this patch the TPM works again on X61S.
+However, somebody with more TPM experience should comment whether such behavior
+was OK or the change brought by commit 1107d065fdf1 was intentional.
 
-Usually with something like this there will be lots of dicussion
-around the uapi portion - that is the portion we have to reatin
-backwards compatability with forever - so there is a natural need to
-make sure it is sane.
+Maciej Szmigiero
 
-This is why I'm so cautious to limit what is possible because it is
-easier to add new stuff then take stuff away.
-
-So design your patch set to keep the uapi stuff as distinct and
-well-described as possible - the other parts are much easier to review
-and agree on.
-
-Jason
+diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+index 7993678954a2..72d365db7c61 100644
+--- a/drivers/char/tpm/tpm_tis_core.c
++++ b/drivers/char/tpm/tpm_tis_core.c
+@@ -188,7 +188,9 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
+ 		if (rc < 0)
+ 			return rc;
+ 		burstcnt = get_burstcount(chip);
+-		if (burstcnt < 0) {
++		if (burstcnt == -EBUSY)
++			continue;
++		else if (burstcnt < 0) {
+ 			dev_err(&chip->dev, "Unable to read burstcount\n");
+ 			return burstcnt;
+ 		}
+@@ -282,18 +284,20 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ 
+ 	while (count < len - 1) {
+ 		burstcnt = get_burstcount(chip);
+-		if (burstcnt < 0) {
++		if (burstcnt < 0 && burstcnt != -EBUSY) {
+ 			dev_err(&chip->dev, "Unable to read burstcount\n");
+ 			rc = burstcnt;
+ 			goto out_err;
++		} else if (burstcnt > 0) {
++			burstcnt = min_t(int, burstcnt, len - count - 1);
++			rc = tpm_tis_write_bytes(priv,
++						 TPM_DATA_FIFO(priv->locality),
++						 burstcnt, buf + count);
++			if (rc < 0)
++				goto out_err;
++
++			count += burstcnt;
+ 		}
+-		burstcnt = min_t(int, burstcnt, len - count - 1);
+-		rc = tpm_tis_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
+-					 burstcnt, buf + count);
+-		if (rc < 0)
+-			goto out_err;
+-
+-		count += burstcnt;
+ 
+ 		if (wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
+ 					&priv->int_queue, false) < 0) {
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
