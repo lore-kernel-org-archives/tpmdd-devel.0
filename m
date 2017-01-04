@@ -1,77 +1,87 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
-Date: Tue, 3 Jan 2017 17:56:13 -0700
-Message-ID: <20170104005613.GA783@obsidianresearch.com>
+From: Andy Lutomirski <luto@kernel.org>
+Subject: Re: [tpmdd-devel] [PATCH RFC 0/4] RFC: in-kernel resource manager
+Date: Tue, 3 Jan 2017 21:47:21 -0800
+Message-ID: <649a9342-f1a5-ca63-90e3-efec1e537908@kernel.org>
 References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
-	<1483374980.2458.13.camel@HansenPartnership.com>
-	<20170102193320.trawto65nkjccbao@intel.com>
-	<1483393248.2458.32.camel@HansenPartnership.com>
-	<20170103135121.4kh3jld5gaq3ptj4@intel.com>
-	<1483461370.2464.19.camel@HansenPartnership.com>
-	<20170103214702.GC29656@obsidianresearch.com>
-	<1483483198.2464.44.camel@HansenPartnership.com>
-	<20170104001732.GB32185@obsidianresearch.com>
-	<1483489799.2464.79.camel@HansenPartnership.com>
+ <1483374980.2458.13.camel@HansenPartnership.com>
+ <20170102193320.trawto65nkjccbao@intel.com>
+ <1483393248.2458.32.camel@HansenPartnership.com>
+ <1483421218.19261.4.camel@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1483489799.2464.79.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <1483421218.19261.4.camel@linux.vnet.ibm.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: James Bottomley <jejb@linux.vnet.ibm.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jan 03, 2017 at 04:29:59PM -0800, James Bottomley wrote:
-> On Tue, 2017-01-03 at 17:17 -0700, Jason Gunthorpe wrote:
-> > On Tue, Jan 03, 2017 at 02:39:58PM -0800, James Bottomley wrote:
-> > 
-> > > > I think we should also consider TPM 1.2 support in all of this, 
-> > > > it is still a very popular peice of hardware and it is equally 
-> > > > able to support a RM.
-> > > 
-> > > I've been running with the openssl and gnome-keyring patches in 1.2 
-> > > for months now.  The thing about 1.2 is that the volatile store is 
-> > > much larger, so there's a lot less of a need for a RM.  It's only a
-> > > requirement in 2.0 because most shipping TPMs only seem to have 
-> > > room for about 3 objects.
-> > 
-> > It would be great if the 1.2 RM could support just enough to allow 
-> > RSA key operations from userspace, without key virtualization. That 
-> > would allow the plugins that already exist to move to the RM 
-> > interface and we can get rid of the hard dependency on trousers.
-> [getting long, let's divide into separate issues]
-> 
-> They actually already do: Trousers, for all its annoying complexity,
-> doesn't actually implement a resource manager, so we should be able to
-> do all the RSA operations we want today with the current 1.2 interface
-> and no RM.
+On 01/02/2017 09:26 PM, James Bottomley wrote:
+> On Mon, 2017-01-02 at 13:40 -0800, James Bottomley wrote:
+>> On Mon, 2017-01-02 at 21:33 +0200, Jarkko Sakkinen wrote:
+>>> On Mon, Jan 02, 2017 at 08:36:20AM -0800, James Bottomley wrote:
+>>>> On Mon, 2017-01-02 at 15:22 +0200, Jarkko Sakkinen wrote:
+>>>>> This patch set adds support for TPM spaces that provide a
+>>>>> context for isolating and swapping transient objects. This
+>>>>> patch set does not yet include support for isolating policy and
+>>>>> HMAC sessions but it is trivial to add once the basic approach
+>>>>> is settled (and that's why I created an RFC patch set).
+>>>>
+>>>> The approach looks fine to me.  The only basic query I have is
+>>>> about the default: shouldn't it be with resource manager on
+>>>> rather than off?  I can't really think of a use case that wants
+>>>> the RM off (even if you're running your own, having another
+>>>> doesn't hurt anything, and it's still required to share with in
+>>>> -kernel uses).
+>>>
+>>> This is a valid question and here's a longish explanation.
+>>>
+>>> In TPM2_GetCapability and maybe couple of other commands you can
+>>> get handles in the response body. I do not want to have special
+>>> cases in the kernel for response bodies because there is no a
+>>> generic way to do the substitution. What's worse, new commands in
+>>> the standard future revisions could have such commands requiring
+>>> special cases. In addition, vendor specific commans could have
+>>> handles in the response bodies.
+>>
+>> OK, in general I buy this ... what you're effectively saying is that
+>> we need a non-RM interface for certain management type commands.
+>>
+>> However, let me expand a bit on why I'm fretting about the non-RM use
+>> case.  Right at the moment, we have a single TPM device which you use
+>> for access to the kernel TPM.  The current tss2 just makes direct use
+>> of this, meaning it has to have 0666 permissions.  This means that
+>> any local user can simply DoS the TPM by running us out of transient
+>> resources if they don't activate the RM.  If they get a connection
+>> always via the RM, this isn't a worry.  Perhaps the best way of
+>> fixing this is to expose two separate device nodes: one raw to the
+>> TPM which we could keep at 0600 and one with an always RM connection
+>> which we can set to 0666.  That would mean that access to the non-RM
+>> connection is either root only or governed by a system set ACL.
+>
+> OK, so I put a patch together that does this (see below). It all works
+> nicely (with a udev script that sets the resource manager device to
+> 0666):
+>
+> jejb@jarvis:~> ls -l /dev/tpm*
+> crw------- 1 root root  10,   224 Jan  2 20:54 /dev/tpm0
+> crw-rw-rw- 1 root root 246, 65536 Jan  2 20:54 /dev/tpm0rm
+>
+> I've modified the tss to connect to /dev/tpm0rm by default and it all
+> seems to work.
+>
+> The patch applies on top of your tabrm branch, by the way.
 
-The current interface cannot be used by unprivileged users. I want to
-see the kernel provide an unprivileged safe interface for both TPM 1.2
-and TPM 2.0
+Conceptually I like this a *lot* better.  I believe that this 
+effectively solves my major gripe with the TPM 1.2 ecosystem.
 
-> The difficulty is no API ... unless you want to speak at
-> the TPM command level and do all the HMAC calculations yourself.
+However, can this be taken just a little farther?  IMO the tpm0rm (or 
+tpms0 or whatever) node should also restrict commands that can be sent 
+(perhaps by in-kernel whitelist?) to those that shouldn't be restricted 
+to the owner (by which I probably mean the Owner, the Platform, etc)? 
+For example, someone with tpm0rm open should not be able to change key 
+hierarchy passwords, write to NV memory, clear hierarchies, etc.
 
-I think the openssl RSA method could certainly do the TPM command
-level with not really a big problem.
-
-That would avoid all these crazy dependencies and debate :|
-
-I have a very good idea what that would look like for tpm 1.2 and I
-would estimate < 500 lines....
-
-Jason
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most 
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+Hmm.  Maybe there should be a way to allocate NV slots to users. 
+/dev/tpm/nv0?  I don't really like that idea, though.
