@@ -1,15 +1,23 @@
-From: James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH RFC 2/4] tpm: validate TPM 2.0 commands
-Date: Wed, 04 Jan 2017 10:19:36 -0800
-Message-ID: <1483553976.2561.38.camel@linux.vnet.ibm.com>
-References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
-	<20170102132213.22880-3-jarkko.sakkinen@linux.intel.com>
-	<OF8D508BD2.EAB22BFD-ON0025809E.0062B40C-8525809E.006356C3@notes.na.collabserv.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
+Date: Wed, 4 Jan 2017 11:31:25 -0700
+Message-ID: <20170104183125.GC783@obsidianresearch.com>
+References: <1483374980.2458.13.camel@HansenPartnership.com>
+	<20170102193320.trawto65nkjccbao@intel.com>
+	<1483393248.2458.32.camel@HansenPartnership.com>
+	<20170103135121.4kh3jld5gaq3ptj4@intel.com>
+	<1483461370.2464.19.camel@HansenPartnership.com>
+	<20170103214702.GC29656@obsidianresearch.com>
+	<1483483198.2464.44.camel@HansenPartnership.com>
+	<20170104001732.GB32185@obsidianresearch.com>
+	<20170104125045.7lorpe55drnrqce5@intel.com>
+	<1483541583.2561.20.camel@HansenPartnership.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <OF8D508BD2.EAB22BFD-ON0025809E.0062B40C-8525809E.006356C3-8eTO7WVQ4XIsd+ienQ86orlN3bxYEBpz@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <1483541583.2561.20.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,52 +26,129 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Andy Lutomirski <luto-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, 2017-01-04 at 13:04 -0500, Stefan Berger wrote:
-> Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote on 01/02/2017
-> 08:22:08 AM:
+On Wed, Jan 04, 2017 at 06:53:03AM -0800, James Bottomley wrote:
+
+> > > But this is not trousers, this is an in-kernel 0666 char dev that 
+> > > will be active on basically every Linux system with a TPM. I think 
+> > > we have a duty to be very conservative here.
 > 
-> > --- a/drivers/char/tpm/tpm2-cmd.c
-> > +++ b/drivers/char/tpm/tpm2-cmd.c
-> > @@ -943,7 +943,9 @@ EXPORT_SYMBOL_GPL(tpm2_probe);
-> >   */
-> >  int tpm2_auto_startup(struct tpm_chip *chip)
-> >  {
-> > +   u32 nr_commands;
-> >     int rc;
-> > +   int i;
-> > 
-> >     rc = tpm_get_timeouts(chip);
-> >     if (rc)
-> > @@ -967,8 +969,49 @@ int tpm2_auto_startup(struct tpm_chip *chip)
-> >        }
-> >     }
-> > 
-> > +   rc = tpm2_get_tpm_pt(chip, TPM_PT_TOTAL_COMMANDS, &nr_commands,
-> NULL);
-> > +   if (rc)
-> > +      return rc;
-> > +
-> > +   chip->cc_attrs_tbl = devm_kzalloc(&chip->dev, 4 * nr_commands,
-> > +                 GFP_KERNEL);
-> 
-> For some reason this devm_kzalloc bombs for the vtpm proxy driver. 
-> The only reason I could come up with is that it's being called before
-> tpm_add_char_device() has been called.
+> Just to note on this that trousers *is* effectively an 0666 kernel
+> device: all tcsd does is run with root privileges on the real /dev/tpm0
+> and mediate the calls.  It doesn't seem to police them at all.
 
-No, it should be sufficient that chip->dev be initialized (which it is
-in tpm_chip_alloc()).  What's the error you're getting?
+That may be, but IHMO trousers is simply not relevant. Real systems do
+not seem to use trousers. I don't use it. Google doesn't use it. You
+report it is crashy.
 
-It does look like the intention was to have non-devm with
-tpm_chip_alloc() and devm with tpmm_chip_alloc(), but devm_kzalloc
-should just work regardless because it's tied to the device model.
+To me it just doesn't represent a reasonable way to use the TPM
+hardware.
 
-James
+> For localities, assuming they can have real meaning in terms of the
+> protection model, I think one device per locality is better than an
+> ioctl because device policy is settable in underspace via the UNIX ACL
+> and hence locality policy is too.
 
+Yes.
 
+> I also think the command filter actually needs more thought.  Right at
+> the moment, if we go with the current proposals, the kernel will create
+> two devices: /dev/tpm<n> and /dev/tpms<n>.  By default they'll both be
+> root owned and 0600, so the current patch adequately protects the TPM.
+
+Yes, but, considering the goals here I'd rather see the default kernel
+permissions for tpms be 0666 ....
+
+You are doing all this work to get the user space side in shape, I'd
+like to see matching kernel support. To me that means out-of-the-box
+a user can just use your plugins, the plugins will access /dev/tmps
+and everything will work fine for RSA key storage.
+
+No messing with udev, no opt-in to TPM usage, no daemon to install,
+no chmod on a dev node. It Just Works.
+
+> Now if we look at use cases, for my laptop, where I'm the only user, I
+> want unrestricted access  to the TPM.  I can achieve that by making
+> /dev/tpms0 0666 (or changing its ownership to me).
+
+This usecase is already handled by making /dev/tmp0 accessible to the
+user. Keeping the 'enable RM' ioctl makes that a little wonky but
+entirely workable..
+
+> Jason's use case is devices running non-root apps that need restricted
+> TPM access.  For them, a single filter on /dev/tpms0 might work,
+> although there might be unrestricted apps needing a broader range of
+> tpm access (perhaps not all running as root?)
+
+Yes, I have a range of usage restrictions.
+
+As an example: My systems support key migration, so I want to make it
+very hard for an attacker to use the migration machinery to steal an
+RSA key. The user controls the migration password, I hope it is
+strong, but even so the system is currently desgined so that only a
+ssh user can even issue migration commands to the tpm. Someone hacking
+a network daemon simply cannot.
+
+This is the sort of defence in depth I think is imporant in a security
+system like this.
+
+> For the cloud use case, we're going to have a variety of applications
+> each with a variety of restrictions (for instance, the orchestration
+> system is definitely going to need PCR extensions if it's doing
+> attestations, but the guests might not want this) etc.
+
+To me a design for how the PCRs actually need to work is what is
+missing here. I only minimially understand this use case...
+
+And it seems like a big leap that orchestration software *needs*
+unprivileged TPM access.
+
+> I think all this points to multiple potential users each with their own
+> filter, so I think the actual architecture for the filter is an ioctl
+> which adds a new filtered device connected to the RM which may be
+> executed many times.
+
+Maybe, but that also seems like over kill.. It entirely depends on
+what the PCR use model actually is.
+
+Here is an alternative starting idea:
+
+- Introduce /dev/tpms a single cdev node that can talk to all chips
+  and all localities.
+- By default it is 0666
+- By default it has a very strong filter allowing only key load,
+  some key ops and any thing else we can identify as unambiguously safe.
+- It has a root-only ioctl that can change the filter (op, chip)
+- It has a root-only ioctl that can change the locality
+- Keep the enable-RM ioctl on /dev/tmpX, except that enable-RM
+  would switch the /dev/tpm0 FD to only use the above uAPI and
+  set an all-permissive filter.
+
+The followup would be a TPM namespace design that meets the needs of
+people working on containers and related. We already know we need this
+today for IMA in containers and vtpm isolation.
+
+TPM namespaces would basically control the filtering options on
+/dev/tmps and set the default TPM. So one could run orchestration
+software unprivileged inside a TPM namespace with greater access.
+
+This should be enough stuff for people to explore different security
+models in user space.
+
+The root-only ioctls and /dev/tpm0 are enough to let user space create
+FDs with whatever properties are needed and pass them to unprivileged,
+eg via fd passing or via open-as-root/drop privs techniques.
+
+The default configuration is enough to enable the RSA key model that
+we actually do understand well and almost have code for :) I think
+this is very important..
+
+We don't introduce any new security risks we don't understand.
+
+Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
