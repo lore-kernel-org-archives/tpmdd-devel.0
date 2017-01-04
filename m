@@ -1,23 +1,14 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+From: "Kenneth Goldman" <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
 Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
-Date: Wed, 4 Jan 2017 11:31:25 -0700
-Message-ID: <20170104183125.GC783@obsidianresearch.com>
-References: <1483374980.2458.13.camel@HansenPartnership.com>
-	<20170102193320.trawto65nkjccbao@intel.com>
-	<1483393248.2458.32.camel@HansenPartnership.com>
-	<20170103135121.4kh3jld5gaq3ptj4@intel.com>
-	<1483461370.2464.19.camel@HansenPartnership.com>
-	<20170103214702.GC29656@obsidianresearch.com>
-	<1483483198.2464.44.camel@HansenPartnership.com>
-	<20170104001732.GB32185@obsidianresearch.com>
-	<20170104125045.7lorpe55drnrqce5@intel.com>
-	<1483541583.2561.20.camel@HansenPartnership.com>
+Date: Wed, 4 Jan 2017 13:37:27 -0500
+Message-ID: <OFAC076931.B5EBB915-ON8525809E.00656B6A-8525809E.00664EE7@notes.na.collabserv.com>
+References: Ken Goldman <kgoldman@us.ibm.com> "Re: [tpmdd-devel] [PATCH RFC
+	0/4] RFC: in-kernel resource manager" (Jan  3,  5:21pm)
+	<201701041612.v04GCfPK031525@wind.enjellic.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: multipart/mixed; boundary="===============4634870599216486367=="
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1483541583.2561.20.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+In-Reply-To: <201701041612.v04GCfPK031525-DHO+NtfOqB5PEDpkEIzg7wC/G2K4zDHf@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -26,130 +17,108 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Andy Lutomirski <luto-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jan 04, 2017 at 06:53:03AM -0800, James Bottomley wrote:
 
-> > > But this is not trousers, this is an in-kernel 0666 char dev that 
-> > > will be active on basically every Linux system with a TPM. I think 
-> > > we have a duty to be very conservative here.
-> 
-> Just to note on this that trousers *is* effectively an 0666 kernel
-> device: all tcsd does is run with root privileges on the real /dev/tpm0
-> and mediate the calls.  It doesn't seem to police them at all.
+--===============4634870599216486367==
+Content-Type: multipart/alternative;
+	boundary="=_alternative 00664E538525809E_="
 
-That may be, but IHMO trousers is simply not relevant. Real systems do
-not seem to use trousers. I don't use it. Google doesn't use it. You
-report it is crashy.
 
-To me it just doesn't represent a reasonable way to use the TPM
-hardware.
+--=_alternative 00664E538525809E_=
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset="US-ASCII"
 
-> For localities, assuming they can have real meaning in terms of the
-> protection model, I think one device per locality is better than an
-> ioctl because device policy is settable in underspace via the UNIX ACL
-> and hence locality policy is too.
+"Dr. Greg Wettstein" <greg-DHO+NtfOqB5PEDpkEIzg7wC/G2K4zDHf@public.gmane.org> wrote on 01/04/2017 11:12:41 =
 
-Yes.
+AM:
 
-> I also think the command filter actually needs more thought.  Right at
-> the moment, if we go with the current proposals, the kernel will create
-> two devices: /dev/tpm<n> and /dev/tpms<n>.  By default they'll both be
-> root owned and 0600, so the current patch adequately protects the TPM.
+> The kernel needs a resource manager.  Everyone needs to think VERY
+> hard and VERY, VERY carefully about what gets put into the kernel.  In
+> making a decision, put the ABSOLUTE smallest amount of code into the
+> kernel ...
 
-Yes, but, considering the goals here I'd rather see the default kernel
-permissions for tpms be 0666 ....
+If you're a TCG member, I invite you to join the TSS WG.  I'd like
+an ally for simplicity.
+=20
+> Repeat incessantly to oneself, TPM1.2 and TPM2 are only similar by
+> virtue of sharing three ASCII characters.
 
-You are doing all this work to get the user space side in shape, I'd
-like to see matching kernel support. To me that means out-of-the-box
-a user can just use your plugins, the plugins will access /dev/tmps
-and everything will work fine for RSA key storage.
+:-) I have to remember that one!
 
-No messing with udev, no opt-in to TPM usage, no daemon to install,
-no chmod on a dev node. It Just Works.
+But, to be accurate, the hardware interface is nearly compatible, and
+the high level concepts (key hierarchy, authorization, PCRs, BV space)=20
+are similar.  The API and implementation are new.
 
-> Now if we look at use cases, for my laptop, where I'm the only user, I
-> want unrestricted access  to the TPM.  I can achieve that by making
-> /dev/tpms0 0666 (or changing its ownership to me).
+> DO NOT rush this process.  If we do not get this right we will
+> ultimately end up trying to shove something which is conceptually
+> worse then tss/tscd into the kernel.
 
-This usecase is already handled by making /dev/tmp0 accessible to the
-user. Keeping the 'enable RM' ioctl makes that a little wonky but
-entirely workable..
+The (only?) reason to put any of this in the kernel is that the kernel
+also needs access to the TPM.=20
 
-> Jason's use case is devices running non-root apps that need restricted
-> TPM access.  For them, a single filter on /dev/tpms0 might work,
-> although there might be unrestricted apps needing a broader range of
-> tpm access (perhaps not all running as root?)
+> Pay homage to Ken, his TSS2 and TPM2 simulator work are beyond
+> excellent...
 
-Yes, I have a range of usage restrictions.
+Thank you.
 
-As an example: My systems support key migration, so I want to make it
-very hard for an attacker to use the migration machinery to steal an
-RSA key. The user controls the migration password, I hope it is
-strong, but even so the system is currently desgined so that only a
-ssh user can even issue migration commands to the tpm. Someone hacking
-a network daemon simply cannot.
 
-This is the sort of defence in depth I think is imporant in a security
-system like this.
 
-> For the cloud use case, we're going to have a variety of applications
-> each with a variety of restrictions (for instance, the orchestration
-> system is definitely going to need PCR extensions if it's doing
-> attestations, but the guests might not want this) etc.
+--=_alternative 00664E538525809E_=
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset="US-ASCII"
 
-To me a design for how the PCRs actually need to work is what is
-missing here. I only minimially understand this use case...
+<tt><font size=3D2>&quot;Dr. Greg Wettstein&quot; &lt;greg-DHO+NtfOqB5PEDpkEIzg7w@public.gmane.org=
+m&gt;
+wrote on 01/04/2017 11:12:41 AM:<br><br>&gt; The kernel needs a resource ma=
+nager. &nbsp;Everyone needs to think
+VERY<br>&gt; hard and VERY, VERY carefully about what gets put into the ker=
+nel.
+&nbsp;In<br>&gt; making a decision, put the ABSOLUTE smallest amount of cod=
+e into the<br>&gt; kernel ...</font></tt><br><br><tt><font size=3D2>If you'=
+re a TCG member, I invite you to join the TSS
+WG. &nbsp;I'd like</font></tt><br><tt><font size=3D2>an ally for simplicity=
+.</font></tt><br><tt><font size=3D2>&nbsp;<br>&gt; Repeat incessantly to on=
+eself, TPM1.2 and TPM2 are only similar by<br>&gt; virtue of sharing three =
+ASCII characters.</font></tt><br><br><tt><font size=3D2>:-) I have to remem=
+ber that one!</font></tt><br><br><tt><font size=3D2>But, to be accurate, th=
+e hardware interface is nearly
+compatible, and</font></tt><br><tt><font size=3D2>the high level concepts (=
+key hierarchy, authorization,
+PCRs, BV space) </font></tt><br><tt><font size=3D2>are similar. &nbsp;The A=
+PI and implementation are
+new.</font></tt><br><tt><font size=3D2><br>&gt; DO NOT rush this process. &=
+nbsp;If we do not get this right we will<br>&gt; ultimately end up trying t=
+o shove something which is conceptually<br>&gt; worse then tss/tscd into th=
+e kernel.</font></tt><br><br><tt><font size=3D2>The (only?) reason to put a=
+ny of this in the kernel
+is that the kernel</font></tt><br><tt><font size=3D2>also needs access to t=
+he TPM. </font></tt><br><tt><font size=3D2><br>&gt; Pay homage to Ken, his =
+TSS2 and TPM2 simulator work are beyond<br>&gt; excellent...</font></tt><br=
+><br><tt><font size=3D2>Thank you.<br></font></tt><BR>
+--=_alternative 00664E538525809E_=--
 
-And it seems like a big leap that orchestration software *needs*
-unprivileged TPM access.
 
-> I think all this points to multiple potential users each with their own
-> filter, so I think the actual architecture for the filter is an ioctl
-> which adds a new filtered device connected to the RM which may be
-> executed many times.
 
-Maybe, but that also seems like over kill.. It entirely depends on
-what the PCR use model actually is.
-
-Here is an alternative starting idea:
-
-- Introduce /dev/tpms a single cdev node that can talk to all chips
-  and all localities.
-- By default it is 0666
-- By default it has a very strong filter allowing only key load,
-  some key ops and any thing else we can identify as unambiguously safe.
-- It has a root-only ioctl that can change the filter (op, chip)
-- It has a root-only ioctl that can change the locality
-- Keep the enable-RM ioctl on /dev/tmpX, except that enable-RM
-  would switch the /dev/tpm0 FD to only use the above uAPI and
-  set an all-permissive filter.
-
-The followup would be a TPM namespace design that meets the needs of
-people working on containers and related. We already know we need this
-today for IMA in containers and vtpm isolation.
-
-TPM namespaces would basically control the filtering options on
-/dev/tmps and set the default TPM. So one could run orchestration
-software unprivileged inside a TPM namespace with greater access.
-
-This should be enough stuff for people to explore different security
-models in user space.
-
-The root-only ioctls and /dev/tpm0 are enough to let user space create
-FDs with whatever properties are needed and pass them to unprivileged,
-eg via fd passing or via open-as-root/drop privs techniques.
-
-The default configuration is enough to enable the RSA key model that
-we actually do understand well and almost have code for :) I think
-this is very important..
-
-We don't introduce any new security risks we don't understand.
-
-Jason
+--===============4634870599216486367==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
 engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+--===============4634870599216486367==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
+
+_______________________________________________
+tpmdd-devel mailing list
+tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+
+--===============4634870599216486367==--
