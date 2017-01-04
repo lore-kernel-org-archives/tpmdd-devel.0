@@ -1,62 +1,85 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH 1/1] add TPM2 version of
- create_tpm2_key and libtpm2.so engine
-Date: Wed, 4 Jan 2017 14:25:15 +0200
-Message-ID: <20170104122515.edspvhd464aluriz@intel.com>
-References: <1483224485.2518.20.camel@HansenPartnership.com>
-	<1483224763.2518.24.camel@HansenPartnership.com>
-	<20170103231126.GE29656@obsidianresearch.com>
-	<1483485776.2464.50.camel@HansenPartnership.com>
-	<20170103234053.GA32185@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH RFC 1/4] tpm: migrate struct tpm_buf to
+	struct tpm_chip
+Date: Wed, 4 Jan 2017 14:29:58 +0200
+Message-ID: <20170104122958.nlbprc6uk37xrcju@intel.com>
+References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
+	<20170102132213.22880-2-jarkko.sakkinen@linux.intel.com>
+	<20170102210101.GA5544@obsidianresearch.com>
+	<20170103005737.t2qrc32xzdnvqy4b@intel.com>
+	<20170103191328.GB26706@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <trousers-tech-bounces@lists.sourceforge.net>
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170103234053.GA32185@obsidianresearch.com>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/trousers-tech>,
-	<mailto:trousers-tech-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=trousers-tech>
-List-Post: <mailto:trousers-tech@lists.sourceforge.net>
-List-Help: <mailto:trousers-tech-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/trousers-tech>,
-	<mailto:trousers-tech-request@lists.sourceforge.net?subject=subscribe>
-Errors-To: trousers-tech-bounces@lists.sourceforge.net
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: James Bottomley <James.Bottomley@HansenPartnership.com>, trousers-tech@lists.sourceforge.net, tpmdd-devel@lists.sourceforge.net, ibmtpm20tss-users@lists.sourceforge.net, openssl-dev@openssl.org
+In-Reply-To: <20170103191328.GB26706-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jan 03, 2017 at 04:40:53PM -0700, Jason Gunthorpe wrote:
-> On Tue, Jan 03, 2017 at 03:22:56PM -0800, James Bottomley wrote:
-> > > I think it is very important to natively support the sign-only key
-> > > usage restriction. TPM1.2 goes so far as to declare keys that can be
-> > > used for arbitary decrypt as 'legacy do not use'.
+On Tue, Jan 03, 2017 at 12:13:28PM -0700, Jason Gunthorpe wrote:
+> On Tue, Jan 03, 2017 at 02:57:37AM +0200, Jarkko Sakkinen wrote:
+> > On Mon, Jan 02, 2017 at 02:01:01PM -0700, Jason Gunthorpe wrote:
+> > > On Mon, Jan 02, 2017 at 03:22:07PM +0200, Jarkko Sakkinen wrote:
+> > > > Since there is only one thread using TPM chip at a time to transmit data
+> > > > we can migrate struct tpm_buf to struct tpm_chip. This makes the use of
+> > > > it more fail safe as the buffer is allocated from heap when the device
+> > > > is created and not for every transaction.
 > > > 
-> > > IMHO the best way to do this is to look at the sign operation openssl
-> > > is trying to do and see if it can be sent down the sign path to the
-> > > TPM. Only if that fails should the decrypt path be used.
+> > > Eh? What? I don't think that is the case..
+> > > 
+> > > We don't serialize until we hit tramsit_cmd at which point the buffer
+> > > is already being used and cannot be shared between threads.
 > > 
-> > The problem is the MD5-SHA1 signature of SSL and TLS < v1.2.   This
-> > cannot be performed by the TPM because it's not listed as a supported
-> > signature, so the choice is either to deprecate these protocols (not
-> > really viable since they're in wide use in old websites) or use decrypt
-> > to do the signatures.  Once we get to the point of having to use
-> > decrypt, there's no reason to preserve the signing distinction since we
-> > never know when a key will be used to decrypt or sign.
+> > There is a regression in the patch. All functions that use 'tr_buf'
+> > should take tpm_mutex first and use TPM_TRANSMIT_UNLOCKED. There's
+> > also a similar regression in TPM space patch that I have to correct.
 > 
-> I'm not disputing your analysis, just remarking that it seem very
-> undesirable to ban *all* sign-only keys just to support a single
-> legacy SSL configuration.
+> No, you can't steal TPM_TRANSMIT_UNLOCKED and tpm_mutex for this, that
+> is to allow a chain of commands to execute atomicly, so a new lock is
+> needed just for the tr_buf.
+> 
+> > > Why would the resource manager need a single global tpm buffer? That
+> > > seems like a big regression from where we have been going. I don't
+> > > think this is a good idea to go down this road.
+> > 
+> > What? 'tr_buf' is not specifically for resource manager. This commit
+> > makes creating TPM commands more fail-safe because there is no need
+> > to allocate page for every transmit.
+> 
+> That doesn't seem all that important, honestly. There kernel does not
+> fail single page allocations without a lot of duress.
+> 
+> > For RM decorations this is really important because I rather would have
+> > them fail as rarely as possible. If this would become a scalability
+> > issue then the granularity could be reconsidered.
+> 
+> Why? The RM design already seems to have the prepare/commit/abort
+> kind of model so it can already fail. What does it matter if the
+> caller can fail before getting that far?
 
-Could this configuration just marked as unsupported, or not?
+Yeah, I just noticed it :-) That kind of formed by accident when I
+experimented with various models of rolling back in an error situation.
 
-> This is why I suggest looking at the sign being requested and using
-> the sign path if it is *possible*, otherwise requiring a key with the
-> broader key usage.
-> 
-> Not everything is SSL - openssh uses these routines too and it should
-> be able to use the sign only key type without a limitation?
-> 
+> It seems like alot of dangerous churn to introduce a new locking model
+> without a really good reason...
+
+OK, thanks for the feedback. I understad your arguments but as this
+was an RFC patch set I don't want to go more details like these but
+I take your advice seriously.
+
+I'll start preparing the first non-RFC version. I'm happy that the beef
+(i.e. the stuff in tpm2-space.c) has been well accepted!
+
 > Jason
 
 /Jarkko
