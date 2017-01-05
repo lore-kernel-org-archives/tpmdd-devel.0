@@ -1,22 +1,12 @@
-From: "Kenneth Goldman" <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [Ibmtpm20tss-users] add TPM2 version of
- create_tpm2_key and libtpm2.so engine -> Hash algoritms
-Date: Wed, 4 Jan 2017 15:58:33 -0500
-Message-ID: <OF68510AAF.A99491D3-ON0025809E.0072EF54-8525809E.007339EC@notes.na.collabserv.com>
-References: <1483224485.2518.20.camel@HansenPartnership.com>
-	<1483224763.2518.24.camel@HansenPartnership.com>
-	<20170103231126.GE29656@obsidianresearch.com>
-	<1483485776.2464.50.camel@HansenPartnership.com>
-	<20170103234053.GA32185@obsidianresearch.com>
-	<1483489026.2464.76.camel@HansenPartnership.com>
-	<20170104004217.GA390@obsidianresearch.com>
-	<OF69E51003.6475FD35-ON8525809E.00669529-8525809E.0067575C@notes.na.collabserv.com>
-	<20170104185434.GA12614@obsidianresearch.com>
-	<1483559121.2561.67.camel@linux.vnet.ibm.com>
+From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH] tpm: check size of response before accessing
+	data
+Date: Thu,  5 Jan 2017 07:11:24 -0500
+Message-ID: <1483618284-3470-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: multipart/mixed; boundary="===============6321481438964183880=="
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1483559121.2561.67.camel-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -25,67 +15,47 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, ibmtpm20tss-users-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, trousers-tech-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+Check the size of the response before accesing data in
+the response packet. This is to avoid accessing data beyond
+the end of the response.
 
---===============6321481438964183880==
-Content-Type: multipart/alternative;
-	boundary="=_alternative 007339598525809E_="
+Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+---
+ drivers/char/tpm/tpm2-cmd.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
 
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index abaa355..98e591b 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -394,6 +394,10 @@ int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max)
+ 	(sizeof(struct tpm_input_header) + \
+ 	 sizeof(struct tpm2_get_tpm_pt_in))
+ 
++#define TPM2_GET_TPM_PT_OUT_SIZE \
++	(sizeof(struct tpm_output_header) + \
++	 sizeof(struct tpm2_get_tpm_pt_out))
++
+ static const struct tpm_input_header tpm2_get_tpm_pt_header = {
+ 	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
+ 	.length = cpu_to_be32(TPM2_GET_TPM_PT_IN_SIZE),
+@@ -713,6 +717,8 @@ ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,  u32 *value,
+ 	cmd.params.get_tpm_pt_in.property_cnt = cpu_to_be32(1);
+ 
+ 	rc = tpm_transmit_cmd(chip, NULL, &cmd, sizeof(cmd), 0, desc);
++	if (be32_to_cpu(cmd.header.out.length) < TPM2_GET_TPM_PT_OUT_SIZE)
++		return -EFAULT;
+ 	if (!rc)
+ 		*value = be32_to_cpu(cmd.params.get_tpm_pt_out.value);
+ 
+-- 
+2.4.3
 
---=_alternative 007339598525809E_=
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/plain; charset="US-ASCII"
-
-James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org> wrote on 01/04/2017 02:45:21 PM:
-
-> > James is proposing using the Decrypt op to do this job.
->=20
-> I believe the TCG has decided this is the only way to sign arbitrary
-> data.
-
-My suspicion is that this was an omission, not a decision.  In fact,
-Part 1 explicitly describes a caller provided OID.  It just wasn't
-implemented - yet.
-
-
-
---=_alternative 007339598525809E_=
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/html; charset="US-ASCII"
-
-<tt><font size=3D2>James Bottomley &lt;jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org&gt; wrote
-on 01/04/2017 02:45:21 PM:<br><br>&gt; &gt; James is proposing using the De=
-crypt op to do this job.<br>&gt; <br>&gt; I believe the TCG has decided thi=
-s is the only way to sign arbitrary<br>&gt; data.<br></font></tt><br><tt><f=
-ont size=3D2>My suspicion is that this was an omission, not a decision.
-&nbsp;In fact,</font></tt><br><tt><font size=3D2>Part 1 explicitly describe=
-s a caller provided OID.
-&nbsp;It just wasn't</font></tt><br><tt><font size=3D2>implemented - yet.</=
-font></tt><br><BR>
---=_alternative 007339598525809E_=--
-
-
-
---===============6321481438964183880==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
 engaging tech sites, SlashDot.org! http://sdm.link/slashdot
---===============6321481438964183880==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-_______________________________________________
-tpmdd-devel mailing list
-tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-
---===============6321481438964183880==--
