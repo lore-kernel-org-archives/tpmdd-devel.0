@@ -1,62 +1,58 @@
-From: James Bottomley <jejb@linux.vnet.ibm.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC 0/4] RFC: in-kernel resource manager
-Date: Thu, 05 Jan 2017 10:33:43 -0800
-Message-ID: <1483641223.2515.62.camel@linux.vnet.ibm.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
+Date: Thu, 5 Jan 2017 12:20:25 -0700
+Message-ID: <20170105192025.GB12587@obsidianresearch.com>
 References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
-         <9F48E1A823B03B4790B7E6E69430724DC7C149F6@exch2010c.sit.fraunhofer.de>
-         <20170105172726.GA11680@obsidianresearch.com>
+	<9F48E1A823B03B4790B7E6E69430724DC7C149F6@exch2010c.sit.fraunhofer.de>
+	<20170105172726.GA11680@obsidianresearch.com>
+	<1483641223.2515.62.camel@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170105172726.GA11680@obsidianresearch.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "Fuchs, Andreas" <andreas.fuchs@sit.fraunhofer.de>
-Cc: "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <1483641223.2515.62.camel-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, 2017-01-05 at 10:27 -0700, Jason Gunthorpe wrote:
-> On Thu, Jan 05, 2017 at 03:52:02PM +0000, Fuchs, Andreas wrote:
-[...]
-> > - Session Limits (here it gets ugly):
+On Thu, Jan 05, 2017 at 10:33:43AM -0800, James Bottomley wrote:
+
+> > A combo ioctl that could setup the session, issue an operation in it
+> > and then delete the session, for instance.
 > 
-> > Even thought the TPM supports the same swapping-scheme for sessions
-> > as it does for transient objects, it only allows for a limited
-> > number of session to be opened (64 in case of PC-Client), called
-> > active sessions.  This means that a single process can still DoS 
-> > the TPM if it allocates 64 sessions, or 64 processes can DoS the
-> > TPM if
-> 
-> Well, if we have an unpriv fd then it should not be able to DOS the
-> system - that would suggest either that FD cannot use sessions or we
-> need some kernel solution to guarentee the DOS is not possible.
+> This would work for encryption or HMAC sessions, but probably not for
+> policy sessions, because they can have an arbitrarily large command
+> sequence to construct them.
 
-The sessions issue is a bit of a monster nightmare.  The basic problem
-is this issue that they're not fully virtualizable: the TPM retains
-knowledge that a session existed on this handle even if the session
-context is offloaded. It's this space for "session exists" that the TPM
-has a limited space for.
+I'd rather give up features (eg policy sessions, if necessary) for the
+unpriv fd than give up security of the unpriv fd.
 
-> A combo ioctl that could setup the session, issue an operation in it
-> and then delete the session, for instance.
+We always have the out that special stuff can go down the priv path.
 
-This would work for encryption or HMAC sessions, but probably not for
-policy sessions, because they can have an arbitrarily large command
-sequence to construct them.
+> The other issue we're likely to run into if we do it this way is
+> delayed error reporting.
 
-The other issue we're likely to run into if we do it this way is
-delayed error reporting.
+Not sure I follow.
 
-How about a more traditional approach which would be leasing (basically
-what we use for NFS).  Any application opening a session would have a
-certain time (probably in ms) to complete it or we'd close the handle
-and flush it.  We'd store the jiffies time the session was first
-requested and loop over all the extent sessions to find ones which get
-too old.  We know there can only be TPM_PT_ACTIVE_SESSIONS_MAX of
-these, so it's a cheap operation. It's only a small extra bit of logic
-to take care of the GAP problem as well, I think.  If we're full when
-you try and start a session, we block you until a handle becomes free
-and the max lease time guarantees when this is.
+> How about a more traditional approach which would be leasing (basically
+> what we use for NFS).  Any application opening a session would have
 
-James
+Doesn't this just change the DOS vector? Now the attacker has to delay
+execution of TPM commands long enough to force session leases to time
+out. That isn't too hard to do, asking the TPM to make a RSA key can
+take seconds, for instance.
 
+Jason
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most 
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
