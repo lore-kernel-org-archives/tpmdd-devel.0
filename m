@@ -1,44 +1,82 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm: check size of response before accessing data
-Date: Tue, 10 Jan 2017 00:59:54 +0200
-Message-ID: <20170109225954.zcd3ep4ul6o7x3ly@intel.com>
-References: <1483618284-3470-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <20170109160538.gwvksj253wl2v5oy@intel.com>
- <be58d656-28f4-5510-d9e7-cfb8333a919c@linux.vnet.ibm.com>
+Subject: Re: [PATCH] tpm: Do not print an error message when doing TPM auto
+ startup
+Date: Tue, 10 Jan 2017 01:08:35 +0200
+Message-ID: <20170109230835.u2jyiv4tntgini53@intel.com>
+References: <20161121183109.GA18088@obsidianresearch.com>
+ <20161121204211.iuwi2embugn4f74v@intel.com>
+ <20170106212551.GA23815@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <be58d656-28f4-5510-d9e7-cfb8333a919c@linux.vnet.ibm.com>
+In-Reply-To: <20170106212551.GA23815@obsidianresearch.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Ed Swierk <eswierk@skyportsystems.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jan 09, 2017 at 01:09:31PM -0500, Stefan Berger wrote:
-> On 01/09/2017 11:05 AM, Jarkko Sakkinen wrote:
-> > On Thu, Jan 05, 2017 at 07:11:24AM -0500, Stefan Berger wrote:
-> > > Check the size of the response before accesing data in
-> > > the response packet. This is to avoid accessing data beyond
-> > > the end of the response.
+On Fri, Jan 06, 2017 at 02:25:51PM -0700, Jason Gunthorpe wrote:
+> On Mon, Nov 21, 2016 at 10:42:11PM +0200, Jarkko Sakkinen wrote:
+> > On Mon, Nov 21, 2016 at 11:31:09AM -0700, Jason Gunthorpe wrote:
+> > > This is a regression when this code was reworked and made the error
+> > > print unconditional. The original code deliberately suppressed printing
+> > > of the first error message so it could quietly sense
+> > > TPM_ERR_INVALID_POSTINIT.
 > > > 
-> > > Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
-> > How on earth this could happen if we request only one property?
+> > > Fixes: a502feb67b47 ("tpm: Clean up reading of timeout and duration capabilities")
+> > > Signed-off-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+> > 
+> > Thanks for spotting this out. I'll apply this tomorrow (i.e. not
+> > tonight) as it does not endager stability in anyway as I test the
+> > other fixes.
+> > 
+> > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 > 
-> My test program vtpmctrl ( https://github.com/stefanberger/linux-vtpm-tests
-> ) didn't feed the kernel a proper response to a TPM command and that's why
-> this code blew up. We do have a very basic check in the driver and otherwise
-> assume that the TPM is a trusted device responding with an expected
-> response.
+> Hey Jarkko, I couldn't find this patch in your trees and it didn't
+> make 4.10-rc1, can you please pick it up?
+> 
+> https://patchwork.kernel.org/patch/9439931/
 
-Hmm.... I guess I could add this check but I'll have to probably
-do a similar check at least in one other place in this patch set
-where I grab the metadata for commands.
-
-I guess similar issues will arise as the virtual TPMs get more
-common. For now I think a good guideline is
-
-1. For new code check that validation for message size is in place.
-2. Fix the old code as you bump into issus.
+My bad. It's applied now. Can you check that everything looks good
+and I'll ask James to take the fixes that I have to 4.10?
 
 /Jarkko
+
+> 
+> > /Jarkko
+> > 
+> > >  drivers/char/tpm/tpm-interface.c | 9 ++++++---
+> > >  1 file changed, 6 insertions(+), 3 deletions(-)
+> > > 
+> > > diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> > > index a2688ac2b48f3c..c90f4f6d7871be 100644
+> > > +++ b/drivers/char/tpm/tpm-interface.c
+> > > @@ -523,8 +523,7 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+> > >  		return 0;
+> > >  	}
+> > >  
+> > > -	rc = tpm_getcap(chip, TPM_CAP_PROP_TIS_TIMEOUT, &cap,
+> > > -			"attempting to determine the timeouts");
+> > > +	rc = tpm_getcap(chip, TPM_CAP_PROP_TIS_TIMEOUT, &cap, NULL);
+> > >  	if (rc == TPM_ERR_INVALID_POSTINIT) {
+> > >  		/* The TPM is not started, we are the first to talk to it.
+> > >  		   Execute a startup command. */
+> > > @@ -535,8 +534,12 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+> > >  		rc = tpm_getcap(chip, TPM_CAP_PROP_TIS_TIMEOUT, &cap,
+> > >  				"attempting to determine the timeouts");
+> > >  	}
+> > > -	if (rc)
+> > > +	if (rc) {
+> > > +		dev_err(&chip->dev,
+> > > +			"A TPM error (%zd) occurred attempting to determine the timeouts\n",
+> > > +			rc);
+> > >  		return rc;
+> > > +	}
+> > >  
+> > >  	old_timeout[0] = be32_to_cpu(cap.timeout.a);
+> > >  	old_timeout[1] = be32_to_cpu(cap.timeout.b);
+> 
+> -- 
+> Jason Gunthorpe <jgunthorpe@obsidianresearch.com>        (780)4406067x832
+> Chief Technology Officer, Obsidian Research Corp         Edmonton, Canada
