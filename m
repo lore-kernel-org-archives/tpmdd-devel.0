@@ -1,97 +1,171 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [RESEND][RFC] tpm_tis: broken on TPMs with a static burst count
-Date: Tue, 10 Jan 2017 00:09:03 +0200
-Message-ID: <20170109220903.vr36mux3nr2bp6z5@intel.com>
-References: <77221b3a-40b3-f5db-e821-10e258f869dc@maciej.szmigiero.name>
+Subject: Re: [tpmdd-devel] [PATCH RFC 4/4] tpm: add the infrastructure for
+ TPM    space for TPM 2.0
+Date: Tue, 10 Jan 2017 00:11:16 +0200
+Message-ID: <20170109221116.qe33dkfdhpx7dlck@intel.com>
+References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
+ <20170102132213.22880-5-jarkko.sakkinen@linux.intel.com>
+ <OF9C3EE9AE.65978870-ON0025809E.0061E7AF-8525809E.0061FFDA@notes.na.collabserv.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <77221b3a-40b3-f5db-e821-10e258f869dc@maciej.szmigiero.name>
-Sender: linux-kernel-owner@vger.kernel.org
-To: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel <linux-kernel@vger.kernel.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Christophe Ricard <christophe.ricard@gmail.com>
+In-Reply-To: <OF9C3EE9AE.65978870-ON0025809E.0061E7AF-8525809E.0061FFDA@notes.na.collabserv.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Stefan Berger <stefanb@us.ibm.com>
+Cc: open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jan 04, 2017 at 06:47:52PM +0100, Maciej S. Szmigiero wrote:
-> (Resending as no reply received, this time with CCs to TPM maintainers and
-> author of the original commit).
+On Wed, Jan 04, 2017 at 12:50:21PM -0500, Stefan Berger wrote:
+>    Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> wrote on 01/02/2017
+>    08:22:10 AM:
 > 
-> Hi all,
+>    >
+>    > Added a ioctl for creating a TPM space. The space is isolated from the
+>    > other users of the TPM. Only a process holding the file with the handle
+>    > can access the objects and only objects that are created through that
+>    > file handle can be accessed.
+>    >
+>    > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+>    > ---
 > 
-> Commit 1107d065fdf1 (tpm_tis: Introduce intermediate layer for TPM access)
-> broke TPM support on ThinkPad X61S (and likely also on other machines which
-> use TPMs with a static burst count).
+>    > diff --git a/drivers/char/tpm/tpm-dev.c b/drivers/char/tpm/tpm-dev.c
+>    > index 912ad30..139638b 100644
+>    > --- a/drivers/char/tpm/tpm-dev.c
+>    > +++ b/drivers/char/tpm/tpm-dev.c
+>    > @@ -19,6 +19,7 @@
+>    >   */
+>    >  #include <linux/slab.h>
+>    >  #include <linux/uaccess.h>
+>    > +#include <uapi/linux/tpm.h>
+>    >  #include "tpm.h"
+>    >  
+>    >  struct file_priv {
+>    > @@ -32,6 +33,8 @@ struct file_priv {
+>    >     struct work_struct work;
+>    >  
+>    >     u8 data_buffer[TPM_BUFSIZE];
+>    > +   struct tpm_space space;
+>    > +   bool has_space;
+>    >  };
+>    >  
+>    >  static void user_reader_timeout(unsigned long ptr)
+>    > @@ -115,6 +118,7 @@ static ssize_t tpm_write(struct file *file,
+>    > const char __user *buf,
+>    >            size_t size, loff_t *off)
+>    >  {
+>    >     struct file_priv *priv = file->private_data;
+>    > +   struct tpm_space *space = NULL;
+>    >     size_t in_size = size;
+>    >     ssize_t out_size;
+>    >  
+>    > @@ -130,6 +134,9 @@ static ssize_t tpm_write(struct file *file,
+>    > const char __user *buf,
+>    >  
+>    >     mutex_lock(&priv->buffer_mutex);
+>    >  
+>    > +   if (priv->has_space)
+>    > +      space = &priv->space;
+>    > +
+>    >     if (copy_from_user
+>    >         (priv->data_buffer, (void __user *) buf, in_size)) {
+>    >        mutex_unlock(&priv->buffer_mutex);
+>    > @@ -144,7 +151,7 @@ static ssize_t tpm_write(struct file *file,
+>    > const char __user *buf,
+>    >        mutex_unlock(&priv->buffer_mutex);
+>    >        return -EPIPE;
+>    >     }
+>    > -   out_size = tpm_transmit(priv->chip, priv->data_buffer,
+>    > +   out_size = tpm_transmit(priv->chip, space, priv->data_buffer,
+>    >              sizeof(priv->data_buffer), 0);
+>    >  
+>    >     tpm_put_ops(priv->chip);
+>    > @@ -162,6 +169,65 @@ static ssize_t tpm_write(struct file *file,
+>    > const char __user *buf,
+>    >     return in_size;
+>    >  }
+>    >  
+>    > +/**
+>    > + * tpm_ioc_new_space - handler for %SGX_IOC_NEW_SPACE ioctl
+>    > + *
+>    > + * Creates a new TPM space that can hold a set of transient
+>    > objects. The space
+>    > + * is isolated with virtual handles that are mapped into physical
+>    > handles by the
+>    > + * driver.
+>    > + */
+>    > +static long tpm_ioc_new_space(struct file *file, unsigned int ioctl,
+>    > +               unsigned long arg)
+>    > +{
+>    > +   struct file_priv *priv = file->private_data;
+>    > +   struct tpm_chip *chip = priv->chip;
+>    > +   int rc = 0;
+>    > +
+>    > +   if (!(chip->flags & TPM_CHIP_FLAG_TPM2))
+>    > +      return -EOPNOTSUPP;
+>    > +
+>    > +   mutex_lock(&priv->buffer_mutex);
+>    > +
+>    > +   if (priv->has_space) {
+>    > +      rc = -EBUSY;
+>    > +      goto out;
+>    > +   }
+>    > +
+>    > +   priv->space.context_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
+>    > +   if (!priv->space.context_buf) {
+>    > +      rc = -ENOMEM;
+>    > +      goto out;
+>    > +   }
+>    > +
+>    > +   /* The TPM device can be opened again as this file has been moved to
+>    a
+>    > +    * TPM handle space.
+>    > +    */
+>    > +   priv->has_space = true;
+>    > +   clear_bit(0, &chip->is_open);
+>    > +out:
+>    > +   mutex_unlock(&priv->buffer_mutex);
+>    > +   return rc;
+>    > +}
+>    > +
+>    > +static long tpm_ioctl(struct file *file, unsigned int ioctl,
+>    > +            unsigned long arg)
+>    > +{
+>    > +   switch (ioctl) {
+>    > +   case TPM_IOC_NEW_SPACE:
+>    > +      return tpm_ioc_new_space(file, ioctl, arg);
+>    > +   default:
+>    > +      return -ENOIOCTLCMD;
+>    > +   }
+>    > +}
+>    > +
+>    > +#ifdef CONFIG_COMPAT
+>    > +static long tpm_compat_ioctl(struct file *file, unsigned int ioctl,
+>    > +              unsigned long arg)
+>    > +{
+>    > +   return tpm_ioctl(file, ioctl, arg);
+>    > +}
+>    > +#endif
+>    > +
+>    >  /*
+>    >   * Called on file close
+>    >   */
+>    > @@ -169,6 +235,14 @@ static int tpm_release(struct inode *inode,
+>    > struct file *file)
+>    >  {
+>    >     struct file_priv *priv = file->private_data;
+>    >  
+>    > +   if (tpm_try_get_ops(priv->chip)) {
+>    > +      mutex_unlock(&priv->buffer_mutex);
+>    > +      return -EPIPE;
+>    > +   }
 > 
-> It looks like tpm_tis code before this commit had spun on TPM_STS_DATA_AVAIL |
-> TPM_STS_VALID status bits in the read case and TPM_STS_VALID in the write case
-> when it got a zero burst count.
-> 
-> I have attached a patch against current code (linux-tpmdd tree) that brings
-> back this old behavior.
-> With this patch the TPM works again on X61S.
-> However, somebody with more TPM experience should comment whether such behavior
-> was OK or the change brought by commit 1107d065fdf1 was intentional.
-> 
-> Maciej Szmigiero
+>    That mutex_unlock looks wrong.
 
-For me this commit makes perfect sense. Could you do the following things:
+Thanks.
 
-1. Clean up the description a little bit
-2. Add your Signed-off-by tag.
-3. Add "Cc: stable@vger.kernel.org" tag right after your signed-off-by.
-4. CC this linux-security-module@vger.kernel.org, stable@vger.kernel.org,
-   linux-kernel@vger.kernel.org.
-5. Run scripts/checkpatch.pl
-6. Re-send for review.
+This will be anyway gone with own device file.
 
-Thanks for fixing the issue. Keep up the good work!
+>       Stefan
 
 /Jarkko
-
-
-> 
-> diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-> index 7993678954a2..72d365db7c61 100644
-> --- a/drivers/char/tpm/tpm_tis_core.c
-> +++ b/drivers/char/tpm/tpm_tis_core.c
-> @@ -188,7 +188,9 @@ static int recv_data(struct tpm_chip *chip, u8 *buf, size_t count)
->  		if (rc < 0)
->  			return rc;
->  		burstcnt = get_burstcount(chip);
-> -		if (burstcnt < 0) {
-> +		if (burstcnt == -EBUSY)
-> +			continue;
-> +		else if (burstcnt < 0) {
->  			dev_err(&chip->dev, "Unable to read burstcount\n");
->  			return burstcnt;
->  		}
-> @@ -282,18 +284,20 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
->  
->  	while (count < len - 1) {
->  		burstcnt = get_burstcount(chip);
-> -		if (burstcnt < 0) {
-> +		if (burstcnt < 0 && burstcnt != -EBUSY) {
->  			dev_err(&chip->dev, "Unable to read burstcount\n");
->  			rc = burstcnt;
->  			goto out_err;
-> +		} else if (burstcnt > 0) {
-> +			burstcnt = min_t(int, burstcnt, len - count - 1);
-> +			rc = tpm_tis_write_bytes(priv,
-> +						 TPM_DATA_FIFO(priv->locality),
-> +						 burstcnt, buf + count);
-> +			if (rc < 0)
-> +				goto out_err;
-> +
-> +			count += burstcnt;
->  		}
-> -		burstcnt = min_t(int, burstcnt, len - count - 1);
-> -		rc = tpm_tis_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
-> -					 burstcnt, buf + count);
-> -		if (rc < 0)
-> -			goto out_err;
-> -
-> -		count += burstcnt;
->  
->  		if (wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
->  					&priv->int_queue, false) < 0) {
