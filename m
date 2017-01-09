@@ -1,16 +1,15 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH] tpm: check size of response before
- accessing data
-Date: Mon, 9 Jan 2017 09:15:25 -0700
-Message-ID: <20170109161525.GA13903@obsidianresearch.com>
-References: <1483618284-3470-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<20170109160538.gwvksj253wl2v5oy@intel.com>
+From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Subject: Re: [PATCH] tpm-emulator: add a TPM emulator pass
+ through
+Date: Mon, 09 Jan 2017 08:23:02 -0800
+Message-ID: <1483978982.2448.7.camel@HansenPartnership.com>
+References: <1483923513.2644.1.camel@HansenPartnership.com>
+	<20170109154945.GA28023@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170109160538.gwvksj253wl2v5oy-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20170109154945.GA28023-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,30 +18,38 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jan 09, 2017 at 06:05:38PM +0200, Jarkko Sakkinen wrote:
-> On Thu, Jan 05, 2017 at 07:11:24AM -0500, Stefan Berger wrote:
-> > Check the size of the response before accesing data in
-> > the response packet. This is to avoid accessing data beyond
-> > the end of the response.
+On Mon, 2017-01-09 at 08:49 -0700, Jason Gunthorpe wrote:
+> On Sun, Jan 08, 2017 at 04:58:33PM -0800, James Bottomley wrote:
+> > I noticed, while playing around with the kernel based resource
+> > manager, that it's very advantageous to have an emulated TPM device
+> > to
+> > test now that I'm playing with startup sequences and TPM ownership.
 > > 
-> > Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> > This is an emulator pass through.  It connects an existing emulator
+> > running on the platform (expected to be the MS Simulator available
+> > from https://sourceforge.net/projects/ibmswtpm2/) and adds it as an
+> > in-kernel device, meaning you can exercise the kernel TPM interface
+> > from either inside the kernel or using the device node.
+> > 
+> > The tpm-emulator simply connects to the command socket of the MS
+> > simulator (on localhost:2321) and proxies TPM commands.  The
+> > destination and port are settable as module parameters meaning that
+> > the TPM emulator doesn't have to be running locally.
 > 
-> How on earth this could happen if we request only one property?
+> What is wrong with using drivers/char/tpm/tpm_vtpm_proxy.c and doing
+> the socket connection in userspace?
 
-His (software) TPM is broken.
+Simplicity, mostly.  It's a tiny driver to proxy the network protocol
+directly, meaning it's much easier to set up.  Plus if you're running
+smoke tests in a VM you can actually run the emulator in the host
+without any additional code in the guest.
 
-Now that we have the vtpm stuff it is super-critical that the kernel
-unmarshal path be bomb proof - it needs to treat the TPM itself as a
-hostile entity.
+James
 
-You should look at all of it and make sure the proper bounds checks
-are done, multiples can't overflow, and so forth.
-
-Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
