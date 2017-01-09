@@ -1,15 +1,15 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH] tpm-emulator: add a TPM emulator pass
- through
-Date: Mon, 9 Jan 2017 08:49:45 -0700
-Message-ID: <20170109154945.GA28023@obsidianresearch.com>
-References: <1483923513.2644.1.camel@HansenPartnership.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm: check size of response before
+	accessing data
+Date: Mon, 9 Jan 2017 18:05:38 +0200
+Message-ID: <20170109160538.gwvksj253wl2v5oy@intel.com>
+References: <1483618284-3470-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1483923513.2644.1.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+In-Reply-To: <1483618284-3470-1-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,30 +18,52 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Jan 08, 2017 at 04:58:33PM -0800, James Bottomley wrote:
-> I noticed, while playing around with the kernel based resource
-> manager, that it's very advantageous to have an emulated TPM device to
-> test now that I'm playing with startup sequences and TPM ownership.
+On Thu, Jan 05, 2017 at 07:11:24AM -0500, Stefan Berger wrote:
+> Check the size of the response before accesing data in
+> the response packet. This is to avoid accessing data beyond
+> the end of the response.
 > 
-> This is an emulator pass through.  It connects an existing emulator
-> running on the platform (expected to be the MS Simulator available
-> from https://sourceforge.net/projects/ibmswtpm2/) and adds it as an
-> in-kernel device, meaning you can exercise the kernel TPM interface
-> from either inside the kernel or using the device node.
+> Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+
+How on earth this could happen if we request only one property?
+
+/Jarkko
+
+> ---
+>  drivers/char/tpm/tpm2-cmd.c | 6 ++++++
+>  1 file changed, 6 insertions(+)
 > 
-> The tpm-emulator simply connects to the command socket of the MS
-> simulator (on localhost:2321) and proxies TPM commands.  The
-> destination and port are settable as module parameters meaning that
-> the TPM emulator doesn't have to be running locally.
-
-What is wrong with using drivers/char/tpm/tpm_vtpm_proxy.c and doing
-the socket connection in userspace?
-
-Jason
+> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+> index abaa355..98e591b 100644
+> --- a/drivers/char/tpm/tpm2-cmd.c
+> +++ b/drivers/char/tpm/tpm2-cmd.c
+> @@ -394,6 +394,10 @@ int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max)
+>  	(sizeof(struct tpm_input_header) + \
+>  	 sizeof(struct tpm2_get_tpm_pt_in))
+>  
+> +#define TPM2_GET_TPM_PT_OUT_SIZE \
+> +	(sizeof(struct tpm_output_header) + \
+> +	 sizeof(struct tpm2_get_tpm_pt_out))
+> +
+>  static const struct tpm_input_header tpm2_get_tpm_pt_header = {
+>  	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
+>  	.length = cpu_to_be32(TPM2_GET_TPM_PT_IN_SIZE),
+> @@ -713,6 +717,8 @@ ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,  u32 *value,
+>  	cmd.params.get_tpm_pt_in.property_cnt = cpu_to_be32(1);
+>  
+>  	rc = tpm_transmit_cmd(chip, NULL, &cmd, sizeof(cmd), 0, desc);
+> +	if (be32_to_cpu(cmd.header.out.length) < TPM2_GET_TPM_PT_OUT_SIZE)
+> +		return -EFAULT;
+>  	if (!rc)
+>  		*value = be32_to_cpu(cmd.params.get_tpm_pt_out.value);
+>  
+> -- 
+> 2.4.3
+> 
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most 
