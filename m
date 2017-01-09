@@ -1,47 +1,48 @@
-From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: Re: [PATCH] tpm: check size of response before accessing data
-Date: Mon, 9 Jan 2017 13:09:31 -0500
-Message-ID: <be58d656-28f4-5510-d9e7-cfb8333a919c@linux.vnet.ibm.com>
-References: <1483618284-3470-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <20170109160538.gwvksj253wl2v5oy@intel.com>
+From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Subject: Re: [PATCH] tpm-emulator: add a TPM emulator pass
+ through
+Date: Mon, 09 Jan 2017 10:24:47 -0800
+Message-ID: <1483986287.2398.5.camel@HansenPartnership.com>
+References: <1483923513.2644.1.camel@HansenPartnership.com>
+	<20170109154945.GA28023@obsidianresearch.com>
+	<1483978982.2448.7.camel@HansenPartnership.com>
+	<20170109165416.GA13960@obsidianresearch.com>
+	<1483981445.2398.4.camel@HansenPartnership.com>
+	<20170109171430.GA18648@obsidianresearch.com>
+	<7bef4616-cd69-2798-fc1f-f7eee2fb8c98@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170109160538.gwvksj253wl2v5oy@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <7bef4616-cd69-2798-fc1f-f7eee2fb8c98-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 01/09/2017 11:05 AM, Jarkko Sakkinen wrote:
-> On Thu, Jan 05, 2017 at 07:11:24AM -0500, Stefan Berger wrote:
->> Check the size of the response before accesing data in
->> the response packet. This is to avoid accessing data beyond
->> the end of the response.
->>
->> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
-> How on earth this could happen if we request only one property?
+On Mon, 2017-01-09 at 13:03 -0500, Stefan Berger wrote:
+> Examples:
+> ./src/vtpmctrl --tpm2 \
+>    --spawn /bin/swtpm chardev --tpm2 --fd %fd --tpmstate dir=/tmp
 
-My test program vtpmctrl ( 
-https://github.com/stefanberger/linux-vtpm-tests ) didn't feed the 
-kernel a proper response to a TPM command and that's why this code blew 
-up. We do have a very basic check in the driver and otherwise assume 
-that the TPM is a trusted device responding with an expected response.
+git head for swtpm is giving
 
-http://lxr.free-electrons.com/source/drivers/char/tpm/tpm-interface.c#L417
+Created TPM device /dev/tpm1; vTPM device has fd 4, major/minor = 247/1.
+chardev: unrecognized option '--tpm2'
 
-414         len = tpm_transmit(chip, (const u8 *)cmd, len, flags);
-415         if (len <  0)
-416                 return len;
-417         else if (len < TPM_HEADER_SIZE)
-418                 return -EFAULT;
+James
 
 
-Now should we expand on this check or just assume the device is flawless?
-
-This particular check above should probably check whether the len is 
-also what the len in the packet indicates.
-
-    Stefan
-
+------------------------------------------------------------------------------
+Developer Access Program for Intel Xeon Phi Processors
+Access to Intel Xeon Phi processor-based developer platforms.
+With one year of Intel Parallel Studio XE.
+Training and support from Colfax.
+Order your platform today. http://sdm.link/xeonphi
