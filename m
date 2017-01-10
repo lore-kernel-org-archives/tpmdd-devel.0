@@ -1,46 +1,62 @@
-From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: Re: [tpmdd-devel] [PATCH v2] tpm: Check size of response before
- accessing data
-Date: Tue, 10 Jan 2017 17:04:37 -0500
-Message-ID: <1894ae73-4816-473f-9eff-76c1d67c5a3d@linux.vnet.ibm.com>
-References: <1484079341-22088-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <20170110211029.GA26700@obsidianresearch.com>
+From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Subject: Re: TPM 2.0 RM flushcontext returning bad address
+Date: Tue, 10 Jan 2017 17:31:45 -0500
+Message-ID: <o53ncb$e8q$1@blaine.gmane.org>
+References: <o53ei5$sc5$1@blaine.gmane.org>
+	<20170110200803.GB5102@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170110211029.GA26700@obsidianresearch.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170110200803.GB5102-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 01/10/2017 04:10 PM, Jason Gunthorpe wrote:
-> On Tue, Jan 10, 2017 at 03:15:41PM -0500, Stefan Berger wrote:
->>   ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd,
->> -			 int len, unsigned int flags, const char *desc)
->> +			 int len, size_t min_rx_len,
-> May as well make len size_t while you are here..
+On 1/10/2017 3:08 PM, Jason Gunthorpe wrote:
+>> 4 - Is a write() error desirable?  I think the application would prefer
+>> a TPM formatted response like TPM_RC_VALUE.
 >
-> The const void * is also wrong and should get fixed someday..
+ >
+> IMHO, I prefer the write errno, but we need to clearly define what our
+> errnos means. Errnos used by RM should not overlap with errnos from
+> other parts of our kernel stack.
 >
->>   ssize_t tpm_getcap(struct tpm_chip *chip, u32 subcap_id, cap_t *cap,
->> -		   const char *desc)
->> +		   const char *desc, size_t min_rx_length)
-> Nicer to make min_rx_length into min_cap_length:
->
->> -	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE, 0,
->> -			      desc);
->> +	rc = tpm_transmit_cmd(chip, &tpm_cmd, TPM_INTERNAL_RESULT_SIZE,
->> +			      min_rx_length, 0, desc);
-> Then use 'TPM_HEADER_SIZE + min_cap_length'
->
->> -	rc = tpm_getcap(chip, TPM_CAP_PROP_TIS_TIMEOUT, &cap, NULL);
->> +	rc = tpm_getcap(chip, TPM_CAP_PROP_TIS_TIMEOUT, &cap, NULL,
->> +	                TPM_HEADER_SIZE + sizeof(cap.timeout));
-> And this is just 'sizeof(cap.timeout)'
+> This makes it clear the kernel is source of the error, not the physical TPM.
 
-Done in v3.
+Except that the kernel is clearly not the source of the error.  The user 
+application tried to flush a handle and specified the wrong handle number.
 
-    Stefan
+"write error" sounds like a write error, but the TPMDD didn't actually
+write anything.
 
+"bad address" sounds like the kernel tried to access a bad address.  But 
+it didn't access any address.
+
+1 - I prefer an error that is meaningful to the user, and I think this 
+one is very misleading.
+
+2 - What's the TSS supposed to do with it?  I can return some generic 
+"problem in the TPM device driver".
+
+It's going to take a long time for the average user to realize that the 
+"bad address" is actually a bad key handle.
+
+
+
+
+
+
+------------------------------------------------------------------------------
+Developer Access Program for Intel Xeon Phi Processors
+Access to Intel Xeon Phi processor-based developer platforms.
+With one year of Intel Parallel Studio XE.
+Training and support from Colfax.
+Order your platform today. http://sdm.link/xeonphi
