@@ -1,8 +1,8 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH 06/10] tpm: tpm2_load_cmd: check size of
+Subject: [PATCH 04/10] tpm: tpm2_get_random: check size of
 	response before accessing data
-Date: Tue, 10 Jan 2017 09:18:16 -0500
-Message-ID: <1484057900-17871-6-git-send-email-stefanb@linux.vnet.ibm.com>
+Date: Tue, 10 Jan 2017 09:18:14 -0500
+Message-ID: <1484057900-17871-4-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1484057900-17871-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -27,23 +27,39 @@ end of the response.
 
 Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 ---
- drivers/char/tpm/tpm2-cmd.c | 3 +++
- 1 file changed, 3 insertions(+)
+ drivers/char/tpm/tpm2-cmd.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 57bb774..4bcda2b 100644
+index e3f760c..1e704a1 100644
 --- a/drivers/char/tpm/tpm2-cmd.c
 +++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -618,6 +618,9 @@ static int tpm2_load_cmd(struct tpm_chip *chip,
- 	}
+@@ -363,7 +363,7 @@ static const struct tpm_input_header tpm2_getrandom_header = {
+ int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max)
+ {
+ 	struct tpm2_cmd cmd;
+-	u32 recd;
++	u32 recd, rlength;
+ 	u32 num_bytes;
+ 	int err;
+ 	int total = 0;
+@@ -385,8 +385,16 @@ int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max)
+ 		if (err)
+ 			break;
  
- 	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, flags, "loading blob");
-+	if (!rc && be32_to_cpu(((struct tpm2_cmd *)&buf)->header.out.length) <
-+                   TPM_HEADER_SIZE + 4)
-+		rc = -EFAULT;
- 	if (!rc)
- 		*blob_handle = be32_to_cpup(
- 			(__be32 *) &buf.data[TPM_HEADER_SIZE]);
++		rlength = be32_to_cpu(cmd.header.out.length);
++		if (rlength < offsetof(struct tpm2_cmd,
++				       params.getrandom_out.buffer))
++			return -EFAULT;
++
+ 		recd = min_t(u32, be16_to_cpu(cmd.params.getrandom_out.size),
+ 			     num_bytes);
++		if (rlength < offsetof(struct tpm2_cmd,
++				       params.getrandom_out.buffer) + recd)
++			return -EFAULT;
+ 		memcpy(dest, cmd.params.getrandom_out.buffer, recd);
+ 
+ 		dest += recd;
 -- 
 2.4.3
 
