@@ -1,8 +1,8 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH 03/10] tpm: tpm2_pcr_read: check size of
+Subject: [PATCH 02/10] tpm: tpm2_get_tpm_pt: check size of
 	response before accessing data
-Date: Tue, 10 Jan 2017 09:18:13 -0500
-Message-ID: <1484057900-17871-3-git-send-email-stefanb@linux.vnet.ibm.com>
+Date: Tue, 10 Jan 2017 09:18:12 -0500
+Message-ID: <1484057900-17871-2-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1484057900-17871-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -27,34 +27,33 @@ end of the response.
 
 Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 ---
- drivers/char/tpm/tpm2-cmd.c | 7 +++++++
- 1 file changed, 7 insertions(+)
+ drivers/char/tpm/tpm2-cmd.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
 
 diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index d302f06..e3f760c 100644
+index 6eda239..d302f06 100644
 --- a/drivers/char/tpm/tpm2-cmd.c
 +++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -248,6 +248,10 @@ static const u8 tpm2_ordinal_duration[TPM2_CC_LAST - TPM2_CC_FIRST + 1] = {
+@@ -394,6 +394,10 @@ int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max)
  	(sizeof(struct tpm_input_header) + \
- 	 sizeof(struct tpm2_pcr_read_in))
+ 	 sizeof(struct tpm2_get_tpm_pt_in))
  
-+#define TPM2_PCR_READ_OUT_SIZE \
++#define TPM2_GET_TPM_PT_OUT_SIZE \
 +	(sizeof(struct tpm_output_header) + \
-+	 sizeof(struct tpm2_pcr_read_out))
++	 sizeof(struct tpm2_get_tpm_pt_out))
 +
- static const struct tpm_input_header tpm2_pcrread_header = {
+ static const struct tpm_input_header tpm2_get_tpm_pt_header = {
  	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
- 	.length = cpu_to_be32(TPM2_PCR_READ_IN_SIZE),
-@@ -282,6 +286,9 @@ int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
+ 	.length = cpu_to_be32(TPM2_GET_TPM_PT_IN_SIZE),
+@@ -740,6 +744,8 @@ ssize_t tpm2_get_tpm_pt(struct tpm_chip *chip, u32 property_id,  u32 *value,
+ 	cmd.params.get_tpm_pt_in.property_cnt = cpu_to_be32(1);
  
- 	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0,
- 			      "attempting to read a pcr value");
-+	if (rc == 0 &&
-+	    be32_to_cpu(cmd.header.out.length) < TPM2_PCR_READ_OUT_SIZE)
+ 	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0, desc);
++	if (be32_to_cpu(cmd.header.out.length) < TPM2_GET_TPM_PT_OUT_SIZE)
 +		return -EFAULT;
- 	if (rc == 0) {
- 		buf = cmd.params.pcrread_out.digest;
- 		memcpy(res_buf, buf, TPM_DIGEST_SIZE);
+ 	if (!rc)
+ 		*value = be32_to_cpu(cmd.params.get_tpm_pt_out.value);
+ 
 -- 
 2.4.3
 
