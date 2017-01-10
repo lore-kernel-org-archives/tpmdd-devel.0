@@ -1,8 +1,8 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH 09/10] tpm: tpm_get_random: check size of
+Subject: [PATCH 07/10] tpm: tpm2_unseal_cmd: check size of
 	response before accessing data
-Date: Tue, 10 Jan 2017 09:18:19 -0500
-Message-ID: <1484057900-17871-9-git-send-email-stefanb@linux.vnet.ibm.com>
+Date: Tue, 10 Jan 2017 09:18:17 -0500
+Message-ID: <1484057900-17871-7-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1484057900-17871-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -27,42 +27,49 @@ end of the response.
 
 Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 ---
- drivers/char/tpm/tpm-interface.c | 14 ++++++++++++--
- 1 file changed, 12 insertions(+), 2 deletions(-)
+ drivers/char/tpm/tpm2-cmd.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index f80df9c..1c04a2d 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -1059,7 +1059,7 @@ int tpm_get_random(u32 chip_num, u8 *out, size_t max)
- {
- 	struct tpm_chip *chip;
- 	struct tpm_cmd_t tpm_cmd;
--	u32 recd, num_bytes = min_t(u32, max, TPM_MAX_RNG_DATA);
-+	u32 recd, num_bytes = min_t(u32, max, TPM_MAX_RNG_DATA), rlength;
- 	int err, total = 0, retries = 5;
- 	u8 *dest = out;
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index 4bcda2b..f55e876 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -689,6 +689,7 @@ static int tpm2_unseal_cmd(struct tpm_chip *chip,
+ 	u16 data_len;
+ 	u8 *data;
+ 	int rc;
++	u32 rlength;
  
-@@ -1085,8 +1085,18 @@ int tpm_get_random(u32 chip_num, u8 *out, size_t max)
- 				       0, "attempting get random");
- 		if (err)
- 			break;
--
-+		rlength = be32_to_cpu(tpm_cmd.header.out.length);
-+		if (rlength < offsetof(struct tpm_cmd_t,
-+				       params.getrandom_out.rng_data)) {
-+			total = -EFAULT;
-+			break;
-+		}
- 		recd = be32_to_cpu(tpm_cmd.params.getrandom_out.rng_data_len);
-+		if (rlength < offsetof(struct tpm_cmd_t,
-+				       params.getrandom_out.rng_data) + recd) {
-+			total = -EFAULT;
-+			break;
-+		}
- 		memcpy(dest, tpm_cmd.params.getrandom_out.rng_data, recd);
+ 	rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS, TPM2_CC_UNSEAL);
+ 	if (rc)
+@@ -708,8 +709,19 @@ static int tpm2_unseal_cmd(struct tpm_chip *chip,
+ 		rc = -EPERM;
  
- 		dest += recd;
+ 	if (!rc) {
++		rlength = be32_to_cpu(((struct tpm2_cmd *)&buf)
++					->header.out.length);
++		if (rlength < TPM_HEADER_SIZE + 4 + 2) {
++			rc = -EFAULT;
++			goto out;
++		}
+ 		data_len = be16_to_cpup(
+ 			(__be16 *) &buf.data[TPM_HEADER_SIZE + 4]);
++
++		if (rlength < TPM_HEADER_SIZE + 4 + 2 + data_len) {
++			rc = -EFAULT;
++			goto out;
++		}
+ 		data = &buf.data[TPM_HEADER_SIZE + 6];
+ 
+ 		memcpy(payload->key, data, data_len - 1);
+@@ -717,6 +729,7 @@ static int tpm2_unseal_cmd(struct tpm_chip *chip,
+ 		payload->migratable = data[data_len - 1];
+ 	}
+ 
++out:
+ 	tpm_buf_destroy(&buf);
+ 	return rc;
+ }
 -- 
 2.4.3
 
