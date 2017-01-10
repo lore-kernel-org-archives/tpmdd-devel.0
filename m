@@ -1,7 +1,7 @@
 From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: [PATCH 05/10] tpm: tpm2_seal_trusted: check size of response before accessing data
-Date: Tue, 10 Jan 2017 09:18:15 -0500
-Message-ID: <1484057900-17871-5-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH 10/10] tpm: tpm_pcr_read_dev: check size of response before accessing data
+Date: Tue, 10 Jan 2017 09:18:20 -0500
+Message-ID: <1484057900-17871-10-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1484057900-17871-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Return-path: <linux-security-module-owner@vger.kernel.org>
 In-Reply-To: <1484057900-17871-1-git-send-email-stefanb@linux.vnet.ibm.com>
@@ -16,44 +16,24 @@ end of the response.
 
 Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
 ---
- drivers/char/tpm/tpm2-cmd.c | 12 +++++++++++-
- 1 file changed, 11 insertions(+), 1 deletion(-)
+ drivers/char/tpm/tpm-interface.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 1e704a1..57bb774 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -464,7 +464,7 @@ int tpm2_seal_trusted(struct tpm_chip *chip,
- {
- 	unsigned int blob_len;
- 	struct tpm_buf buf;
--	u32 hash;
-+	u32 hash, rlength;
- 	int i;
- 	int rc;
- 
-@@ -533,11 +533,21 @@ int tpm2_seal_trusted(struct tpm_chip *chip,
- 	if (rc)
- 		goto out;
- 
-+	rlength = be32_to_cpu(((struct tpm2_cmd*)&buf)->header.out.length);
-+	if (rlength < TPM_HEADER_SIZE + 4) {
-+		rc = -EFAULT;
-+		goto out;
-+	}
-+
- 	blob_len = be32_to_cpup((__be32 *) &buf.data[TPM_HEADER_SIZE]);
- 	if (blob_len > MAX_BLOB_SIZE) {
- 		rc = -E2BIG;
- 		goto out;
- 	}
-+	if (rlength < TPM_HEADER_SIZE + 4 + blob_len) {
-+		rc = -EFAULT;
-+		goto out;
-+	}
- 
- 	memcpy(payload->blob, &buf.data[TPM_HEADER_SIZE + 4], blob_len);
- 	payload->blob_len = blob_len;
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index 1c04a2d..6b6f099 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -687,7 +687,9 @@ int tpm_pcr_read_dev(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
+ 	cmd.params.pcrread_in.pcr_idx = cpu_to_be32(pcr_idx);
+ 	rc = tpm_transmit_cmd(chip, &cmd, READ_PCR_RESULT_SIZE, 0,
+ 			      "attempting to read a pcr value");
+-
++	if (rc == 0 &&
++	    be32_to_cpu(cmd.header.out.length) < READ_PCR_RESULT_SIZE)
++		return -EFAULT;
+ 	if (rc == 0)
+ 		memcpy(res_buf, cmd.params.pcrread_out.pcr_result,
+ 		       TPM_DIGEST_SIZE);
 -- 
 2.4.3
 
