@@ -1,45 +1,49 @@
-From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [tpmdd-devel] [PATCH 03/10] tpm: tpm2_pcr_read: check size of
- response before accessing data
-Date: Tue, 10 Jan 2017 09:18:37 -0700
-Message-ID: <20170110161837.GD15493@obsidianresearch.com>
-References: <1484057900-17871-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1484057900-17871-3-git-send-email-stefanb@linux.vnet.ibm.com>
+From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
+Date: Tue, 10 Jan 2017 13:55:49 -0500
+Message-ID: <o53ang$jl6$1@blaine.gmane.org>
+References: <20170102132213.22880-1-jarkko.sakkinen@linux.intel.com>
+	<1483374980.2458.13.camel@HansenPartnership.com>
+	<20170102193320.trawto65nkjccbao@intel.com>
+	<1483393248.2458.32.camel@HansenPartnership.com>
+	<20170103135121.4kh3jld5gaq3ptj4@intel.com>
+	<1483461370.2464.19.camel@HansenPartnership.com>
+	<20170103214702.GC29656@obsidianresearch.com>
+	<1483483198.2464.44.camel@HansenPartnership.com>
+	<20170104001732.GB32185@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <1484057900-17871-3-git-send-email-stefanb@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170104001732.GB32185-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jan 10, 2017 at 09:18:13AM -0500, Stefan Berger wrote:
-> Check the size of the response before accessing data in the
-> response packet. This is to avoid accessing data beyond the
-> end of the response.
+On 1/3/2017 7:17 PM, Jason Gunthorpe wrote:
+>
+> Well, by policy you mean 'know the owner password' which at least I am
+> *very* nervous about exposing beyond the super user - certainly in my
+> embedded systems.
 
-IMHO you should chnage the signature for
-tpm_transmit_cmd to be:
+For TPM 2.0, the "owner" is mostly just the controller of the storage
+hierarchy.  It's not a "super user", and is less privileged that even 
+the TPM 1.2 owner.
 
-ssize_t tpm_transmit_cmd(struct tpm_chip *chip,
-  void *iobuf, size_t tx_len,
-  size_t min_rx_len,
-  unsigned int flags,
-  const char *desc);
+For example, the TPM 2.0 owner cannot run TPM2_Clear.
 
-And then fold this repeated:
 
->  	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0,
->  			      "attempting to read a pcr value");
-> +	if (rc == 0 &&
-> +	    be32_to_cpu(cmd.header.out.length) < TPM2_PCR_READ_OUT_SIZE)
-> +		return -EFAULT;
 
-test into tpm_transmit_cmd and now we require every single caller to
-specify the minimum command length.
-
-You can fold all of that into one patch, IMHO. Easier for stable.
-
-Jason
+------------------------------------------------------------------------------
+Developer Access Program for Intel Xeon Phi Processors
+Access to Intel Xeon Phi processor-based developer platforms.
+With one year of Intel Parallel Studio XE.
+Training and support from Colfax.
+Order your platform today. http://sdm.link/xeonphi
