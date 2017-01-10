@@ -1,8 +1,8 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH 07/10] tpm: tpm2_unseal_cmd: check size of
+Subject: [PATCH 03/10] tpm: tpm2_pcr_read: check size of
 	response before accessing data
-Date: Tue, 10 Jan 2017 09:18:17 -0500
-Message-ID: <1484057900-17871-7-git-send-email-stefanb@linux.vnet.ibm.com>
+Date: Tue, 10 Jan 2017 09:18:13 -0500
+Message-ID: <1484057900-17871-3-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1484057900-17871-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -27,49 +27,34 @@ end of the response.
 
 Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 ---
- drivers/char/tpm/tpm2-cmd.c | 13 +++++++++++++
- 1 file changed, 13 insertions(+)
+ drivers/char/tpm/tpm2-cmd.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
 
 diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 4bcda2b..f55e876 100644
+index d302f06..e3f760c 100644
 --- a/drivers/char/tpm/tpm2-cmd.c
 +++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -689,6 +689,7 @@ static int tpm2_unseal_cmd(struct tpm_chip *chip,
- 	u16 data_len;
- 	u8 *data;
- 	int rc;
-+	u32 rlength;
+@@ -248,6 +248,10 @@ static const u8 tpm2_ordinal_duration[TPM2_CC_LAST - TPM2_CC_FIRST + 1] = {
+ 	(sizeof(struct tpm_input_header) + \
+ 	 sizeof(struct tpm2_pcr_read_in))
  
- 	rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS, TPM2_CC_UNSEAL);
- 	if (rc)
-@@ -708,8 +709,19 @@ static int tpm2_unseal_cmd(struct tpm_chip *chip,
- 		rc = -EPERM;
- 
- 	if (!rc) {
-+		rlength = be32_to_cpu(((struct tpm2_cmd *)&buf)
-+					->header.out.length);
-+		if (rlength < TPM_HEADER_SIZE + 4 + 2) {
-+			rc = -EFAULT;
-+			goto out;
-+		}
- 		data_len = be16_to_cpup(
- 			(__be16 *) &buf.data[TPM_HEADER_SIZE + 4]);
++#define TPM2_PCR_READ_OUT_SIZE \
++	(sizeof(struct tpm_output_header) + \
++	 sizeof(struct tpm2_pcr_read_out))
 +
-+		if (rlength < TPM_HEADER_SIZE + 4 + 2 + data_len) {
-+			rc = -EFAULT;
-+			goto out;
-+		}
- 		data = &buf.data[TPM_HEADER_SIZE + 6];
+ static const struct tpm_input_header tpm2_pcrread_header = {
+ 	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
+ 	.length = cpu_to_be32(TPM2_PCR_READ_IN_SIZE),
+@@ -282,6 +286,9 @@ int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
  
- 		memcpy(payload->key, data, data_len - 1);
-@@ -717,6 +729,7 @@ static int tpm2_unseal_cmd(struct tpm_chip *chip,
- 		payload->migratable = data[data_len - 1];
- 	}
- 
-+out:
- 	tpm_buf_destroy(&buf);
- 	return rc;
- }
+ 	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0,
+ 			      "attempting to read a pcr value");
++	if (rc == 0 &&
++	    be32_to_cpu(cmd.header.out.length) < TPM2_PCR_READ_OUT_SIZE)
++		return -EFAULT;
+ 	if (rc == 0) {
+ 		buf = cmd.params.pcrread_out.digest;
+ 		memcpy(res_buf, buf, TPM_DIGEST_SIZE);
 -- 
 2.4.3
 
