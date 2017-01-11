@@ -1,39 +1,23 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
-Date: Wed, 11 Jan 2017 13:34:16 +0200
-Message-ID: <20170111113416.4h6ucm5y3hjjnfhv@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [PATCH RFC 0/4] RFC: in-kernel resource manager
+Date: Wed, 11 Jan 2017 13:36:58 +0200
+Message-ID: <20170111113658.u5tmmjbuqrxfgpol@intel.com>
 References: <kgoldman@us.ibm.com>
-	<201701041612.v04GCfPK031525@wind.enjellic.com>
-	<20170109231635.6wh25qoy7svcnys6@intel.com>
-	<20170110200558.GA5102@obsidianresearch.com>
+ <201701041612.v04GCfPK031525@wind.enjellic.com>
+ <20170109231635.6wh25qoy7svcnys6@intel.com>
+ <o53clt$uo9$1@blaine.gmane.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170110200558.GA5102-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, greg-R92VP3DqSWVWk0Htik3J/w@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+In-Reply-To: <o53clt$uo9$1@blaine.gmane.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Ken Goldman <kgoldman@us.ibm.com>
+Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jan 10, 2017 at 01:05:58PM -0700, Jason Gunthorpe wrote:
-> On Tue, Jan 10, 2017 at 01:16:35AM +0200, Jarkko Sakkinen wrote:
-> > On Wed, Jan 04, 2017 at 10:12:41AM -0600, Dr. Greg Wettstein wrote:
-> > > The kernel needs a resource manager.  Everyone needs to think VERY
-> > > hard and VERY, VERY carefully about what gets put into the kernel.  In
-> > > making a decision, put the ABSOLUTE smallest amount of code into the
-> > > kernel which allows various 'TPM2 personalities' to be implemented in
-> > > userspace and functionally verified and protected by the physical
-> > > instance.  The emergence of commodity TEE's (SGX, et.al) should be in
-> > > the back of everyone's mind as a factor in the roadmap.
+On Tue, Jan 10, 2017 at 02:29:08PM -0500, Ken Goldman wrote:
+> On 1/9/2017 6:16 PM, Jarkko Sakkinen wrote:
 > > 
 > > Here's my cuts for the kernel:
 > > 
@@ -41,41 +25,13 @@ On Tue, Jan 10, 2017 at 01:05:58PM -0700, Jason Gunthorpe wrote:
 > > - Kernel does not virtualize bodies. It's not mechanical.
 > > - At least the first version of the RM will not do other than session
 > >   isolation for sessions.
-> > 
-> > This keeps the core for RM inside the kernel small and tight.
 > 
-> I think this makes sense.
+> Is it correct that "bodies" are the parameter area of the commands and
+> responses?
 > 
-> In addition the kernel should only permit RM operations that are known
-> to be 100% correct with the RM.
-> 
-> I think you should stick with your original design basic design,
-> except instead of using an ioctl to switch modes, use an ioctl to
-> execute the operation:
-> 
-> struct tpm_ioctl_operation {
->    u16 mode;  // == TPM1_RAW,TPM2_RAW,TPM1_RM,TPM2_RM
->    u16 locality;
->    u32 txlen;
->    u32 rxlen;
->    const void *txbuf;
->    void *rxbuf;
-> };
-> 
-> The userspace broker would be expected to use a mixture of RM and RAW
-> operations.
-> 
-> Let's deal with the idea of another cdev some other day when someone
-> can figure out a comprehensive way to do that securely for unpriv..
+> if so, eventually something should virtualize getcapability.  It may be
+> safer in user space, but it can mask RM issues.
 
-James, what do you think about this proposal?
+body == command / response - (header + handle area)
 
 /Jarkko
-
-
-------------------------------------------------------------------------------
-Developer Access Program for Intel Xeon Phi Processors
-Access to Intel Xeon Phi processor-based developer platforms.
-With one year of Intel Parallel Studio XE.
-Training and support from Colfax.
-Order your platform today. http://sdm.link/xeonphi
