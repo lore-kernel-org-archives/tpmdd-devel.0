@@ -1,54 +1,43 @@
-From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH RFC 0/4] RFC: in-kernel resource manager
-Date: Wed, 11 Jan 2017 13:27:30 -0500
-Message-ID: <7a61bdf9-da82-c772-7e73-d4a4ffc25559@linux.vnet.ibm.com>
+From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Subject: Re: [tpmdd-devel] [PATCH RFC 0/4] RFC: in-kernel resource manager
+Date: Wed, 11 Jan 2017 12:04:28 -0700
+Message-ID: <20170111190428.GA17873@obsidianresearch.com>
 References: <kgoldman@us.ibm.com>
-	<201701041612.v04GCfPK031525@wind.enjellic.com>
-	<20170109231635.6wh25qoy7svcnys6@intel.com>
-	<20170110200558.GA5102@obsidianresearch.com>
-	<ee6c1e48-e21f-d05e-0939-473001224aba@sit.fraunhofer.de>
-	<20170111180328.GB22783@obsidianresearch.com>
+ <201701041612.v04GCfPK031525@wind.enjellic.com>
+ <20170109231635.6wh25qoy7svcnys6@intel.com>
+ <20170110200558.GA5102@obsidianresearch.com>
+ <20170111113416.4h6ucm5y3hjjnfhv@intel.com>
+ <1484149193.2509.12.camel@HansenPartnership.com>
+ <20170111175657.GA22783@obsidianresearch.com>
+ <1484159157.2509.23.camel@HansenPartnership.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170111180328.GB22783-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Andreas Fuchs <andreas.fuchs-iXjGqz/onsDSyEMIgutvibNAH6kLmebB@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, greg-R92VP3DqSWVWk0Htik3J/w@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <1484159157.2509.23.camel@HansenPartnership.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: James Bottomley <James.Bottomley@HansenPartnership.com>
+Cc: Ken Goldman <kgoldman@us.ibm.com>, greg@enjellic.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 01/11/2017 01:03 PM, Jason Gunthorpe wrote:
-> On Wed, Jan 11, 2017 at 11:00:43AM +0100, Andreas Fuchs wrote:
->
->> could we please get an ioctl, that switches the "mode" of the fd entirely.
->> I'd like to see the write()/read() support still intact.
->> All my current code uses main-loop based poll on the fd and I don't want
->> to be force to start using threads...
-> We currently do not support poll in the kernel for /dev/tpmX.
->
-> ie we do not supply a poll method for 'struct file_operations'.
->
-> Even worse, the current implementation blocks returning from write()
-> until the TPM has completed its work, so it doesn't even make sense to
-> combine it with poll.
+On Wed, Jan 11, 2017 at 10:25:57AM -0800, James Bottomley wrote:
 
-Newer applications could issue an ioctl() after the open() to unblock 
-the write().
+> Right, but we're going around in circles.  I'm currently researching
+> what it would take to be daemonless, so an ioctl which requires an
+> access broker daemon would obviously be something I'd object to.
 
-     Stefan
+Well, when we figure out a security model that works for that and can
+be implemented in the kernel then lets add the new cdev.
 
+But that is *explicitly* not what Jarkko is doing, no reason to jump
+the gun.
 
-------------------------------------------------------------------------------
-Developer Access Program for Intel Xeon Phi Processors
-Access to Intel Xeon Phi processor-based developer platforms.
-With one year of Intel Parallel Studio XE.
-Training and support from Colfax.
-Order your platform today. http://sdm.link/xeonphi
+> Basically, though, I think you can do both: we can add an ioctl and the
+> differing device hooks.  I just think for that case RAW vs RM would be
+> redundant.
+
+Right, some future new cdev would only support ioctl and only the RM
+path, but for priv use having both concurrently available makes sense
+as a userspace broker producing a full RM will need to using both paths.
+
+Jason
