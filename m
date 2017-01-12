@@ -1,72 +1,59 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH RFC v2 5/5] tpm2: expose resource manager via a device
- link /dev/tpms<n>
-Date: Thu, 12 Jan 2017 22:56:28 +0200
-Message-ID: <20170112205628.qh3yf2jcargtw6qv@intel.com>
-References: <20170112174612.9314-1-jarkko.sakkinen@linux.intel.com>
- <20170112174612.9314-6-jarkko.sakkinen@linux.intel.com>
+From: "Maciej S. Szmigiero" <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
+Subject: Re: [PATCH] tpm_tis: override reported C and D
+ timeouts for Atmel 3203
+Date: Thu, 12 Jan 2017 22:37:31 +0100
+Message-ID: <20f8645d-f3fd-550b-b830-d1e55b8f2d17@maciej.szmigiero.name>
+References: <08953fb6-c332-ef29-2614-6335570023be@maciej.szmigiero.name>
+	<20170112184229.GB12836@obsidianresearch.com>
+	<259e1606-255b-5bf4-54bb-1bed967c228a@maciej.szmigiero.name>
+	<20170112202055.uxabnu553qwqql72@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20170112174612.9314-6-jarkko.sakkinen@linux.intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: linux-security-module@vger.kernel.org, James Bottomley <James.Bottomley@HansenPartnership.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170112202055.uxabnu553qwqql72-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, linux-kernel <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jan 12, 2017 at 07:46:08PM +0200, Jarkko Sakkinen wrote:
-> From: James Bottomley <James.Bottomley@HansenPartnership.com>
+On 12.01.2017 21:20, Jarkko Sakkinen wrote:
+> On Thu, Jan 12, 2017 at 09:09:33PM +0100, Maciej S. Szmigiero wrote:
+>> Hi Jason,
+>>
+>> On 12.01.2017 19:42, Jason Gunthorpe wrote:
+(..)
+>>> Can you also add a check for 0 timeouts in the core code and print a
+>>> FW_BUG :\
+>>
+>> Hmm, I dug in history of tpm-interface.c and the code had actually rejected
+>> zero timeouts until commit 8e54caf407b98e (this is the commit that
+>> introduced the Atmel 3204 workaround) and let default timeout values remain
+>> instead (it looks like they were exactly like these in above override at
+>> that time).
+>>
+>> Did Atmel 3204 report wrong but non-zero timeouts?
 > 
-> Currently the Resource Manager (RM) is not exposed to userspace.  Make
-> this exposure via a separate device, which can now be opened multiple
-> times because each read/write transaction goes separately via the RM.
-> 
-> Concurrency is protected by the chip->tpm_mutex for each read/write
-> transaction separately.  The TPM is cleared of all transient objects
-> by the time the mutex is dropped, so there should be no interference
-> between the kernel and userspace.
-> 
-> Signed-off-by: James Bottomley <James.Bottomley@HansenPartnership.com>
+> Wouldn't it make more sense to fix this by re-adding this fallback?
 
-I think you should talk about TPM spaces here.
+I think it would be a cleaner fix and also catch other problematic
+devices (if there are any) without needing to add individual overrides.
 
-> ---
->  drivers/char/tpm/Makefile        |  2 +-
->  drivers/char/tpm/tpm-chip.c      | 54 ++++++++++++++++++++++++++++++++++---
->  drivers/char/tpm/tpm-interface.c | 13 +++++++--
->  drivers/char/tpm/tpm.h           |  6 +++--
->  drivers/char/tpm/tpms-dev.c      | 57 ++++++++++++++++++++++++++++++++++++++++
->  5 files changed, 124 insertions(+), 8 deletions(-)
->  create mode 100644 drivers/char/tpm/tpms-dev.c
-> 
-> diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
-> index 13ff5da..e50d768 100644
-> --- a/drivers/char/tpm/Makefile
-> +++ b/drivers/char/tpm/Makefile
-> @@ -3,7 +3,7 @@
->  #
->  obj-$(CONFIG_TCG_TPM) += tpm.o
->  tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o \
-> -	 tpm_eventlog.o tpm2-space.o tpm-dev-common.o
-> +	 tpm_eventlog.o tpm2-space.o tpm-dev-common.o tpms-dev.o
->  tpm-$(CONFIG_ACPI) += tpm_ppi.o tpm_acpi.o
->  tpm-$(CONFIG_OF) += tpm_of.o
->  obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
-> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> index 993b9ae..0d2be04 100644
-> --- a/drivers/char/tpm/tpm-chip.c
-> +++ b/drivers/char/tpm/tpm-chip.c
-> @@ -33,6 +33,7 @@ DEFINE_IDR(dev_nums_idr);
->  static DEFINE_MUTEX(idr_lock);
->  
->  struct class *tpm_class;
-> +struct class *tpm_rm_class;
+> /Jarkko
 
-They belong to the same device class.
+Maciej
 
->  dev_t tpm_devt;
 
-But they should have different major device numbers.
-
-/Jarkko
+------------------------------------------------------------------------------
+Developer Access Program for Intel Xeon Phi Processors
+Access to Intel Xeon Phi processor-based developer platforms.
+With one year of Intel Parallel Studio XE.
+Training and support from Colfax.
+Order your platform today. http://sdm.link/xeonphi
