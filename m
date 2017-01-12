@@ -1,61 +1,87 @@
-From: "Maciej S. Szmigiero" <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
-Subject: [PATCH] tpm_tis: override reported C and D timeouts
-	for Atmel 3203
-Date: Thu, 12 Jan 2017 19:08:53 +0100
-Message-ID: <08953fb6-c332-ef29-2614-6335570023be@maciej.szmigiero.name>
+From: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>
+Subject: [PATCH] tpm_tis: fix iTPM probe via probe_itpm() function
+Date: Thu, 12 Jan 2017 19:12:06 +0100
+Message-ID: <6bd0d2fe-f979-a4dc-7c4d-54036f4d37f8@maciej.szmigiero.name>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, linux-kernel <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net
+Cc: linux-kernel <linux-kernel@vger.kernel.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Christophe Ricard <christophe.ricard@gmail.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Since commit 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM
-access") Atmel 3203 TPM on ThinkPad X61S (TPM firmware version 13.9) no
-longer works.
-It turns out the initialization proceeds fine until we get and start using
-chip-reported timeouts - and the chip reports C and D timeouts of zero.
+probe_itpm() function is supposed to send command without an itpm flag set
+and if this fails to repeat it, this time with the itpm flag set.
 
-Since these are clearly not long enough let's add an override for them
-to TPM TIS default values, just as we do for Atmel 3204.
-A and B timeouts are set to the same values as the chip normally reports.
+However, commit 41a5e1cf1fe15 ("tpm/tpm_tis: Split tpm_tis driver into a
+core and TCG TIS compliant phy") moved the itpm flag from an "itpm"
+variable to a TPM_TIS_ITPM_POSSIBLE chip flag, so setting the
+(now function-local) itpm variable no longer had any effect.
 
-Signed-off-by: Maciej S. Szmigiero <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
+Finally, this function-local itpm variable was removed by
+commit 56af322156dbe9 ("tpm/tpm_tis: remove unused itpm variable")
 
-Fixes: 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM access")
-Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Tested only on non-iTPM TIS TPM.
+
+Signed-off-by: Maciej S. Szmigiero <mail@maciej.szmigiero.name>
+
+Fixes: 41a5e1cf1fe15 ("Split tpm_tis driver into a core and TCG TIS compliant phy")
+Cc: stable@vger.kernel.org
 ---
- drivers/char/tpm/tpm_tis_core.c | 3 +++
- 1 file changed, 3 insertions(+)
+ drivers/char/tpm/tpm_tis_core.c | 25 +++++++++++++------------
+ 1 file changed, 13 insertions(+), 12 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-index 7993678954a2..e42e5a6a3c2f 100644
+index e42e5a6a3c2f..401f1228547c 100644
 --- a/drivers/char/tpm/tpm_tis_core.c
 +++ b/drivers/char/tpm/tpm_tis_core.c
-@@ -421,6 +421,9 @@ struct tis_vendor_timeout_override {
- };
+@@ -467,6 +467,9 @@ static int probe_itpm(struct tpm_chip *chip)
+ 	size_t len = sizeof(cmd_getticks);
+ 	u16 vendor;
  
- static const struct tis_vendor_timeout_override vendor_timeout_overrides[] = {
-+	/* Atmel 3203 */
-+	{ 0x32031114, { (10*1000), (10*1000),
-+			(TIS_SHORT_TIMEOUT*1000), (TIS_SHORT_TIMEOUT*1000) } },
- 	/* Atmel 3204 */
- 	{ 0x32041114, { (TIS_SHORT_TIMEOUT*1000), (TIS_LONG_TIMEOUT*1000),
- 			(TIS_SHORT_TIMEOUT*1000), (TIS_SHORT_TIMEOUT*1000) } },
-
-
-------------------------------------------------------------------------------
-Developer Access Program for Intel Xeon Phi Processors
-Access to Intel Xeon Phi processor-based developer platforms.
-With one year of Intel Parallel Studio XE.
-Training and support from Colfax.
-Order your platform today. http://sdm.link/xeonphi
++	if (priv->flags & TPM_TIS_ITPM_POSSIBLE)
++		return 0;
++
+ 	rc = tpm_tis_read16(priv, TPM_DID_VID(0), &vendor);
+ 	if (rc < 0)
+ 		return rc;
+@@ -482,12 +485,15 @@ static int probe_itpm(struct tpm_chip *chip)
+ 	tpm_tis_ready(chip);
+ 	release_locality(chip, priv->locality, 0);
+ 
++	priv->flags |= TPM_TIS_ITPM_POSSIBLE;
++
+ 	rc = tpm_tis_send_data(chip, cmd_getticks, len);
+-	if (rc == 0) {
++	if (rc == 0)
+ 		dev_info(&chip->dev, "Detected an iTPM.\n");
+-		rc = 1;
+-	} else
++	else {
++		priv->flags &= ~TPM_TIS_ITPM_POSSIBLE;
+ 		rc = -EFAULT;
++	}
+ 
+ out:
+ 	tpm_tis_ready(chip);
+@@ -743,15 +749,10 @@ int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
+ 		 (chip->flags & TPM_CHIP_FLAG_TPM2) ? "2.0" : "1.2",
+ 		 vendor >> 16, rid);
+ 
+-	if (!(priv->flags & TPM_TIS_ITPM_POSSIBLE)) {
+-		probe = probe_itpm(chip);
+-		if (probe < 0) {
+-			rc = -ENODEV;
+-			goto out_err;
+-		}
+-
+-		if (!!probe)
+-			priv->flags |= TPM_TIS_ITPM_POSSIBLE;
++	probe = probe_itpm(chip);
++	if (probe < 0) {
++		rc = -ENODEV;
++		goto out_err;
+ 	}
+ 
+ 	/* Figure out the capabilities */
