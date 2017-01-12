@@ -1,14 +1,12 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH RFC v2 5/5] tpm2: expose resource manager via
-	a device link /dev/tpms<n>
-Date: Thu, 12 Jan 2017 19:46:08 +0200
-Message-ID: <20170112174612.9314-6-jarkko.sakkinen@linux.intel.com>
-References: <20170112174612.9314-1-jarkko.sakkinen@linux.intel.com>
+From: "Maciej S. Szmigiero" <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
+Subject: [PATCH] tpm_tis: override reported C and D timeouts
+	for Atmel 3203
+Date: Thu, 12 Jan 2017 19:08:53 +0100
+Message-ID: <08953fb6-c332-ef29-2614-6335570023be@maciej.szmigiero.name>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170112174612.9314-1-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,296 +16,41 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, linux-kernel <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Since commit 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM
+access") Atmel 3203 TPM on ThinkPad X61S (TPM firmware version 13.9) no
+longer works.
+It turns out the initialization proceeds fine until we get and start using
+chip-reported timeouts - and the chip reports C and D timeouts of zero.
 
-Currently the Resource Manager (RM) is not exposed to userspace.  Make
-this exposure via a separate device, which can now be opened multiple
-times because each read/write transaction goes separately via the RM.
+Since these are clearly not long enough let's add an override for them
+to TPM TIS default values, just as we do for Atmel 3204.
+A and B timeouts are set to the same values as the chip normally reports.
 
-Concurrency is protected by the chip->tpm_mutex for each read/write
-transaction separately.  The TPM is cleared of all transient objects
-by the time the mutex is dropped, so there should be no interference
-between the kernel and userspace.
+Signed-off-by: Maciej S. Szmigiero <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
 
-Signed-off-by: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Fixes: 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM access")
+Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 ---
- drivers/char/tpm/Makefile        |  2 +-
- drivers/char/tpm/tpm-chip.c      | 54 ++++++++++++++++++++++++++++++++++---
- drivers/char/tpm/tpm-interface.c | 13 +++++++--
- drivers/char/tpm/tpm.h           |  6 +++--
- drivers/char/tpm/tpms-dev.c      | 57 ++++++++++++++++++++++++++++++++++++++++
- 5 files changed, 124 insertions(+), 8 deletions(-)
- create mode 100644 drivers/char/tpm/tpms-dev.c
+ drivers/char/tpm/tpm_tis_core.c | 3 +++
+ 1 file changed, 3 insertions(+)
 
-diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
-index 13ff5da..e50d768 100644
---- a/drivers/char/tpm/Makefile
-+++ b/drivers/char/tpm/Makefile
-@@ -3,7 +3,7 @@
- #
- obj-$(CONFIG_TCG_TPM) += tpm.o
- tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o \
--	 tpm_eventlog.o tpm2-space.o tpm-dev-common.o
-+	 tpm_eventlog.o tpm2-space.o tpm-dev-common.o tpms-dev.o
- tpm-$(CONFIG_ACPI) += tpm_ppi.o tpm_acpi.o
- tpm-$(CONFIG_OF) += tpm_of.o
- obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index 993b9ae..0d2be04 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -33,6 +33,7 @@ DEFINE_IDR(dev_nums_idr);
- static DEFINE_MUTEX(idr_lock);
- 
- struct class *tpm_class;
-+struct class *tpm_rm_class;
- dev_t tpm_devt;
- 
- /**
-@@ -168,27 +169,40 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
- 	chip->dev_num = rc;
- 
- 	device_initialize(&chip->dev);
-+	device_initialize(&chip->devrm);
- 
- 	chip->dev.class = tpm_class;
- 	chip->dev.release = tpm_dev_release;
- 	chip->dev.parent = pdev;
- 	chip->dev.groups = chip->groups;
- 
-+	chip->devrm.parent = pdev;
-+	chip->devrm.class = tpm_rm_class;
-+
- 	if (chip->dev_num == 0)
- 		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
- 	else
- 		chip->dev.devt = MKDEV(MAJOR(tpm_devt), chip->dev_num);
- 
-+	chip->devrm.devt =
-+		MKDEV(MAJOR(tpm_devt), chip->dev_num + TPM_NUM_DEVICES);
-+
- 	rc = dev_set_name(&chip->dev, "tpm%d", chip->dev_num);
- 	if (rc)
- 		goto out;
-+	rc = dev_set_name(&chip->devrm, "tpms%d", chip->dev_num);
-+	if (rc)
-+		goto out;
- 
- 	if (!pdev)
- 		chip->flags |= TPM_CHIP_FLAG_VIRTUAL;
- 
- 	cdev_init(&chip->cdev, &tpm_fops);
-+	cdev_init(&chip->cdevrm, &tpm_rm_fops);
- 	chip->cdev.owner = THIS_MODULE;
-+	chip->cdevrm.owner = THIS_MODULE;
- 	chip->cdev.kobj.parent = &chip->dev.kobj;
-+	chip->cdevrm.kobj.parent = &chip->devrm.kobj;
- 
- 	chip->work_space.context_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
- 	if (!chip->work_space.context_buf) {
-@@ -200,6 +214,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
- 
- out:
- 	put_device(&chip->dev);
-+	put_device(&chip->devrm);
- 	return ERR_PTR(rc);
- }
- EXPORT_SYMBOL_GPL(tpm_chip_alloc);
-@@ -244,7 +259,7 @@ static int tpm_add_char_device(struct tpm_chip *chip)
- 			dev_name(&chip->dev), MAJOR(chip->dev.devt),
- 			MINOR(chip->dev.devt), rc);
- 
--		return rc;
-+		goto err_1;
- 	}
- 
- 	rc = device_add(&chip->dev);
-@@ -254,16 +269,44 @@ static int tpm_add_char_device(struct tpm_chip *chip)
- 			dev_name(&chip->dev), MAJOR(chip->dev.devt),
- 			MINOR(chip->dev.devt), rc);
- 
--		cdev_del(&chip->cdev);
--		return rc;
-+		goto err_2;
-+	}
-+
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+		rc = cdev_add(&chip->cdevrm, chip->devrm.devt, 1);
-+	if (rc) {
-+		dev_err(&chip->dev,
-+			"unable to cdev_add() %s, major %d, minor %d, err=%d\n",
-+			dev_name(&chip->devrm), MAJOR(chip->devrm.devt),
-+			MINOR(chip->devrm.devt), rc);
-+
-+		goto err_3;
- 	}
- 
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+		rc = device_add(&chip->devrm);
-+	if (rc) {
-+		dev_err(&chip->dev,
-+			"unable to device_register() %s, major %d, minor %d, err=%d\n",
-+			dev_name(&chip->devrm), MAJOR(chip->devrm.devt),
-+			MINOR(chip->devrm.devt), rc);
-+
-+		goto err_4;
-+	}
- 	/* Make the chip available. */
- 	mutex_lock(&idr_lock);
- 	idr_replace(&dev_nums_idr, chip, chip->dev_num);
- 	mutex_unlock(&idr_lock);
- 
- 	return rc;
-+ err_4:
-+	cdev_del(&chip->cdevrm);
-+ err_3:
-+	device_del(&chip->dev);
-+ err_2:
-+	cdev_del(&chip->cdev);
-+ err_1:
-+	return rc;
- }
- 
- static void tpm_del_char_device(struct tpm_chip *chip)
-@@ -271,6 +314,11 @@ static void tpm_del_char_device(struct tpm_chip *chip)
- 	cdev_del(&chip->cdev);
- 	device_del(&chip->dev);
- 
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
-+		cdev_del(&chip->cdevrm);
-+		device_del(&chip->devrm);
-+	}
-+
- 	/* Make the chip unavailable. */
- 	mutex_lock(&idr_lock);
- 	idr_replace(&dev_nums_idr, NULL, chip->dev_num);
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 65fcd04c..f5c9355 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -1197,9 +1197,17 @@ static int __init tpm_init(void)
- 		return PTR_ERR(tpm_class);
- 	}
- 
--	rc = alloc_chrdev_region(&tpm_devt, 0, TPM_NUM_DEVICES, "tpm");
-+	tpm_rm_class = class_create(THIS_MODULE, "tpms");
-+	if (IS_ERR(tpm_rm_class)) {
-+		pr_err("couldn't create tpmrm class\n");
-+		class_destroy(tpm_class);
-+		return PTR_ERR(tpm_rm_class);
-+	}
-+
-+	rc = alloc_chrdev_region(&tpm_devt, 0, 2*TPM_NUM_DEVICES, "tpm");
- 	if (rc < 0) {
- 		pr_err("tpm: failed to allocate char dev region\n");
-+		class_destroy(tpm_rm_class);
- 		class_destroy(tpm_class);
- 		return rc;
- 	}
-@@ -1211,7 +1219,8 @@ static void __exit tpm_exit(void)
- {
- 	idr_destroy(&dev_nums_idr);
- 	class_destroy(tpm_class);
--	unregister_chrdev_region(tpm_devt, TPM_NUM_DEVICES);
-+	class_destroy(tpm_rm_class);
-+	unregister_chrdev_region(tpm_devt, 2*TPM_NUM_DEVICES);
- }
- 
- subsys_initcall(tpm_init);
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 0e93b93..61422e6 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -172,8 +172,8 @@ struct tpm_chip_seqops {
+diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+index 7993678954a2..e42e5a6a3c2f 100644
+--- a/drivers/char/tpm/tpm_tis_core.c
++++ b/drivers/char/tpm/tpm_tis_core.c
+@@ -421,6 +421,9 @@ struct tis_vendor_timeout_override {
  };
  
- struct tpm_chip {
--	struct device dev;
--	struct cdev cdev;
-+	struct device dev, devrm;
-+	struct cdev cdev, cdevrm;
- 
- 	/* A driver callback under ops cannot be run unless ops_sem is held
- 	 * (sometimes implicitly, eg for the sysfs code). ops becomes null
-@@ -510,8 +510,10 @@ static inline void tpm_buf_append_u32(struct tpm_buf *buf, const u32 value)
- }
- 
- extern struct class *tpm_class;
-+extern struct class *tpm_rm_class;
- extern dev_t tpm_devt;
- extern const struct file_operations tpm_fops;
-+extern const struct file_operations tpm_rm_fops;
- extern struct idr dev_nums_idr;
- 
- enum tpm_transmit_flags {
-diff --git a/drivers/char/tpm/tpms-dev.c b/drivers/char/tpm/tpms-dev.c
-new file mode 100644
-index 0000000..d822600
---- /dev/null
-+++ b/drivers/char/tpm/tpms-dev.c
-@@ -0,0 +1,57 @@
-+/*
-+ * Copyright (C) 2017 James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org
-+ *
-+ * GPLv2
-+ */
-+#include <linux/slab.h>
-+#include "tpm-dev.h"
-+
-+struct tpms_priv {
-+	struct file_priv priv;
-+	struct tpm_space space;
-+};
-+
-+static int tpms_open(struct inode *inode, struct file *file)
-+{
-+	struct tpm_chip *chip;
-+	struct tpms_priv *priv;
-+
-+	chip = container_of(inode->i_cdev, struct tpm_chip, cdevrm);
-+	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-+	if (priv == NULL)
-+		return -ENOMEM;
-+
-+	tpm_common_open(file, chip, &priv->priv);
-+
-+	return 0;
-+}
-+
-+static int tpms_release(struct inode *inode, struct file *file)
-+{
-+	struct file_priv *fpriv = file->private_data;
-+	struct tpms_priv *priv = container_of(fpriv, struct tpms_priv, priv);
-+
-+	tpm_common_release(file, fpriv);
-+	kfree(priv);
-+
-+	return 0;
-+}
-+
-+ssize_t tpms_write(struct file *file, const char __user *buf,
-+		   size_t size, loff_t *off)
-+{
-+	struct file_priv *fpriv = file->private_data;
-+	struct tpms_priv *priv = container_of(fpriv, struct tpms_priv, priv);
-+
-+	return tpm_common_write(file, buf, size, off, &priv->space);
-+}
-+
-+const struct file_operations tpm_rm_fops = {
-+	.owner = THIS_MODULE,
-+	.llseek = no_llseek,
-+	.open = tpms_open,
-+	.read = tpm_common_read,
-+	.write = tpms_write,
-+	.release = tpms_release,
-+};
-+
--- 
-2.9.3
+ static const struct tis_vendor_timeout_override vendor_timeout_overrides[] = {
++	/* Atmel 3203 */
++	{ 0x32031114, { (10*1000), (10*1000),
++			(TIS_SHORT_TIMEOUT*1000), (TIS_SHORT_TIMEOUT*1000) } },
+ 	/* Atmel 3204 */
+ 	{ 0x32041114, { (TIS_SHORT_TIMEOUT*1000), (TIS_LONG_TIMEOUT*1000),
+ 			(TIS_SHORT_TIMEOUT*1000), (TIS_SHORT_TIMEOUT*1000) } },
 
 
 ------------------------------------------------------------------------------
