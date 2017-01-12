@@ -1,68 +1,55 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [PATCH RFC v2 5/5] tpm2: expose resource manager
- via	a device link /dev/tpms<n>
-Date: Thu, 12 Jan 2017 11:46:09 -0800
-Message-ID: <1484250369.5807.11.camel@HansenPartnership.com>
-References: <20170112174612.9314-1-jarkko.sakkinen@linux.intel.com>
-	<20170112174612.9314-6-jarkko.sakkinen@linux.intel.com>
+From: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>
+Subject: Re: [PATCH] tpm_tis: override reported C and D timeouts for Atmel
+ 3203
+Date: Thu, 12 Jan 2017 21:09:33 +0100
+Message-ID: <259e1606-255b-5bf4-54bb-1bed967c228a@maciej.szmigiero.name>
+References: <08953fb6-c332-ef29-2614-6335570023be@maciej.szmigiero.name>
+ <20170112184229.GB12836@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset=windows-1252
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170112174612.9314-6-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20170112184229.GB12836@obsidianresearch.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel <linux-kernel@vger.kernel.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Christophe Ricard <christophe.ricard@gmail.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, 2017-01-12 at 19:46 +0200, Jarkko Sakkinen wrote:
-> From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Hi Jason,
+
+On 12.01.2017 19:42, Jason Gunthorpe wrote:
+> On Thu, Jan 12, 2017 at 07:08:53PM +0100, Maciej S. Szmigiero wrote:
+>> Since commit 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM
+>> access") Atmel 3203 TPM on ThinkPad X61S (TPM firmware version 13.9) no
+>> longer works.
+>> It turns out the initialization proceeds fine until we get and start using
+>> chip-reported timeouts - and the chip reports C and D timeouts of zero.
+>>
+>> Since these are clearly not long enough let's add an override for them
+>> to TPM TIS default values, just as we do for Atmel 3204.
+>> A and B timeouts are set to the same values as the chip normally reports.
+>>
+>> Signed-off-by: Maciej S. Szmigiero <mail@maciej.szmigiero.name>
 > 
-> Currently the Resource Manager (RM) is not exposed to userspace. 
->  Make
-> this exposure via a separate device, which can now be opened multiple
-> times because each read/write transaction goes separately via the RM.
+>>  static const struct tis_vendor_timeout_override vendor_timeout_overrides[] = {
+>> +	/* Atmel 3203 */
+>> +	{ 0x32031114, { (10*1000), (10*1000),
+>> +			(TIS_SHORT_TIMEOUT*1000), (TIS_SHORT_TIMEOUT*1000) } },
+>>  	/* Atmel 3204 */
+>>  	{ 0x32041114, { (TIS_SHORT_TIMEOUT*1000), (TIS_LONG_TIMEOUT*1000),
+>>  			(TIS_SHORT_TIMEOUT*1000), (TIS_SHORT_TIMEOUT*1000) } },
 > 
-> Concurrency is protected by the chip->tpm_mutex for each read/write
-> transaction separately.  The TPM is cleared of all transient objects
-> by the time the mutex is dropped, so there should be no interference
-> between the kernel and userspace.
+> Can you also add a check for 0 timeouts in the core code and print a
+> FW_BUG :\
 
-There's a bug in this code that will crash on first command.  This is
-the incremental fix.  It must have got lost when I did the split.
+Hmm, I dug in history of tpm-interface.c and the code had actually rejected
+zero timeouts until commit 8e54caf407b98e (this is the commit that
+introduced the Atmel 3204 workaround) and let default timeout values remain
+instead (it looks like they were exactly like these in above override at
+that time).
 
-James
+Did Atmel 3204 report wrong but non-zero timeouts?
 
----
+> Jason
 
-diff --git a/drivers/char/tpm/tpms-dev.c b/drivers/char/tpm/tpms-dev.c
-index f4cb7a3..3eb5955 100644
---- a/drivers/char/tpm/tpms-dev.c
-+++ b/drivers/char/tpm/tpms-dev.c
-@@ -20,6 +20,11 @@ static int tpms_open(struct inode *inode, struct file *file)
- 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
- 	if (priv == NULL)
- 		return -ENOMEM;
-+	priv->space.context_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
-+	if (priv->space.context_buf == NULL) {
-+		kfree(priv);
-+		return -ENOMEM;
-+	}
- 
- 	tpm_common_open(file, chip, &priv->priv);
- 
-
-
-------------------------------------------------------------------------------
-Developer Access Program for Intel Xeon Phi Processors
-Access to Intel Xeon Phi processor-based developer platforms.
-With one year of Intel Parallel Studio XE.
-Training and support from Colfax.
-Order your platform today. http://sdm.link/xeonphi
+Maciej
