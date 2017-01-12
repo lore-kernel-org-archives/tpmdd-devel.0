@@ -1,100 +1,52 @@
-From: James Bottomley <jejb@linux.vnet.ibm.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC v2 3/5] tpm: infrastructure for TPM
- spaces
-Date: Thu, 12 Jan 2017 12:38:52 -0800
-Message-ID: <1484253532.5807.16.camel@linux.vnet.ibm.com>
-References: <20170112174612.9314-1-jarkko.sakkinen@linux.intel.com>
-         <20170112174612.9314-4-jarkko.sakkinen@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v3] tpm: Check size of response before
+	accessing data
+Date: Thu, 12 Jan 2017 22:39:39 +0200
+Message-ID: <20170112203939.qdae6nqsxb5mw2uc@intel.com>
+References: <1484085844-23374-1-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20170112174043.a7drpmbhtxkakiy6@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <20170112174612.9314-4-jarkko.sakkinen@linux.intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net
-Cc: open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20170112174043.a7drpmbhtxkakiy6-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, 2017-01-12 at 19:46 +0200, Jarkko Sakkinen wrote:
-> +static int tpm2_map_response(struct tpm_chip *chip, u32 cc, u8 *rsp,
-> size_t len)
-> +{
-> +       struct tpm_space *space = &chip->work_space;
-> +       u32 phandle;
-> +       u32 vhandle;
-> +       u32 attrs;
-> +       int i;
-> +       int rc;
-> +
-> +       if (!tpm2_find_cc_attrs(chip, cc, &attrs)) {
-> +               /* should never happen */
-> +               dev_err(&chip->dev, "TPM returned a different CC:
-> 0x%04x\n",
-> +                       cc);
-> +               rc = -EFAULT;
-> +               goto out_err;
-> +       }
-> +
-> +       if (!((attrs >> TPM2_CC_ATTR_RHANDLE) & 1))
-> +               return 0;
-> +
-> +       phandle = be32_to_cpup((__be32 *)&rsp[TPM_HEADER_SIZE]);
+On Thu, Jan 12, 2017 at 07:40:43PM +0200, Jarkko Sakkinen wrote:
+> On Tue, Jan 10, 2017 at 05:04:04PM -0500, Stefan Berger wrote:
+> > Make sure that we have not received less bytes than what is indicated
+> > in the header of the TPM response. Also, check the number of bytes in
+> > the response before accessing its data.
+> > 
+> > Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> 
+> This patch has a bunch of checkpatch.pl errors.
+> 
+> Can you pick "tpm: validate TPM 2.0 commands" as part of v4?
 
-I think we have to check the command return code here.  We can't
-blindly fish handles out of the response if the TPM returned an error
-because they won't exist and we'll pull rubbish from the buffer. 
- Incremental patch below.
+On a second thought: lets get this commit right first. Don't worry
+about my commit. Once this is ready to be applied I'll update my
+patch to use the new mechanism.
 
-Note I think we should use get_unaligned_be32 because we're pulling a
-32 bit word from something that's on byte 6 (so misaligned): some
-architectures will trigger an unaligned trap for this (it's not a
-problem: they trap handle it, it just slows down processing a lot).
+So just fix the checkpatch.pl errors and send v4. I'll take care of
+the rest.
 
-James
+/Jarkko
 
----
-
-commit d17ad905ff7b114f7efd23f930e9a541ccdf7621
-Author: James Bottomley <James.Bottomley@HansenPartnership.com>
-Date:   Wed Jan 11 22:01:29 2017 -0800
-
-    check return code
-
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 61422e6..8009ed4 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -90,6 +90,7 @@ enum tpm2_structures {
- };
- 
- enum tpm2_return_codes {
-+	TPM2_RC_SUCCESS		= 0x0000,
- 	TPM2_RC_HASH		= 0x0083, /* RC_FMT1 */
- 	TPM2_RC_HANDLE		= 0x008B,
- 	TPM2_RC_INITIALIZE	= 0x0100, /* RC_VER1 */
-diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2-space.c
-index ca55feb..44e5501 100644
---- a/drivers/char/tpm/tpm2-space.c
-+++ b/drivers/char/tpm/tpm2-space.c
-@@ -16,6 +16,7 @@
-  */
- 
- #include <linux/gfp.h>
-+#include <asm/unaligned.h>
- #include "tpm.h"
- 
- enum tpm2_handle_types {
-@@ -167,9 +168,13 @@ static int tpm2_map_response(struct tpm_chip *chip, u32 cc, u8 *rsp, size_t len)
- 	u32 phandle;
- 	u32 vhandle;
- 	u32 attrs;
-+	u32 return_code = get_unaligned_be32((__be32 *)&rsp[6]);
- 	int i;
- 	int rc;
- 
-+	if (return_code != TPM2_RC_SUCCESS)
-+		return 0;
-+
- 	if (!tpm2_find_cc_attrs(chip, cc, &attrs)) {
- 		/* should never happen */
- 		dev_err(&chip->dev, "TPM returned a different CC: 0x%04x\n",
+------------------------------------------------------------------------------
+Developer Access Program for Intel Xeon Phi Processors
+Access to Intel Xeon Phi processor-based developer platforms.
+With one year of Intel Parallel Studio XE.
+Training and support from Colfax.
+Order your platform today. http://sdm.link/xeonphi
