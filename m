@@ -1,15 +1,16 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [PATCH RFC v2 3/5] tpm: infrastructure for TPM
- spaces
-Date: Thu, 12 Jan 2017 10:38:30 -0800
-Message-ID: <1484246310.2417.15.camel@HansenPartnership.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH RFC v2 5/5] tpm2: expose resource manager
+ via a device link /dev/tpms<n>
+Date: Thu, 12 Jan 2017 11:39:19 -0700
+Message-ID: <20170112183919.GA12836@obsidianresearch.com>
 References: <20170112174612.9314-1-jarkko.sakkinen@linux.intel.com>
-	<20170112174612.9314-4-jarkko.sakkinen@linux.intel.com>
+	<20170112174612.9314-6-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170112174612.9314-4-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20170112174612.9314-6-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,39 +19,31 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, 2017-01-12 at 19:46 +0200, Jarkko Sakkinen wrote:
-> @@ -435,17 +440,23 @@ ssize_t tpm_transmit(struct tpm_chip *chip,
-> const u8 *buf, size_t bufsiz,
->         goto out;
-> 
->  out_recv:
-> -       rc = chip->ops->recv(chip, (u8 *) buf, bufsiz);
-> -       if (rc < 0)
-> +       len = chip->ops->recv(chip, (u8 *) buf, bufsiz);
-> +       if (len < 0) {
->                 dev_err(&chip->dev,
-> -                       "tpm_transmit: tpm_recv: error %zd\n", rc);
-> +                       "tpm_transmit: tpm_recv: error %d\n", rc);
-> +               rc = len;
-> +               goto out;
-> +       }
-> +
-> +       rc = tpm2_commit_space(chip, space, ordinal, buf, bufsiz);
+On Thu, Jan 12, 2017 at 07:46:08PM +0200, Jarkko Sakkinen wrote:
 
-I think this should be
+>  struct tpm_chip {
+> -	struct device dev;
+> -	struct cdev cdev;
+> +	struct device dev, devrm;
 
-rc = tpm2_commit_space(chip, space, ordinal, buf, len)
+Hum.. devrm adds a new kref but doesn't do anything with the release
+function, so that is going to use after free, ie here:
 
-because tpm2_commit_space wants to know the length of the response, not
-the length of the original command.
+> 	put_device(&chip->dev);
+>+	put_device(&chip->devrm);
+> 	return ERR_PTR(rc);
 
-James
+And other places.
 
+One solution is to get_device(chip->dev) after
+device_initialize(dev->rm) and add a devrm->dev.release function to
+do put_device(chip->dev)
 
+Jason
 
 ------------------------------------------------------------------------------
 Developer Access Program for Intel Xeon Phi Processors
