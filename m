@@ -1,7 +1,7 @@
 From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: TPM 2.0 RM getcapability #1
-Date: Thu, 12 Jan 2017 09:56:14 -0500
-Message-ID: <o585e6$cb0$1@blaine.gmane.org>
+Subject: TPM 2.0 RM getcapability #2
+Date: Thu, 12 Jan 2017 10:15:25 -0500
+Message-ID: <o586i6$qb$1@blaine.gmane.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
@@ -17,32 +17,33 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Question 1 of 2:
+The result of getcapability for transient objects should normally be 
+virtual handles that the application sees, not the TPM handles.
 
-The RM is virtualizing transient handles.  When getcapability returns 
-TPM handles, they have to be mapped to the virtual handles.
+However, there is a corner case - auditing the getcapability command.
 
-Where should the mapping occur?  RM vs. user space TSS?
+	Audit is a TPM function that maintains a hash of commands
+	and responses, and can sign the audit log.
 
-- The RM sees the TPM physical handles, and knows the mapping to virtual 
-handles for that process.  It can do accurate mapping.
+If the command is audited, the application will see different data from 
+the TPM (if the getcapability command is even sent to the TPM).  Thus, 
+the audit log won't match.
 
-However, it adds complexity to the kernel driver.  Kernel complexity is 
-to be avoided, and bugs are harder to fix than in the user space TSS.
+Two solutions:
 
-- The user space TSS would have to track the transient handles for the 
-process.  In this case, the TSS would not even send the getcapability 
-command, but just emulate it in the library.
+1 - Detect the audit bit in the session, and don't virtualize the 
+command.  Send it to the TPM and return the TPM handles.
 
-However, this is a local calculation of what SHOULD be in the RM, and 
-does not consider bugs in either code.
+2 - Declare that auditing getcapability -> transient objects won't work.
 
-~~
+The TSS WG specifies #1.
 
-I don't have a strong feeling either way.
+My feeling is that audit is a dubious use case, and auditing 
+getcapability is a very unlikely use case.  I'd go with #2.
 
-However, I'd like to know the sense of the community.  As a TSS 
-maintainer, I want to know if I should start writing code.
+Again, what's the sense of the group?  I want to know if I have to 
+either (#1) write TSS code or (#2) put an informative comment in the TPM 
+library specification.
 
 
 ------------------------------------------------------------------------------
