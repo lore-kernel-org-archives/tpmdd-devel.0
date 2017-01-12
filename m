@@ -1,49 +1,53 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH 01/10] tpm: Check received number of bytes against length
- indicator in header
-Date: Thu, 12 Jan 2017 16:45:01 +0200
-Message-ID: <20170112144501.nj37ecairdp5ev36@intel.com>
-References: <1484057900-17871-1-git-send-email-stefanb@linux.vnet.ibm.com>
+From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Subject: TPM 2.0 RM getcapability #1
+Date: Thu, 12 Jan 2017 09:56:14 -0500
+Message-ID: <o585e6$cb0$1@blaine.gmane.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <1484057900-17871-1-git-send-email-stefanb@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jan 10, 2017 at 09:18:11AM -0500, Stefan Berger wrote:
-> Make sure that we have not received less bytes than what is indicated
-> in the header of the TPM response.
-> 
-> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Question 1 of 2:
 
-NAK for the whole patch set as it is missing the cover letter.
+The RM is virtualizing transient handles.  When getcapability returns 
+TPM handles, they have to be mapped to the virtual handles.
 
-Also you should pick my validation patch to this patch set and do the
-check inside the new function.
+Where should the mapping occur?  RM vs. user space TSS?
 
-/Jarkko
+- The RM sees the TPM physical handles, and knows the mapping to virtual 
+handles for that process.  It can do accurate mapping.
 
-> ---
->  drivers/char/tpm/tpm-interface.c | 2 ++
->  1 file changed, 2 insertions(+)
-> 
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index fecdd3f..9d6f894 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -446,6 +446,8 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd,
->  		return -EFAULT;
->  
->  	header = cmd;
-> +	if (len < be32_to_cpu(header->length))
-> +		return -EFAULT;
->  
->  	err = be32_to_cpu(header->return_code);
->  	if (err != 0 && desc)
-> -- 
-> 2.4.3
-> 
+However, it adds complexity to the kernel driver.  Kernel complexity is 
+to be avoided, and bugs are harder to fix than in the user space TSS.
+
+- The user space TSS would have to track the transient handles for the 
+process.  In this case, the TSS would not even send the getcapability 
+command, but just emulate it in the library.
+
+However, this is a local calculation of what SHOULD be in the RM, and 
+does not consider bugs in either code.
+
+~~
+
+I don't have a strong feeling either way.
+
+However, I'd like to know the sense of the community.  As a TSS 
+maintainer, I want to know if I should start writing code.
+
+
+------------------------------------------------------------------------------
+Developer Access Program for Intel Xeon Phi Processors
+Access to Intel Xeon Phi processor-based developer platforms.
+With one year of Intel Parallel Studio XE.
+Training and support from Colfax.
+Order your platform today. http://sdm.link/xeonphi
