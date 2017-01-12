@@ -1,54 +1,77 @@
-From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: TPM 2.0 RM getcapability #2
-Date: Thu, 12 Jan 2017 10:15:25 -0500
-Message-ID: <o586i6$qb$1@blaine.gmane.org>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+From: Nayna Jain <nayna@linux.vnet.ibm.com>
+Subject: [PATCH v3 0/2] tpm: enhance TPM 2.0 extend function to support multiple PCR banks
+Date: Thu, 12 Jan 2017 11:58:08 -0500
+Message-ID: <1484240290-4306-1-git-send-email-nayna@linux.vnet.ibm.com>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Sender: owner-linux-security-module@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net
+Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Nayna Jain <nayna@linux.vnet.ibm.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The result of getcapability for transient objects should normally be 
-virtual handles that the application sees, not the TPM handles.
+IMA extends its hash measurements in the TPM PCRs, based on policy.
+The existing in-kernel TPM extend function extends only the SHA1
+PCR bank. TPM 2.0 defines multiple PCR banks, to support different
+hash algorithms. The TCG TPM 2.0 Specification[1] recommends
+extending all active PCR banks to prevent malicious users from
+setting unused PCR banks with fake measurements and quoting them.
+This patch set adds support for extending all active PCR banks,
+as recommended.
 
-However, there is a corner case - auditing the getcapability command.
+The first patch implements the TPM 2.0 capability to retrieve
+the list of active PCR banks.
 
-	Audit is a TPM function that maintains a hash of commands
-	and responses, and can sign the audit log.
+The second patch modifies the tpm_pcr_extend() and tpm2_pcr_extend()
+interface to support extending multiple PCR banks. The existing
+tpm_pcr_extend() interface expects only a SHA1 digest. Hence, to
+extend all active PCR banks with differing digest sizes for TPM 2.0,
+the SHA1 digest is padded with 0's as needed.
 
-If the command is audited, the application will see different data from 
-the TPM (if the getcapability command is even sent to the TPM).  Thus, 
-the audit log won't match.
+This approach is taken to maintain backwards compatibility for IMA
+in order to continue working with both TPM 1.2 and TPM 2.0 without
+any changes and still comply with TCG TPM 2.0 Specification[1].
 
-Two solutions:
+[1] TPM 2.0 Specification referred here is "TCG PC Client Specific
+Platform Firmware Profile for TPM 2.0"
 
-1 - Detect the audit bit in the session, and don't virtualize the 
-command.  Send it to the TPM and return the TPM handles.
+Changelog v3:
+- Rebased to the Jarkko's latest master branch (8e25809 tpm:
+  Do not print an error message when doing TPM auto startup)
+- Patch "tpm: implement TPM 2.0 capability to get active PCR banks"
+  - Included Jarkko's feedbacks
+     - Removed getcap_in, getcap_out and used tpm_buf for getting
+     capability.
+     - Used ARRAY_SIZE in place of TPM_MAX_PCR_BANKS and included
+     other feedbacks.
+- Patch "tpm: enhance TPM 2.0 PCR extend to support multiple banks"
+     - Fixed kbuild errors
+       - Fixed buf.data uninitialized warning.
+       - Added TCG_TPM dependency on CONFIG_CRYPTO_HASH_INFO in Kconfig.
 
-2 - Declare that auditing getcapability -> transient objects won't work.
+Changelog v2:
 
-The TSS WG specifies #1.
+- Patch "tpm: implement TPM 2.0 capability to get active PCR banks"
+  - defined structs definition in tpm2-cmd.c.
+  - no_of_active_banks field is removed. Instead, constant
+  TPM2_MAX_PCR_BANKS is defined.
+  - renamed tpm2_get_active_pcr_banks() to tpm2_get_pcr_allocation()
+  - removed generic function tpm2_get_capability().
 
-My feeling is that audit is a dubious use case, and auditing 
-getcapability is a very unlikely use case.  I'd go with #2.
+- Patch "tpm: enchance TPM 2.0 PCR extend to support multiple banks"
+ - Removed tpm2.h, and defined structs common for extend and event log
+  in tpm_eventlog.h
+ - uses tpm_buf in tpm2_pcr_extend().
 
-Again, what's the sense of the group?  I want to know if I have to 
-either (#1) write TSS code or (#2) put an informative comment in the TPM 
-library specification.
+Nayna Jain (2):
+  tpm: implement TPM 2.0 capability to get active PCR banks
+  tpm: enhance TPM 2.0 PCR extend to support multiple banks
 
+ drivers/char/tpm/Kconfig         |   1 +
+ drivers/char/tpm/tpm-interface.c |  16 ++++-
+ drivers/char/tpm/tpm.h           |   7 ++-
+ drivers/char/tpm/tpm2-cmd.c      | 127 ++++++++++++++++++++++++++++++---------
+ drivers/char/tpm/tpm_eventlog.h  |  18 ++++++
+ 5 files changed, 138 insertions(+), 31 deletions(-)
 
-------------------------------------------------------------------------------
-Developer Access Program for Intel Xeon Phi Processors
-Access to Intel Xeon Phi processor-based developer platforms.
-With one year of Intel Parallel Studio XE.
-Training and support from Colfax.
-Order your platform today. http://sdm.link/xeonphi
+-- 
+2.5.0
+
