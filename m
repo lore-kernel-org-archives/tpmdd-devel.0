@@ -1,60 +1,57 @@
-From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC v2 5/5] tpm2: expose resource manager
- via a device link /dev/tpms<n>
-Date: Fri, 13 Jan 2017 11:01:10 -0700
-Message-ID: <20170113180110.GA31397@obsidianresearch.com>
-References: <20170112174612.9314-1-jarkko.sakkinen@linux.intel.com>
- <20170112174612.9314-6-jarkko.sakkinen@linux.intel.com>
- <20170112205628.qh3yf2jcargtw6qv@intel.com>
- <20170113172537.GA31125@obsidianresearch.com>
- <1484329208.2527.18.camel@HansenPartnership.com>
+From: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Subject: Re: [tpmdd-devel] [PATCH v8 2/2] tpm: add securityfs support for TPM
+ 2.0 firmware event log
+Date: Fri, 13 Jan 2017 13:09:29 -0500
+Message-ID: <9c605b61-bd5f-eb74-8fc0-ac3587852808@linux.vnet.ibm.com>
+References: <1484121262-25732-1-git-send-email-nayna@linux.vnet.ibm.com>
+ <1484121262-25732-3-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
 Return-path: <linux-kernel-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <1484329208.2527.18.camel@HansenPartnership.com>
+In-Reply-To: <1484121262-25732-3-git-send-email-nayna@linux.vnet.ibm.com>
 Sender: linux-kernel-owner@vger.kernel.org
-To: James Bottomley <James.Bottomley@HansenPartnership.com>
-Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+To: Nayna Jain <nayna@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net
+Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jan 13, 2017 at 09:40:08AM -0800, James Bottomley wrote:
-> On Fri, 2017-01-13 at 10:25 -0700, Jason Gunthorpe wrote:
-> > On Thu, Jan 12, 2017 at 10:56:28PM +0200, Jarkko Sakkinen wrote:
-> > 
-> > > >  dev_t tpm_devt;
-> > > 
-> > > But they should have different major device numbers.
-> > 
-> > major/minors don't really matter these days since they are dynamic
-> 
-> Right, although we have this weird piece of code:
-> 
-> 
-> 	if (chip->dev_num == 0)
-> 		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
-> 	else
-> 		chip->dev.devt = MKDEV(MAJOR(tpm_devt), chip->dev_num);
-> 
-> So the first TPM device gets the MISC_MAJOR with TPM_MINOR and the rest
-> get the dynamic major/minor.  It means when you do an ls on a complex
-> system you get something like:
+On 01/11/2017 02:54 AM, Nayna Jain wrote:
+> Unlike the device driver support for TPM 1.2, the TPM 2.0 does
+> not support the securityfs pseudo files for displaying the
+> firmware event log.
+>
+> This patch enables support for providing the TPM 2.0 event log in
+> binary form. TPM 2.0 event log supports a crypto agile format that
+> records multiple digests, which is different from TPM 1.2. This
+> patch enables the tpm_bios_log_setup for TPM 2.0  and adds the
+> event log parser which understand the TPM 2.0 crypto agile format.
+>
+> Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
+> ---
+>   drivers/char/tpm/Makefile                          |   2 +-
+>   .../char/tpm/{tpm_eventlog.c => tpm1_eventlog.c}   |  35 ++--
+>   drivers/char/tpm/tpm2_eventlog.c                   | 203 +++++++++++++++++++++
+>   drivers/char/tpm/tpm_acpi.c                        |   3 +
+>   drivers/char/tpm/tpm_eventlog.h                    |  63 +++++++
+>   5 files changed, 291 insertions(+), 15 deletions(-)
+>   rename drivers/char/tpm/{tpm_eventlog.c => tpm1_eventlog.c} (95%)
+>   create mode 100644 drivers/char/tpm/tpm2_eventlog.c
+>
+>
+> diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
+> index b7718c9..169edf3 100644
+> --- a/drivers/char/tpm/tpm_acpi.c
+> +++ b/drivers/char/tpm/tpm_acpi.c
+> @@ -54,6 +54,9 @@ int tpm_read_log_acpi(struct tpm_chip *chip)
+>   	u64 len, start;
+>   	struct tpm_bios_log *log;
+>
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		return -ENODEV;
+> +
 
-The TPM has always used a static major/minor for tpm0 and dynamic for
-the following. Originally this used a misc_device and did:
 
-        } else if (chip->dev_num == 0)
-                chip->vendor.miscdev.minor = TPM_MINOR;
-        else
-                chip->vendor.miscdev.minor = MISC_DYNAMIC_MINOR;
+Works with SeaBIOS when this check is disabled.
 
-When we moved to struct device the !0 tpms got a dynamic major as
-well.
 
-I don't really know what the broad kernel feeling is on historical
-major/minor stability - this was mainly continuing what had always
-been done in this code for pre-udev userspace compatibility.
-
-Does it harm anything?
-
-Jason
+    Stefan
