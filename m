@@ -1,75 +1,434 @@
 From: James Bottomley <James.Bottomley@HansenPartnership.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC v2 5/5] tpm2: expose resource manager
- via a device link /dev/tpms<n>
-Date: Fri, 13 Jan 2017 10:11:02 -0800
-Message-ID: <1484331062.2527.22.camel@HansenPartnership.com>
+Subject: Re: [tpmdd-devel] [PATCH RFC v2 4/5] tpm: split out tpm-dev.c into
+ tpm-dev.c and tpm-common-dev.c
+Date: Fri, 13 Jan 2017 11:18:30 -0800
+Message-ID: <1484335110.2527.25.camel@HansenPartnership.com>
 References: <20170112174612.9314-1-jarkko.sakkinen@linux.intel.com>
-         <20170112174612.9314-6-jarkko.sakkinen@linux.intel.com>
-         <20170112205628.qh3yf2jcargtw6qv@intel.com>
-         <20170113172537.GA31125@obsidianresearch.com>
-         <1484329208.2527.18.camel@HansenPartnership.com>
-         <20170113180110.GA31397@obsidianresearch.com>
+         <20170112174612.9314-5-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <20170113180110.GA31397@obsidianresearch.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170112174612.9314-5-jarkko.sakkinen@linux.intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net
+Cc: open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, 2017-01-13 at 11:01 -0700, Jason Gunthorpe wrote:
-> On Fri, Jan 13, 2017 at 09:40:08AM -0800, James Bottomley wrote:
-> > On Fri, 2017-01-13 at 10:25 -0700, Jason Gunthorpe wrote:
-> > > On Thu, Jan 12, 2017 at 10:56:28PM +0200, Jarkko Sakkinen wrote:
-> > > 
-> > > > >  dev_t tpm_devt;
-> > > > 
-> > > > But they should have different major device numbers.
-> > > 
-> > > major/minors don't really matter these days since they are
-> > > dynamic
-> > 
-> > Right, although we have this weird piece of code:
-> > 
-> > 
-> > 	if (chip->dev_num == 0)
-> > 		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
-> > 	else
-> > 		chip->dev.devt = MKDEV(MAJOR(tpm_devt), chip->dev_num);
-> > 
-> > So the first TPM device gets the MISC_MAJOR with TPM_MINOR and the
-> > rest
-> > get the dynamic major/minor.  It means when you do an ls on a
-> > complex
-> > system you get something like:
-> 
-> The TPM has always used a static major/minor for tpm0 and dynamic for
-> the following. Originally this used a misc_device and did:
-> 
->         } else if (chip->dev_num == 0)
->                 chip->vendor.miscdev.minor = TPM_MINOR;
->         else
->                 chip->vendor.miscdev.minor = MISC_DYNAMIC_MINOR;
-> 
-> When we moved to struct device the !0 tpms got a dynamic major as
-> well.
-> 
-> I don't really know what the broad kernel feeling is on historical
-> major/minor stability - this was mainly continuing what had always
-> been done in this code for pre-udev userspace compatibility.
-> 
-> Does it harm anything?
-
-Devices are either supposed to be static, so you can rely on the
-major/minor without needing udev or fully dynamic, so you need udev to
-get the nodes and you may not rely on the major/minor number.  The
-potential harm is that we're neither one nor the other, which sounds
-like an accident waiting to happen if someone decides to rely on our
-numbers but gets the wrong node.  Chances are that, since most linux
-devices are fully dynamic, no-one ever thinks of relying on fixed
-major/minor numbers anymore, so everyone avoids this banana skin and
-perhaps it doesn't matter.
+This version has a bug in that it doesn't do a clear_bit(0, &chip
+->is_open) on release. so fixed that
 
 James
+
+---
+
+>From c006f181988dd2fd54e5a84f3e4a6dc0157c96f5 Mon Sep 17 00:00:00 2001
+From: James Bottomley <James.Bottomley@HansenPartnership.com>
+Date: Tue, 10 Jan 2017 19:08:53 -0800
+Subject: [PATCH 4/5] tpm: split out tpm-dev.c into tpm-dev.c and
+ tpm-common-dev.c
+
+In preparation for adding a space management device, split out all of
+the common routines that would be shareable between these device types
+into a common file.
+
+Signed-off-by: James Bottomley <James.Bottomley@HansenPartnership.com>
+---
+ drivers/char/tpm/Makefile         |   2 +-
+ drivers/char/tpm/tpm-dev-common.c | 145 ++++++++++++++++++++++++++++++++++++++
+ drivers/char/tpm/tpm-dev.c        | 142 +++++--------------------------------
+ drivers/char/tpm/tpm-dev.h        |  27 +++++++
+ 4 files changed, 189 insertions(+), 127 deletions(-)
+ create mode 100644 drivers/char/tpm/tpm-dev-common.c
+ create mode 100644 drivers/char/tpm/tpm-dev.h
+
+diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
+index 251d0ed..13ff5da 100644
+--- a/drivers/char/tpm/Makefile
++++ b/drivers/char/tpm/Makefile
+@@ -3,7 +3,7 @@
+ #
+ obj-$(CONFIG_TCG_TPM) += tpm.o
+ tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o \
+-	 tpm_eventlog.o tpm2-space.o
++	 tpm_eventlog.o tpm2-space.o tpm-dev-common.o
+ tpm-$(CONFIG_ACPI) += tpm_ppi.o tpm_acpi.o
+ tpm-$(CONFIG_OF) += tpm_of.o
+ obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
+diff --git a/drivers/char/tpm/tpm-dev-common.c b/drivers/char/tpm/tpm-dev-common.c
+new file mode 100644
+index 0000000..0156562
+--- /dev/null
++++ b/drivers/char/tpm/tpm-dev-common.c
+@@ -0,0 +1,145 @@
++/*
++ * Copyright (C) 2004 IBM Corporation
++ * Authors:
++ * Leendert van Doorn <leendert@watson.ibm.com>
++ * Dave Safford <safford@watson.ibm.com>
++ * Reiner Sailer <sailer@watson.ibm.com>
++ * Kylene Hall <kjhall@us.ibm.com>
++ *
++ * Copyright (C) 2013 Obsidian Research Corp
++ * Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
++ *
++ * Device file system interface to the TPM
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation, version 2 of the
++ * License.
++ *
++ */
++#include <linux/slab.h>
++#include <linux/uaccess.h>
++#include "tpm.h"
++#include "tpm-dev.h"
++
++static void user_reader_timeout(unsigned long ptr)
++{
++	struct file_priv *priv = (struct file_priv *)ptr;
++
++	schedule_work(&priv->work);
++}
++
++static void timeout_work(struct work_struct *work)
++{
++	struct file_priv *priv = container_of(work, struct file_priv, work);
++
++	mutex_lock(&priv->buffer_mutex);
++	atomic_set(&priv->data_pending, 0);
++	memset(priv->data_buffer, 0, sizeof(priv->data_buffer));
++	mutex_unlock(&priv->buffer_mutex);
++}
++
++void tpm_common_open(struct file *file, struct tpm_chip *chip,
++		     struct file_priv *priv)
++{
++	priv->chip = chip;
++	atomic_set(&priv->data_pending, 0);
++	mutex_init(&priv->buffer_mutex);
++	setup_timer(&priv->user_read_timer, user_reader_timeout,
++			(unsigned long)priv);
++	INIT_WORK(&priv->work, timeout_work);
++
++	file->private_data = priv;
++}
++
++ssize_t tpm_common_read(struct file *file, char __user *buf,
++			size_t size, loff_t *off)
++{
++	struct file_priv *priv = file->private_data;
++	ssize_t ret_size;
++	ssize_t orig_ret_size;
++	int rc;
++
++	del_singleshot_timer_sync(&priv->user_read_timer);
++	flush_work(&priv->work);
++	ret_size = atomic_read(&priv->data_pending);
++	if (ret_size > 0) {	/* relay data */
++		orig_ret_size = ret_size;
++		if (size < ret_size)
++			ret_size = size;
++
++		mutex_lock(&priv->buffer_mutex);
++		rc = copy_to_user(buf, priv->data_buffer, ret_size);
++		memset(priv->data_buffer, 0, orig_ret_size);
++		if (rc)
++			ret_size = -EFAULT;
++
++		mutex_unlock(&priv->buffer_mutex);
++	}
++
++	atomic_set(&priv->data_pending, 0);
++
++	return ret_size;
++}
++
++ssize_t tpm_common_write(struct file *file, const char __user *buf,
++			 size_t size, loff_t *off, struct tpm_space *space)
++{
++	struct file_priv *priv = file->private_data;
++	size_t in_size = size;
++	ssize_t out_size;
++
++	/* Cannot perform a write until the read has cleared either via
++	 * tpm_read or a user_read_timer timeout. This also prevents split
++	 * buffered writes from blocking here.
++	 */
++	if (atomic_read(&priv->data_pending) != 0)
++		return -EBUSY;
++
++	if (in_size > TPM_BUFSIZE)
++		return -E2BIG;
++
++	mutex_lock(&priv->buffer_mutex);
++
++	if (copy_from_user
++	    (priv->data_buffer, (void __user *) buf, in_size)) {
++		mutex_unlock(&priv->buffer_mutex);
++		return -EFAULT;
++	}
++
++	/* atomic tpm command send and result receive. We only hold the ops
++	 * lock during this period so that the tpm can be unregistered even if
++	 * the char dev is held open.
++	 */
++	if (tpm_try_get_ops(priv->chip)) {
++		mutex_unlock(&priv->buffer_mutex);
++		return -EPIPE;
++	}
++	out_size = tpm_transmit(priv->chip, space, priv->data_buffer,
++				sizeof(priv->data_buffer), 0);
++
++	tpm_put_ops(priv->chip);
++	if (out_size < 0) {
++		mutex_unlock(&priv->buffer_mutex);
++		return out_size;
++	}
++
++	atomic_set(&priv->data_pending, out_size);
++	mutex_unlock(&priv->buffer_mutex);
++
++	/* Set a timeout by which the reader must come claim the result */
++	mod_timer(&priv->user_read_timer, jiffies + (60 * HZ));
++
++	return in_size;
++}
++
++/*
++ * Called on file close
++ */
++void tpm_common_release(struct file *file, struct file_priv *priv)
++{
++	del_singleshot_timer_sync(&priv->user_read_timer);
++	flush_work(&priv->work);
++	file->private_data = NULL;
++	atomic_set(&priv->data_pending, 0);
++}
+diff --git a/drivers/char/tpm/tpm-dev.c b/drivers/char/tpm/tpm-dev.c
+index 249eeb0..92fc2c6 100644
+--- a/drivers/char/tpm/tpm-dev.c
++++ b/drivers/char/tpm/tpm-dev.c
+@@ -18,45 +18,15 @@
+  *
+  */
+ #include <linux/slab.h>
+-#include <linux/uaccess.h>
+-#include "tpm.h"
+-
+-struct file_priv {
+-	struct tpm_chip *chip;
+-
+-	/* Data passed to and from the tpm via the read/write calls */
+-	atomic_t data_pending;
+-	struct mutex buffer_mutex;
+-
+-	struct timer_list user_read_timer;      /* user needs to claim result */
+-	struct work_struct work;
+-
+-	u8 data_buffer[TPM_BUFSIZE];
+-};
+-
+-static void user_reader_timeout(unsigned long ptr)
+-{
+-	struct file_priv *priv = (struct file_priv *)ptr;
+-
+-	schedule_work(&priv->work);
+-}
+-
+-static void timeout_work(struct work_struct *work)
+-{
+-	struct file_priv *priv = container_of(work, struct file_priv, work);
+-
+-	mutex_lock(&priv->buffer_mutex);
+-	atomic_set(&priv->data_pending, 0);
+-	memset(priv->data_buffer, 0, sizeof(priv->data_buffer));
+-	mutex_unlock(&priv->buffer_mutex);
+-}
++#include "tpm-dev.h"
+ 
+ static int tpm_open(struct inode *inode, struct file *file)
+ {
+-	struct tpm_chip *chip =
+-		container_of(inode->i_cdev, struct tpm_chip, cdev);
++	struct tpm_chip *chip;
+ 	struct file_priv *priv;
+ 
++	chip = container_of(inode->i_cdev, struct tpm_chip, cdev);
++
+ 	/* It's assured that the chip will be opened just once,
+ 	 * by the check of is_open variable, which is protected
+ 	 * by driver_lock. */
+@@ -66,100 +36,22 @@ static int tpm_open(struct inode *inode, struct file *file)
+ 	}
+ 
+ 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+-	if (priv == NULL) {
+-		clear_bit(0, &chip->is_open);
+-		return -ENOMEM;
+-	}
++	if (priv == NULL)
++		goto out;
+ 
+-	priv->chip = chip;
+-	atomic_set(&priv->data_pending, 0);
+-	mutex_init(&priv->buffer_mutex);
+-	setup_timer(&priv->user_read_timer, user_reader_timeout,
+-			(unsigned long)priv);
+-	INIT_WORK(&priv->work, timeout_work);
++	tpm_common_open(file, chip, priv);
+ 
+-	file->private_data = priv;
+ 	return 0;
+-}
+-
+-static ssize_t tpm_read(struct file *file, char __user *buf,
+-			size_t size, loff_t *off)
+-{
+-	struct file_priv *priv = file->private_data;
+-	ssize_t ret_size;
+-	int rc;
+-
+-	del_singleshot_timer_sync(&priv->user_read_timer);
+-	flush_work(&priv->work);
+-	ret_size = atomic_read(&priv->data_pending);
+-	if (ret_size > 0) {	/* relay data */
+-		ssize_t orig_ret_size = ret_size;
+-		if (size < ret_size)
+-			ret_size = size;
+-
+-		mutex_lock(&priv->buffer_mutex);
+-		rc = copy_to_user(buf, priv->data_buffer, ret_size);
+-		memset(priv->data_buffer, 0, orig_ret_size);
+-		if (rc)
+-			ret_size = -EFAULT;
+ 
+-		mutex_unlock(&priv->buffer_mutex);
+-	}
+-
+-	atomic_set(&priv->data_pending, 0);
+-
+-	return ret_size;
++ out:
++	clear_bit(0, &chip->is_open);
++	return -ENOMEM;
+ }
+ 
+ static ssize_t tpm_write(struct file *file, const char __user *buf,
+ 			 size_t size, loff_t *off)
+ {
+-	struct file_priv *priv = file->private_data;
+-	size_t in_size = size;
+-	ssize_t out_size;
+-
+-	/* cannot perform a write until the read has cleared
+-	   either via tpm_read or a user_read_timer timeout.
+-	   This also prevents splitted buffered writes from blocking here.
+-	*/
+-	if (atomic_read(&priv->data_pending) != 0)
+-		return -EBUSY;
+-
+-	if (in_size > TPM_BUFSIZE)
+-		return -E2BIG;
+-
+-	mutex_lock(&priv->buffer_mutex);
+-
+-	if (copy_from_user
+-	    (priv->data_buffer, (void __user *) buf, in_size)) {
+-		mutex_unlock(&priv->buffer_mutex);
+-		return -EFAULT;
+-	}
+-
+-	/* atomic tpm command send and result receive. We only hold the ops
+-	 * lock during this period so that the tpm can be unregistered even if
+-	 * the char dev is held open.
+-	 */
+-	if (tpm_try_get_ops(priv->chip)) {
+-		mutex_unlock(&priv->buffer_mutex);
+-		return -EPIPE;
+-	}
+-	out_size = tpm_transmit(priv->chip, NULL, priv->data_buffer,
+-				sizeof(priv->data_buffer), 0);
+-
+-	tpm_put_ops(priv->chip);
+-	if (out_size < 0) {
+-		mutex_unlock(&priv->buffer_mutex);
+-		return out_size;
+-	}
+-
+-	atomic_set(&priv->data_pending, out_size);
+-	mutex_unlock(&priv->buffer_mutex);
+-
+-	/* Set a timeout by which the reader must come claim the result */
+-	mod_timer(&priv->user_read_timer, jiffies + (60 * HZ));
+-
+-	return in_size;
++	return tpm_common_write(file, buf, size, off, NULL);
+ }
+ 
+ /*
+@@ -169,12 +61,12 @@ static int tpm_release(struct inode *inode, struct file *file)
+ {
+ 	struct file_priv *priv = file->private_data;
+ 
+-	del_singleshot_timer_sync(&priv->user_read_timer);
+-	flush_work(&priv->work);
+-	file->private_data = NULL;
+-	atomic_set(&priv->data_pending, 0);
++	tpm_common_release(file, priv);
++
+ 	clear_bit(0, &priv->chip->is_open);
++
+ 	kfree(priv);
++
+ 	return 0;
+ }
+ 
+@@ -182,9 +74,7 @@ const struct file_operations tpm_fops = {
+ 	.owner = THIS_MODULE,
+ 	.llseek = no_llseek,
+ 	.open = tpm_open,
+-	.read = tpm_read,
++	.read = tpm_common_read,
+ 	.write = tpm_write,
+ 	.release = tpm_release,
+ };
+-
+-
+diff --git a/drivers/char/tpm/tpm-dev.h b/drivers/char/tpm/tpm-dev.h
+new file mode 100644
+index 0000000..ff15cf7
+--- /dev/null
++++ b/drivers/char/tpm/tpm-dev.h
+@@ -0,0 +1,27 @@
++#ifndef _TPM_DEV_H
++#define _TPM_DEV_H
++
++#include "tpm.h"
++
++struct file_priv {
++	struct tpm_chip *chip;
++
++	/* Data passed to and from the tpm via the read/write calls */
++	atomic_t data_pending;
++	struct mutex buffer_mutex;
++
++	struct timer_list user_read_timer;      /* user needs to claim result */
++	struct work_struct work;
++
++	u8 data_buffer[TPM_BUFSIZE];
++};
++
++void tpm_common_open(struct file *file, struct tpm_chip *chip,
++		     struct file_priv *priv);
++ssize_t tpm_common_read(struct file *file, char __user *buf,
++			size_t size, loff_t *off);
++ssize_t tpm_common_write(struct file *file, const char __user *buf,
++			 size_t size, loff_t *off, struct tpm_space *space);
++void tpm_common_release(struct file *file, struct file_priv *priv);
++
++#endif
+-- 
+2.6.6
+
