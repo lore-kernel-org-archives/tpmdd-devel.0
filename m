@@ -1,107 +1,155 @@
-From: "Maciej S. Szmigiero" <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
-Subject: [PATCH] tpm_tis: rename TPM_TIS_ITPM_POSSIBLE to
- TPM_TIS_ITPM_WORKAROUND
-Date: Thu, 12 Jan 2017 23:04:11 +0100
-Message-ID: <36b62240-e8c8-9cef-2052-e4e33a617bcf@maciej.szmigiero.name>
+From: James Bottomley <jejb@linux.vnet.ibm.com>
+Subject: Re: [tpmdd-devel] [PATCH RFC v2 3/5] tpm: infrastructure for TPM
+ spaces
+Date: Thu, 12 Jan 2017 17:17:23 -0800
+Message-ID: <1484270243.5807.31.camel@linux.vnet.ibm.com>
+References: <20170112174612.9314-1-jarkko.sakkinen@linux.intel.com>
+         <20170112174612.9314-4-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, linux-kernel <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170112174612.9314-4-jarkko.sakkinen@linux.intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net
+Cc: open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Rename TPM_TIS_ITPM_POSSIBLE to TPM_TIS_ITPM_WORKAROUND since it gives a
-better idea what this flag actually does.
+On Thu, 2017-01-12 at 19:46 +0200, Jarkko Sakkinen wrote:
+> @@ -189,6 +190,12 @@ struct tpm_chip *tpm_chip_alloc(struct device
+> *pdev,
+>  	chip->cdev.owner = THIS_MODULE;
+>  	chip->cdev.kobj.parent = &chip->dev.kobj;
+> 
+> +	chip->work_space.context_buf = kzalloc(PAGE_SIZE,
+> GFP_KERNEL);
+> +	if (!chip->work_space.context_buf) {
+> +		rc = -ENOMEM;
+> +		goto out;
+> +	}
+> +
 
-Suggested-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Signed-off-by: Maciej S. Szmigiero <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
+I think the work_buf handling can be greatly simplified by making it a
+pointer to the space: it's only usable between tpm2_prepare_space() and
+tpm2_commit_space() which are protected by the chip mutex, so there's
+no need for it to exist outside of these calls (i.e. it can be NULL).
+
+Doing it this way also saves the allocation and copying overhead of
+work_space.
+
+The patch below can be folded to effect this.
+
+James
+
 ---
-This needs "tpm_tis: fix iTPM probe via probe_itpm() function"
-applied first.
 
- drivers/char/tpm/tpm_tis.c      | 2 +-
- drivers/char/tpm/tpm_tis_core.c | 8 ++++----
- drivers/char/tpm/tpm_tis_core.h | 2 +-
- 3 files changed, 6 insertions(+), 6 deletions(-)
-
-diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index 0127af130cb1..7912dadc39be 100644
---- a/drivers/char/tpm/tpm_tis.c
-+++ b/drivers/char/tpm/tpm_tis.c
-@@ -159,7 +159,7 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
- 		irq = tpm_info->irq;
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 13cac09..770a8c0 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -131,7 +131,6 @@ static void tpm_dev_release(struct device *dev)
+ 	mutex_unlock(&idr_lock);
  
- 	if (itpm)
--		phy->priv.flags |= TPM_TIS_ITPM_POSSIBLE;
-+		phy->priv.flags |= TPM_TIS_ITPM_WORKAROUND;
+ 	kfree(chip->log.bios_event_log);
+-	kfree(chip->work_space.context_buf);
+ 	kfree(chip);
+ }
  
- 	return tpm_tis_core_init(dev, &phy->priv, irq, &tpm_tcg,
- 				 acpi_dev_handle);
-diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-index 401f1228547c..b6d2a6d474d2 100644
---- a/drivers/char/tpm/tpm_tis_core.c
-+++ b/drivers/char/tpm/tpm_tis_core.c
-@@ -264,7 +264,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	int rc, status, burstcnt;
- 	size_t count = 0;
--	bool itpm = priv->flags & TPM_TIS_ITPM_POSSIBLE;
-+	bool itpm = priv->flags & TPM_TIS_ITPM_WORKAROUND;
+@@ -206,12 +205,6 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+ 	chip->cdev.kobj.parent = &chip->dev.kobj;
+ 	chip->cdevrm.kobj.parent = &chip->devrm.kobj;
  
- 	if (request_locality(chip, 0) < 0)
- 		return -EBUSY;
-@@ -467,7 +467,7 @@ static int probe_itpm(struct tpm_chip *chip)
- 	size_t len = sizeof(cmd_getticks);
- 	u16 vendor;
+-	chip->work_space.context_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
+-	if (!chip->work_space.context_buf) {
+-		rc = -ENOMEM;
+-		goto out;
+-	}
+-
+ 	return chip;
  
--	if (priv->flags & TPM_TIS_ITPM_POSSIBLE)
-+	if (priv->flags & TPM_TIS_ITPM_WORKAROUND)
+ out:
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 8009ed4..adf7810 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -211,7 +211,7 @@ struct tpm_chip {
+ 	char ppi_version[TPM_PPI_VERSION_LEN + 1];
+ #endif /* CONFIG_ACPI */
+ 
+-	struct tpm_space work_space;
++	struct tpm_space *work_space;
+ 	u32 nr_commands;
+ 	u32 *cc_attrs_tbl;
+ };
+diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2-space.c
+index 44e5501..285361e 100644
+--- a/drivers/char/tpm/tpm2-space.c
++++ b/drivers/char/tpm/tpm2-space.c
+@@ -27,7 +27,7 @@ enum tpm2_handle_types {
+ 
+ static void tpm2_flush_space(struct tpm_chip *chip)
+ {
+-	struct tpm_space *space = &chip->work_space;
++	struct tpm_space *space = chip->work_space;
+ 	int i;
+ 
+ 	for (i = 0; i < ARRAY_SIZE(space->context_tbl); i++)
+@@ -45,7 +45,7 @@ struct tpm2_context {
+ 
+ static int tpm2_load_space(struct tpm_chip *chip)
+ {
+-	struct tpm_space *space = &chip->work_space;
++	struct tpm_space *space = chip->work_space;
+ 	struct tpm2_context *ctx;
+ 	struct tpm_buf buf;
+ 	int i;
+@@ -99,7 +99,7 @@ static int tpm2_load_space(struct tpm_chip *chip)
+ 
+ static int tpm2_map_command(struct tpm_chip *chip, u32 cc, u8 *cmd, size_t len)
+ {
+-	struct tpm_space *space = &chip->work_space;
++	struct tpm_space *space = chip->work_space;
+ 	unsigned int nr_handles;
+ 	u32 vhandle;
+ 	u32 phandle;
+@@ -147,9 +147,7 @@ int tpm2_prepare_space(struct tpm_chip *chip, struct tpm_space *space,
+ 	if (!space)
  		return 0;
  
- 	rc = tpm_tis_read16(priv, TPM_DID_VID(0), &vendor);
-@@ -485,13 +485,13 @@ static int probe_itpm(struct tpm_chip *chip)
- 	tpm_tis_ready(chip);
- 	release_locality(chip, priv->locality, 0);
+-	memcpy(&chip->work_space.context_tbl, &space->context_tbl,
+-	       sizeof(space->context_tbl));
+-	memcpy(chip->work_space.context_buf, space->context_buf, PAGE_SIZE);
++	chip->work_space = space;
  
--	priv->flags |= TPM_TIS_ITPM_POSSIBLE;
-+	priv->flags |= TPM_TIS_ITPM_WORKAROUND;
+ 	rc = tpm2_load_space(chip);
+ 	if (rc)
+@@ -164,7 +162,7 @@ int tpm2_prepare_space(struct tpm_chip *chip, struct tpm_space *space,
  
- 	rc = tpm_tis_send_data(chip, cmd_getticks, len);
- 	if (rc == 0)
- 		dev_info(&chip->dev, "Detected an iTPM.\n");
- 	else {
--		priv->flags &= ~TPM_TIS_ITPM_POSSIBLE;
-+		priv->flags &= ~TPM_TIS_ITPM_WORKAROUND;
- 		rc = -EFAULT;
- 	}
+ static int tpm2_map_response(struct tpm_chip *chip, u32 cc, u8 *rsp, size_t len)
+ {
+-	struct tpm_space *space = &chip->work_space;
++	struct tpm_space *space = chip->work_space;
+ 	u32 phandle;
+ 	u32 vhandle;
+ 	u32 attrs;
+@@ -222,7 +220,7 @@ static int tpm2_map_response(struct tpm_chip *chip, u32 cc, u8 *rsp, size_t len)
  
-diff --git a/drivers/char/tpm/tpm_tis_core.h b/drivers/char/tpm/tpm_tis_core.h
-index 9191aabbf9c2..e2212f021a02 100644
---- a/drivers/char/tpm/tpm_tis_core.h
-+++ b/drivers/char/tpm/tpm_tis_core.h
-@@ -80,7 +80,7 @@ enum tis_defaults {
- #define	TPM_RID(l)			(0x0F04 | ((l) << 12))
+ static int tpm2_save_space(struct tpm_chip *chip)
+ {
+-	struct tpm_space *space = &chip->work_space;
++	struct tpm_space *space = chip->work_space;
+ 	struct tpm_buf buf;
+ 	int i;
+ 	int j;
+@@ -295,9 +293,7 @@ int tpm2_commit_space(struct tpm_chip *chip, struct tpm_space *space,
+ 	if (rc)
+ 		return rc;
  
- enum tpm_tis_flags {
--	TPM_TIS_ITPM_POSSIBLE		= BIT(0),
-+	TPM_TIS_ITPM_WORKAROUND		= BIT(0),
- };
+-	memcpy(&space->context_tbl, &chip->work_space.context_tbl,
+-	       sizeof(space->context_tbl));
+-	memcpy(space->context_buf, chip->work_space.context_buf, PAGE_SIZE);
++	chip->work_space = NULL;
  
- struct tpm_tis_data {
+ 	return 0;
+ }
 
-
-------------------------------------------------------------------------------
-Developer Access Program for Intel Xeon Phi Processors
-Access to Intel Xeon Phi processor-based developer platforms.
-With one year of Intel Parallel Studio XE.
-Training and support from Colfax.
-Order your platform today. http://sdm.link/xeonphi
