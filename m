@@ -1,26 +1,27 @@
 From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [tpmdd-devel] [PATCH v4] tpm: Check size of response before
- accessing data
-Date: Fri, 13 Jan 2017 10:19:50 -0700
-Message-ID: <20170113171950.GB30551@obsidianresearch.com>
-References: <1484270351-16878-1-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: Re: [PATCH RFC v2 5/5] tpm2: expose resource manager via a device
+ link /dev/tpms<n>
+Date: Fri, 13 Jan 2017 10:25:37 -0700
+Message-ID: <20170113172537.GA31125@obsidianresearch.com>
+References: <20170112174612.9314-1-jarkko.sakkinen@linux.intel.com>
+ <20170112174612.9314-6-jarkko.sakkinen@linux.intel.com>
+ <20170112205628.qh3yf2jcargtw6qv@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1484270351-16878-1-git-send-email-stefanb@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
+In-Reply-To: <20170112205628.qh3yf2jcargtw6qv@intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, James Bottomley <James.Bottomley@HansenPartnership.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jan 12, 2017 at 08:19:11PM -0500, Stefan Berger wrote:
-> Make sure that we have not received less bytes than what is indicated
-> in the header of the TPM response. Also, check the number of bytes in
-> the response before accessing its data.
-> 
-> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+On Thu, Jan 12, 2017 at 10:56:28PM +0200, Jarkko Sakkinen wrote:
 
-Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+> >  dev_t tpm_devt;
+> 
+> But they should have different major device numbers.
+
+major/minors don't really matter these days since they are dynamic
 
 Jason
