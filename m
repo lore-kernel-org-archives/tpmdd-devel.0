@@ -1,77 +1,80 @@
-From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v8 2/2] tpm: add securityfs support for
- TPM 2.0 firmware event log
-Date: Fri, 13 Jan 2017 15:35:40 -0500
-Message-ID: <9e823fb6-dcc7-a097-1cba-948aeffe2eb6@linux.vnet.ibm.com>
-References: <1484121262-25732-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1484121262-25732-3-git-send-email-nayna@linux.vnet.ibm.com>
-	<9c605b61-bd5f-eb74-8fc0-ac3587852808@linux.vnet.ibm.com>
+From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Subject: Re: [tpmdd-devel] [PATCH RFC v2 5/5] tpm2: expose resource manager
+ via a device link /dev/tpms<n>
+Date: Fri, 13 Jan 2017 14:23:00 -0700
+Message-ID: <20170113212300.GA1463@obsidianresearch.com>
+References: <20170112174612.9314-1-jarkko.sakkinen@linux.intel.com>
+ <20170112174612.9314-6-jarkko.sakkinen@linux.intel.com>
+ <20170112183919.GA12836@obsidianresearch.com>
+ <1484335247.2527.28.camel@HansenPartnership.com>
+ <20170113194730.GA32214@obsidianresearch.com>
+ <1484337756.2527.48.camel@HansenPartnership.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <9c605b61-bd5f-eb74-8fc0-ac3587852808-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <1484337756.2527.48.camel@HansenPartnership.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: James Bottomley <James.Bottomley@HansenPartnership.com>
+Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 01/13/2017 01:09 PM, Stefan Berger wrote:
-> On 01/11/2017 02:54 AM, Nayna Jain wrote:
->> Unlike the device driver support for TPM 1.2, the TPM 2.0 does
->> not support the securityfs pseudo files for displaying the
->> firmware event log.
->>
->> This patch enables support for providing the TPM 2.0 event log in
->> binary form. TPM 2.0 event log supports a crypto agile format that
->> records multiple digests, which is different from TPM 1.2. This
->> patch enables the tpm_bios_log_setup for TPM 2.0  and adds the
->> event log parser which understand the TPM 2.0 crypto agile format.
->>
->> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
->> ---
->>   drivers/char/tpm/Makefile                          |   2 +-
->>   .../char/tpm/{tpm_eventlog.c => tpm1_eventlog.c}   |  35 ++--
->>   drivers/char/tpm/tpm2_eventlog.c                   | 203 
->> +++++++++++++++++++++
->>   drivers/char/tpm/tpm_acpi.c                        |   3 +
->>   drivers/char/tpm/tpm_eventlog.h                    |  63 +++++++
->>   5 files changed, 291 insertions(+), 15 deletions(-)
->>   rename drivers/char/tpm/{tpm_eventlog.c => tpm1_eventlog.c} (95%)
->>   create mode 100644 drivers/char/tpm/tpm2_eventlog.c
->>
->>
->> diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
->> index b7718c9..169edf3 100644
->> --- a/drivers/char/tpm/tpm_acpi.c
->> +++ b/drivers/char/tpm/tpm_acpi.c
->> @@ -54,6 +54,9 @@ int tpm_read_log_acpi(struct tpm_chip *chip)
->>       u64 len, start;
->>       struct tpm_bios_log *log;
->>
->> +    if (chip->flags & TPM_CHIP_FLAG_TPM2)
->> +        return -ENODEV;
->> +
->
->
-> Works with SeaBIOS when this check is disabled.
->
+On Fri, Jan 13, 2017 at 12:02:36PM -0800, James Bottomley wrote:
+> > > Actually, no, the devrm is a completely lifetime managed device as
+> > > part
+> > > of the chip structure.  once you've done a device_del on it, it can
+> > > be
+> > > kfreed because it's no longer visible to anything else.
+> > 
+> > No, that isn't enough. Anything else could have obtained a kref on
+> > devrm outside of the sphere the device_del manages.
+> > 
+> > For instance, the cdev does exactly that, via this:
+> > 
+> > >  	chip->cdev.kobj.parent = &chip->dev.kobj;
+> > > +	chip->cdevrm.kobj.parent = &chip->devrm.kobj;
+> > 
+> > In the worst case the kref the cdev grabs is not released until after
+> > tpm_chip_unregister() returns.
+> 
+> chip_unregister doesn't tear down either device. It's the final
+> release of the chip->dev that does that.
 
--> Tested-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+I don't think you are seeing the problem.
 
+I think you are assuming cdev_del waits for userspace to close any
+open fds. It does not.
 
+Instead cdev independently holds on to a module lock and a kref on the
+chip, once userspace has done close() then the kref is dropped and the
+module lock let go. This can happen after chip_unregister, after devm
+has done the final put_device, and after the driver core has completed
+driver detach.
 
+This is why it is necessary for this:
 
-------------------------------------------------------------------------------
-Developer Access Program for Intel Xeon Phi Processors
-Access to Intel Xeon Phi processor-based developer platforms.
-With one year of Intel Parallel Studio XE.
-Training and support from Colfax.
-Order your platform today. http://sdm.link/xeonphi
+ +	chip->cdevrm.kobj.parent = &chip->devrm.kobj;
+
+To point to a working kref, such as chip->dev.kobj.
+
+My point is this patch has two very subtle bugs caused by devrm having
+a broken kref. Yes we can fix those two cases, but this entire class
+of bugs is prevented if devrm has a release function that does
+put_device(chip->dev).
+
+We have no idea what will happen down the road; most poeple assume
+krefs *work*, having a struct with 4 krefs where only 3 work is pretty
+wild, IMHO.
+
+> Now there is a related problem that the owner is actually the *wrong*
+> module: it holds the tpm module in place not the actual driver module,
+> so I can happily attach tcsd to the TPM device then rmmod tpm_tis,
+> which causes some interesting issues.  I can fix this, but it's not a
+> problem of the current patch.
+
+No, it is correct as is. The cdev fops rely only on the tpm module.
+When tpm_chip_unregister returns to the driver the chips->ops is set
+to NULL with proper locking - the driver code becomes uncallable at
+that point.
+
+Jason
