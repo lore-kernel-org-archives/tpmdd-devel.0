@@ -1,80 +1,130 @@
-From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC v2 5/5] tpm2: expose resource manager
- via a device link /dev/tpms<n>
-Date: Fri, 13 Jan 2017 14:23:00 -0700
-Message-ID: <20170113212300.GA1463@obsidianresearch.com>
-References: <20170112174612.9314-1-jarkko.sakkinen@linux.intel.com>
- <20170112174612.9314-6-jarkko.sakkinen@linux.intel.com>
- <20170112183919.GA12836@obsidianresearch.com>
- <1484335247.2527.28.camel@HansenPartnership.com>
- <20170113194730.GA32214@obsidianresearch.com>
- <1484337756.2527.48.camel@HansenPartnership.com>
+From: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>
+Subject: [PATCH] tpm_tis: use default timeout value if chip reports it as zero
+Date: Fri, 13 Jan 2017 22:37:00 +0100
+Message-ID: <d5469294-34e6-2e5e-43e8-9ff82579fc2a@maciej.szmigiero.name>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
 Return-path: <linux-kernel-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <1484337756.2527.48.camel@HansenPartnership.com>
 Sender: linux-kernel-owner@vger.kernel.org
-To: James Bottomley <James.Bottomley@HansenPartnership.com>
-Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+To: tpmdd-devel@lists.sourceforge.net
+Cc: linux-kernel <linux-kernel@vger.kernel.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Christophe Ricard <christophe.ricard@gmail.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jan 13, 2017 at 12:02:36PM -0800, James Bottomley wrote:
-> > > Actually, no, the devrm is a completely lifetime managed device as
-> > > part
-> > > of the chip structure.  once you've done a device_del on it, it can
-> > > be
-> > > kfreed because it's no longer visible to anything else.
-> > 
-> > No, that isn't enough. Anything else could have obtained a kref on
-> > devrm outside of the sphere the device_del manages.
-> > 
-> > For instance, the cdev does exactly that, via this:
-> > 
-> > >  	chip->cdev.kobj.parent = &chip->dev.kobj;
-> > > +	chip->cdevrm.kobj.parent = &chip->devrm.kobj;
-> > 
-> > In the worst case the kref the cdev grabs is not released until after
-> > tpm_chip_unregister() returns.
-> 
-> chip_unregister doesn't tear down either device. It's the final
-> release of the chip->dev that does that.
+Since commit 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM
+access") Atmel 3203 TPM on ThinkPad X61S (TPM firmware version 13.9) no
+longer works.
+The initialization proceeds fine until we get and start using chip-reported
+timeouts - and the chip reports C and D timeouts of zero.
 
-I don't think you are seeing the problem.
+It turns out that until commit 8e54caf407b98e ("tpm: Provide a generic
+means to override the chip returned timeouts") we had actually let default
+timeout values remain in this case, so let's bring back this behavior to
+make chips like Atmel 3203 work again.
 
-I think you are assuming cdev_del waits for userspace to close any
-open fds. It does not.
+Use a common code that was introduced by that commit so a warning is
+printed in this case and /sys/class/tpm/tpm*/timeouts correctly says the
+timeouts aren't chip-original.
 
-Instead cdev independently holds on to a module lock and a kref on the
-chip, once userspace has done close() then the kref is dropped and the
-module lock let go. This can happen after chip_unregister, after devm
-has done the final put_device, and after the driver core has completed
-driver detach.
+Signed-off-by: Maciej S. Szmigiero <mail@maciej.szmigiero.name>
 
-This is why it is necessary for this:
+Fixes: 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM access")
+Cc: stable@vger.kernel.org
+---
+This replaces "tpm_tis: override reported C and D timeouts for Atmel 3203"
+submission.
 
- +	chip->cdevrm.kobj.parent = &chip->devrm.kobj;
+ drivers/char/tpm/tpm-interface.c | 53 ++++++++++++++++++++++++----------------
+ 1 file changed, 32 insertions(+), 21 deletions(-)
 
-To point to a working kref, such as chip->dev.kobj.
-
-My point is this patch has two very subtle bugs caused by devrm having
-a broken kref. Yes we can fix those two cases, but this entire class
-of bugs is prevented if devrm has a release function that does
-put_device(chip->dev).
-
-We have no idea what will happen down the road; most poeple assume
-krefs *work*, having a struct with 4 krefs where only 3 work is pretty
-wild, IMHO.
-
-> Now there is a related problem that the owner is actually the *wrong*
-> module: it holds the tpm module in place not the actual driver module,
-> so I can happily attach tcsd to the TPM device then rmmod tpm_tis,
-> which causes some interesting issues.  I can fix this, but it's not a
-> problem of the current patch.
-
-No, it is correct as is. The cdev fops rely only on the tpm module.
-When tpm_chip_unregister returns to the driver the chips->ops is set
-to NULL with proper locking - the driver code becomes uncallable at
-that point.
-
-Jason
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index fecdd3fa8126..a3461cbdde5f 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -522,8 +522,7 @@ static int tpm_startup(struct tpm_chip *chip, __be16 startup_type)
+ int tpm_get_timeouts(struct tpm_chip *chip)
+ {
+ 	cap_t cap;
+-	unsigned long new_timeout[4];
+-	unsigned long old_timeout[4];
++	unsigned long timeout_old[4], timeout_chip[4], timeout_eff[4];
+ 	ssize_t rc;
+ 
+ 	if (chip->flags & TPM_CHIP_FLAG_HAVE_TIMEOUTS)
+@@ -564,11 +563,15 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+ 		return rc;
+ 	}
+ 
+-	old_timeout[0] = be32_to_cpu(cap.timeout.a);
+-	old_timeout[1] = be32_to_cpu(cap.timeout.b);
+-	old_timeout[2] = be32_to_cpu(cap.timeout.c);
+-	old_timeout[3] = be32_to_cpu(cap.timeout.d);
+-	memcpy(new_timeout, old_timeout, sizeof(new_timeout));
++	timeout_old[0] = jiffies_to_usecs(chip->timeout_a);
++	timeout_old[1] = jiffies_to_usecs(chip->timeout_b);
++	timeout_old[2] = jiffies_to_usecs(chip->timeout_c);
++	timeout_old[3] = jiffies_to_usecs(chip->timeout_d);
++	timeout_chip[0] = be32_to_cpu(cap.timeout.a);
++	timeout_chip[1] = be32_to_cpu(cap.timeout.b);
++	timeout_chip[2] = be32_to_cpu(cap.timeout.c);
++	timeout_chip[3] = be32_to_cpu(cap.timeout.d);
++	memcpy(timeout_eff, timeout_chip, sizeof(timeout_eff));
+ 
+ 	/*
+ 	 * Provide ability for vendor overrides of timeout values in case
+@@ -576,16 +579,24 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+ 	 */
+ 	if (chip->ops->update_timeouts != NULL)
+ 		chip->timeout_adjusted =
+-			chip->ops->update_timeouts(chip, new_timeout);
++			chip->ops->update_timeouts(chip, timeout_eff);
+ 
+ 	if (!chip->timeout_adjusted) {
+-		/* Don't overwrite default if value is 0 */
+-		if (new_timeout[0] != 0 && new_timeout[0] < 1000) {
+-			int i;
++		/* Restore default if chip reported 0 */
++		int i;
+ 
++		for (i = 0; i < ARRAY_SIZE(timeout_eff); i++) {
++			if (timeout_eff[i])
++				continue;
++
++			timeout_eff[i] = timeout_old[i];
++			chip->timeout_adjusted = true;
++		}
++
++		if (timeout_eff[0] != 0 && timeout_eff[0] < 1000) {
+ 			/* timeouts in msec rather usec */
+-			for (i = 0; i != ARRAY_SIZE(new_timeout); i++)
+-				new_timeout[i] *= 1000;
++			for (i = 0; i != ARRAY_SIZE(timeout_eff); i++)
++				timeout_eff[i] *= 1000;
+ 			chip->timeout_adjusted = true;
+ 		}
+ 	}
+@@ -594,16 +605,16 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+ 	if (chip->timeout_adjusted) {
+ 		dev_info(&chip->dev,
+ 			 HW_ERR "Adjusting reported timeouts: A %lu->%luus B %lu->%luus C %lu->%luus D %lu->%luus\n",
+-			 old_timeout[0], new_timeout[0],
+-			 old_timeout[1], new_timeout[1],
+-			 old_timeout[2], new_timeout[2],
+-			 old_timeout[3], new_timeout[3]);
++			 timeout_chip[0], timeout_eff[0],
++			 timeout_chip[1], timeout_eff[1],
++			 timeout_chip[2], timeout_eff[2],
++			 timeout_chip[3], timeout_eff[3]);
+ 	}
+ 
+-	chip->timeout_a = usecs_to_jiffies(new_timeout[0]);
+-	chip->timeout_b = usecs_to_jiffies(new_timeout[1]);
+-	chip->timeout_c = usecs_to_jiffies(new_timeout[2]);
+-	chip->timeout_d = usecs_to_jiffies(new_timeout[3]);
++	chip->timeout_a = usecs_to_jiffies(timeout_eff[0]);
++	chip->timeout_b = usecs_to_jiffies(timeout_eff[1]);
++	chip->timeout_c = usecs_to_jiffies(timeout_eff[2]);
++	chip->timeout_d = usecs_to_jiffies(timeout_eff[3]);
+ 
+ 	rc = tpm_getcap(chip, TPM_CAP_PROP_TIS_DURATION, &cap,
+ 			"attempting to determine the durations");
