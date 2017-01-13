@@ -1,338 +1,442 @@
-From: James Bottomley <James.Bottomley@HansenPartnership.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC v2 5/5] tpm2: expose resource manager
- via a device link /dev/tpms<n>
-Date: Fri, 13 Jan 2017 11:20:47 -0800
-Message-ID: <1484335247.2527.28.camel@HansenPartnership.com>
-References: <20170112174612.9314-1-jarkko.sakkinen@linux.intel.com>
-         <20170112174612.9314-6-jarkko.sakkinen@linux.intel.com>
-         <20170112183919.GA12836@obsidianresearch.com>
+From: James Bottomley <jejb@linux.vnet.ibm.com>
+Subject: [PATCH] tpm: add session handles to the save and restore of the
+ tpm2 space manager
+Date: Fri, 13 Jan 2017 11:24:13 -0800
+Message-ID: <1484335453.2527.31.camel@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <20170112183919.GA12836@obsidianresearch.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Sender: owner-linux-security-module@vger.kernel.org
+To: linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+Cc: open list <linux-kernel@vger.kernel.org>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, 2017-01-12 at 11:39 -0700, Jason Gunthorpe wrote:
-> On Thu, Jan 12, 2017 at 07:46:08PM +0200, Jarkko Sakkinen wrote:
-> 
-> >  struct tpm_chip {
-> > -	struct device dev;
-> > -	struct cdev cdev;
-> > +	struct device dev, devrm;
-> 
-> Hum.. devrm adds a new kref but doesn't do anything with the release
-> function, so that is going to use after free, ie here:
-> 
-> > 	put_device(&chip->dev);
-> > +	put_device(&chip->devrm);
-> > 	return ERR_PTR(rc);
-> 
-> And other places.
-> 
-> One solution is to get_device(chip->dev) after
-> device_initialize(dev->rm) and add a devrm->dev.release function to
-> do put_device(chip->dev)
+Session handles are slightly more difficult to manage because any TPM
+only has a finite number of allowed handles, even if the session has
+been saved; so when you context save a session, you must not flush it
+because that would destroy the ability to context load it (you only
+flush sessions when you're done with them) and the tpm won't re-use
+the handle.  Additionally, sessions can be flushed as part of the
+successful execution of a command if the continueSession attribute is
+clear, so we have to mark any session we find in the command (using
+TPM2_HT_TAG_FOR_FLUSH) so it can be cleared from the space if the
+command successfully executes.
 
-Actually, no, the devrm is a completely lifetime managed device as part
-of the chip structure.  once you've done a device_del on it, it can be
-kfreed because it's no longer visible to anything else.  The fix is
-simply not to do the put.
+Finally, a session may also be cleared by flushing it, so we have to
+emulate the TPM2_FlushContext command to see if a session is being
+flushed and manually clear it from the space.
 
-With that and the other errors, here's a v3
-
-James
-
----
-
->From 572cbf2ac64df040be084182d750f55df836a759 Mon Sep 17 00:00:00 2001
-From: James Bottomley <James.Bottomley@HansenPartnership.com>
-Date: Tue, 3 Jan 2017 09:07:32 -0800
-Subject: [PATCH 5/5] tpm2: expose resource manager via a device link
- /dev/tpms<n>
-
-Currently the Resource Manager (RM) is not exposed to userspace.  Make
-this exposure via a separate device, which can now be opened multiple
-times because each read/write transaction goes separately via the RM.
-
-Concurrency is protected by the chip->tpm_mutex for each read/write
-transaction separately.  The TPM is cleared of all transient objects
-by the time the mutex is dropped, so there should be no interference
-between the kernel and userspace.
+We also fully flush all sessions on device close.
 
 Signed-off-by: James Bottomley <James.Bottomley@HansenPartnership.com>
----
- drivers/char/tpm/Makefile        |  2 +-
- drivers/char/tpm/tpm-chip.c      | 53 ++++++++++++++++++++++++++++++++--
- drivers/char/tpm/tpm-interface.c | 13 +++++++--
- drivers/char/tpm/tpm.h           |  6 ++--
- drivers/char/tpm/tpms-dev.c      | 62 ++++++++++++++++++++++++++++++++++++++++
- 5 files changed, 128 insertions(+), 8 deletions(-)
- create mode 100644 drivers/char/tpm/tpms-dev.c
 
-diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
-index 13ff5da..e50d768 100644
---- a/drivers/char/tpm/Makefile
-+++ b/drivers/char/tpm/Makefile
-@@ -3,7 +3,7 @@
- #
- obj-$(CONFIG_TCG_TPM) += tpm.o
- tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o \
--	 tpm_eventlog.o tpm2-space.o tpm-dev-common.o
-+	 tpm_eventlog.o tpm2-space.o tpm-dev-common.o tpms-dev.o
- tpm-$(CONFIG_ACPI) += tpm_ppi.o tpm_acpi.o
- tpm-$(CONFIG_OF) += tpm_of.o
- obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index 993b9ae..4548df0 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -33,6 +33,7 @@ DEFINE_IDR(dev_nums_idr);
- static DEFINE_MUTEX(idr_lock);
- 
- struct class *tpm_class;
-+struct class *tpm_rm_class;
- dev_t tpm_devt;
- 
- /**
-@@ -168,27 +169,40 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
- 	chip->dev_num = rc;
- 
- 	device_initialize(&chip->dev);
-+	device_initialize(&chip->devrm);
- 
- 	chip->dev.class = tpm_class;
- 	chip->dev.release = tpm_dev_release;
- 	chip->dev.parent = pdev;
- 	chip->dev.groups = chip->groups;
- 
-+	chip->devrm.parent = pdev;
-+	chip->devrm.class = tpm_rm_class;
-+
- 	if (chip->dev_num == 0)
- 		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
- 	else
- 		chip->dev.devt = MKDEV(MAJOR(tpm_devt), chip->dev_num);
- 
-+	chip->devrm.devt =
-+		MKDEV(MAJOR(tpm_devt), chip->dev_num + TPM_NUM_DEVICES);
-+
- 	rc = dev_set_name(&chip->dev, "tpm%d", chip->dev_num);
- 	if (rc)
- 		goto out;
-+	rc = dev_set_name(&chip->devrm, "tpms%d", chip->dev_num);
-+	if (rc)
-+		goto out;
- 
- 	if (!pdev)
- 		chip->flags |= TPM_CHIP_FLAG_VIRTUAL;
- 
- 	cdev_init(&chip->cdev, &tpm_fops);
-+	cdev_init(&chip->cdevrm, &tpm_rm_fops);
- 	chip->cdev.owner = THIS_MODULE;
-+	chip->cdevrm.owner = THIS_MODULE;
- 	chip->cdev.kobj.parent = &chip->dev.kobj;
-+	chip->cdevrm.kobj.parent = &chip->devrm.kobj;
- 
- 	chip->work_space.context_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
- 	if (!chip->work_space.context_buf) {
-@@ -244,7 +258,7 @@ static int tpm_add_char_device(struct tpm_chip *chip)
- 			dev_name(&chip->dev), MAJOR(chip->dev.devt),
- 			MINOR(chip->dev.devt), rc);
- 
--		return rc;
-+		goto err_1;
- 	}
- 
- 	rc = device_add(&chip->dev);
-@@ -254,16 +268,44 @@ static int tpm_add_char_device(struct tpm_chip *chip)
- 			dev_name(&chip->dev), MAJOR(chip->dev.devt),
- 			MINOR(chip->dev.devt), rc);
- 
--		cdev_del(&chip->cdev);
--		return rc;
-+		goto err_2;
-+	}
-+
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+		rc = cdev_add(&chip->cdevrm, chip->devrm.devt, 1);
-+	if (rc) {
-+		dev_err(&chip->dev,
-+			"unable to cdev_add() %s, major %d, minor %d, err=%d\n",
-+			dev_name(&chip->devrm), MAJOR(chip->devrm.devt),
-+			MINOR(chip->devrm.devt), rc);
-+
-+		goto err_3;
- 	}
- 
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+		rc = device_add(&chip->devrm);
-+	if (rc) {
-+		dev_err(&chip->dev,
-+			"unable to device_register() %s, major %d, minor %d, err=%d\n",
-+			dev_name(&chip->devrm), MAJOR(chip->devrm.devt),
-+			MINOR(chip->devrm.devt), rc);
-+
-+		goto err_4;
-+	}
- 	/* Make the chip available. */
- 	mutex_lock(&idr_lock);
- 	idr_replace(&dev_nums_idr, chip, chip->dev_num);
- 	mutex_unlock(&idr_lock);
- 
- 	return rc;
-+ err_4:
-+	cdev_del(&chip->cdevrm);
-+ err_3:
-+	device_del(&chip->dev);
-+ err_2:
-+	cdev_del(&chip->cdev);
-+ err_1:
-+	return rc;
- }
- 
- static void tpm_del_char_device(struct tpm_chip *chip)
-@@ -271,6 +313,11 @@ static void tpm_del_char_device(struct tpm_chip *chip)
- 	cdev_del(&chip->cdev);
- 	device_del(&chip->dev);
- 
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
-+		cdev_del(&chip->cdevrm);
-+		device_del(&chip->devrm);
-+	}
-+
- 	/* Make the chip unavailable. */
- 	mutex_lock(&idr_lock);
- 	idr_replace(&dev_nums_idr, NULL, chip->dev_num);
 diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 65fcd04c..f5c9355 100644
+index f5c9355..d8e896e 100644
 --- a/drivers/char/tpm/tpm-interface.c
 +++ b/drivers/char/tpm/tpm-interface.c
-@@ -1197,9 +1197,17 @@ static int __init tpm_init(void)
- 		return PTR_ERR(tpm_class);
- 	}
+@@ -400,6 +400,10 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+ 	if (chip->dev.parent)
+ 		pm_runtime_get_sync(chip->dev.parent);
  
--	rc = alloc_chrdev_region(&tpm_devt, 0, TPM_NUM_DEVICES, "tpm");
-+	tpm_rm_class = class_create(THIS_MODULE, "tpms");
-+	if (IS_ERR(tpm_rm_class)) {
-+		pr_err("couldn't create tpmrm class\n");
-+		class_destroy(tpm_class);
-+		return PTR_ERR(tpm_rm_class);
-+	}
++	rc = tpm2_emulate(chip, space, ordinal, buf, bufsiz);
++	if (rc)
++		goto out;
 +
-+	rc = alloc_chrdev_region(&tpm_devt, 0, 2*TPM_NUM_DEVICES, "tpm");
- 	if (rc < 0) {
- 		pr_err("tpm: failed to allocate char dev region\n");
-+		class_destroy(tpm_rm_class);
- 		class_destroy(tpm_class);
- 		return rc;
- 	}
-@@ -1211,7 +1219,8 @@ static void __exit tpm_exit(void)
- {
- 	idr_destroy(&dev_nums_idr);
- 	class_destroy(tpm_class);
--	unregister_chrdev_region(tpm_devt, TPM_NUM_DEVICES);
-+	class_destroy(tpm_rm_class);
-+	unregister_chrdev_region(tpm_devt, 2*TPM_NUM_DEVICES);
- }
- 
- subsys_initcall(tpm_init);
+ 	rc = tpm2_prepare_space(chip, space, ordinal, buf, bufsiz);
+ 	if (rc)
+ 		goto out;
 diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 0e93b93..61422e6 100644
+index adf7810..b922652 100644
 --- a/drivers/char/tpm/tpm.h
 +++ b/drivers/char/tpm/tpm.h
-@@ -172,8 +172,8 @@ struct tpm_chip_seqops {
+@@ -136,7 +136,8 @@ enum tpm2_capabilities {
  };
  
- struct tpm_chip {
--	struct device dev;
--	struct cdev cdev;
-+	struct device dev, devrm;
-+	struct cdev cdev, cdevrm;
+ enum tpm2_properties {
+-	TPM_PT_TOTAL_COMMANDS	= 0x0129,
++	TPM_PT_ACTIVE_SESSIONS_MAX	= 0x0111,
++	TPM_PT_TOTAL_COMMANDS		= 0x0129,
+ };
  
- 	/* A driver callback under ops cannot be run unless ops_sem is held
- 	 * (sometimes implicitly, eg for the sysfs code). ops becomes null
-@@ -510,8 +510,10 @@ static inline void tpm_buf_append_u32(struct tpm_buf *buf, const u32 value)
+ enum tpm2_startup_types {
+@@ -214,6 +215,8 @@ struct tpm_chip {
+ 	struct tpm_space *work_space;
+ 	u32 nr_commands;
+ 	u32 *cc_attrs_tbl;
++	struct tpm_sessions *sessions;
++	int max_sessions;
+ };
+ 
+ #define to_tpm_chip(d) container_of(d, struct tpm_chip, dev)
+@@ -583,4 +586,7 @@ int tpm2_prepare_space(struct tpm_chip *chip, struct tpm_space *space,
+ 		       u32 cc, u8 *buf, size_t bufsiz);
+ int tpm2_commit_space(struct tpm_chip *chip, struct tpm_space *space,
+ 		      u32 cc, u8 *buf, size_t bufsiz);
++void tpm2_flush_space(struct tpm_chip *chip, struct tpm_space *space);
++int tpm2_emulate(struct tpm_chip *chip, struct tpm_space *space,
++		  u32 cc, u8 *buf, size_t bufsiz);
+ #endif
+diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2-space.c
+index 285361e..e8e9f32 100644
+--- a/drivers/char/tpm/tpm2-space.c
++++ b/drivers/char/tpm/tpm2-space.c
+@@ -25,15 +25,29 @@ enum tpm2_handle_types {
+ 	TPM2_HT_TRANSIENT	= 0x80000000,
+ };
+ 
+-static void tpm2_flush_space(struct tpm_chip *chip)
++#define TPM2_HT_TAG_FOR_FLUSH	0xF0000000
++
++void tpm2_flush_space(struct tpm_chip *chip, struct tpm_space *space)
+ {
+-	struct tpm_space *space = chip->work_space;
+ 	int i;
+ 
+-	for (i = 0; i < ARRAY_SIZE(space->context_tbl); i++)
+-		if (space->context_tbl[i] && ~space->context_tbl[i])
+-			tpm2_flush_context_cmd(chip, space->context_tbl[i],
+-					       TPM_TRANSMIT_UNLOCKED);
++	for (i = 0; i < ARRAY_SIZE(space->context_tbl); i++) {
++		u32 handle = space->context_tbl[i];
++		u32 handle_type;
++
++		if (handle == 0 || handle == ~0)
++			continue;
++
++		if ((handle & TPM2_HT_TAG_FOR_FLUSH) ==
++		    TPM2_HT_TAG_FOR_FLUSH)
++			handle &= ~TPM2_HT_TAG_FOR_FLUSH;
++
++		handle_type = (handle & 0xFF000000);
++
++		tpm2_flush_context_cmd(chip, handle, TPM_TRANSMIT_UNLOCKED);
++
++		space->context_tbl[i] = 0;
++	}
  }
  
- extern struct class *tpm_class;
-+extern struct class *tpm_rm_class;
- extern dev_t tpm_devt;
- extern const struct file_operations tpm_fops;
-+extern const struct file_operations tpm_rm_fops;
- extern struct idr dev_nums_idr;
+ struct tpm2_context {
+@@ -54,15 +68,11 @@ static int tpm2_load_space(struct tpm_chip *chip)
+ 	u32 s;
  
- enum tpm_transmit_flags {
-diff --git a/drivers/char/tpm/tpms-dev.c b/drivers/char/tpm/tpms-dev.c
-new file mode 100644
-index 0000000..c10b308
---- /dev/null
-+++ b/drivers/char/tpm/tpms-dev.c
-@@ -0,0 +1,62 @@
-+/*
-+ * Copyright (C) 2017 James.Bottomley@HansenPartnership.com
-+ *
-+ * GPLv2
-+ */
-+#include <linux/slab.h>
-+#include "tpm-dev.h"
+ 	for (i = 0, j = 0; i < ARRAY_SIZE(space->context_tbl); i++) {
++		u32 phandle, phandle_type;
 +
-+struct tpms_priv {
-+	struct file_priv priv;
-+	struct tpm_space space;
-+};
-+
-+static int tpms_open(struct inode *inode, struct file *file)
+ 		if (!space->context_tbl[i])
+ 			continue;
+ 
+-		/* sanity check, should never happen */
+-		if (~space->context_tbl[i]) {
+-			dev_err(&chip->dev, "context table is inconsistent");
+-			return -EFAULT;
+-		}
+-
+ 		rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS,
+ 				 TPM2_CC_CONTEXT_LOAD);
+ 		if (rc)
+@@ -80,9 +90,23 @@ static int tpm2_load_space(struct tpm_chip *chip)
+ 			rc = -EFAULT;
+ 			goto out_err;
+ 		}
++		phandle = get_unaligned_be32((__be32 *)&buf.data[TPM_HEADER_SIZE]);
++		phandle_type = (phandle & 0xFF000000);
++		if (phandle_type == TPM2_HT_TRANSIENT &&
++		    space->context_tbl[i] != ~0) {
++			dev_err(&chip->dev, "context table is inconsistent");
++			rc = -EFAULT;
++			goto out_err;
++		}
++		if ((phandle_type == TPM2_HT_HMAC_SESSION ||
++		     phandle_type == TPM2_HT_POLICY_SESSION) &&
++		    space->context_tbl[i] != phandle) {
++			dev_err(&chip->dev, "session handle changed\n");
++			rc = -EFAULT;
++			goto out_err;
++		}
+ 
+-		space->context_tbl[i] =
+-			be32_to_cpup((__be32 *)&buf.data[TPM_HEADER_SIZE]);
++		space->context_tbl[i] = phandle;
+ 
+ 		j += s;
+ 
+@@ -93,10 +117,85 @@ static int tpm2_load_space(struct tpm_chip *chip)
+ 
+ out_err:
+ 	tpm_buf_destroy(&buf);
+-	tpm2_flush_space(chip);
++	tpm2_flush_space(chip, space);
+ 	return rc;
+ }
+ 
++static void tpm2_unmap_sessions(struct tpm_chip *chip, u32 rc)
 +{
-+	struct tpm_chip *chip;
-+	struct tpms_priv *priv;
++	struct tpm_space *space = chip->work_space;
++	int i;
 +
-+	chip = container_of(inode->i_cdev, struct tpm_chip, cdevrm);
-+	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-+	if (priv == NULL)
-+		return -ENOMEM;
-+	priv->space.context_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
-+	if (priv->space.context_buf == NULL) {
-+		kfree(priv);
-+		return -ENOMEM;
++	for (i = 0; i < ARRAY_SIZE(space->context_tbl); i++) {
++		if ((space->context_tbl[i] & TPM2_HT_TAG_FOR_FLUSH) !=
++		    TPM2_HT_TAG_FOR_FLUSH)
++			continue;
++		if (rc == TPM2_RC_SUCCESS)
++			space->context_tbl[i] = 0;
++		else
++			/* for unsuccessful command, keep session */
++			space->context_tbl[i] &= ~TPM2_HT_TAG_FOR_FLUSH;
++	}
++}
++
++static int tpm2_map_sessions(struct tpm_chip *chip, u8 *buf, size_t len,
++			     size_t start)
++{
++	struct tpm_space *space = chip->work_space;
++	u32 size = be32_to_cpup((__be32 *)&buf[start]);
++	int i;
++
++	/* skip over authorizationSize */
++	start += 4;
++
++	if (size > len - start) {
++		dev_err(&chip->dev, "Invalid authorization header size %u\n",
++			size);
++		return -EINVAL;
 +	}
 +
-+	tpm_common_open(file, chip, &priv->priv);
++	for (i = start; i < start+size; ) {
++		u16 skip;
++		__be32 *handlep;
++		u8 attr;
++		int j;
++		u32 handle_type;
++
++		/* TPMI_SH_AUTH_SESSION */
++		handlep = (__be32 *)&buf[i];
++		handle_type = get_unaligned_be32(handlep) & 0xFF000000;
++		i += 4;
++		/* TPM2B_DIGEST */
++		skip = get_unaligned_be16((__be16 *)&buf[i]);
++		i += skip + sizeof(skip);
++		/* TPMA_SESSION */
++		attr = buf[i++];
++		/* TPM2B_AUTH */
++		skip = get_unaligned_be16((__be16 *)&buf[i]);
++		i += skip + sizeof(skip);
++
++		if (handle_type != TPM2_HT_HMAC_SESSION &&
++		    handle_type != TPM2_HT_POLICY_SESSION)
++			continue;
++
++		j = 0xFFFFFF - (get_unaligned_be32(handlep) & 0xFFFFFF);
++		if (j > ARRAY_SIZE(space->context_tbl) ||
++		    !space->context_tbl[j])
++			return -EINVAL;
++		put_unaligned_be32(space->context_tbl[j], handlep);
++		if ((attr & 1) == 0)
++			/* session is flushed by the command */
++			space->context_tbl[j] |= TPM2_HT_TAG_FOR_FLUSH;
++	}
++
++	if (i != start+size) {
++		dev_err(&chip->dev, "Authorization session overflow\n");
++		return -EINVAL;
++	}
 +
 +	return 0;
 +}
 +
-+static int tpms_release(struct inode *inode, struct file *file)
+ static int tpm2_map_command(struct tpm_chip *chip, u32 cc, u8 *cmd, size_t len)
+ {
+ 	struct tpm_space *space = chip->work_space;
+@@ -104,6 +203,7 @@ static int tpm2_map_command(struct tpm_chip *chip, u32 cc, u8 *cmd, size_t len)
+ 	u32 vhandle;
+ 	u32 phandle;
+ 	u32 attrs;
++	u16 tag = get_unaligned_be16((__be16 *)cmd);
+ 	int i;
+ 	int j;
+ 	int rc;
+@@ -131,11 +231,14 @@ static int tpm2_map_command(struct tpm_chip *chip, u32 cc, u8 *cmd, size_t len)
+ 		*((__be32 *)&cmd[TPM_HEADER_SIZE + 4 * i]) =
+ 			cpu_to_be32(phandle);
+ 	}
++	if (tag == TPM2_ST_SESSIONS)
++		tpm2_map_sessions(chip, cmd, len,
++				  TPM_HEADER_SIZE + 4*nr_handles);
+ 
+ 	return 0;
+ 
+ out_err:
+-	tpm2_flush_space(chip);
++	tpm2_flush_space(chip, space);
+ 	return rc;
+ }
+ 
+@@ -163,13 +266,17 @@ int tpm2_prepare_space(struct tpm_chip *chip, struct tpm_space *space,
+ static int tpm2_map_response(struct tpm_chip *chip, u32 cc, u8 *rsp, size_t len)
+ {
+ 	struct tpm_space *space = chip->work_space;
+-	u32 phandle;
++	u32 phandle, phandle_type;
+ 	u32 vhandle;
+ 	u32 attrs;
+ 	u32 return_code = get_unaligned_be32((__be32 *)&rsp[6]);
++	u16 tag = get_unaligned_be16((__be16 *)rsp);
+ 	int i;
+ 	int rc;
+ 
++	if (tag == TPM2_ST_SESSIONS)
++		tpm2_unmap_sessions(chip, return_code);
++
+ 	if (return_code != TPM2_RC_SUCCESS)
+ 		return 0;
+ 
+@@ -185,7 +292,10 @@ static int tpm2_map_response(struct tpm_chip *chip, u32 cc, u8 *rsp, size_t len)
+ 		return 0;
+ 
+ 	phandle = be32_to_cpup((__be32 *)&rsp[TPM_HEADER_SIZE]);
+-	if ((phandle & 0xFF000000) != TPM2_HT_TRANSIENT)
++	phandle_type = (phandle & 0xFF000000);
++	if (phandle_type != TPM2_HT_TRANSIENT &&
++	    phandle_type != TPM2_HT_HMAC_SESSION &&
++	    phandle_type != TPM2_HT_POLICY_SESSION)
+ 		return 0;
+ 
+ 	/* Garbage collect a dead context. */
+@@ -208,13 +318,13 @@ static int tpm2_map_response(struct tpm_chip *chip, u32 cc, u8 *rsp, size_t len)
+ 	}
+ 
+ 	space->context_tbl[i] = phandle;
+-	vhandle = TPM2_HT_TRANSIENT | (0xFFFFFF - i);
++	vhandle = phandle_type | (0xFFFFFF - i);
+ 	*(__be32 *)&rsp[TPM_HEADER_SIZE] = cpu_to_be32(vhandle);
+ 
+ 	return 0;
+ 
+ out_err:
+-	tpm2_flush_space(chip);
++	tpm2_flush_space(chip, space);
+ 	return rc;
+ }
+ 
+@@ -228,9 +338,20 @@ static int tpm2_save_space(struct tpm_chip *chip)
+ 	u32 s;
+ 
+ 	for (i = 0, j = 0; i < ARRAY_SIZE(space->context_tbl); i++) {
+-		if (!(space->context_tbl[i] && ~space->context_tbl[i]))
++		u32 phandle, phandle_type;
++
++		phandle = space->context_tbl[i];
++
++		if (phandle == 0)
+ 			continue;
+ 
++		if (phandle == ~0) {
++			dev_err(&chip->dev, "context table is inconsistent\n");
++			return -EFAULT;
++		}
++
++		phandle_type = (phandle & 0xFF000000);
++
+ 		rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS,
+ 				  TPM2_CC_CONTEXT_SAVE);
+ 		if (rc)
+@@ -260,10 +381,11 @@ static int tpm2_save_space(struct tpm_chip *chip)
+ 
+ 		memcpy(&space->context_buf[j], &buf.data[TPM_HEADER_SIZE], s);
+ 
+-		tpm2_flush_context_cmd(chip, space->context_tbl[i],
+-				       TPM_TRANSMIT_UNLOCKED);
+-
+-		space->context_tbl[i] = ~0;
++		if (phandle_type == TPM2_HT_TRANSIENT) {
++			tpm2_flush_context_cmd(chip, space->context_tbl[i],
++					       TPM_TRANSMIT_UNLOCKED);
++			space->context_tbl[i] = ~0;
++		}
+ 
+ 		j += s;
+ 
+@@ -273,7 +395,7 @@ static int tpm2_save_space(struct tpm_chip *chip)
+ 	return 0;
+ out_err:
+ 	tpm_buf_destroy(&buf);
+-	tpm2_flush_space(chip);
++	tpm2_flush_space(chip, space);
+ 	return rc;
+ }
+ 
+@@ -297,3 +419,60 @@ int tpm2_commit_space(struct tpm_chip *chip, struct tpm_space *space,
+ 
+ 	return 0;
+ }
++
++/* if a space is active, emulate some commands */
++int tpm2_emulate(struct tpm_chip *chip, struct tpm_space *space,
++		 u32 cc, u8 *buf, size_t bufsiz)
 +{
-+	struct file_priv *fpriv = file->private_data;
-+	struct tpms_priv *priv = container_of(fpriv, struct tpms_priv, priv);
++	int i, j, k;
++	u32 vhandle, handle_type, phandle;
++	struct tpm2_context *ctx;
++	static struct tpm_output_header buf_rc = {
++		.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
++		.length = cpu_to_be32(sizeof(struct tpm_output_header)),
++	};
 +
-+	tpm_common_release(file, fpriv);
-+	kfree(priv);
++	if (!space)
++		return 0;
 +
-+	return 0;
++	if (cc != TPM2_CC_FLUSH_CONTEXT)
++		return 0;
++	vhandle = get_unaligned_be32((__be32 *)&buf[10]);
++	handle_type = (vhandle & 0xFF000000);
++
++	if (handle_type != TPM2_HT_HMAC_SESSION &&
++	    handle_type != TPM2_HT_POLICY_SESSION &&
++	    handle_type != TPM2_HT_TRANSIENT)
++		/* let the TPM figure out and return the error */
++		return 0;
++
++	buf_rc.return_code = TPM2_RC_HANDLE;
++
++	j = 0xFFFFFF - (vhandle & 0xFFFFFF);
++	if (j > ARRAY_SIZE(space->context_tbl))
++		goto error;
++	phandle = space->context_tbl[j];
++	if (phandle != ~0)
++		goto error;
++
++	for (i = 0, k = 0; i <= j; i++) {
++		ctx = (struct tpm2_context *)&space->context_buf[k];
++
++		if (space->context_tbl[i] == 0)
++			continue;
++
++		k += sizeof(*ctx) + get_unaligned_be16(&ctx->blob_size);
++	}
++	/* move all the contexts up */
++	memcpy(ctx, &space->context_buf[k], PAGE_SIZE - k);
++	space->context_tbl[j] = 0;
++
++	if (handle_type != TPM2_HT_TRANSIENT)
++		tpm2_flush_context_cmd(chip, phandle, TPM_TRANSMIT_UNLOCKED);
++
++	buf_rc.return_code = TPM2_RC_SUCCESS;
++
++ error:
++	memcpy(buf, &buf_rc, sizeof(buf_rc));
++	return sizeof(buf_rc);
 +}
-+
-+ssize_t tpms_write(struct file *file, const char __user *buf,
-+		   size_t size, loff_t *off)
-+{
-+	struct file_priv *fpriv = file->private_data;
-+	struct tpms_priv *priv = container_of(fpriv, struct tpms_priv, priv);
-+
-+	return tpm_common_write(file, buf, size, off, &priv->space);
-+}
-+
-+const struct file_operations tpm_rm_fops = {
-+	.owner = THIS_MODULE,
-+	.llseek = no_llseek,
-+	.open = tpms_open,
-+	.read = tpm_common_read,
-+	.write = tpms_write,
-+	.release = tpms_release,
-+};
-+
--- 
-2.6.6
+diff --git a/drivers/char/tpm/tpms-dev.c b/drivers/char/tpm/tpms-dev.c
+index c10b308..3eb5955 100644
+--- a/drivers/char/tpm/tpms-dev.c
++++ b/drivers/char/tpm/tpms-dev.c
+@@ -36,6 +36,7 @@ static int tpms_release(struct inode *inode, struct file *file)
+ 	struct file_priv *fpriv = file->private_data;
+ 	struct tpms_priv *priv = container_of(fpriv, struct tpms_priv, priv);
+ 
++	tpm2_flush_space(fpriv->chip, &priv->space);
+ 	tpm_common_release(file, fpriv);
+ 	kfree(priv);
+ 
+
