@@ -1,130 +1,43 @@
-From: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>
-Subject: [PATCH] tpm_tis: use default timeout value if chip reports it as zero
-Date: Fri, 13 Jan 2017 22:37:00 +0100
-Message-ID: <d5469294-34e6-2e5e-43e8-9ff82579fc2a@maciej.szmigiero.name>
+From: Ken Goldman <kgoldman@us.ibm.com>
+Subject: Re: [PATCH] tpm: add session handles to the save and restore of the
+ tpm2 space manager
+Date: Fri, 13 Jan 2017 16:23:41 -0500
+Message-ID: <o5bggj$8ts$1@blaine.gmane.org>
+References: <1484335453.2527.31.camel@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Sender: linux-kernel-owner@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: linux-kernel <linux-kernel@vger.kernel.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Christophe Ricard <christophe.ricard@gmail.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <1484335453.2527.31.camel@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: linux-security-module@vger.kernel.org
+Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Since commit 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM
-access") Atmel 3203 TPM on ThinkPad X61S (TPM firmware version 13.9) no
-longer works.
-The initialization proceeds fine until we get and start using chip-reported
-timeouts - and the chip reports C and D timeouts of zero.
+On 1/13/2017 2:24 PM, James Bottomley wrote:
+> Session handles are slightly more difficult to manage because any TPM
+> only has a finite number of allowed handles, even if the session has
+> been saved; so when you context save a session, you must not flush it
+> because that would destroy the ability to context load it
 
-It turns out that until commit 8e54caf407b98e ("tpm: Provide a generic
-means to override the chip returned timeouts") we had actually let default
-timeout values remain in this case, so let's bring back this behavior to
-make chips like Atmel 3203 work again.
+This is correct.
 
-Use a common code that was introduced by that commit so a warning is
-printed in this case and /sys/class/tpm/tpm*/timeouts correctly says the
-timeouts aren't chip-original.
+Background:  A save context for a session implicitly does flush the 
+session (loaded session in TCG jargon).  However, it keeps some state
+(saved session in TCG jargon) to provide anti-replay protection when
+the session is later context loaded.
 
-Signed-off-by: Maciej S. Szmigiero <mail@maciej.szmigiero.name>
+If you explicitly flushcontext a saved session, you're actually flushing 
+that state.
 
-Fixes: 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM access")
-Cc: stable@vger.kernel.org
----
-This replaces "tpm_tis: override reported C and D timeouts for Atmel 3203"
-submission.
+> +static int tpm2_map_sessions(struct tpm_chip *chip, u8 *buf, size_t len,
+> +			     size_t start)
+> +{
 
- drivers/char/tpm/tpm-interface.c | 53 ++++++++++++++++++++++++----------------
- 1 file changed, 32 insertions(+), 21 deletions(-)
+This looks like session handles are virtualized.  I believe that this 
+will break the HMAC for commands (e.g. TPM2_PolicySecret) that have
+a session handle in the handle area.  The session's handle is its
+"Name" and is included in the cpHash (command parameter hash) data
+that is HMACed.
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index fecdd3fa8126..a3461cbdde5f 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -522,8 +522,7 @@ static int tpm_startup(struct tpm_chip *chip, __be16 startup_type)
- int tpm_get_timeouts(struct tpm_chip *chip)
- {
- 	cap_t cap;
--	unsigned long new_timeout[4];
--	unsigned long old_timeout[4];
-+	unsigned long timeout_old[4], timeout_chip[4], timeout_eff[4];
- 	ssize_t rc;
- 
- 	if (chip->flags & TPM_CHIP_FLAG_HAVE_TIMEOUTS)
-@@ -564,11 +563,15 @@ int tpm_get_timeouts(struct tpm_chip *chip)
- 		return rc;
- 	}
- 
--	old_timeout[0] = be32_to_cpu(cap.timeout.a);
--	old_timeout[1] = be32_to_cpu(cap.timeout.b);
--	old_timeout[2] = be32_to_cpu(cap.timeout.c);
--	old_timeout[3] = be32_to_cpu(cap.timeout.d);
--	memcpy(new_timeout, old_timeout, sizeof(new_timeout));
-+	timeout_old[0] = jiffies_to_usecs(chip->timeout_a);
-+	timeout_old[1] = jiffies_to_usecs(chip->timeout_b);
-+	timeout_old[2] = jiffies_to_usecs(chip->timeout_c);
-+	timeout_old[3] = jiffies_to_usecs(chip->timeout_d);
-+	timeout_chip[0] = be32_to_cpu(cap.timeout.a);
-+	timeout_chip[1] = be32_to_cpu(cap.timeout.b);
-+	timeout_chip[2] = be32_to_cpu(cap.timeout.c);
-+	timeout_chip[3] = be32_to_cpu(cap.timeout.d);
-+	memcpy(timeout_eff, timeout_chip, sizeof(timeout_eff));
- 
- 	/*
- 	 * Provide ability for vendor overrides of timeout values in case
-@@ -576,16 +579,24 @@ int tpm_get_timeouts(struct tpm_chip *chip)
- 	 */
- 	if (chip->ops->update_timeouts != NULL)
- 		chip->timeout_adjusted =
--			chip->ops->update_timeouts(chip, new_timeout);
-+			chip->ops->update_timeouts(chip, timeout_eff);
- 
- 	if (!chip->timeout_adjusted) {
--		/* Don't overwrite default if value is 0 */
--		if (new_timeout[0] != 0 && new_timeout[0] < 1000) {
--			int i;
-+		/* Restore default if chip reported 0 */
-+		int i;
- 
-+		for (i = 0; i < ARRAY_SIZE(timeout_eff); i++) {
-+			if (timeout_eff[i])
-+				continue;
-+
-+			timeout_eff[i] = timeout_old[i];
-+			chip->timeout_adjusted = true;
-+		}
-+
-+		if (timeout_eff[0] != 0 && timeout_eff[0] < 1000) {
- 			/* timeouts in msec rather usec */
--			for (i = 0; i != ARRAY_SIZE(new_timeout); i++)
--				new_timeout[i] *= 1000;
-+			for (i = 0; i != ARRAY_SIZE(timeout_eff); i++)
-+				timeout_eff[i] *= 1000;
- 			chip->timeout_adjusted = true;
- 		}
- 	}
-@@ -594,16 +605,16 @@ int tpm_get_timeouts(struct tpm_chip *chip)
- 	if (chip->timeout_adjusted) {
- 		dev_info(&chip->dev,
- 			 HW_ERR "Adjusting reported timeouts: A %lu->%luus B %lu->%luus C %lu->%luus D %lu->%luus\n",
--			 old_timeout[0], new_timeout[0],
--			 old_timeout[1], new_timeout[1],
--			 old_timeout[2], new_timeout[2],
--			 old_timeout[3], new_timeout[3]);
-+			 timeout_chip[0], timeout_eff[0],
-+			 timeout_chip[1], timeout_eff[1],
-+			 timeout_chip[2], timeout_eff[2],
-+			 timeout_chip[3], timeout_eff[3]);
- 	}
- 
--	chip->timeout_a = usecs_to_jiffies(new_timeout[0]);
--	chip->timeout_b = usecs_to_jiffies(new_timeout[1]);
--	chip->timeout_c = usecs_to_jiffies(new_timeout[2]);
--	chip->timeout_d = usecs_to_jiffies(new_timeout[3]);
-+	chip->timeout_a = usecs_to_jiffies(timeout_eff[0]);
-+	chip->timeout_b = usecs_to_jiffies(timeout_eff[1]);
-+	chip->timeout_c = usecs_to_jiffies(timeout_eff[2]);
-+	chip->timeout_d = usecs_to_jiffies(timeout_eff[3]);
- 
- 	rc = tpm_getcap(chip, TPM_CAP_PROP_TIS_DURATION, &cap,
- 			"attempting to determine the durations");
+
