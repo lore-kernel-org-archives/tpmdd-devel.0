@@ -1,20 +1,27 @@
-From: James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: TPM 2.0 RM flushcontext returning bad address
-Date: Sat, 14 Jan 2017 10:32:30 -0800
-Message-ID: <1484418750.2424.13.camel@linux.vnet.ibm.com>
-References: <o53ei5$sc5$1@blaine.gmane.org>
-	<20170110200803.GB5102@obsidianresearch.com>
-	<o53ncb$e8q$1@blaine.gmane.org>
-	<20170110224225.GA5451@obsidianresearch.com>
-	<o561te$39p$1@blaine.gmane.org>
-	<1484164614.2509.31.camel@HansenPartnership.com>
-	<1484412351.2424.7.camel@HansenPartnership.com>
-	<o5dq32$b3s$1@blaine.gmane.org>
+From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH] tpm-emulator: add a TPM emulator pass
+ through
+Date: Sun, 15 Jan 2017 14:18:42 -0500
+Message-ID: <7fa906c5-081f-f095-6730-dfcb35cda661@linux.vnet.ibm.com>
+References: <1483923513.2644.1.camel@HansenPartnership.com>
+	<20170109154945.GA28023@obsidianresearch.com>
+	<1483978982.2448.7.camel@HansenPartnership.com>
+	<20170109165416.GA13960@obsidianresearch.com>
+	<1483981445.2398.4.camel@HansenPartnership.com>
+	<20170109171430.GA18648@obsidianresearch.com>
+	<7bef4616-cd69-2798-fc1f-f7eee2fb8c98@linux.vnet.ibm.com>
+	<1483986287.2398.5.camel@HansenPartnership.com>
+	<1e9d8540-63b9-e6fe-d643-30705030d49c@linux.vnet.ibm.com>
+	<1483987877.2398.9.camel@HansenPartnership.com>
+	<fdbd3976-e457-f17e-faed-e40e749f5a21@linux.vnet.ibm.com>
+	<1483989503.2398.13.camel@HansenPartnership.com>
+	<c59ebdec-d1e1-b8d6-53b2-81973ea3e64f@linux.vnet.ibm.com>
+	<1483992413.2398.16.camel@HansenPartnership.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <o5dq32$b3s$1@blaine.gmane.org>
+In-Reply-To: <1483992413.2398.16.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,50 +30,27 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat, 2017-01-14 at 13:19 -0500, Ken Goldman wrote:
-> On 1/14/2017 11:45 AM, James Bottomley wrote:
-> > 
-> > Should fix all of this.  The code has to partially emulate
-> > TPM2_FlushContext.  The emulation is
-> > 
-> >    1. If the handle type is not one we manage (transient, hmac or
-> > policy)
-> >       send the command on to the TPM
-> >    2. next, if the handle isn't currently in the RM table,
-> > manufacture a
-> >       TPM_RC_HANDLE error and return it
-> >    3. remove the handle from the RM table
-> >    4. if the handle is transient, manufacture TPM_RC_SUCCESS and
-> > return it
-> >    5. otherwise it's a session handle: flush it and return success.
-> 
-> This sounds right, assuming:
-> 
-> 1 - The RM immediately context saves and then flushes any transient 
-> object that's created or loaded onto the TPM.
+On 01/09/2017 03:06 PM, James Bottomley wrote:
+>>
+>>
+>> Thanks. I fixed this now to make it at least compilable. The more
+>> recent branch is the tpm2-preview.rev138, which makes that other
+>> branch more or less obsolete.
+> OK, with this branch, I can get a mostly successful run of the smoke
+> tests.  The failure looks to be a dispute over who handles TPM_RC_RETRY
 
-Yes, that's how the space code operates.  It saves every handle (well,
-every policy, hmac or transient handle) after a command completes and
-reloads them all before the next one.
+The following now also works after a (forced) updated on the swtpm TPM2 
+preview branch:
 
-> If you want a list of commands that load transient objects, let me
-> know.
+swtpm chardev --vtpm-proxy --tpmstate dir=/tmp --tpm2
+swtpm chardev --vtpm-proxy --tpmstate dir=/tmp
 
-I think for simplicity, unless there's a severe performance impact, we
-should stick with loading and saving everything for every command
-rather than trying to be selective about  whether the command might
-actually use any saved contexts.
 
-> 2 - Step 3 also implies deleting the saved context.
-
-Yes, that's what I meant by "remove" the function in the patch is tpm2
--space.c:tpm2_forget_session() It removes both the handle and the saved
-context information for the now flushed session.
-
-James
+    Stefan
 
 
 ------------------------------------------------------------------------------
