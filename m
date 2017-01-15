@@ -1,8 +1,8 @@
-From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 Subject: Re: [PATCH] tpm-emulator: add a TPM emulator pass
  through
-Date: Sun, 15 Jan 2017 14:18:42 -0500
-Message-ID: <7fa906c5-081f-f095-6730-dfcb35cda661@linux.vnet.ibm.com>
+Date: Sun, 15 Jan 2017 11:40:02 -0800
+Message-ID: <1484509202.2405.18.camel@HansenPartnership.com>
 References: <1483923513.2644.1.camel@HansenPartnership.com>
 	<20170109154945.GA28023@obsidianresearch.com>
 	<1483978982.2448.7.camel@HansenPartnership.com>
@@ -17,11 +17,12 @@ References: <1483923513.2644.1.camel@HansenPartnership.com>
 	<1483989503.2398.13.camel@HansenPartnership.com>
 	<c59ebdec-d1e1-b8d6-53b2-81973ea3e64f@linux.vnet.ibm.com>
 	<1483992413.2398.16.camel@HansenPartnership.com>
+	<7fa906c5-081f-f095-6730-dfcb35cda661@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1483992413.2398.16.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+In-Reply-To: <7fa906c5-081f-f095-6730-dfcb35cda661-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -30,27 +31,31 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 01/09/2017 03:06 PM, James Bottomley wrote:
->>
->>
->> Thanks. I fixed this now to make it at least compilable. The more
->> recent branch is the tpm2-preview.rev138, which makes that other
->> branch more or less obsolete.
-> OK, with this branch, I can get a mostly successful run of the smoke
-> tests.  The failure looks to be a dispute over who handles TPM_RC_RETRY
+On Sun, 2017-01-15 at 14:18 -0500, Stefan Berger wrote:
+> On 01/09/2017 03:06 PM, James Bottomley wrote:
+> > > 
+> > > 
+> > > Thanks. I fixed this now to make it at least compilable. The more
+> > > recent branch is the tpm2-preview.rev138, which makes that other
+> > > branch more or less obsolete.
+> > OK, with this branch, I can get a mostly successful run of the 
+> > smoke tests.  The failure looks to be a dispute over who handles
+> > TPM_RC_RETRY
+> 
+> The following now also works after a (forced) updated on the swtpm 
+> TPM2 preview branch:
+> 
+> swtpm chardev --vtpm-proxy --tpmstate dir=/tmp --tpm2
+> swtpm chardev --vtpm-proxy --tpmstate dir=/tmp
 
-The following now also works after a (forced) updated on the swtpm TPM2 
-preview branch:
+What would it take to get this into the master branch and released, so
+those of us who use standard distribution tools can get it?
 
-swtpm chardev --vtpm-proxy --tpmstate dir=/tmp --tpm2
-swtpm chardev --vtpm-proxy --tpmstate dir=/tmp
-
-
-    Stefan
+James
 
 
 ------------------------------------------------------------------------------
