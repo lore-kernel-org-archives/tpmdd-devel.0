@@ -1,59 +1,140 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3 2/2] tpm: enhance TPM 2.0 PCR extend to
- support multiple banks
-Date: Mon, 16 Jan 2017 11:41:05 +0200
-Message-ID: <20170116094105.k2vuf3cclippkbye@intel.com>
-References: <1484240290-4306-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1484240290-4306-3-git-send-email-nayna@linux.vnet.ibm.com>
-	<20170112182044.hehe5d5fblecejwo@intel.com>
-	<58787E47.3010908@linux.vnet.ibm.com>
-	<20170113164315.kxbdhchoi64jy44p@intel.com>
-	<o5bcp5$9tn$1@blaine.gmane.org>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH] tpm_tis: use default timeout value if chip reports it as
+ zero
+Date: Mon, 16 Jan 2017 11:42:02 +0200
+Message-ID: <20170116094202.bng7zfznepw7s5la@intel.com>
+References: <d5469294-34e6-2e5e-43e8-9ff82579fc2a@maciej.szmigiero.name>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <o5bcp5$9tn$1@blaine.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <d5469294-34e6-2e5e-43e8-9ff82579fc2a@maciej.szmigiero.name>
+Sender: linux-kernel-owner@vger.kernel.org
+To: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel <linux-kernel@vger.kernel.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Christophe Ricard <christophe.ricard@gmail.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jan 13, 2017 at 03:19:59PM -0500, Ken Goldman wrote:
-> On 1/13/2017 11:43 AM, Jarkko Sakkinen wrote:
+On Fri, Jan 13, 2017 at 10:37:00PM +0100, Maciej S. Szmigiero wrote:
+> Since commit 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM
+> access") Atmel 3203 TPM on ThinkPad X61S (TPM firmware version 13.9) no
+> longer works.
+> The initialization proceeds fine until we get and start using chip-reported
+> timeouts - and the chip reports C and D timeouts of zero.
 > 
-> >>>> +struct tpml_digest_values {
-> >>>> +	u32 count;
-> >>>> +	struct tpmt_ha digests[TPM2_ACTIVE_PCR_BANKS];
-> >>>> +} __packed;
-> >>>
-> >>> Please remove this structure.
-> >>
-> >> Sorry Jarkko, I didn't understand this comment.
-> >> Why do we want to remove this structure.
-> >
-> > Well it is only used to pass two parameters.
+> It turns out that until commit 8e54caf407b98e ("tpm: Provide a generic
+> means to override the chip returned timeouts") we had actually let default
+> timeout values remain in this case, so let's bring back this behavior to
+> make chips like Atmel 3203 work again.
 > 
-> Might it be good in general to reuse TPM Part 2
-> structures?  For someone familiar with the TPM
-> spec, it could make reading the device driver code
-> easier.
+> Use a common code that was introduced by that commit so a warning is
+> printed in this case and /sys/class/tpm/tpm*/timeouts correctly says the
+> timeouts aren't chip-original.
+> 
+> Signed-off-by: Maciej S. Szmigiero <mail@maciej.szmigiero.name>
+> 
+> Fixes: 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM access")
+> Cc: stable@vger.kernel.org
 
-Having a structure to encapsulate two parameters is an overkill.
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
 /Jarkko
 
-------------------------------------------------------------------------------
-Developer Access Program for Intel Xeon Phi Processors
-Access to Intel Xeon Phi processor-based developer platforms.
-With one year of Intel Parallel Studio XE.
-Training and support from Colfax.
-Order your platform today. http://sdm.link/xeonphi
+> ---
+> This replaces "tpm_tis: override reported C and D timeouts for Atmel 3203"
+> submission.
+> 
+>  drivers/char/tpm/tpm-interface.c | 53 ++++++++++++++++++++++++----------------
+>  1 file changed, 32 insertions(+), 21 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index fecdd3fa8126..a3461cbdde5f 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -522,8 +522,7 @@ static int tpm_startup(struct tpm_chip *chip, __be16 startup_type)
+>  int tpm_get_timeouts(struct tpm_chip *chip)
+>  {
+>  	cap_t cap;
+> -	unsigned long new_timeout[4];
+> -	unsigned long old_timeout[4];
+> +	unsigned long timeout_old[4], timeout_chip[4], timeout_eff[4];
+>  	ssize_t rc;
+>  
+>  	if (chip->flags & TPM_CHIP_FLAG_HAVE_TIMEOUTS)
+> @@ -564,11 +563,15 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+>  		return rc;
+>  	}
+>  
+> -	old_timeout[0] = be32_to_cpu(cap.timeout.a);
+> -	old_timeout[1] = be32_to_cpu(cap.timeout.b);
+> -	old_timeout[2] = be32_to_cpu(cap.timeout.c);
+> -	old_timeout[3] = be32_to_cpu(cap.timeout.d);
+> -	memcpy(new_timeout, old_timeout, sizeof(new_timeout));
+> +	timeout_old[0] = jiffies_to_usecs(chip->timeout_a);
+> +	timeout_old[1] = jiffies_to_usecs(chip->timeout_b);
+> +	timeout_old[2] = jiffies_to_usecs(chip->timeout_c);
+> +	timeout_old[3] = jiffies_to_usecs(chip->timeout_d);
+> +	timeout_chip[0] = be32_to_cpu(cap.timeout.a);
+> +	timeout_chip[1] = be32_to_cpu(cap.timeout.b);
+> +	timeout_chip[2] = be32_to_cpu(cap.timeout.c);
+> +	timeout_chip[3] = be32_to_cpu(cap.timeout.d);
+> +	memcpy(timeout_eff, timeout_chip, sizeof(timeout_eff));
+>  
+>  	/*
+>  	 * Provide ability for vendor overrides of timeout values in case
+> @@ -576,16 +579,24 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+>  	 */
+>  	if (chip->ops->update_timeouts != NULL)
+>  		chip->timeout_adjusted =
+> -			chip->ops->update_timeouts(chip, new_timeout);
+> +			chip->ops->update_timeouts(chip, timeout_eff);
+>  
+>  	if (!chip->timeout_adjusted) {
+> -		/* Don't overwrite default if value is 0 */
+> -		if (new_timeout[0] != 0 && new_timeout[0] < 1000) {
+> -			int i;
+> +		/* Restore default if chip reported 0 */
+> +		int i;
+>  
+> +		for (i = 0; i < ARRAY_SIZE(timeout_eff); i++) {
+> +			if (timeout_eff[i])
+> +				continue;
+> +
+> +			timeout_eff[i] = timeout_old[i];
+> +			chip->timeout_adjusted = true;
+> +		}
+> +
+> +		if (timeout_eff[0] != 0 && timeout_eff[0] < 1000) {
+>  			/* timeouts in msec rather usec */
+> -			for (i = 0; i != ARRAY_SIZE(new_timeout); i++)
+> -				new_timeout[i] *= 1000;
+> +			for (i = 0; i != ARRAY_SIZE(timeout_eff); i++)
+> +				timeout_eff[i] *= 1000;
+>  			chip->timeout_adjusted = true;
+>  		}
+>  	}
+> @@ -594,16 +605,16 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+>  	if (chip->timeout_adjusted) {
+>  		dev_info(&chip->dev,
+>  			 HW_ERR "Adjusting reported timeouts: A %lu->%luus B %lu->%luus C %lu->%luus D %lu->%luus\n",
+> -			 old_timeout[0], new_timeout[0],
+> -			 old_timeout[1], new_timeout[1],
+> -			 old_timeout[2], new_timeout[2],
+> -			 old_timeout[3], new_timeout[3]);
+> +			 timeout_chip[0], timeout_eff[0],
+> +			 timeout_chip[1], timeout_eff[1],
+> +			 timeout_chip[2], timeout_eff[2],
+> +			 timeout_chip[3], timeout_eff[3]);
+>  	}
+>  
+> -	chip->timeout_a = usecs_to_jiffies(new_timeout[0]);
+> -	chip->timeout_b = usecs_to_jiffies(new_timeout[1]);
+> -	chip->timeout_c = usecs_to_jiffies(new_timeout[2]);
+> -	chip->timeout_d = usecs_to_jiffies(new_timeout[3]);
+> +	chip->timeout_a = usecs_to_jiffies(timeout_eff[0]);
+> +	chip->timeout_b = usecs_to_jiffies(timeout_eff[1]);
+> +	chip->timeout_c = usecs_to_jiffies(timeout_eff[2]);
+> +	chip->timeout_d = usecs_to_jiffies(timeout_eff[3]);
+>  
+>  	rc = tpm_getcap(chip, TPM_CAP_PROP_TIS_DURATION, &cap,
+>  			"attempting to determine the durations");
+> 
