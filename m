@@ -1,49 +1,62 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm/tpm_i2c_infineon: ensure no ongoing commands on
- shutdown
-Date: Mon, 16 Jan 2017 11:33:18 +0200
-Message-ID: <20170116093318.wmmr2z54pc6k7t2c@intel.com>
-References: <20170114000954.17728-1-apronin@chromium.org>
- <20170114002857.GA5851@obsidianresearch.com>
- <20170114004230.GA21035@apronin>
+Subject: Re: [tpmdd-devel] [PATCH v8 2/2] tpm: add securityfs support for TPM
+ 2.0 firmware event log
+Date: Mon, 16 Jan 2017 11:38:16 +0200
+Message-ID: <20170116093816.7pzmpmcmlj4t5zr6@intel.com>
+References: <1484121262-25732-1-git-send-email-nayna@linux.vnet.ibm.com>
+ <1484121262-25732-3-git-send-email-nayna@linux.vnet.ibm.com>
+ <9c605b61-bd5f-eb74-8fc0-ac3587852808@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170114004230.GA21035@apronin>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Andrey Pronin <apronin@chromium.org>
-Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, semenzato@chromium.org, groeck@chromium.org
+In-Reply-To: <9c605b61-bd5f-eb74-8fc0-ac3587852808@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: Nayna Jain <nayna@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jan 13, 2017 at 04:42:30PM -0800, Andrey Pronin wrote:
-> On Fri, Jan 13, 2017 at 05:28:57PM -0700, Jason Gunthorpe wrote:
-> > On Fri, Jan 13, 2017 at 04:09:54PM -0800, Andrey Pronin wrote:
-> > > Resetting TPM while processing a command may lead to issues
-> > > on the next boot. Ensure that we don't have any ongoing
-> > > commands, and that no further commands can be sent to the chip
-> > > by unregistering the device in the shutdown handler.
-> > > tpm_chip_unregister() waits for the completion of an ongoing
-> > > command, if any, and then clears out chip->ops and unregisters
-> > > sysfs entities.
+On Fri, Jan 13, 2017 at 01:09:29PM -0500, Stefan Berger wrote:
+> On 01/11/2017 02:54 AM, Nayna Jain wrote:
+> > Unlike the device driver support for TPM 1.2, the TPM 2.0 does
+> > not support the securityfs pseudo files for displaying the
+> > firmware event log.
 > > 
-> > Unregistering in a shutdown handler seems very strange, it also waits
-> > for userspace things, so I wonder if it could be problematic?
+> > This patch enables support for providing the TPM 2.0 event log in
+> > binary form. TPM 2.0 event log supports a crypto agile format that
+> > records multiple digests, which is different from TPM 1.2. This
+> > patch enables the tpm_bios_log_setup for TPM 2.0  and adds the
+> > event log parser which understand the TPM 2.0 crypto agile format.
 > > 
-> > Maybe just use
+> > Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
+> > ---
+> >   drivers/char/tpm/Makefile                          |   2 +-
+> >   .../char/tpm/{tpm_eventlog.c => tpm1_eventlog.c}   |  35 ++--
+> >   drivers/char/tpm/tpm2_eventlog.c                   | 203 +++++++++++++++++++++
+> >   drivers/char/tpm/tpm_acpi.c                        |   3 +
+> >   drivers/char/tpm/tpm_eventlog.h                    |  63 +++++++
+> >   5 files changed, 291 insertions(+), 15 deletions(-)
+> >   rename drivers/char/tpm/{tpm_eventlog.c => tpm1_eventlog.c} (95%)
+> >   create mode 100644 drivers/char/tpm/tpm2_eventlog.c
 > > 
-> >    down_write(&chip->ops_sem);
-> >    chip->ops = NULL;
-> >    up_write(&chip->ops_sem);
 > > 
-> > In the shutdown handler?
+> > diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
+> > index b7718c9..169edf3 100644
+> > --- a/drivers/char/tpm/tpm_acpi.c
+> > +++ b/drivers/char/tpm/tpm_acpi.c
+> > @@ -54,6 +54,9 @@ int tpm_read_log_acpi(struct tpm_chip *chip)
+> >   	u64 len, start;
+> >   	struct tpm_bios_log *log;
+> > 
+> > +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> > +		return -ENODEV;
+> > +
 > 
-> down_write(&chip->ops_sem) would still wait for completing the initiated
-> writes, since tpm_write() in tpm-dev.c calls tpm_try_get_ops().
-> Also, tpm-sysfs.c calls chip->ops directly, so sysfs should be
-> unregistered first.
+> 
+> Works with SeaBIOS when this check is disabled.
 
-Why don't you fix the tpm-sysfs issue but rather misusing
-tpm_chip_unregister?
+What about OF call paths?
+
+>    Stefan
 
 /Jarkko
