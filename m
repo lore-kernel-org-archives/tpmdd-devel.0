@@ -1,44 +1,32 @@
 From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [tpmdd-devel] [PATCH v5] tpm: Check size of response before
- accessing data
-Date: Mon, 16 Jan 2017 09:06:21 -0700
-Message-ID: <20170116160621.GA18596@obsidianresearch.com>
-References: <1484361394-13581-1-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: Re: [PATCH RFC v3 5/5] tpm2: expose resource manager via a device
+ link /dev/tpms<n>
+Date: Mon, 16 Jan 2017 09:14:13 -0700
+Message-ID: <20170116161413.GA19979@obsidianresearch.com>
+References: <20170116131215.28930-1-jarkko.sakkinen@linux.intel.com>
+ <20170116131215.28930-6-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1484361394-13581-1-git-send-email-stefanb@linux.vnet.ibm.com>
+In-Reply-To: <20170116131215.28930-6-jarkko.sakkinen@linux.intel.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, James Bottomley <James.Bottomley@HansenPartnership.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jan 13, 2017 at 09:36:34PM -0500, Stefan Berger wrote:
+On Mon, Jan 16, 2017 at 03:12:11PM +0200, Jarkko Sakkinen wrote:
 
->  	header = cmd;
-> +	if (len < be32_to_cpu(header->length) ||
-> +	    be32_to_cpu(header->length) < min_rx_length)
-> +		return -EFAULT;
+> @@ -199,7 +227,9 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+>  	return chip;
+>  
+>  out:
+> +	put_device(&chip->devrm);
+>  	put_device(&chip->dev);
+> +	put_device(&chip->devrm);
+>  	return ERR_PTR(rc);
+>  }
 
->  	err = be32_to_cpu(header->return_code);
->  	if (err != 0 && desc)
-
-Your earlier message points out the problem with this order, it seems
-like we want a valid TPM error code to take precedence over a short
-message. Isn't this better than hacking up things that check for
-POSTINIT?
-
-  if (len < be32_to_cpu(header->length))
-        return -EFAULT;
-
-   err = be32_to_cpu(header->return_code);
-   if (err != 0)
-     [..]
-
-   if (be32_to_cpu(header->length) < min_rx_length)
-        return -EFAULT;
-
-?
+Something has gone wrong here..
 
 Jason
