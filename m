@@ -1,72 +1,102 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm_tis: use default timeout value if
- chip reports it as zero
-Date: Mon, 16 Jan 2017 18:39:27 +0200
-Message-ID: <20170116163927.od5coufxvctgknot@intel.com>
-References: <d5469294-34e6-2e5e-43e8-9ff82579fc2a@maciej.szmigiero.name>
-	<20170116094202.bng7zfznepw7s5la@intel.com>
-	<20170116134612.uuzbb6xi7pw7czyo@intel.com>
-	<20170116135539.4qtrylwt3m2yfapx@intel.com>
-	<17fd82a8-d6fd-d4ec-0965-3ebba25fca0e@maciej.szmigiero.name>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [PATCH RFC v2 3/5] tpm: infrastructure for TPM
+ spaces
+Date: Mon, 16 Jan 2017 18:52:25 +0200
+Message-ID: <20170116165225.gjchmn7pylpakjck@intel.com>
+References: <20170112174612.9314-1-jarkko.sakkinen@linux.intel.com>
+ <20170112174612.9314-4-jarkko.sakkinen@linux.intel.com>
+ <1484270243.5807.31.camel@linux.vnet.ibm.com>
+ <20170116090931.dzdv4tcvhj4m4rrl@intel.com>
+ <1484576688.2540.18.camel@linux.vnet.ibm.com>
+ <20170116144847.p7nh3vvmqdoqlq7y@intel.com>
+ <1484578724.2540.30.camel@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <17fd82a8-d6fd-d4ec-0965-3ebba25fca0e-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Maciej S. Szmigiero" <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
-Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, linux-kernel <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <1484578724.2540.30.camel@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: James Bottomley <jejb@linux.vnet.ibm.com>
+Cc: linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jan 16, 2017 at 03:58:26PM +0100, Maciej S. Szmigiero wrote:
-> On 16.01.2017 14:55, Jarkko Sakkinen wrote:
-> > On Mon, Jan 16, 2017 at 03:46:12PM +0200, Jarkko Sakkinen wrote:
-> >> On Mon, Jan 16, 2017 at 11:42:02AM +0200, Jarkko Sakkinen wrote:
-> >>> On Fri, Jan 13, 2017 at 10:37:00PM +0100, Maciej S. Szmigiero wrote:
-> >>>> Since commit 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM
-> >>>> access") Atmel 3203 TPM on ThinkPad X61S (TPM firmware version 13.9) no
-> >>>> longer works.
-> >>>> The initialization proceeds fine until we get and start using chip-reported
-> >>>> timeouts - and the chip reports C and D timeouts of zero.
-> >>>>
-> >>>> It turns out that until commit 8e54caf407b98e ("tpm: Provide a generic
-> >>>> means to override the chip returned timeouts") we had actually let default
-> >>>> timeout values remain in this case, so let's bring back this behavior to
-> >>>> make chips like Atmel 3203 work again.
-> >>>>
-> >>>> Use a common code that was introduced by that commit so a warning is
-> >>>> printed in this case and /sys/class/tpm/tpm*/timeouts correctly says the
-> >>>> timeouts aren't chip-original.
-> >>>>
-> >>>> Signed-off-by: Maciej S. Szmigiero <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
-> >>>>
-> >>>> Fixes: 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM access")
-> >>>> Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-> >>>
-> >>> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> >>
-> >> It's now applied to my master branch so if someone wants to
-> >> test it, it should be fairly easy.
+On Mon, Jan 16, 2017 at 06:58:44AM -0800, James Bottomley wrote:
+> On Mon, 2017-01-16 at 16:48 +0200, Jarkko Sakkinen wrote:
+> > On Mon, Jan 16, 2017 at 06:24:48AM -0800, James Bottomley wrote:
+> > > On Mon, 2017-01-16 at 11:09 +0200, Jarkko Sakkinen wrote:
+> > > > On Thu, Jan 12, 2017 at 05:17:23PM -0800, James Bottomley wrote:
+> > > > > On Thu, 2017-01-12 at 19:46 +0200, Jarkko Sakkinen wrote:
+> > > > > > @@ -189,6 +190,12 @@ struct tpm_chip *tpm_chip_alloc(struct
+> > > > > > device
+> > > > > > *pdev,
+> > > > > >  	chip->cdev.owner = THIS_MODULE;
+> > > > > >  	chip->cdev.kobj.parent = &chip->dev.kobj;
+> > > > > > 
+> > > > > > +	chip->work_space.context_buf = kzalloc(PAGE_SIZE,
+> > > > > > GFP_KERNEL);
+> > > > > > +	if (!chip->work_space.context_buf) {
+> > > > > > +		rc = -ENOMEM;
+> > > > > > +		goto out;
+> > > > > > +	}
+> > > > > > +
+> > > > > 
+> > > > > I think the work_buf handling can be greatly simplified by 
+> > > > > making it a pointer to the space: it's only usable between
+> > > > > tpm2_prepare_space() and tpm2_commit_space() which are 
+> > > > > protected by the chip mutex, so there's no need for it to exist 
+> > > > > outside of these calls (i.e. it can be NULL).
+> > > > > 
+> > > > > Doing it this way also saves the allocation and copying 
+> > > > > overhead of work_space.
+> > > > > 
+> > > > > The patch below can be folded to effect this.
+> > > > 
+> > > > Hey, I have to take my words back. There's a separate buffer for 
+> > > > space for a reason. If the transaction fails for example when RM 
+> > > > is doing its job, we can revert to the previous set of transient
+> > > > objects.
+> > > > 
+> > > > Your change would completely thrawt this. I tried varius ways to 
+> > > > heal when RM decorations fail and this is the most fail safe to 
+> > > > do it so lets stick with it.
+> > > 
+> > > That's why I added the return code check in the other patch: if the
+> > > command fails in the TPM, the space state isn't updated at all, the 
+> > > net result being that nothing changes in the space, thus you don't 
+> > > need the copy, because there's nothing to revert on a failure.
 > > 
-> > And I decided to squash the rename commit to it.
+> > You are right in what you say but what if you save lets say 5 
+> > transient contexts and ContextSave fails on 2nd. It's not for the 
+> > command itself but for falling back to a sane state when 
+> > tpm2_commit_space fails (to the previous set of transient objects).
+> > 
+> > I've never meant it as a fallback for the command itself...
 > 
-> Wouldn't it be better to squash the rename commit into "fix iTPM probe via
-> probe_itpm() function" patch (if it isn't too late), since they touch the
-> same functionality?
+> Current error handling is to flush the entire space and abort ... and I
+> think that's correct.  There can't be any recovery because the TPM just
+> signalled it's in an insane state (it failed a command that should
+> succeed, either because our state is wrong and the TPM doesn't have the
+> handle we think it does or the TPM has had some internal error).  If
+> I'm the user, I'm likely going to have to reset the TPM and restart and
+> I likely wouldn't trust any state it gave me before this.
+> 
+> James
 
-It can be renamed, modified and even dropped as long as it is in my
-master branch and I haven't sent pull request to James Morris.
+The *current* fallback in the patch set is what I said. It keeps
+previously saved set of transient objects and will try to load them next
+time. Only when contexts are succesfully saved the code overwrite the
+buffers with new stuff.
 
-/Jarkkok
+tpm2_flush_context() is only used to clean up remaining contexts after
+ContextSave fails. It's not *the* fallback. Reverting to the previous
+set of transient contexts is.
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+That's why I didn't check for TPM error in tpm2_commit_response (except
+now I have the check in v3 because this wasn't bright in my mind at the
+time).
+
+The reasons for this fallback have nothing to do with mixed up TPM
+state. There are legit reasons for tpm2_commit_response to fail like
+running out of virtual handle slots or out of backing storage.
+
+/Jarkko
