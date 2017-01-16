@@ -1,140 +1,55 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm_tis: use default timeout value if chip reports it as
- zero
-Date: Mon, 16 Jan 2017 11:42:02 +0200
-Message-ID: <20170116094202.bng7zfznepw7s5la@intel.com>
-References: <d5469294-34e6-2e5e-43e8-9ff82579fc2a@maciej.szmigiero.name>
+Subject: Re: [tpmdd-devel] [PATCH RFC v2 5/5] tpm2: expose resource manager
+ via a device link /dev/tpms<n>
+Date: Mon, 16 Jan 2017 11:45:59 +0200
+Message-ID: <20170116094559.jsw7ffrozs42ubue@intel.com>
+References: <20170112174612.9314-1-jarkko.sakkinen@linux.intel.com>
+ <20170112174612.9314-6-jarkko.sakkinen@linux.intel.com>
+ <20170112205628.qh3yf2jcargtw6qv@intel.com>
+ <20170113172537.GA31125@obsidianresearch.com>
+ <1484329208.2527.18.camel@HansenPartnership.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <d5469294-34e6-2e5e-43e8-9ff82579fc2a@maciej.szmigiero.name>
-Sender: linux-kernel-owner@vger.kernel.org
-To: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel <linux-kernel@vger.kernel.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Christophe Ricard <christophe.ricard@gmail.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+In-Reply-To: <1484329208.2527.18.camel@HansenPartnership.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: James Bottomley <James.Bottomley@HansenPartnership.com>
+Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jan 13, 2017 at 10:37:00PM +0100, Maciej S. Szmigiero wrote:
-> Since commit 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM
-> access") Atmel 3203 TPM on ThinkPad X61S (TPM firmware version 13.9) no
-> longer works.
-> The initialization proceeds fine until we get and start using chip-reported
-> timeouts - and the chip reports C and D timeouts of zero.
+On Fri, Jan 13, 2017 at 09:40:08AM -0800, James Bottomley wrote:
+> On Fri, 2017-01-13 at 10:25 -0700, Jason Gunthorpe wrote:
+> > On Thu, Jan 12, 2017 at 10:56:28PM +0200, Jarkko Sakkinen wrote:
+> > 
+> > > >  dev_t tpm_devt;
+> > > 
+> > > But they should have different major device numbers.
+> > 
+> > major/minors don't really matter these days since they are dynamic
 > 
-> It turns out that until commit 8e54caf407b98e ("tpm: Provide a generic
-> means to override the chip returned timeouts") we had actually let default
-> timeout values remain in this case, so let's bring back this behavior to
-> make chips like Atmel 3203 work again.
+> Right, although we have this weird piece of code:
 > 
-> Use a common code that was introduced by that commit so a warning is
-> printed in this case and /sys/class/tpm/tpm*/timeouts correctly says the
-> timeouts aren't chip-original.
 > 
-> Signed-off-by: Maciej S. Szmigiero <mail@maciej.szmigiero.name>
+> 	if (chip->dev_num == 0)
+> 		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
+> 	else
+> 		chip->dev.devt = MKDEV(MAJOR(tpm_devt), chip->dev_num);
 > 
-> Fixes: 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM access")
-> Cc: stable@vger.kernel.org
+> So the first TPM device gets the MISC_MAJOR with TPM_MINOR and the rest
+> get the dynamic major/minor.  It means when you do an ls on a complex
+> system you get something like:
+> 
+> crw------- 1 root root  10,   224 Jan 13 06:21 /dev/tpm0
+> crw------- 1 root root 246,     1 Jan 13 09:38 /dev/tpm1
+> crw-rw-rw- 1 root root 246, 65536 Jan 13 06:21 /dev/tpms0
+> crw-rw-rw- 1 root root 246, 65537 Jan 13 09:38 /dev/tpms1
+> 
+> Perhaps it's time just to junk the reserved misc minor?
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
++1 
+
+And Jason is correct about major numbers. I still am puzzled whether
+these should share the device class and devt with raw /dev/tpm0.
 
 /Jarkko
-
-> ---
-> This replaces "tpm_tis: override reported C and D timeouts for Atmel 3203"
-> submission.
-> 
->  drivers/char/tpm/tpm-interface.c | 53 ++++++++++++++++++++++++----------------
->  1 file changed, 32 insertions(+), 21 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index fecdd3fa8126..a3461cbdde5f 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -522,8 +522,7 @@ static int tpm_startup(struct tpm_chip *chip, __be16 startup_type)
->  int tpm_get_timeouts(struct tpm_chip *chip)
->  {
->  	cap_t cap;
-> -	unsigned long new_timeout[4];
-> -	unsigned long old_timeout[4];
-> +	unsigned long timeout_old[4], timeout_chip[4], timeout_eff[4];
->  	ssize_t rc;
->  
->  	if (chip->flags & TPM_CHIP_FLAG_HAVE_TIMEOUTS)
-> @@ -564,11 +563,15 @@ int tpm_get_timeouts(struct tpm_chip *chip)
->  		return rc;
->  	}
->  
-> -	old_timeout[0] = be32_to_cpu(cap.timeout.a);
-> -	old_timeout[1] = be32_to_cpu(cap.timeout.b);
-> -	old_timeout[2] = be32_to_cpu(cap.timeout.c);
-> -	old_timeout[3] = be32_to_cpu(cap.timeout.d);
-> -	memcpy(new_timeout, old_timeout, sizeof(new_timeout));
-> +	timeout_old[0] = jiffies_to_usecs(chip->timeout_a);
-> +	timeout_old[1] = jiffies_to_usecs(chip->timeout_b);
-> +	timeout_old[2] = jiffies_to_usecs(chip->timeout_c);
-> +	timeout_old[3] = jiffies_to_usecs(chip->timeout_d);
-> +	timeout_chip[0] = be32_to_cpu(cap.timeout.a);
-> +	timeout_chip[1] = be32_to_cpu(cap.timeout.b);
-> +	timeout_chip[2] = be32_to_cpu(cap.timeout.c);
-> +	timeout_chip[3] = be32_to_cpu(cap.timeout.d);
-> +	memcpy(timeout_eff, timeout_chip, sizeof(timeout_eff));
->  
->  	/*
->  	 * Provide ability for vendor overrides of timeout values in case
-> @@ -576,16 +579,24 @@ int tpm_get_timeouts(struct tpm_chip *chip)
->  	 */
->  	if (chip->ops->update_timeouts != NULL)
->  		chip->timeout_adjusted =
-> -			chip->ops->update_timeouts(chip, new_timeout);
-> +			chip->ops->update_timeouts(chip, timeout_eff);
->  
->  	if (!chip->timeout_adjusted) {
-> -		/* Don't overwrite default if value is 0 */
-> -		if (new_timeout[0] != 0 && new_timeout[0] < 1000) {
-> -			int i;
-> +		/* Restore default if chip reported 0 */
-> +		int i;
->  
-> +		for (i = 0; i < ARRAY_SIZE(timeout_eff); i++) {
-> +			if (timeout_eff[i])
-> +				continue;
-> +
-> +			timeout_eff[i] = timeout_old[i];
-> +			chip->timeout_adjusted = true;
-> +		}
-> +
-> +		if (timeout_eff[0] != 0 && timeout_eff[0] < 1000) {
->  			/* timeouts in msec rather usec */
-> -			for (i = 0; i != ARRAY_SIZE(new_timeout); i++)
-> -				new_timeout[i] *= 1000;
-> +			for (i = 0; i != ARRAY_SIZE(timeout_eff); i++)
-> +				timeout_eff[i] *= 1000;
->  			chip->timeout_adjusted = true;
->  		}
->  	}
-> @@ -594,16 +605,16 @@ int tpm_get_timeouts(struct tpm_chip *chip)
->  	if (chip->timeout_adjusted) {
->  		dev_info(&chip->dev,
->  			 HW_ERR "Adjusting reported timeouts: A %lu->%luus B %lu->%luus C %lu->%luus D %lu->%luus\n",
-> -			 old_timeout[0], new_timeout[0],
-> -			 old_timeout[1], new_timeout[1],
-> -			 old_timeout[2], new_timeout[2],
-> -			 old_timeout[3], new_timeout[3]);
-> +			 timeout_chip[0], timeout_eff[0],
-> +			 timeout_chip[1], timeout_eff[1],
-> +			 timeout_chip[2], timeout_eff[2],
-> +			 timeout_chip[3], timeout_eff[3]);
->  	}
->  
-> -	chip->timeout_a = usecs_to_jiffies(new_timeout[0]);
-> -	chip->timeout_b = usecs_to_jiffies(new_timeout[1]);
-> -	chip->timeout_c = usecs_to_jiffies(new_timeout[2]);
-> -	chip->timeout_d = usecs_to_jiffies(new_timeout[3]);
-> +	chip->timeout_a = usecs_to_jiffies(timeout_eff[0]);
-> +	chip->timeout_b = usecs_to_jiffies(timeout_eff[1]);
-> +	chip->timeout_c = usecs_to_jiffies(timeout_eff[2]);
-> +	chip->timeout_d = usecs_to_jiffies(timeout_eff[3]);
->  
->  	rc = tpm_getcap(chip, TPM_CAP_PROP_TIS_DURATION, &cap,
->  			"attempting to determine the durations");
-> 
