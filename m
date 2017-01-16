@@ -1,74 +1,72 @@
-From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [PATCH] tpm/tpm_i2c_infineon: ensure no ongoing commands on
- shutdown
-Date: Mon, 16 Jan 2017 09:19:19 -0700
-Message-ID: <20170116161919.GA20238@obsidianresearch.com>
-References: <20170114000954.17728-1-apronin@chromium.org>
- <20170114002857.GA5851@obsidianresearch.com>
- <20170114004230.GA21035@apronin>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm_tis: use default timeout value if
+ chip reports it as zero
+Date: Mon, 16 Jan 2017 18:39:27 +0200
+Message-ID: <20170116163927.od5coufxvctgknot@intel.com>
+References: <d5469294-34e6-2e5e-43e8-9ff82579fc2a@maciej.szmigiero.name>
+	<20170116094202.bng7zfznepw7s5la@intel.com>
+	<20170116134612.uuzbb6xi7pw7czyo@intel.com>
+	<20170116135539.4qtrylwt3m2yfapx@intel.com>
+	<17fd82a8-d6fd-d4ec-0965-3ebba25fca0e@maciej.szmigiero.name>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170114004230.GA21035@apronin>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Andrey Pronin <apronin@chromium.org>
-Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, semenzato@chromium.org, groeck@chromium.org
+In-Reply-To: <17fd82a8-d6fd-d4ec-0965-3ebba25fca0e-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: "Maciej S. Szmigiero" <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
+Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, linux-kernel <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jan 13, 2017 at 04:42:30PM -0800, Andrey Pronin wrote:
-> On Fri, Jan 13, 2017 at 05:28:57PM -0700, Jason Gunthorpe wrote:
-> > On Fri, Jan 13, 2017 at 04:09:54PM -0800, Andrey Pronin wrote:
-> > > Resetting TPM while processing a command may lead to issues
-> > > on the next boot. Ensure that we don't have any ongoing
-> > > commands, and that no further commands can be sent to the chip
-> > > by unregistering the device in the shutdown handler.
-> > > tpm_chip_unregister() waits for the completion of an ongoing
-> > > command, if any, and then clears out chip->ops and unregisters
-> > > sysfs entities.
+On Mon, Jan 16, 2017 at 03:58:26PM +0100, Maciej S. Szmigiero wrote:
+> On 16.01.2017 14:55, Jarkko Sakkinen wrote:
+> > On Mon, Jan 16, 2017 at 03:46:12PM +0200, Jarkko Sakkinen wrote:
+> >> On Mon, Jan 16, 2017 at 11:42:02AM +0200, Jarkko Sakkinen wrote:
+> >>> On Fri, Jan 13, 2017 at 10:37:00PM +0100, Maciej S. Szmigiero wrote:
+> >>>> Since commit 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM
+> >>>> access") Atmel 3203 TPM on ThinkPad X61S (TPM firmware version 13.9) no
+> >>>> longer works.
+> >>>> The initialization proceeds fine until we get and start using chip-reported
+> >>>> timeouts - and the chip reports C and D timeouts of zero.
+> >>>>
+> >>>> It turns out that until commit 8e54caf407b98e ("tpm: Provide a generic
+> >>>> means to override the chip returned timeouts") we had actually let default
+> >>>> timeout values remain in this case, so let's bring back this behavior to
+> >>>> make chips like Atmel 3203 work again.
+> >>>>
+> >>>> Use a common code that was introduced by that commit so a warning is
+> >>>> printed in this case and /sys/class/tpm/tpm*/timeouts correctly says the
+> >>>> timeouts aren't chip-original.
+> >>>>
+> >>>> Signed-off-by: Maciej S. Szmigiero <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
+> >>>>
+> >>>> Fixes: 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM access")
+> >>>> Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+> >>>
+> >>> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> >>
+> >> It's now applied to my master branch so if someone wants to
+> >> test it, it should be fairly easy.
 > > 
-> > Unregistering in a shutdown handler seems very strange, it also waits
-> > for userspace things, so I wonder if it could be problematic?
-> > 
-> > Maybe just use
-> > 
-> >    down_write(&chip->ops_sem);
-> >    chip->ops = NULL;
-> >    up_write(&chip->ops_sem);
-> > 
-> > In the shutdown handler?
+> > And I decided to squash the rename commit to it.
 > 
-> down_write(&chip->ops_sem) would still wait for completing the initiated
-> writes, since tpm_write() in tpm-dev.c calls tpm_try_get_ops().
+> Wouldn't it be better to squash the rename commit into "fix iTPM probe via
+> probe_itpm() function" patch (if it isn't too late), since they touch the
+> same functionality?
 
-Yes, but that is a timeout limited wait. unregister waits for sysfs
-files to be closed which is potentially unbounded.
+It can be renamed, modified and even dropped as long as it is in my
+master branch and I haven't sent pull request to James Morris.
 
-> Yes, but it doesn't wait for sysfs
-> Also, tpm-sysfs.c calls chip->ops directly, so sysfs should be
-> unregistered first.
+/Jarkkok
 
-Yes, sorry, I should have mentioned that.. Maybe that is too much to
-fix..
-
-> And the last thing, this driver supports TPM 1.2, but if it was a 2.0
-> chip, it'd also need to send TPM2_Shutdown(CLEAR) from its shutdown
-> handler (or get an unorderly shutdown and DA counter increment).
-
-I'm confused - doesn't your system reset the TPM when it reboots?
-Isn't that required so the firmware starts with known PCRs? Doesn't
-reset trump unorderly shutdown?
-
-In any event that seems like an all-chips problem not a chip specific
-bug fix?
-
-> All these things are handled by tpm_chip_unregister(). I thought about
-> creating a tpm_chip_shutdown routine that could be called from shutdown
-> handlers of the drivers that need it (and I'd do it for every driver,
-> especially in 2.0 case). But decided that it's better to reuse the
-> existing tpm_chip_unregister() that already does what's needed.
-
-If for some reason we need this for every driver then this is probably
-a better approach - but that seems very, very strange to me.
-
-Jason
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
