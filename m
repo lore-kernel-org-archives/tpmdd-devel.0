@@ -1,55 +1,59 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC v2 5/5] tpm2: expose resource manager
- via a device link /dev/tpms<n>
-Date: Mon, 16 Jan 2017 11:45:59 +0200
-Message-ID: <20170116094559.jsw7ffrozs42ubue@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH RFC v2 3/5] tpm: infrastructure for TPM
+ spaces
+Date: Mon, 16 Jan 2017 11:52:36 +0200
+Message-ID: <20170116095236.dlhqf4ghv2xv2sas@intel.com>
 References: <20170112174612.9314-1-jarkko.sakkinen@linux.intel.com>
- <20170112174612.9314-6-jarkko.sakkinen@linux.intel.com>
- <20170112205628.qh3yf2jcargtw6qv@intel.com>
- <20170113172537.GA31125@obsidianresearch.com>
- <1484329208.2527.18.camel@HansenPartnership.com>
+	<20170112174612.9314-4-jarkko.sakkinen@linux.intel.com>
+	<1484253532.5807.16.camel@linux.vnet.ibm.com>
+	<20170113162855.dddgsomp7m4c3inc@intel.com>
+	<o5dohv$60l$1@blaine.gmane.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1484329208.2527.18.camel@HansenPartnership.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: James Bottomley <James.Bottomley@HansenPartnership.com>
-Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+In-Reply-To: <o5dohv$60l$1@blaine.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jan 13, 2017 at 09:40:08AM -0800, James Bottomley wrote:
-> On Fri, 2017-01-13 at 10:25 -0700, Jason Gunthorpe wrote:
-> > On Thu, Jan 12, 2017 at 10:56:28PM +0200, Jarkko Sakkinen wrote:
-> > 
-> > > >  dev_t tpm_devt;
-> > > 
-> > > But they should have different major device numbers.
-> > 
-> > major/minors don't really matter these days since they are dynamic
+On Sat, Jan 14, 2017 at 12:53:15PM -0500, Ken Goldman wrote:
+> On 1/13/2017 11:28 AM, Jarkko Sakkinen wrote:
 > 
-> Right, although we have this weird piece of code:
+> > > > +
+> > > > +       if (!tpm2_find_cc_attrs(chip, cc, &attrs)) {
+> > > > +               /* should never happen */
+> > > > +               dev_err(&chip->dev, "TPM returned a different CC:
+> > > > 0x%04x\n",
+> > > > +                       cc);
+> > > > +               rc = -EFAULT;
+> > > > +               goto out_err;
+> > > > +       }
 > 
+> Something is strange here.  Is "CC" command code?
 > 
-> 	if (chip->dev_num == 0)
-> 		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
-> 	else
-> 		chip->dev.devt = MKDEV(MAJOR(tpm_devt), chip->dev_num);
+> The TPM does not return a command code.  The mapping should use the
+> command code from the command.
 > 
-> So the first TPM device gets the MISC_MAJOR with TPM_MINOR and the rest
-> get the dynamic major/minor.  It means when you do an ls on a complex
-> system you get something like:
-> 
-> crw------- 1 root root  10,   224 Jan 13 06:21 /dev/tpm0
-> crw------- 1 root root 246,     1 Jan 13 09:38 /dev/tpm1
-> crw-rw-rw- 1 root root 246, 65536 Jan 13 06:21 /dev/tpms0
-> crw-rw-rw- 1 root root 246, 65537 Jan 13 09:38 /dev/tpms1
-> 
-> Perhaps it's time just to junk the reserved misc minor?
+> It could be the code is correct - the command code mapped OK in the command
+> but then failed in the response.  But the error message is strange.
 
-+1 
-
-And Jason is correct about major numbers. I still am puzzled whether
-these should share the device class and devt with raw /dev/tpm0.
+Thanks. I'll update that message.
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Developer Access Program for Intel Xeon Phi Processors
+Access to Intel Xeon Phi processor-based developer platforms.
+With one year of Intel Parallel Studio XE.
+Training and support from Colfax.
+Order your platform today. http://sdm.link/xeonphi
