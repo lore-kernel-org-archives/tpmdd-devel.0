@@ -1,93 +1,56 @@
-From: James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH] tpm: add session handles to the save and
- restore of the tpm2 space manager
-Date: Mon, 16 Jan 2017 15:18:45 -0800
-Message-ID: <1484608725.2540.88.camel@linux.vnet.ibm.com>
-References: <1484335453.2527.31.camel@linux.vnet.ibm.com>
-	<20170116100415.ieyweqjjcg5d3zzd@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [PATCH RFC v3 5/5] tpm2: expose resource manager
+ via a device link /dev/tpms<n>
+Date: Tue, 17 Jan 2017 09:14:50 +0200
+Message-ID: <20170117071450.gksh34rncbgkibab@intel.com>
+References: <20170116131215.28930-1-jarkko.sakkinen@linux.intel.com>
+ <20170116131215.28930-6-jarkko.sakkinen@linux.intel.com>
+ <20170116161413.GA19979@obsidianresearch.com>
+ <20170116172443.kaakeyahnril55r3@intel.com>
+ <1484587697.2540.39.camel@HansenPartnership.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170116100415.ieyweqjjcg5d3zzd-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <1484587697.2540.39.camel@HansenPartnership.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: James Bottomley <James.Bottomley@HansenPartnership.com>
+Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, 2017-01-16 at 12:04 +0200, Jarkko Sakkinen wrote:
-> On Fri, Jan 13, 2017 at 11:24:13AM -0800, James Bottomley wrote:
-> > Session handles are slightly more difficult to manage because any
-> > TPM
-> > only has a finite number of allowed handles, even if the session
-> > has
-> > been saved; so when you context save a session, you must not flush
-> > it
-> > because that would destroy the ability to context load it (you only
-> > flush sessions when you're done with them) and the tpm won't re-use
-> > the handle.  Additionally, sessions can be flushed as part of the
-> > successful execution of a command if the continueSession attribute
-> > is
-> > clear, so we have to mark any session we find in the command (using
-> > TPM2_HT_TAG_FOR_FLUSH) so it can be cleared from the space if the
-> > command successfully executes.
+On Mon, Jan 16, 2017 at 09:28:17AM -0800, James Bottomley wrote:
+> On Mon, 2017-01-16 at 19:24 +0200, Jarkko Sakkinen wrote:
+> > On Mon, Jan 16, 2017 at 09:14:13AM -0700, Jason Gunthorpe wrote:
+> > > On Mon, Jan 16, 2017 at 03:12:11PM +0200, Jarkko Sakkinen wrote:
+> > > 
+> > > > @@ -199,7 +227,9 @@ struct tpm_chip *tpm_chip_alloc(struct device
+> > > > *pdev,
+> > > >  	return chip;
+> > > >  
+> > > >  out:
+> > > > +	put_device(&chip->devrm);
+> > > >  	put_device(&chip->dev);
+> > > > +	put_device(&chip->devrm);
+> > > >  	return ERR_PTR(rc);
+> > > >  }
+> > > 
+> > > Something has gone wrong here..
 > > 
-> > Finally, a session may also be cleared by flushing it, so we have
-> > to
-> > emulate the TPM2_FlushContext command to see if a session is being
-> > flushed and manually clear it from the space.
+> > Not a big surprise. There were a bunch of these small patches
+> > that I had to squash. Thanks for spotting this.
 > > 
-> > We also fully flush all sessions on device close.
+> > Funny that I didn't experiece any issues when I run my smoke
+> > tests.
 > 
-> Some big overview comments without going deeply into details. I will
-> use more time for this once the 
-> 
-> Please do not use handle allocation code for sessions. This commit
-> makes the implementation a mess. Just use the phandle directly and
-> have array of session phandles for each space.
-> 
-> I would also almost require to have at minimum two patches: one that
-> implements purely isolation and another that implements swapping.
-> 
-> It might be for example that I want to land TPM spaces with session
-> isolation to one release and swapping to n+1 because my hunch tells
-> me that it is better to bake the swapping part for a while.
-> 
-> One more thing. Maybe commit messages should speak uniformally about
-> TPM spaces? They are a tool to implement resource manager, not a
-> resource manager.
+> It's the error path in tpm_chip_alloc: it's incredibly hard to trigger,
+> which is probably why your tests didn't see it.  You basically either
+> have to be out of kernel memory or out of TPM device numbers.
 
-Yes, so Ken also had a reply to this which the Mailing List seems to
-have eaten:
+Right, of course.
 
-> This looks like session handles are virtualized.  I believe that this 
-> will break the HMAC for commands (e.g. TPM2_PolicySecret) that have
-> a session handle in the handle area.  The session's handle is its 
-> "Name" and is included in the cpHash (command parameter hash) data 
-> that is HMACed. 
+I have branch for each new patch set version. For v3 the branch is named
+as tabrm3. I'll apply all the fixes as separate commits on top of that
+branch. Once I'm ready to send a new version, I'll create tabrm4 branch
+and squash the fixes.
 
-Basically this means that the advice to virtualize session handles in
-the TCG RM document is wrong and we have to use physical handles. I'll
-redo the implementation for this ... and now, since we'll have nothing
-to use as an index, it probably does make sense to have sessions in a
-separate array.  I can also separate isolation from context switching
-... although I really think this is less optimal: my TPM only allows
-three active context handles, so if we don't context switch them
-identially to transient object (which it also only allows three of) I'm
-going to run out.  I actually redid my openssl_tpm_engine patches so
-they use session handles for parameter encryption and HMAC based
-authority, so this may end up biting me soon ...
-
-James
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+/Jarkko
