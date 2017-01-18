@@ -1,56 +1,48 @@
-From: James Bottomley <James.Bottomley@HansenPartnership.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC v3 5/5] tpm2: expose resource manager
- via    a device link /dev/tpms<n>
-Date: Wed, 18 Jan 2017 10:01:03 -0500
-Message-ID: <1484751663.2717.10.camel@HansenPartnership.com>
-References: <20170116131215.28930-1-jarkko.sakkinen@linux.intel.com>
-         <20170116131215.28930-6-jarkko.sakkinen@linux.intel.com>
+From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Subject: [PATCH 0/2] Add session isolation and context saving
+ to the space manager
+Date: Wed, 18 Jan 2017 10:08:17 -0500
+Message-ID: <1484752097.2717.14.camel@HansenPartnership.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170116131215.28930-6-jarkko.sakkinen@linux.intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net
-Cc: open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, 2017-01-16 at 15:12 +0200, Jarkko Sakkinen wrote:
-> From: James Bottomley <James.Bottomley@HansenPartnership.com>
-> 
-> Currently the Resource Manager (RM) is not exposed to userspace. 
->  Make
-> this exposure via a separate device, which can now be opened multiple
-> times because each read/write transaction goes separately via the RM.
-> 
-> Concurrency is protected by the chip->tpm_mutex for each read/write
-> transaction separately.  The TPM is cleared of all transient objects
-> by the time the mutex is dropped, so there should be no interference
-> between the kernel and userspace.
-
-There's actually a missing kfree of context_buf on the tpms_release
-path as well.  This patch fixes it up.
+As requested, the first patch adds isolation and the second does
+context switching.  I've also removed the flush emulation which changed
+transient object accounting from lazy to strict.  Note that session
+tracking has to be strict because the TPM needs to manage these closely
+to avoid running out of global session numbers.
 
 James
 
 ---
 
-commit 778425973c532a0c1ec2b5b2ccd7ff995e2cc9db
-Author: James Bottomley <James.Bottomley@HansenPartnership.com>
-Date:   Wed Jan 18 09:58:23 2017 -0500
+James Bottomley (2):
+  tpm2: add session handle isolation to tpm spaces
+  tpm2: context save and restore space managed sessions
 
-    add missing kfree to tpms_release
+ drivers/char/tpm/tpm-chip.c   |   6 +
+ drivers/char/tpm/tpm.h        |   3 +
+ drivers/char/tpm/tpm2-space.c | 377 ++++++++++++++++++++++++++++++++++--------
+ drivers/char/tpm/tpms-dev.c   |   8 +
+ 4 files changed, 325 insertions(+), 69 deletions(-)
 
-diff --git a/drivers/char/tpm/tpms-dev.c b/drivers/char/tpm/tpms-dev.c
-index c10b308..6bb687f 100644
---- a/drivers/char/tpm/tpms-dev.c
-+++ b/drivers/char/tpm/tpms-dev.c
-@@ -37,6 +37,7 @@ static int tpms_release(struct inode *inode, struct file *file)
- 	struct tpms_priv *priv = container_of(fpriv, struct tpms_priv, priv);
- 
- 	tpm_common_release(file, fpriv);
-+	kfree(priv->space.context_buf);
- 	kfree(priv);
- 
- 	return 0;
+-- 
+2.6.6
 
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
