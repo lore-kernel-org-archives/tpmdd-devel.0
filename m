@@ -1,279 +1,56 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v4 2/2] tpm: enhance TPM 2.0 PCR extend to support
- multiple banks
-Date: Wed, 18 Jan 2017 15:58:38 +0200
-Message-ID: <20170118135838.j2g2qtkzmtwaeer2@intel.com>
-References: <1484729090-16012-1-git-send-email-nayna@linux.vnet.ibm.com>
- <1484729090-16012-3-git-send-email-nayna@linux.vnet.ibm.com>
+From: James Bottomley <James.Bottomley@HansenPartnership.com>
+Subject: Re: [tpmdd-devel] [PATCH RFC v3 5/5] tpm2: expose resource manager
+ via    a device link /dev/tpms<n>
+Date: Wed, 18 Jan 2017 10:01:03 -0500
+Message-ID: <1484751663.2717.10.camel@HansenPartnership.com>
+References: <20170116131215.28930-1-jarkko.sakkinen@linux.intel.com>
+         <20170116131215.28930-6-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <1484729090-16012-3-git-send-email-nayna@linux.vnet.ibm.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Nayna Jain <nayna@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: 7bit
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170116131215.28930-6-jarkko.sakkinen@linux.intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net
+Cc: open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jan 18, 2017 at 03:44:50AM -0500, Nayna Jain wrote:
-> The current TPM 2.0 device driver extends only the SHA1 PCR bank
-> but the TCG Specification[1] recommends extending all active PCR
-> banks, to prevent malicious users from setting unused PCR banks with
-> fake measurements and quoting them.
+On Mon, 2017-01-16 at 15:12 +0200, Jarkko Sakkinen wrote:
+> From: James Bottomley <James.Bottomley@HansenPartnership.com>
 > 
-> The existing in-kernel interface(tpm_pcr_extend()) expects only a
-> SHA1 digest.  To extend all active PCR banks with differing
-> digest sizes, the SHA1 digest is padded with trailing 0's as needed.
+> Currently the Resource Manager (RM) is not exposed to userspace. 
+>  Make
+> this exposure via a separate device, which can now be opened multiple
+> times because each read/write transaction goes separately via the RM.
 > 
-> This patch reuses the defined digest sizes from the crypto subsystem,
-> adding a dependency on CRYPTO_HASH_INFO module.
-> 
-> [1] TPM 2.0 Specification referred here is "TCG PC Client Specific
-> Platform Firmware Profile for TPM 2.0"
-> 
-> Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
-> ---
->  drivers/char/tpm/Kconfig         |  1 +
->  drivers/char/tpm/tpm-interface.c | 15 ++++++-
->  drivers/char/tpm/tpm.h           |  3 +-
->  drivers/char/tpm/tpm2-cmd.c      | 91 +++++++++++++++++++++-------------------
->  drivers/char/tpm/tpm_eventlog.h  |  7 ++++
->  5 files changed, 73 insertions(+), 44 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
-> index 277186d..af985cc 100644
-> --- a/drivers/char/tpm/Kconfig
-> +++ b/drivers/char/tpm/Kconfig
-> @@ -6,6 +6,7 @@ menuconfig TCG_TPM
->  	tristate "TPM Hardware Support"
->  	depends on HAS_IOMEM
->  	select SECURITYFS
-> +	select CRYPTO_HASH_INFO
->  	---help---
->  	  If you have a TPM security chip in your system, which
->  	  implements the Trusted Computing Group's specification,
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index a3461cb..00612dd 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -770,6 +770,7 @@ static const struct tpm_input_header pcrextend_header = {
->  int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
->  {
->  	struct tpm_cmd_t cmd;
-> +	int i;
->  	int rc;
->  	struct tpm_chip *chip;
->  
-> @@ -778,7 +779,19 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
->  		return -ENODEV;
->  
->  	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
-> -		rc = tpm2_pcr_extend(chip, pcr_idx, hash);
-> +		struct tpm2_digest digest_list[ARRAY_SIZE(chip->active_banks)];
-> +		u32 count = 0;
+> Concurrency is protected by the chip->tpm_mutex for each read/write
+> transaction separately.  The TPM is cleared of all transient objects
+> by the time the mutex is dropped, so there should be no interference
+> between the kernel and userspace.
 
-Declare variables in the beginning.
+There's actually a missing kfree of context_buf on the tpms_release
+path as well.  This patch fixes it up.
 
-> +
-> +		memset(digest_list, 0, sizeof(digest_list));
-> +
-> +		for (i = 0; (chip->active_banks[i] != 0) &&
-> +		     (i < ARRAY_SIZE(chip->active_banks)); i++) {
-> +			digest_list[i].alg_id = chip->active_banks[i];
-> +			memcpy(digest_list[i].digest, hash, TPM_DIGEST_SIZE);
-> +			count++;
-> +		}
-> +
-> +		rc = tpm2_pcr_extend(chip, pcr_idx, count, digest_list);
->  		tpm_put_ops(chip);
->  		return rc;
->  	}
-> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> index dddd573..f578822 100644
-> --- a/drivers/char/tpm/tpm.h
-> +++ b/drivers/char/tpm/tpm.h
-> @@ -533,7 +533,8 @@ static inline void tpm_add_ppi(struct tpm_chip *chip)
->  #endif
->  
->  int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf);
-> -int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash);
-> +int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
-> +		    struct tpm2_digest *digests);
->  int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max);
->  int tpm2_seal_trusted(struct tpm_chip *chip,
->  		      struct trusted_key_payload *payload,
-> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-> index 75a7546..7ceebbd 100644
-> --- a/drivers/char/tpm/tpm2-cmd.c
-> +++ b/drivers/char/tpm/tpm2-cmd.c
-> @@ -53,22 +53,6 @@ struct tpm2_pcr_read_out {
->  	u8	digest[TPM_DIGEST_SIZE];
->  } __packed;
->  
-> -struct tpm2_null_auth_area {
-> -	__be32			handle;
-> -	__be16			nonce_size;
-> -	u8			attributes;
-> -	__be16			auth_size;
-> -} __packed;
-> -
-> -struct tpm2_pcr_extend_in {
-> -	__be32				pcr_idx;
-> -	__be32				auth_area_size;
-> -	struct tpm2_null_auth_area	auth_area;
-> -	__be32				digest_cnt;
-> -	__be16				hash_alg;
-> -	u8				digest[TPM_DIGEST_SIZE];
-> -} __packed;
-> -
->  struct tpm2_get_tpm_pt_in {
->  	__be32	cap_id;
->  	__be32	property_id;
-> @@ -97,7 +81,6 @@ union tpm2_cmd_params {
->  	struct	tpm2_self_test_in	selftest_in;
->  	struct	tpm2_pcr_read_in	pcrread_in;
->  	struct	tpm2_pcr_read_out	pcrread_out;
-> -	struct	tpm2_pcr_extend_in	pcrextend_in;
->  	struct	tpm2_get_tpm_pt_in	get_tpm_pt_in;
->  	struct	tpm2_get_tpm_pt_out	get_tpm_pt_out;
->  	struct	tpm2_get_random_in	getrandom_in;
-> @@ -290,46 +273,68 @@ int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
->  	return rc;
->  }
->  
-> -#define TPM2_GET_PCREXTEND_IN_SIZE \
-> -	(sizeof(struct tpm_input_header) + \
-> -	 sizeof(struct tpm2_pcr_extend_in))
-> -
-> -static const struct tpm_input_header tpm2_pcrextend_header = {
-> -	.tag = cpu_to_be16(TPM2_ST_SESSIONS),
-> -	.length = cpu_to_be32(TPM2_GET_PCREXTEND_IN_SIZE),
-> -	.ordinal = cpu_to_be32(TPM2_CC_PCR_EXTEND)
-> -};
-> +struct tpm2_null_auth_area {
-> +	__be32  handle;
-> +	__be16  nonce_size;
-> +	u8  attributes;
-> +	__be16  auth_size;
-> +} __packed;
->  
->  /**
->   * tpm2_pcr_extend() - extend a PCR value
->   *
->   * @chip:	TPM chip to use.
->   * @pcr_idx:	index of the PCR.
-> - * @hash:	hash value to use for the extend operation.
-> + * @count:	number of digests passed.
-> + * @digests:	list of pcr banks and corresponding digest values to extend.
->   *
->   * Return: Same as with tpm_transmit_cmd.
->   *
-> -int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash)
-> +int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
-> +		    struct tpm2_digest *digests)
+James
 
-Yes, this much much better. Now you can understand what is happening
-even if you never have read the TPM 2.0 spec.
+---
 
->  {
-> -	struct tpm2_cmd cmd;
-> +	struct tpm_buf buf;
-> +	struct tpm2_null_auth_area auth_area;
->  	int rc;
-> +	int i;
-> +	int j;
->  
-> -	cmd.header.in = tpm2_pcrextend_header;
-> -	cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(pcr_idx);
-> -	cmd.params.pcrextend_in.auth_area_size =
-> -		cpu_to_be32(sizeof(struct tpm2_null_auth_area));
-> -	cmd.params.pcrextend_in.auth_area.handle =
-> -		cpu_to_be32(TPM2_RS_PW);
-> -	cmd.params.pcrextend_in.auth_area.nonce_size = 0;
-> -	cmd.params.pcrextend_in.auth_area.attributes = 0;
-> -	cmd.params.pcrextend_in.auth_area.auth_size = 0;
-> -	cmd.params.pcrextend_in.digest_cnt = cpu_to_be32(1);
-> -	cmd.params.pcrextend_in.hash_alg = cpu_to_be16(TPM2_ALG_SHA1);
-> -	memcpy(cmd.params.pcrextend_in.digest, hash, TPM_DIGEST_SIZE);
-> +	if (count > ARRAY_SIZE(chip->active_banks))
-> +		return -EINVAL;
->  
-> -	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0,
-> +	rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS, TPM2_CC_PCR_EXTEND);
-> +	if (rc)
-> +		return rc;
-> +
-> +	tpm_buf_append_u32(&buf, pcr_idx);
-> +
-> +	auth_area.handle = cpu_to_be32(TPM2_RS_PW);
-> +	auth_area.nonce_size = 0;
-> +	auth_area.attributes = 0;
-> +	auth_area.auth_size = 0;
-> +
-> +	tpm_buf_append_u32(&buf, sizeof(struct tpm2_null_auth_area));
-> +	tpm_buf_append(&buf, (const unsigned char *)&auth_area,
-> +		       sizeof(auth_area));
-> +	tpm_buf_append_u32(&buf, count);
-> +
-> +	for (i = 0; i < count; i++) {
-> +		for (j = 0; j < ARRAY_SIZE(tpm2_hash_map); j++) {
-> +			if (digests[i].alg_id != tpm2_hash_map[j].tpm_id)
-> +				continue;
-> +
-> +			tpm_buf_append_u16(&buf, digests[i].alg_id);
-> +			tpm_buf_append(&buf, (const unsigned char
-> +					      *)&digests[i].digest,
-> +				hash_digest_size[tpm2_hash_map[j].crypto_id]);
-> +		}
-> +	}
-> +
-> +	rc = tpm_transmit_cmd(chip, buf.data, tpm_buf_length(&buf), 0,
->  			      "attempting extend a PCR value");
->  
-> +	tpm_buf_destroy(&buf);
-> +
->  	return rc;
->  }
->  
-> @@ -993,6 +998,8 @@ int tpm2_auto_startup(struct tpm_chip *chip)
->  		}
->  	}
->  
-> +	rc = tpm2_get_pcr_allocation(chip);
-> +
->  out:
->  	if (rc > 0)
->  		rc = -ENODEV;
-> diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
-> index 1660d74..b5ae372 100644
-> --- a/drivers/char/tpm/tpm_eventlog.h
-> +++ b/drivers/char/tpm/tpm_eventlog.h
-> @@ -2,6 +2,8 @@
->  #ifndef __TPM_EVENTLOG_H__
->  #define __TPM_EVENTLOG_H__
->  
-> +#include <crypto/hash_info.h>
-> +
->  #define TCG_EVENT_NAME_LEN_MAX	255
->  #define MAX_TEXT_EVENT		1000	/* Max event string length */
->  #define ACPI_TCPA_SIG		"TCPA"	/* 0x41504354 /'TCPA' */
-> @@ -73,6 +75,11 @@ enum tcpa_pc_event_ids {
->  	HOST_TABLE_OF_DEVICES,
->  };
->  
-> +struct tpm2_digest {
-> +	u16 alg_id;
-> +	u8 digest[SHA512_DIGEST_SIZE];
-> +} __packed;
-> +
->  #if defined(CONFIG_ACPI)
->  int tpm_read_log_acpi(struct tpm_chip *chip);
->  #else
-> -- 
-> 2.5.0
+commit 778425973c532a0c1ec2b5b2ccd7ff995e2cc9db
+Author: James Bottomley <James.Bottomley@HansenPartnership.com>
+Date:   Wed Jan 18 09:58:23 2017 -0500
 
-Otherwise,
+    add missing kfree to tpms_release
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+diff --git a/drivers/char/tpm/tpms-dev.c b/drivers/char/tpm/tpms-dev.c
+index c10b308..6bb687f 100644
+--- a/drivers/char/tpm/tpms-dev.c
++++ b/drivers/char/tpm/tpms-dev.c
+@@ -37,6 +37,7 @@ static int tpms_release(struct inode *inode, struct file *file)
+ 	struct tpms_priv *priv = container_of(fpriv, struct tpms_priv, priv);
+ 
+ 	tpm_common_release(file, fpriv);
++	kfree(priv->space.context_buf);
+ 	kfree(priv);
+ 
+ 	return 0;
 
-/Jarkko
