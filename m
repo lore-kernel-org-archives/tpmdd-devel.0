@@ -1,14 +1,20 @@
-From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v4 1/2] tpm: implement TPM 2.0 capability to
-	get active PCR banks
-Date: Wed, 18 Jan 2017 03:44:49 -0500
-Message-ID: <1484729090-16012-2-git-send-email-nayna@linux.vnet.ibm.com>
-References: <1484729090-16012-1-git-send-email-nayna@linux.vnet.ibm.com>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH v3 2/2] tpm: enhance TPM 2.0 PCR extend to
+ support multiple banks
+Date: Wed, 18 Jan 2017 14:27:10 +0530
+Message-ID: <587F2DE6.4030102@linux.vnet.ibm.com>
+References: <1484240290-4306-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1484240290-4306-3-git-send-email-nayna@linux.vnet.ibm.com>
+	<20170112182044.hehe5d5fblecejwo@intel.com>
+	<58787E47.3010908@linux.vnet.ibm.com>
+	<20170113164315.kxbdhchoi64jy44p@intel.com>
+	<o5bcp5$9tn$1@blaine.gmane.org>
+	<20170116094105.k2vuf3cclippkbye@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1484729090-16012-1-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <20170116094105.k2vuf3cclippkbye-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,115 +23,58 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This patch implements the TPM 2.0 capability TPM_CAP_PCRS to
-retrieve the active PCR banks from the TPM. This is needed
-to enable extending all active banks as recommended by TPM 2.0
-TCG Specification.
 
-Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
----
- drivers/char/tpm/tpm.h      |  4 ++++
- drivers/char/tpm/tpm2-cmd.c | 57 +++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 61 insertions(+)
 
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 1ae9768..dddd573 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -127,6 +127,7 @@ enum tpm2_permanent_handles {
- };
- 
- enum tpm2_capabilities {
-+	TPM2_CAP_PCRS		= 5,
- 	TPM2_CAP_TPM_PROPERTIES = 6,
- };
- 
-@@ -187,6 +188,8 @@ struct tpm_chip {
- 
- 	const struct attribute_group *groups[3];
- 	unsigned int groups_cnt;
-+
-+	u16 active_banks[7];
- #ifdef CONFIG_ACPI
- 	acpi_handle acpi_dev_handle;
- 	char ppi_version[TPM_PPI_VERSION_LEN + 1];
-@@ -545,4 +548,5 @@ int tpm2_auto_startup(struct tpm_chip *chip);
- void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
- unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
- int tpm2_probe(struct tpm_chip *chip);
-+ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip);
- #endif
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 6eda239..75a7546 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -998,3 +998,60 @@ int tpm2_auto_startup(struct tpm_chip *chip)
- 		rc = -ENODEV;
- 	return rc;
- }
-+
-+struct tpm2_pcr_selection {
-+	__be16  hash_alg;
-+	u8  size_of_select;
-+	u8  pcr_select[3];
-+} __packed;
-+
-+/**
-+ * tpm2_get_pcr_allocation() - get TPM active PCR banks.
-+ *
-+ * @chip: TPM chip to use.
-+ *
-+ * Return: Same as with tpm_transmit_cmd.
-+ */
-+ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
-+{
-+	struct tpm2_pcr_selection pcr_selection;
-+	struct tpm_buf buf;
-+	void *marker;
-+	unsigned int count = 0;
-+	int rc;
-+	int i;
-+
-+	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_GET_CAPABILITY);
-+	if (rc)
-+		return rc;
-+
-+	tpm_buf_append_u32(&buf, TPM2_CAP_PCRS);
-+	tpm_buf_append_u32(&buf, 0);
-+	tpm_buf_append_u32(&buf, 1);
-+
-+	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 0,
-+			      "get tpm pcr allocation");
-+	if (rc < 0)
-+		goto out;
-+
-+	count = be32_to_cpup(
-+		(__be32 *)&buf.data[TPM_HEADER_SIZE + 5]);
-+
-+	if (count > ARRAY_SIZE(chip->active_banks))
-+		return -ENODEV;
-+
-+	marker = &buf.data[TPM_HEADER_SIZE + 9];
-+	for (i = 0; i < count; i++) {
-+		memcpy(&pcr_selection, marker, sizeof(pcr_selection));
-+		chip->active_banks[i] = be16_to_cpu(pcr_selection.hash_alg);
-+		marker = marker + sizeof(struct tpm2_pcr_selection);
-+	}
-+
-+out:
-+	if (count < ARRAY_SIZE(chip->active_banks))
-+		chip->active_banks[count] = 0;
-+
-+	tpm_buf_destroy(&buf);
-+
-+	return rc;
-+}
--- 
-2.5.0
+On 01/16/2017 03:11 PM, Jarkko Sakkinen wrote:
+> On Fri, Jan 13, 2017 at 03:19:59PM -0500, Ken Goldman wrote:
+>> On 1/13/2017 11:43 AM, Jarkko Sakkinen wrote:
+>>
+>>>>>> +struct tpml_digest_values {
+>>>>>> +	u32 count;
+>>>>>> +	struct tpmt_ha digests[TPM2_ACTIVE_PCR_BANKS];
+>>>>>> +} __packed;
+>>>>>
+>>>>> Please remove this structure.
+>>>>
+>>>> Sorry Jarkko, I didn't understand this comment.
+>>>> Why do we want to remove this structure.
+>>>
+>>> Well it is only used to pass two parameters.
+>>
+>> Might it be good in general to reuse TPM Part 2
+>> structures?  For someone familiar with the TPM
+>> spec, it could make reading the device driver code
+>> easier.
+>
+> Having a structure to encapsulate two parameters is an overkill.
+
+As per TCG TPM 2.0 Spec, struct tpml_digest_values is member of both 
+extend structure and tcg_pcr_event structure.
+
+These two structs are part of event log patch set also
+So, will update event log patch as well.
+
+Thanks & Regards,
+    - Nayna
+
+>
+> /Jarkko
+>
+> ------------------------------------------------------------------------------
+> Developer Access Program for Intel Xeon Phi Processors
+> Access to Intel Xeon Phi processor-based developer platforms.
+> With one year of Intel Parallel Studio XE.
+> Training and support from Colfax.
+> Order your platform today. http://sdm.link/xeonphi
+> _______________________________________________
+> tpmdd-devel mailing list
+> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+>
 
 
 ------------------------------------------------------------------------------
