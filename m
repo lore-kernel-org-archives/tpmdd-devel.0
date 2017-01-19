@@ -1,294 +1,386 @@
-From: Nayna <nayna@linux.vnet.ibm.com>
-Subject: Re: [PATCH v4 2/2] tpm: enhance TPM 2.0 PCR extend to support
- multiple banks
-Date: Thu, 19 Jan 2017 14:48:19 +0530
-Message-ID: <5880845B.2080202@linux.vnet.ibm.com>
-References: <1484729090-16012-1-git-send-email-nayna@linux.vnet.ibm.com>
- <1484729090-16012-3-git-send-email-nayna@linux.vnet.ibm.com>
- <20170118135838.j2g2qtkzmtwaeer2@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH RFC v3 5/5] tpm2: expose resource manager
+ via a device link /dev/tpms<n>
+Date: Thu, 19 Jan 2017 12:42:26 +0200
+Message-ID: <20170119104226.jghpe7qw654bjrxl@intel.com>
+References: <20170116131215.28930-1-jarkko.sakkinen@linux.intel.com>
+	<20170116131215.28930-6-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170118135838.j2g2qtkzmtwaeer2@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20170116131215.28930-6-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+I've forgot to put out my review comments about this patch. Please send
+me an updated patch and I'll include it to v4. You can choose to send it
+also privately because it will go to public review anyway through the
+patch set.
 
+I could fix these myself (because they are cosmetic stuff) but I simply
+don't have the time at my hand and you are the author so...
 
-On 01/18/2017 07:28 PM, Jarkko Sakkinen wrote:
-> On Wed, Jan 18, 2017 at 03:44:50AM -0500, Nayna Jain wrote:
->> The current TPM 2.0 device driver extends only the SHA1 PCR bank
->> but the TCG Specification[1] recommends extending all active PCR
->> banks, to prevent malicious users from setting unused PCR banks with
->> fake measurements and quoting them.
->>
->> The existing in-kernel interface(tpm_pcr_extend()) expects only a
->> SHA1 digest.  To extend all active PCR banks with differing
->> digest sizes, the SHA1 digest is padded with trailing 0's as needed.
->>
->> This patch reuses the defined digest sizes from the crypto subsystem,
->> adding a dependency on CRYPTO_HASH_INFO module.
->>
->> [1] TPM 2.0 Specification referred here is "TCG PC Client Specific
->> Platform Firmware Profile for TPM 2.0"
->>
->> Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
->> ---
->>   drivers/char/tpm/Kconfig         |  1 +
->>   drivers/char/tpm/tpm-interface.c | 15 ++++++-
->>   drivers/char/tpm/tpm.h           |  3 +-
->>   drivers/char/tpm/tpm2-cmd.c      | 91 +++++++++++++++++++++-------------------
->>   drivers/char/tpm/tpm_eventlog.h  |  7 ++++
->>   5 files changed, 73 insertions(+), 44 deletions(-)
->>
->> diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
->> index 277186d..af985cc 100644
->> --- a/drivers/char/tpm/Kconfig
->> +++ b/drivers/char/tpm/Kconfig
->> @@ -6,6 +6,7 @@ menuconfig TCG_TPM
->>   	tristate "TPM Hardware Support"
->>   	depends on HAS_IOMEM
->>   	select SECURITYFS
->> +	select CRYPTO_HASH_INFO
->>   	---help---
->>   	  If you have a TPM security chip in your system, which
->>   	  implements the Trusted Computing Group's specification,
->> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
->> index a3461cb..00612dd 100644
->> --- a/drivers/char/tpm/tpm-interface.c
->> +++ b/drivers/char/tpm/tpm-interface.c
->> @@ -770,6 +770,7 @@ static const struct tpm_input_header pcrextend_header = {
->>   int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
->>   {
->>   	struct tpm_cmd_t cmd;
->> +	int i;
->>   	int rc;
->>   	struct tpm_chip *chip;
->>
->> @@ -778,7 +779,19 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
->>   		return -ENODEV;
->>
->>   	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
->> -		rc = tpm2_pcr_extend(chip, pcr_idx, hash);
->> +		struct tpm2_digest digest_list[ARRAY_SIZE(chip->active_banks)];
->> +		u32 count = 0;
->
-> Declare variables in the beginning.
+Please include also the fixup to remove that leftover put_device. Thank
+you.
 
-Done, posted new version with this change.
+On Mon, Jan 16, 2017 at 03:12:11PM +0200, Jarkko Sakkinen wrote:
+> From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+> 
+> Currently the Resource Manager (RM) is not exposed to userspace.  Make
+> this exposure via a separate device, which can now be opened multiple
+> times because each read/write transaction goes separately via the RM.
+> 
+> Concurrency is protected by the chip->tpm_mutex for each read/write
+> transaction separately.  The TPM is cleared of all transient objects
+> by the time the mutex is dropped, so there should be no interference
+> between the kernel and userspace.
+> 
+> Signed-off-by: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 
->
->> +
->> +		memset(digest_list, 0, sizeof(digest_list));
->> +
->> +		for (i = 0; (chip->active_banks[i] != 0) &&
->> +		     (i < ARRAY_SIZE(chip->active_banks)); i++) {
->> +			digest_list[i].alg_id = chip->active_banks[i];
->> +			memcpy(digest_list[i].digest, hash, TPM_DIGEST_SIZE);
->> +			count++;
->> +		}
->> +
->> +		rc = tpm2_pcr_extend(chip, pcr_idx, count, digest_list);
->>   		tpm_put_ops(chip);
->>   		return rc;
->>   	}
->> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
->> index dddd573..f578822 100644
->> --- a/drivers/char/tpm/tpm.h
->> +++ b/drivers/char/tpm/tpm.h
->> @@ -533,7 +533,8 @@ static inline void tpm_add_ppi(struct tpm_chip *chip)
->>   #endif
->>
->>   int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf);
->> -int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash);
->> +int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
->> +		    struct tpm2_digest *digests);
->>   int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max);
->>   int tpm2_seal_trusted(struct tpm_chip *chip,
->>   		      struct trusted_key_payload *payload,
->> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
->> index 75a7546..7ceebbd 100644
->> --- a/drivers/char/tpm/tpm2-cmd.c
->> +++ b/drivers/char/tpm/tpm2-cmd.c
->> @@ -53,22 +53,6 @@ struct tpm2_pcr_read_out {
->>   	u8	digest[TPM_DIGEST_SIZE];
->>   } __packed;
->>
->> -struct tpm2_null_auth_area {
->> -	__be32			handle;
->> -	__be16			nonce_size;
->> -	u8			attributes;
->> -	__be16			auth_size;
->> -} __packed;
->> -
->> -struct tpm2_pcr_extend_in {
->> -	__be32				pcr_idx;
->> -	__be32				auth_area_size;
->> -	struct tpm2_null_auth_area	auth_area;
->> -	__be32				digest_cnt;
->> -	__be16				hash_alg;
->> -	u8				digest[TPM_DIGEST_SIZE];
->> -} __packed;
->> -
->>   struct tpm2_get_tpm_pt_in {
->>   	__be32	cap_id;
->>   	__be32	property_id;
->> @@ -97,7 +81,6 @@ union tpm2_cmd_params {
->>   	struct	tpm2_self_test_in	selftest_in;
->>   	struct	tpm2_pcr_read_in	pcrread_in;
->>   	struct	tpm2_pcr_read_out	pcrread_out;
->> -	struct	tpm2_pcr_extend_in	pcrextend_in;
->>   	struct	tpm2_get_tpm_pt_in	get_tpm_pt_in;
->>   	struct	tpm2_get_tpm_pt_out	get_tpm_pt_out;
->>   	struct	tpm2_get_random_in	getrandom_in;
->> @@ -290,46 +273,68 @@ int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
->>   	return rc;
->>   }
->>
->> -#define TPM2_GET_PCREXTEND_IN_SIZE \
->> -	(sizeof(struct tpm_input_header) + \
->> -	 sizeof(struct tpm2_pcr_extend_in))
->> -
->> -static const struct tpm_input_header tpm2_pcrextend_header = {
->> -	.tag = cpu_to_be16(TPM2_ST_SESSIONS),
->> -	.length = cpu_to_be32(TPM2_GET_PCREXTEND_IN_SIZE),
->> -	.ordinal = cpu_to_be32(TPM2_CC_PCR_EXTEND)
->> -};
->> +struct tpm2_null_auth_area {
->> +	__be32  handle;
->> +	__be16  nonce_size;
->> +	u8  attributes;
->> +	__be16  auth_size;
->> +} __packed;
->>
->>   /**
->>    * tpm2_pcr_extend() - extend a PCR value
->>    *
->>    * @chip:	TPM chip to use.
->>    * @pcr_idx:	index of the PCR.
->> - * @hash:	hash value to use for the extend operation.
->> + * @count:	number of digests passed.
->> + * @digests:	list of pcr banks and corresponding digest values to extend.
->>    *
->>    * Return: Same as with tpm_transmit_cmd.
->>    *
->> -int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash)
->> +int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
->> +		    struct tpm2_digest *digests)
->
-> Yes, this much much better. Now you can understand what is happening
-> even if you never have read the TPM 2.0 spec.
+TPM spaces are not exposed to the user space, which are a tool to
+implement a resource manager. This commit message should be rewritten.
 
-Yeah.. I agree..
+> ---
+>  drivers/char/tpm/Makefile        |  2 +-
+>  drivers/char/tpm/tpm-chip.c      | 72 ++++++++++++++++++++++++++++++++++++++--
+>  drivers/char/tpm/tpm-interface.c | 13 ++++++--
+>  drivers/char/tpm/tpm.h           |  6 ++--
+>  drivers/char/tpm/tpms-dev.c      | 62 ++++++++++++++++++++++++++++++++++
+>  5 files changed, 147 insertions(+), 8 deletions(-)
+>  create mode 100644 drivers/char/tpm/tpms-dev.c
+> 
+> diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
+> index 13ff5da..e50d768 100644
+> --- a/drivers/char/tpm/Makefile
+> +++ b/drivers/char/tpm/Makefile
+> @@ -3,7 +3,7 @@
+>  #
+>  obj-$(CONFIG_TCG_TPM) += tpm.o
+>  tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o \
+> -	 tpm_eventlog.o tpm2-space.o tpm-dev-common.o
+> +	 tpm_eventlog.o tpm2-space.o tpm-dev-common.o tpms-dev.o
+>  tpm-$(CONFIG_ACPI) += tpm_ppi.o tpm_acpi.o
+>  tpm-$(CONFIG_OF) += tpm_of.o
+>  obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index 993b9ae..5ae3050 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -33,6 +33,7 @@ DEFINE_IDR(dev_nums_idr);
+>  static DEFINE_MUTEX(idr_lock);
+>  
+>  struct class *tpm_class;
+> +struct class *tpm_rm_class;
 
-Thanks & Regards,
-    - Nayna
+tpms_class
 
->
->>   {
->> -	struct tpm2_cmd cmd;
->> +	struct tpm_buf buf;
->> +	struct tpm2_null_auth_area auth_area;
->>   	int rc;
->> +	int i;
->> +	int j;
->>
->> -	cmd.header.in = tpm2_pcrextend_header;
->> -	cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(pcr_idx);
->> -	cmd.params.pcrextend_in.auth_area_size =
->> -		cpu_to_be32(sizeof(struct tpm2_null_auth_area));
->> -	cmd.params.pcrextend_in.auth_area.handle =
->> -		cpu_to_be32(TPM2_RS_PW);
->> -	cmd.params.pcrextend_in.auth_area.nonce_size = 0;
->> -	cmd.params.pcrextend_in.auth_area.attributes = 0;
->> -	cmd.params.pcrextend_in.auth_area.auth_size = 0;
->> -	cmd.params.pcrextend_in.digest_cnt = cpu_to_be32(1);
->> -	cmd.params.pcrextend_in.hash_alg = cpu_to_be16(TPM2_ALG_SHA1);
->> -	memcpy(cmd.params.pcrextend_in.digest, hash, TPM_DIGEST_SIZE);
->> +	if (count > ARRAY_SIZE(chip->active_banks))
->> +		return -EINVAL;
->>
->> -	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0,
->> +	rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS, TPM2_CC_PCR_EXTEND);
->> +	if (rc)
->> +		return rc;
->> +
->> +	tpm_buf_append_u32(&buf, pcr_idx);
->> +
->> +	auth_area.handle = cpu_to_be32(TPM2_RS_PW);
->> +	auth_area.nonce_size = 0;
->> +	auth_area.attributes = 0;
->> +	auth_area.auth_size = 0;
->> +
->> +	tpm_buf_append_u32(&buf, sizeof(struct tpm2_null_auth_area));
->> +	tpm_buf_append(&buf, (const unsigned char *)&auth_area,
->> +		       sizeof(auth_area));
->> +	tpm_buf_append_u32(&buf, count);
->> +
->> +	for (i = 0; i < count; i++) {
->> +		for (j = 0; j < ARRAY_SIZE(tpm2_hash_map); j++) {
->> +			if (digests[i].alg_id != tpm2_hash_map[j].tpm_id)
->> +				continue;
->> +
->> +			tpm_buf_append_u16(&buf, digests[i].alg_id);
->> +			tpm_buf_append(&buf, (const unsigned char
->> +					      *)&digests[i].digest,
->> +				hash_digest_size[tpm2_hash_map[j].crypto_id]);
->> +		}
->> +	}
->> +
->> +	rc = tpm_transmit_cmd(chip, buf.data, tpm_buf_length(&buf), 0,
->>   			      "attempting extend a PCR value");
->>
->> +	tpm_buf_destroy(&buf);
->> +
->>   	return rc;
->>   }
->>
->> @@ -993,6 +998,8 @@ int tpm2_auto_startup(struct tpm_chip *chip)
->>   		}
->>   	}
->>
->> +	rc = tpm2_get_pcr_allocation(chip);
->> +
->>   out:
->>   	if (rc > 0)
->>   		rc = -ENODEV;
->> diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
->> index 1660d74..b5ae372 100644
->> --- a/drivers/char/tpm/tpm_eventlog.h
->> +++ b/drivers/char/tpm/tpm_eventlog.h
->> @@ -2,6 +2,8 @@
->>   #ifndef __TPM_EVENTLOG_H__
->>   #define __TPM_EVENTLOG_H__
->>
->> +#include <crypto/hash_info.h>
->> +
->>   #define TCG_EVENT_NAME_LEN_MAX	255
->>   #define MAX_TEXT_EVENT		1000	/* Max event string length */
->>   #define ACPI_TCPA_SIG		"TCPA"	/* 0x41504354 /'TCPA' */
->> @@ -73,6 +75,11 @@ enum tcpa_pc_event_ids {
->>   	HOST_TABLE_OF_DEVICES,
->>   };
->>
->> +struct tpm2_digest {
->> +	u16 alg_id;
->> +	u8 digest[SHA512_DIGEST_SIZE];
->> +} __packed;
->> +
->>   #if defined(CONFIG_ACPI)
->>   int tpm_read_log_acpi(struct tpm_chip *chip);
->>   #else
->> --
->> 2.5.0
->
-> Otherwise,
->
-> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
->
-> /Jarkko
->
+>  dev_t tpm_devt;
+>  
+>  /**
+> @@ -132,6 +133,14 @@ static void tpm_dev_release(struct device *dev)
+>  	kfree(chip);
+>  }
+>  
+> +static void tpm_devrm_release(struct device *dev)
 
+tpms_release
+
+> +{
+> +	struct tpm_chip *chip = container_of(dev, struct tpm_chip, devrm);
+> +
+> +	/* release the master device reference */
+> +	put_device(&chip->dev);
+> +}
+> +
+>  /**
+>   * tpm_chip_alloc() - allocate a new struct tpm_chip instance
+>   * @pdev: device to which the chip is associated
+> @@ -168,27 +177,46 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+>  	chip->dev_num = rc;
+>  
+>  	device_initialize(&chip->dev);
+> +	device_initialize(&chip->devrm);
+
+chip->devs (well you probably get the iea, not going to comment every
+possible instance)
+
+>  
+>  	chip->dev.class = tpm_class;
+>  	chip->dev.release = tpm_dev_release;
+>  	chip->dev.parent = pdev;
+>  	chip->dev.groups = chip->groups;
+>  
+> +	chip->devrm.parent = pdev;
+> +	chip->devrm.class = tpm_rm_class;
+> +	chip->devrm.release = tpm_devrm_release;
+> +	/* get extra reference on main device to hold on
+> +	 * behalf of devrm.  This holds the chip structure
+> +	 * while cdevrm is in use.  The corresponding put
+> +	 * is in the tpm_devrm_release */
+> +	get_device(&chip->dev);
+> +
+>  	if (chip->dev_num == 0)
+>  		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
+>  	else
+>  		chip->dev.devt = MKDEV(MAJOR(tpm_devt), chip->dev_num);
+>  
+> +	chip->devrm.devt =
+> +		MKDEV(MAJOR(tpm_devt), chip->dev_num + TPM_NUM_DEVICES);
+> +
+>  	rc = dev_set_name(&chip->dev, "tpm%d", chip->dev_num);
+>  	if (rc)
+>  		goto out;
+> +	rc = dev_set_name(&chip->devrm, "tpms%d", chip->dev_num);
+> +	if (rc)
+> +		goto out;
+>  
+>  	if (!pdev)
+>  		chip->flags |= TPM_CHIP_FLAG_VIRTUAL;
+>  
+>  	cdev_init(&chip->cdev, &tpm_fops);
+> +	cdev_init(&chip->cdevrm, &tpm_rm_fops);
+>  	chip->cdev.owner = THIS_MODULE;
+> +	chip->cdevrm.owner = THIS_MODULE;
+>  	chip->cdev.kobj.parent = &chip->dev.kobj;
+> +	chip->cdevrm.kobj.parent = &chip->devrm.kobj;
+>  
+>  	chip->work_space.context_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
+>  	if (!chip->work_space.context_buf) {
+> @@ -199,7 +227,9 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+>  	return chip;
+>  
+>  out:
+> +	put_device(&chip->devrm);
+>  	put_device(&chip->dev);
+> +	put_device(&chip->devrm);
+>  	return ERR_PTR(rc);
+>  }
+>  EXPORT_SYMBOL_GPL(tpm_chip_alloc);
+> @@ -244,7 +274,7 @@ static int tpm_add_char_device(struct tpm_chip *chip)
+>  			dev_name(&chip->dev), MAJOR(chip->dev.devt),
+>  			MINOR(chip->dev.devt), rc);
+>  
+> -		return rc;
+> +		goto err_1;
+>  	}
+>  
+>  	rc = device_add(&chip->dev);
+> @@ -254,16 +284,44 @@ static int tpm_add_char_device(struct tpm_chip *chip)
+>  			dev_name(&chip->dev), MAJOR(chip->dev.devt),
+>  			MINOR(chip->dev.devt), rc);
+>  
+> -		cdev_del(&chip->cdev);
+> -		return rc;
+> +		goto err_2;
+> +	}
+> +
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		rc = cdev_add(&chip->cdevrm, chip->devrm.devt, 1);
+> +	if (rc) {
+> +		dev_err(&chip->dev,
+> +			"unable to cdev_add() %s, major %d, minor %d, err=%d\n",
+> +			dev_name(&chip->devrm), MAJOR(chip->devrm.devt),
+> +			MINOR(chip->devrm.devt), rc);
+> +
+> +		goto err_3;
+>  	}
+>  
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		rc = device_add(&chip->devrm);
+> +	if (rc) {
+> +		dev_err(&chip->dev,
+> +			"unable to device_register() %s, major %d, minor %d, err=%d\n",
+> +			dev_name(&chip->devrm), MAJOR(chip->devrm.devt),
+> +			MINOR(chip->devrm.devt), rc);
+> +
+> +		goto err_4;
+> +	}
+>  	/* Make the chip available. */
+>  	mutex_lock(&idr_lock);
+>  	idr_replace(&dev_nums_idr, chip, chip->dev_num);
+>  	mutex_unlock(&idr_lock);
+>  
+>  	return rc;
+> + err_4:
+> +	cdev_del(&chip->cdevrm);
+> + err_3:
+> +	device_del(&chip->dev);
+> + err_2:
+> +	cdev_del(&chip->cdev);
+> + err_1:
+> +	return rc;
+>  }
+>  
+>  static void tpm_del_char_device(struct tpm_chip *chip)
+> @@ -271,6 +329,11 @@ static void tpm_del_char_device(struct tpm_chip *chip)
+>  	cdev_del(&chip->cdev);
+>  	device_del(&chip->dev);
+>  
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+> +		cdev_del(&chip->cdevrm);
+> +		device_del(&chip->devrm);
+> +	}
+> +
+>  	/* Make the chip unavailable. */
+>  	mutex_lock(&idr_lock);
+>  	idr_replace(&dev_nums_idr, NULL, chip->dev_num);
+> @@ -282,6 +345,9 @@ static void tpm_del_char_device(struct tpm_chip *chip)
+>  		tpm2_shutdown(chip, TPM2_SU_CLEAR);
+>  	chip->ops = NULL;
+>  	up_write(&chip->ops_sem);
+> +	/* will release the devrm reference to the chip->dev unless
+> +	 * something has cdevrm open */
+> +	put_device(&chip->devrm);
+>  }
+>  
+>  static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index ae85aab..40bf022 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -1218,9 +1218,17 @@ static int __init tpm_init(void)
+>  		return PTR_ERR(tpm_class);
+>  	}
+>  
+> -	rc = alloc_chrdev_region(&tpm_devt, 0, TPM_NUM_DEVICES, "tpm");
+> +	tpm_rm_class = class_create(THIS_MODULE, "tpms");
+> +	if (IS_ERR(tpm_rm_class)) {
+> +		pr_err("couldn't create tpmrm class\n");
+> +		class_destroy(tpm_class);
+> +		return PTR_ERR(tpm_rm_class);
+> +	}
+> +
+> +	rc = alloc_chrdev_region(&tpm_devt, 0, 2*TPM_NUM_DEVICES, "tpm");
+>  	if (rc < 0) {
+>  		pr_err("tpm: failed to allocate char dev region\n");
+> +		class_destroy(tpm_rm_class);
+>  		class_destroy(tpm_class);
+>  		return rc;
+>  	}
+> @@ -1232,7 +1240,8 @@ static void __exit tpm_exit(void)
+>  {
+>  	idr_destroy(&dev_nums_idr);
+>  	class_destroy(tpm_class);
+> -	unregister_chrdev_region(tpm_devt, TPM_NUM_DEVICES);
+> +	class_destroy(tpm_rm_class);
+> +	unregister_chrdev_region(tpm_devt, 2*TPM_NUM_DEVICES);
+>  }
+>  
+>  subsys_initcall(tpm_init);
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 45d997f..3346c48 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -173,8 +173,8 @@ struct tpm_chip_seqops {
+>  };
+>  
+>  struct tpm_chip {
+> -	struct device dev;
+> -	struct cdev cdev;
+> +	struct device dev, devrm;
+> +	struct cdev cdev, cdevrm;
+
+Again cosmetic stuff (or more like nitpicking) but I would like have one
+declaration per line.
+
+>  	/* A driver callback under ops cannot be run unless ops_sem is held
+>  	 * (sometimes implicitly, eg for the sysfs code). ops becomes null
+> @@ -511,8 +511,10 @@ static inline void tpm_buf_append_u32(struct tpm_buf *buf, const u32 value)
+>  }
+>  
+>  extern struct class *tpm_class;
+> +extern struct class *tpm_rm_class;
+>  extern dev_t tpm_devt;
+>  extern const struct file_operations tpm_fops;
+> +extern const struct file_operations tpm_rm_fops;
+>  extern struct idr dev_nums_idr;
+>  
+>  enum tpm_transmit_flags {
+> diff --git a/drivers/char/tpm/tpms-dev.c b/drivers/char/tpm/tpms-dev.c
+> new file mode 100644
+> index 0000000..c10b308
+> --- /dev/null
+> +++ b/drivers/char/tpm/tpms-dev.c
+> @@ -0,0 +1,62 @@
+> +/*
+> + * Copyright (C) 2017 James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org
+> + *
+> + * GPLv2
+> + */
+> +#include <linux/slab.h>
+> +#include "tpm-dev.h"
+> +
+> +struct tpms_priv {
+> +	struct file_priv priv;
+> +	struct tpm_space space;
+> +};
+> +
+> +static int tpms_open(struct inode *inode, struct file *file)
+> +{
+> +	struct tpm_chip *chip;
+> +	struct tpms_priv *priv;
+> +
+> +	chip = container_of(inode->i_cdev, struct tpm_chip, cdevrm);
+> +	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+> +	if (priv == NULL)
+> +		return -ENOMEM;
+> +	priv->space.context_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
+> +	if (priv->space.context_buf == NULL) {
+> +		kfree(priv);
+> +		return -ENOMEM;
+> +	}
+> +
+> +	tpm_common_open(file, chip, &priv->priv);
+> +
+> +	return 0;
+> +}
+> +
+> +static int tpms_release(struct inode *inode, struct file *file)
+> +{
+> +	struct file_priv *fpriv = file->private_data;
+> +	struct tpms_priv *priv = container_of(fpriv, struct tpms_priv, priv);
+> +
+> +	tpm_common_release(file, fpriv);
+> +	kfree(priv);
+> +
+> +	return 0;
+> +}
+> +
+> +ssize_t tpms_write(struct file *file, const char __user *buf,
+> +		   size_t size, loff_t *off)
+> +{
+> +	struct file_priv *fpriv = file->private_data;
+> +	struct tpms_priv *priv = container_of(fpriv, struct tpms_priv, priv);
+> +
+> +	return tpm_common_write(file, buf, size, off, &priv->space);
+> +}
+> +
+> +const struct file_operations tpm_rm_fops = {
+> +	.owner = THIS_MODULE,
+> +	.llseek = no_llseek,
+> +	.open = tpms_open,
+> +	.read = tpm_common_read,
+> +	.write = tpms_write,
+> +	.release = tpms_release,
+> +};
+> +
+> -- 
+> 2.9.3
+> 
+
+/Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
