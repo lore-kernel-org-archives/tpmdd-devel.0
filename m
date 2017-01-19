@@ -1,15 +1,18 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [RFC] tpm2-space: add handling for global session
- exhaustion
-Date: Thu, 19 Jan 2017 07:59:04 -0500
-Message-ID: <1484830744.3140.17.camel@HansenPartnership.com>
-References: <1484772489.2396.2.camel@HansenPartnership.com>
-	<20170119122533.d7h5rgatpwl3qmcl@intel.com>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH v4 1/2] tpm: implement TPM 2.0 capability
+ to get active PCR banks
+Date: Thu, 19 Jan 2017 19:04:44 +0530
+Message-ID: <5880C074.9050401@linux.vnet.ibm.com>
+References: <1484729090-16012-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1484729090-16012-2-git-send-email-nayna@linux.vnet.ibm.com>
+	<20170118134522.ftikno7gy3vttv6w@intel.com>
+	<587F7252.4070808@linux.vnet.ibm.com>
+	<20170119104759.oqobziiuy7lqnzbf@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170119122533.d7h5rgatpwl3qmcl-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20170119104759.oqobziiuy7lqnzbf-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,70 +22,170 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, 2017-01-19 at 14:25 +0200, Jarkko Sakkinen wrote:
-> On Wed, Jan 18, 2017 at 03:48:09PM -0500, James Bottomley wrote:
-> > In a TPM2, sessions can be globally exhausted once there are
-> > TPM_PT_ACTIVE_SESSION_MAX of them (even if they're all context
-> > saved).
-> > The Strategy for handling this is to keep a global count of all the
-> > sessions along with their creation time.  Then if we see the TPM
-> > run
-> > out of sessions (via the TPM_RC_SESSION_HANDLES) we first wait for
-> > one
-> > to become free, but if it doesn't, we forcibly evict an existing
-> > one.
-> > The eviction strategy waits until the current command is repeated
-> > to
-> > evict the session which should guarantee there is an available
-> > slot.
-> > 
-> > On the force eviction case, we make sure that the victim session is
-> > at
-> > least SESSION_TIMEOUT old (currently 2 seconds).  The wait queue
-> > for
-> > session slots is a FIFO one, ensuring that once we run out of
-> > sessions, everyone will get a session in a bounded time and once
-> > they
-> > get one, they'll have SESSION_TIMEOUT to use it before it may be
-> > subject to eviction.
-> > 
-> > Signed-off-by: James Bottomley <
-> > James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-> 
-> I didn't yet read the code properly. I'll do a more proper review
-> once I have v4 of my patch set together. This comment is solely
-> based on your commit message.
-> 
-> I'm just thinking that do we need this complicated timeout stuff
-> or could you just kick a session out in LRU fashion as we run
-> out of them?
-> 
-> Or one variation of what you are doing: couldn't the session that
-> needs a session handle to do something sleep for 2 seconds and then
-> take the oldest session? It would have essentially the same effect
-> but no waitqueue needed.
-> 
-> Yeah, as I said, this is just commentary based on the description.
 
-If you don't have a wait queue you lose fairness in resource allocation
-on starvation.  What happens is that you get RC_SESSION_HANDLES and
-sleep for 2s and retry.  Meanwhile someone frees a session, then next
-user grabs it while you were sleeping and when you wake you still get
-RC_SESSION_HANDLES.  I can basically DoS your process if I understand
-this. The only way to make the resource fairly allocated: i.e. the
-first person to sleep waiting for a session is the one who gets it when
-they wake is to make sure that you wake one waiter as soon as a free
-session comes in so probabalistically, they get the session.  If you
-look, there are two mechanisms for ensuring fairness: one is the FIFO
-wait queue (probabalistic) and the other is the reserved session which
-really ensures it belongs to you when you wake (deterministic but
-expensive, so this is only activated on the penultimate go around).
 
-James
+On 01/19/2017 04:17 PM, Jarkko Sakkinen wrote:
+> On Wed, Jan 18, 2017 at 07:19:06PM +0530, Nayna wrote:
+>>
+>>
+>> On 01/18/2017 07:15 PM, Jarkko Sakkinen wrote:
+>>> On Wed, Jan 18, 2017 at 03:44:49AM -0500, Nayna Jain wrote:
+>>>> This patch implements the TPM 2.0 capability TPM_CAP_PCRS to
+>>>> retrieve the active PCR banks from the TPM. This is needed
+>>>> to enable extending all active banks as recommended by TPM 2.0
+>>>> TCG Specification.
+>>>>
+>>>> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+>>>> ---
+>>>>    drivers/char/tpm/tpm.h      |  4 ++++
+>>>>    drivers/char/tpm/tpm2-cmd.c | 57 +++++++++++++++++++++++++++++++++++++++++++++
+>>>>    2 files changed, 61 insertions(+)
+>>>>
+>>>> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+>>>> index 1ae9768..dddd573 100644
+>>>> --- a/drivers/char/tpm/tpm.h
+>>>> +++ b/drivers/char/tpm/tpm.h
+>>>> @@ -127,6 +127,7 @@ enum tpm2_permanent_handles {
+>>>>    };
+>>>>
+>>>>    enum tpm2_capabilities {
+>>>> +	TPM2_CAP_PCRS		= 5,
+>>>>    	TPM2_CAP_TPM_PROPERTIES = 6,
+>>>>    };
+>>>>
+>>>> @@ -187,6 +188,8 @@ struct tpm_chip {
+>>>>
+>>>>    	const struct attribute_group *groups[3];
+>>>>    	unsigned int groups_cnt;
+>>>> +
+>>>> +	u16 active_banks[7];
+>>>>    #ifdef CONFIG_ACPI
+>>>>    	acpi_handle acpi_dev_handle;
+>>>>    	char ppi_version[TPM_PPI_VERSION_LEN + 1];
+>>>> @@ -545,4 +548,5 @@ int tpm2_auto_startup(struct tpm_chip *chip);
+>>>>    void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
+>>>>    unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
+>>>>    int tpm2_probe(struct tpm_chip *chip);
+>>>> +ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip);
+>>>>    #endif
+>>>> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+>>>> index 6eda239..75a7546 100644
+>>>> --- a/drivers/char/tpm/tpm2-cmd.c
+>>>> +++ b/drivers/char/tpm/tpm2-cmd.c
+>>>> @@ -998,3 +998,60 @@ int tpm2_auto_startup(struct tpm_chip *chip)
+>>>>    		rc = -ENODEV;
+>>>>    	return rc;
+>>>>    }
+>>>> +
+>>>> +struct tpm2_pcr_selection {
+>>>> +	__be16  hash_alg;
+>>>> +	u8  size_of_select;
+>>>> +	u8  pcr_select[3];
+>>>> +} __packed;
+>>>> +
+>>>> +/**
+>>>> + * tpm2_get_pcr_allocation() - get TPM active PCR banks.
+>>>> + *
+>>>> + * @chip: TPM chip to use.
+>>>> + *
+>>>> + * Return: Same as with tpm_transmit_cmd.
+>>>> + */
+>>>> +ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
+>>>> +{
+>>>> +	struct tpm2_pcr_selection pcr_selection;
+>>>> +	struct tpm_buf buf;
+>>>> +	void *marker;
+>>>> +	unsigned int count = 0;
+>>>
+>>> You shouldn't initialize 'count'.
+>>
+>> It is initialized for reason below:
+>>
+>>>
+>>>> +	int rc;
+>>>> +	int i;
+>>>> +
+>>>> +	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_GET_CAPABILITY);
+>>>> +	if (rc)
+>>>> +		return rc;
+>>>> +
+>>>> +	tpm_buf_append_u32(&buf, TPM2_CAP_PCRS);
+>>>> +	tpm_buf_append_u32(&buf, 0);
+>>>> +	tpm_buf_append_u32(&buf, 1);
+>>>> +
+>>>> +	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 0,
+>>>> +			      "get tpm pcr allocation");
+>>>> +	if (rc < 0)
+>>>> +		goto out;
+>>
+>> if  tpm_transmit_cmd()fails, it jumps to out:
+>> where count is used in if(..).
+>
+> Why the out label is placed there and not after?
 
+Since tpm2_get_pcr_allocation() returns from here as failure,
+chip->active_banks doesn't get anytime initialized.
+
+By placing it there, for failure, chip->active_bank[0] is initialized to 0.
+Then its later use like in tpm_pcr_extend(), it loops on this array till 
+there is a value "0"(considered as invalid) or reaches max size of array.
+
+>
+>>
+>> Thanks & Regards,
+>>     - Nayna
+>>
+>>>> +
+>>>> +	count = be32_to_cpup(
+>>>> +		(__be32 *)&buf.data[TPM_HEADER_SIZE + 5]);
+>>>> +
+>>>> +	if (count > ARRAY_SIZE(chip->active_banks))
+>>>> +		return -ENODEV;
+>
+> Hey, here's a regression (didn't notice it last time). You
+> nee to call tpm_buf_destroy().
+
+Oh!! Yes, Thanks !!. I will fix this with:
+rc = -ENODEV;
+goto out;
+
+Thanks & Regards
+    - Nayna
+
+>
+>
+>>>> +
+>>>> +	marker = &buf.data[TPM_HEADER_SIZE + 9];
+>>>> +	for (i = 0; i < count; i++) {
+>>>> +		memcpy(&pcr_selection, marker, sizeof(pcr_selection));
+>>>> +		chip->active_banks[i] = be16_to_cpu(pcr_selection.hash_alg);
+>>>> +		marker = marker + sizeof(struct tpm2_pcr_selection);
+>>>> +	}
+>>>> +
+>>>> +out:
+>>>> +	if (count < ARRAY_SIZE(chip->active_banks))
+>>>> +		chip->active_banks[count] = 0;
+>>>> +
+>>>> +	tpm_buf_destroy(&buf);
+>>>> +
+>>>> +	return rc;
+>>>> +}
+>>>> --
+>>>> 2.5.0
+>>>
+>>> Otherwise,
+>>>
+>>> Reviewed-by: Jarkko Sakkinen <jarkko.sakkien-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+>>>
+>>> /Jarkko
+>>>
+>>
+>
+> /Jarkko
+>
 
 
 ------------------------------------------------------------------------------
