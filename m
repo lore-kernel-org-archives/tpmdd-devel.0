@@ -1,139 +1,77 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [PATCH 1/2] tpm2: add session handle isolation to
- tpm spaces
-Date: Fri, 20 Jan 2017 09:39:13 -0500
-Message-ID: <1484923153.3011.15.camel@HansenPartnership.com>
-References: <1484752097.2717.14.camel@HansenPartnership.com>
-	<1484752186.2717.16.camel@HansenPartnership.com>
-	<20170119115812.vqaoxv77mgnuq43h@intel.com>
-	<1484827883.3140.7.camel@HansenPartnership.com>
-	<20170120132331.74dixmuj6htzgr4z@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v7] tpm: Check size of response before accessing data
+Date: Fri, 20 Jan 2017 18:21:58 +0200
+Message-ID: <20170120162145.lrdcrf5iw6d6otd3@intel.com>
+References: <1484828352-23202-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <20170120133630.ld5shdqhquxzd7sn@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170120132331.74dixmuj6htzgr4z-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20170120133630.ld5shdqhquxzd7sn@intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, 2017-01-20 at 15:23 +0200, Jarkko Sakkinen wrote:
-> On Thu, Jan 19, 2017 at 07:11:23AM -0500, James Bottomley wrote:
-> > On Thu, 2017-01-19 at 13:58 +0200, Jarkko Sakkinen wrote:
-> > > On Wed, Jan 18, 2017 at 10:09:46AM -0500, James Bottomley wrote:
-> > > > sessions should be isolated during each instance of a tpm 
-> > > > space.  This means that spaces shouldn't be able to see each 
-> > > > other's sessions and also when a space is closed, all the 
-> > > > sessions belonging to it should be flushed.
-> > > > 
-> > > > This is implemented by adding a session_tbl to the space to 
-> > > > track the created session handles.  Sessions can be flushed 
-> > > > either by not setting the continueSession attribute in the 
-> > > > session table or by an explicit flush.  In the first case we 
-> > > > have to mark the session as being ready to flush and explicitly 
-> > > > forget it if the command completes successfully and in the 
-> > > > second case we have to intercept the flush instruction and
-> > > > clear the session from our table.
-> > > 
-> > > You could do this without these nasty corner cases by arbage 
-> > > collecting when a command emits a new session handle.
+On Fri, Jan 20, 2017 at 03:36:30PM +0200, Jarkko Sakkinen wrote:
+> On Thu, Jan 19, 2017 at 07:19:12AM -0500, Stefan Berger wrote:
+> > Make sure that we have not received less bytes than what is indicated
+> > in the header of the TPM response. Also, check the number of bytes in
+> > the response before accessing its data.
 > > 
-> > I could for this patch set.  However, the global session accounting 
-> > RFC requires strict accounting, because it needs to know exactly 
-> > when to retry a command that failed because we were out of sessions 
-> > and because we don't want to needlessly evict a session if there 
-> > was one available which we didn't see because of lazy accounting. 
-> >  It would be a lot of churn to do it lazily in this patch set and 
-> > then switch to strict in that one, so I chose to account sessions
-> > strictly always.
+> > Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
 > 
-> Lazy is kind of ambiguous word so I'll have to check that we have 
-> same definition for it in this context.
-> 
-> I'm talking about not trying to detect if something gets deleted. 
-> When something gets created you would go through the global list of
-> sessions and check if it is used. If so, it must be that the session 
-> was deleted at some point.
+> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
-That's my terminology too.  We're talking about lazy and strict
-tracking of session flushing.
+Oops. I found some odd stuff after all so hold on for a moment.
+I could do these updates myself probably...
 
-> Your argument is that in this scheme sometimes there might be a
-> session marked as "reserved" but it is in fact free. This might lead
-> to useless eviction. Am I correct?
+> >  ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd,
+> > -			 int len, unsigned int flags, const char *desc)
+> > +			 size_t len, size_t min_rsp_body_length,
+> > +			 unsigned int flags, const char *desc)
 
-Yes, but not just that, it will also lead to over long waits because we
-can no longer wake the waiters the moment a session becomes free.
+BTW, maybe the cmd_length would be actually a better idea because
+it gets mixes witht local variable.
 
-> My argument is that the lazy scheme is more generic (does not require
-> special cases). As a subsystem maintainer I tend to be more fond of 
-> that kind of solutions. Having special cases raises questios like 
-> (for example):
-> 
-> 1. What if standard gets added something that does not fall into the
->    current set of special cases? You never know.
-> 2. What about vendor specific commands? The lazy scheme is compatible
->    with them. The standard does not put any kind of constraints for
->    vendor specific commands.
+> >  {
+> >  	const struct tpm_output_header *header;
+> >  	int err;
+> > +	ssize_t length;
 
-We rely on the assertion in the Manual that sessions are only returned
-in the handle area (as we do for objects).  We also rely on the
-guarantee that they're only destroyed by flush or continueSession being
-0 in the session attributes.
+Maybe it would make sense to name this as rsp_length.
 
-If some mad vendor introduces a command that creates an object and
-doesn't return it in the handle area, we'll get screwed for both
-transient objects and sessions.  Sessions also could have issues if
-some mad vendor creates a command that flushes them outside of the
-above description.  That's why the standard has all these caveats about
-handle and session creation.  In theory the vendors are not allowed to
-violate them in their own commands ...
+> >  
+> > -	len = tpm_transmit(chip, (const u8 *)cmd, len, flags);
+> > -	if (len <  0)
+> > -		return len;
+> > -	else if (len < TPM_HEADER_SIZE)
+> > +	length = tpm_transmit(chip, (const u8 *)cmd, len, flags);
+> > +	if (length <  0)
+> > +		return length;
+> > +	else if (length < TPM_HEADER_SIZE)
+> >  		return -EFAULT;
+> >  
+> >  	header = cmd;
+> > +	if (length < be32_to_cpu(header->length))
+> > +		return -EFAULT;
 
-> You could solve the problem you are stating by getting the full the
-> list of alive sessions with CAP_HANDLES and mark dangling sessions
-> as free.
+Why '<' and not '!='? In what legit case length would be larger?
 
-That's a command which produces a huge output ... I'd have to do it at
-the end of every input command to get the list of current handles ... I
-don't really think it's a better solution.
+> >  
+> >  	err = be32_to_cpu(header->return_code);
+> >  	if (err != 0 && desc)
+> >  		dev_err(&chip->dev, "A TPM error (%d) occurred %s\n", err,
+> >  			desc);
+> > +	if (err)
+> > +		return err;
+> >  
+> > -	return err;
+> > +	if (be32_to_cpu(header->length) <
+> > +	    min_rsp_body_length + TPM_HEADER_SIZE)
+> > +		return -EFAULT;
 
-Let me describe the failure case with strict destruction accounting:
-supposing a mad vendor does introduce a command that flushes a session
-outside the standards prescribed way.  What happens is that it gets re
--used before the TPM exhausts handles, and tpm2_session_chip_add will
-simply to replace what it currently has.  The only consequence is a
-single missed wakeup.  So even in the face of vendor failure, this
-scheme will work almost all of the time and it will always work better
-than a lazy scheme because the failure case gives us properties
-identical to the lazy case.  To make this case iron, we should get a
-failure on context save, so I can use that failure to drop the handle
-and I think the strict scheme will then always perform better than the
-lazy scheme (let's call it strict with lazy backup) will that suffice?
+Why couldn't you use 'length' here?
 
-> PS. I've started to think that maybe also with sessions it is better
-> to have just one change that implements full eviction like we have
-> for transient objects after seeing your breakdown. I'm sorry about
-> putting you extra trouble doing the isolation only patch. It's better
-> to do this right once...
-
-Well, I can put them back together again, but you could just apply them
-together as two patches ... they are now bisectable.
-
-James
-
-
-> /Jarkko
-> 
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+/Jarkko
