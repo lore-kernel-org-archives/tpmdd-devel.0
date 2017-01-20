@@ -1,14 +1,17 @@
-From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v6 1/2] tpm: implement TPM 2.0 capability to
-	get active PCR banks
-Date: Fri, 20 Jan 2017 12:05:12 -0500
-Message-ID: <1484931913-24909-2-git-send-email-nayna@linux.vnet.ibm.com>
-References: <1484931913-24909-1-git-send-email-nayna@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v7] tpm: Check size of response before
+	accessing data
+Date: Fri, 20 Jan 2017 19:55:22 +0200
+Message-ID: <20170120175522.zsotpu22be3nozbl@intel.com>
+References: <1484828352-23202-1-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20170120133630.ld5shdqhquxzd7sn@intel.com>
+	<20170120162145.lrdcrf5iw6d6otd3@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1484931913-24909-1-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20170120162145.lrdcrf5iw6d6otd3-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,127 +20,78 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This patch implements the TPM 2.0 capability TPM_CAP_PCRS to
-retrieve the active PCR banks from the TPM. This is needed
-to enable extending all active banks as recommended by TPM 2.0
-TCG Specification.
+On Fri, Jan 20, 2017 at 06:21:58PM +0200, Jarkko Sakkinen wrote:
+> On Fri, Jan 20, 2017 at 03:36:30PM +0200, Jarkko Sakkinen wrote:
+> > On Thu, Jan 19, 2017 at 07:19:12AM -0500, Stefan Berger wrote:
+> > > Make sure that we have not received less bytes than what is indicated
+> > > in the header of the TPM response. Also, check the number of bytes in
+> > > the response before accessing its data.
+> > > 
+> > > Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> > 
+> > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> 
+> Oops. I found some odd stuff after all so hold on for a moment.
+> I could do these updates myself probably...
+> 
+> > >  ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *cmd,
+> > > -			 int len, unsigned int flags, const char *desc)
+> > > +			 size_t len, size_t min_rsp_body_length,
+> > > +			 unsigned int flags, const char *desc)
+> 
+> BTW, maybe the cmd_length would be actually a better idea because
+> it gets mixes witht local variable.
+> 
+> > >  {
+> > >  	const struct tpm_output_header *header;
+> > >  	int err;
+> > > +	ssize_t length;
+> 
+> Maybe it would make sense to name this as rsp_length.
+> 
+> > >  
+> > > -	len = tpm_transmit(chip, (const u8 *)cmd, len, flags);
+> > > -	if (len <  0)
+> > > -		return len;
+> > > -	else if (len < TPM_HEADER_SIZE)
+> > > +	length = tpm_transmit(chip, (const u8 *)cmd, len, flags);
+> > > +	if (length <  0)
+> > > +		return length;
+> > > +	else if (length < TPM_HEADER_SIZE)
+> > >  		return -EFAULT;
+> > >  
+> > >  	header = cmd;
+> > > +	if (length < be32_to_cpu(header->length))
+> > > +		return -EFAULT;
+> 
+> Why '<' and not '!='? In what legit case length would be larger?
+> 
+> > >  
+> > >  	err = be32_to_cpu(header->return_code);
+> > >  	if (err != 0 && desc)
+> > >  		dev_err(&chip->dev, "A TPM error (%d) occurred %s\n", err,
+> > >  			desc);
+> > > +	if (err)
+> > > +		return err;
+> > >  
+> > > -	return err;
+> > > +	if (be32_to_cpu(header->length) <
+> > > +	    min_rsp_body_length + TPM_HEADER_SIZE)
+> > > +		return -EFAULT;
+> 
+> Why couldn't you use 'length' here?
+> 
+> /Jarkko
 
-Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
----
- drivers/char/tpm/tpm.h      |  5 ++++
- drivers/char/tpm/tpm2-cmd.c | 59 +++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 64 insertions(+)
+Anyway,
 
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 1ae9768..c291f19 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -97,6 +97,7 @@ enum tpm2_return_codes {
- };
- 
- enum tpm2_algorithms {
-+	TPM2_ALG_ERROR		= 0x0000,
- 	TPM2_ALG_SHA1		= 0x0004,
- 	TPM2_ALG_KEYEDHASH	= 0x0008,
- 	TPM2_ALG_SHA256		= 0x000B,
-@@ -127,6 +128,7 @@ enum tpm2_permanent_handles {
- };
- 
- enum tpm2_capabilities {
-+	TPM2_CAP_PCRS		= 5,
- 	TPM2_CAP_TPM_PROPERTIES = 6,
- };
- 
-@@ -187,6 +189,8 @@ struct tpm_chip {
- 
- 	const struct attribute_group *groups[3];
- 	unsigned int groups_cnt;
-+
-+	u16 active_banks[7];
- #ifdef CONFIG_ACPI
- 	acpi_handle acpi_dev_handle;
- 	char ppi_version[TPM_PPI_VERSION_LEN + 1];
-@@ -545,4 +549,5 @@ int tpm2_auto_startup(struct tpm_chip *chip);
- void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
- unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
- int tpm2_probe(struct tpm_chip *chip);
-+ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip);
- #endif
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 6eda239..0e000a3 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -998,3 +998,62 @@ int tpm2_auto_startup(struct tpm_chip *chip)
- 		rc = -ENODEV;
- 	return rc;
- }
-+
-+struct tpm2_pcr_selection {
-+	__be16  hash_alg;
-+	u8  size_of_select;
-+	u8  pcr_select[3];
-+} __packed;
-+
-+/**
-+ * tpm2_get_pcr_allocation() - get TPM active PCR banks.
-+ *
-+ * @chip: TPM chip to use.
-+ *
-+ * Return: Same as with tpm_transmit_cmd.
-+ */
-+ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
-+{
-+	struct tpm2_pcr_selection pcr_selection;
-+	struct tpm_buf buf;
-+	void *marker;
-+	unsigned int count = 0;
-+	int rc;
-+	int i;
-+
-+	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_GET_CAPABILITY);
-+	if (rc)
-+		return rc;
-+
-+	tpm_buf_append_u32(&buf, TPM2_CAP_PCRS);
-+	tpm_buf_append_u32(&buf, 0);
-+	tpm_buf_append_u32(&buf, 1);
-+
-+	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 0,
-+			      "get tpm pcr allocation");
-+	if (rc < 0)
-+		goto out;
-+
-+	count = be32_to_cpup(
-+		(__be32 *)&buf.data[TPM_HEADER_SIZE + 5]);
-+
-+	if (count > ARRAY_SIZE(chip->active_banks)) {
-+		rc = -ENODEV;
-+		goto out;
-+	}
-+
-+	marker = &buf.data[TPM_HEADER_SIZE + 9];
-+	for (i = 0; i < count; i++) {
-+		memcpy(&pcr_selection, marker, sizeof(pcr_selection));
-+		chip->active_banks[i] = be16_to_cpu(pcr_selection.hash_alg);
-+		marker = marker + sizeof(struct tpm2_pcr_selection);
-+	}
-+
-+out:
-+	if (count < ARRAY_SIZE(chip->active_banks))
-+		chip->active_banks[count] = TPM2_ALG_ERROR;
-+
-+	tpm_buf_destroy(&buf);
-+
-+	return rc;
-+}
--- 
-2.5.0
+Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
+/Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
