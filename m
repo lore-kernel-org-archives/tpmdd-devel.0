@@ -1,18 +1,18 @@
-From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v4 1/2] tpm: implement TPM 2.0 capability
- to get active PCR banks
-Date: Thu, 19 Jan 2017 19:04:44 +0530
-Message-ID: <5880C074.9050401@linux.vnet.ibm.com>
-References: <1484729090-16012-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1484729090-16012-2-git-send-email-nayna@linux.vnet.ibm.com>
-	<20170118134522.ftikno7gy3vttv6w@intel.com>
-	<587F7252.4070808@linux.vnet.ibm.com>
-	<20170119104759.oqobziiuy7lqnzbf@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH 1/2] tpm2: add session handle isolation to
+ tpm spaces
+Date: Fri, 20 Jan 2017 15:23:31 +0200
+Message-ID: <20170120132331.74dixmuj6htzgr4z@intel.com>
+References: <1484752097.2717.14.camel@HansenPartnership.com>
+	<1484752186.2717.16.camel@HansenPartnership.com>
+	<20170119115812.vqaoxv77mgnuq43h@intel.com>
+	<1484827883.3140.7.camel@HansenPartnership.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170119104759.oqobziiuy7lqnzbf-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <1484827883.3140.7.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,172 +21,71 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Thu, Jan 19, 2017 at 07:11:23AM -0500, James Bottomley wrote:
+> On Thu, 2017-01-19 at 13:58 +0200, Jarkko Sakkinen wrote:
+> > On Wed, Jan 18, 2017 at 10:09:46AM -0500, James Bottomley wrote:
+> > > sessions should be isolated during each instance of a tpm space. 
+> > >  This means that spaces shouldn't be able to see each other's 
+> > > sessions and also when a space is closed, all the sessions 
+> > > belonging to it should be flushed.
+> > > 
+> > > This is implemented by adding a session_tbl to the space to track 
+> > > the created session handles.  Sessions can be flushed either by not
+> > > setting the continueSession attribute in the session table or by an
+> > > explicit flush.  In the first case we have to mark the session as
+> > > being ready to flush and explicitly forget it if the command 
+> > > completes successfully and in the second case we have to intercept 
+> > > the flush instruction and clear the session from our table.
+> > 
+> > You could do this without these nasty corner cases by arbage 
+> > collecting when a command emits a new session handle.
+> 
+> I could for this patch set.  However, the global session accounting RFC
+> requires strict accounting, because it needs to know exactly when to
+> retry a command that failed because we were out of sessions and because
+> we don't want to needlessly evict a session if there was one available
+> which we didn't see because of lazy accounting.  It would be a lot of
+> churn to do it lazily in this patch set and then switch to strict in
+> that one, so I chose to account sessions strictly always.
 
+Lazy is kind of ambiguous word so I'll have to check that we have same
+definition for it in this context.
 
-On 01/19/2017 04:17 PM, Jarkko Sakkinen wrote:
-> On Wed, Jan 18, 2017 at 07:19:06PM +0530, Nayna wrote:
->>
->>
->> On 01/18/2017 07:15 PM, Jarkko Sakkinen wrote:
->>> On Wed, Jan 18, 2017 at 03:44:49AM -0500, Nayna Jain wrote:
->>>> This patch implements the TPM 2.0 capability TPM_CAP_PCRS to
->>>> retrieve the active PCR banks from the TPM. This is needed
->>>> to enable extending all active banks as recommended by TPM 2.0
->>>> TCG Specification.
->>>>
->>>> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
->>>> ---
->>>>    drivers/char/tpm/tpm.h      |  4 ++++
->>>>    drivers/char/tpm/tpm2-cmd.c | 57 +++++++++++++++++++++++++++++++++++++++++++++
->>>>    2 files changed, 61 insertions(+)
->>>>
->>>> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
->>>> index 1ae9768..dddd573 100644
->>>> --- a/drivers/char/tpm/tpm.h
->>>> +++ b/drivers/char/tpm/tpm.h
->>>> @@ -127,6 +127,7 @@ enum tpm2_permanent_handles {
->>>>    };
->>>>
->>>>    enum tpm2_capabilities {
->>>> +	TPM2_CAP_PCRS		= 5,
->>>>    	TPM2_CAP_TPM_PROPERTIES = 6,
->>>>    };
->>>>
->>>> @@ -187,6 +188,8 @@ struct tpm_chip {
->>>>
->>>>    	const struct attribute_group *groups[3];
->>>>    	unsigned int groups_cnt;
->>>> +
->>>> +	u16 active_banks[7];
->>>>    #ifdef CONFIG_ACPI
->>>>    	acpi_handle acpi_dev_handle;
->>>>    	char ppi_version[TPM_PPI_VERSION_LEN + 1];
->>>> @@ -545,4 +548,5 @@ int tpm2_auto_startup(struct tpm_chip *chip);
->>>>    void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
->>>>    unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
->>>>    int tpm2_probe(struct tpm_chip *chip);
->>>> +ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip);
->>>>    #endif
->>>> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
->>>> index 6eda239..75a7546 100644
->>>> --- a/drivers/char/tpm/tpm2-cmd.c
->>>> +++ b/drivers/char/tpm/tpm2-cmd.c
->>>> @@ -998,3 +998,60 @@ int tpm2_auto_startup(struct tpm_chip *chip)
->>>>    		rc = -ENODEV;
->>>>    	return rc;
->>>>    }
->>>> +
->>>> +struct tpm2_pcr_selection {
->>>> +	__be16  hash_alg;
->>>> +	u8  size_of_select;
->>>> +	u8  pcr_select[3];
->>>> +} __packed;
->>>> +
->>>> +/**
->>>> + * tpm2_get_pcr_allocation() - get TPM active PCR banks.
->>>> + *
->>>> + * @chip: TPM chip to use.
->>>> + *
->>>> + * Return: Same as with tpm_transmit_cmd.
->>>> + */
->>>> +ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
->>>> +{
->>>> +	struct tpm2_pcr_selection pcr_selection;
->>>> +	struct tpm_buf buf;
->>>> +	void *marker;
->>>> +	unsigned int count = 0;
->>>
->>> You shouldn't initialize 'count'.
->>
->> It is initialized for reason below:
->>
->>>
->>>> +	int rc;
->>>> +	int i;
->>>> +
->>>> +	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_GET_CAPABILITY);
->>>> +	if (rc)
->>>> +		return rc;
->>>> +
->>>> +	tpm_buf_append_u32(&buf, TPM2_CAP_PCRS);
->>>> +	tpm_buf_append_u32(&buf, 0);
->>>> +	tpm_buf_append_u32(&buf, 1);
->>>> +
->>>> +	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 0,
->>>> +			      "get tpm pcr allocation");
->>>> +	if (rc < 0)
->>>> +		goto out;
->>
->> if  tpm_transmit_cmd()fails, it jumps to out:
->> where count is used in if(..).
->
-> Why the out label is placed there and not after?
+I'm talking about not trying to detect if something gets deleted. When
+something gets created you would go through the global list of sessions
+and check if it is used. If so, it must be that the session was deleted
+at some point.
 
-Since tpm2_get_pcr_allocation() returns from here as failure,
-chip->active_banks doesn't get anytime initialized.
+Your argument is that in this scheme sometimes there might be a session
+marked as "reserved" but it is in fact free. This might lead to useless
+eviction. Am I correct?
 
-By placing it there, for failure, chip->active_bank[0] is initialized to 0.
-Then its later use like in tpm_pcr_extend(), it loops on this array till 
-there is a value "0"(considered as invalid) or reaches max size of array.
+My argument is that the lazy scheme is more generic (does not require
+special cases). As a subsystem maintainer I tend to be more fond of that
+kind of solutions. Having special cases raises questios like (for
+example):
 
->
->>
->> Thanks & Regards,
->>     - Nayna
->>
->>>> +
->>>> +	count = be32_to_cpup(
->>>> +		(__be32 *)&buf.data[TPM_HEADER_SIZE + 5]);
->>>> +
->>>> +	if (count > ARRAY_SIZE(chip->active_banks))
->>>> +		return -ENODEV;
->
-> Hey, here's a regression (didn't notice it last time). You
-> nee to call tpm_buf_destroy().
+1. What if standard gets added something that does not fall into the
+   current set of special cases? You never know.
+2. What about vendor specific commands? The lazy scheme is compatible
+   with them. The standard does not put any kind of constraints for
+   vendor specific commands.
 
-Oh!! Yes, Thanks !!. I will fix this with:
-rc = -ENODEV;
-goto out;
+You could solve the problem you are stating by getting the full the
+list of alive sessions with CAP_HANDLES and mark dangling sessions
+as free.
 
-Thanks & Regards
-    - Nayna
+PS. I've started to think that maybe also with sessions it is better
+to have just one change that implements full eviction like we have
+for transient objects after seeing your breakdown. I'm sorry about
+putting you extra trouble doing the isolation only patch. It's better
+to do this right once...
 
->
->
->>>> +
->>>> +	marker = &buf.data[TPM_HEADER_SIZE + 9];
->>>> +	for (i = 0; i < count; i++) {
->>>> +		memcpy(&pcr_selection, marker, sizeof(pcr_selection));
->>>> +		chip->active_banks[i] = be16_to_cpu(pcr_selection.hash_alg);
->>>> +		marker = marker + sizeof(struct tpm2_pcr_selection);
->>>> +	}
->>>> +
->>>> +out:
->>>> +	if (count < ARRAY_SIZE(chip->active_banks))
->>>> +		chip->active_banks[count] = 0;
->>>> +
->>>> +	tpm_buf_destroy(&buf);
->>>> +
->>>> +	return rc;
->>>> +}
->>>> --
->>>> 2.5.0
->>>
->>> Otherwise,
->>>
->>> Reviewed-by: Jarkko Sakkinen <jarkko.sakkien-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
->>>
->>> /Jarkko
->>>
->>
->
-> /Jarkko
->
-
+/Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
