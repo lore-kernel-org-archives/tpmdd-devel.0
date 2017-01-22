@@ -1,112 +1,83 @@
-From: James Bottomley <James.Bottomley@HansenPartnership.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC v3 5/5] tpm2: expose resource manager
- via    a device link /dev/tpms<n>
-Date: Sun, 22 Jan 2017 13:36:28 -0800
-Message-ID: <1485120988.2504.21.camel@HansenPartnership.com>
-References: <20170116131215.28930-6-jarkko.sakkinen@linux.intel.com>
-         <1484751663.2717.10.camel@HansenPartnership.com>
-         <20170119104922.vhgz4rxw6yzdrxqt@intel.com>
-         <1484828380.3140.11.camel@HansenPartnership.com>
-         <20170120133914.2wk43nteh2hh7n3c@intel.com>
-         <20170120210522.glx4y4oui36oimld@intel.com>
-         <1485107342.2504.7.camel@HansenPartnership.com>
-         <1485110892.2504.12.camel@HansenPartnership.com>
-         <20170122203055.zg52yraahqvn4rbv@intel.com>
-         <20170122210107.zwrvuhnelrvaoe5h@intel.com>
-         <20170122210441.ivzujugb3urzndhj@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: [PATCH RFC v4 0/5] RFC: in-kernel resource manager
+Date: Mon, 23 Jan 2017 01:44:28 +0200
+Message-ID: <20170122234438.12102-1-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170122210441.ivzujugb3urzndhj@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, open list <linux-kernel@vger.kernel.org>
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, 2017-01-22 at 23:04 +0200, Jarkko Sakkinen wrote:
-> On Sun, Jan 22, 2017 at 11:01:07PM +0200, Jarkko Sakkinen wrote:
-> > On Sun, Jan 22, 2017 at 10:30:55PM +0200, Jarkko Sakkinen wrote:
-> > > On Sun, Jan 22, 2017 at 10:48:12AM -0800, James Bottomley wrote:
-> > > > On Sun, 2017-01-22 at 09:49 -0800, James Bottomley wrote:
-> > > > > On Fri, 2017-01-20 at 23:05 +0200, Jarkko Sakkinen wrote:
-> > > > > > 'tabrm4' branch has been now rebased. It's now on top of
-> > > > > > master
-> > > > > > branch that contains Stefan's latest patch (min body length
-> > > > > > check) 
-> > > > > > that I've reviewed and tested. It also contains your
-> > > > > > updated
-> > > > > > /dev/tpms patch.
-> > > > > > 
-> > > > > > I guess the 5 commits that are there now are such that we
-> > > > > > have 
-> > > > > > fairly good consensus, don't we? If so, can I add your
-> > > > > > reviewed-by 
-> > > > > > and tested-by to my commits and vice versa?
-> > > > > 
-> > > > > We're still failing my test_transients.  This is the full
-> > > > > python of 
-> > > > > the test case:
-> > > > > 
-> > > > > 
-> > > > >     def test_transients(self):
-> > > > >         k = self.open_transients()
-> > > > >         self.c.flush_context(k[0])
-> > > > >         self.c.change_auth(self.c.SRK, k[1], None, pwd1)
-> > > > >         ...
-> > > > > 
-> > > > > It's failing at self.c.flush_context(k[0]) with TPM_RC_VALUE.
-> > > > >   It's 
-> > > > > the same problem Ken complained about: TPM2_FlushContext
-> > > > > doesn't have 
-> > > > > a declared handle area so we don't translate the handle being
-> > > > > sent
-> > > > > down.  We have to fix this either by intercepting the flush
-> > > > > and 
-> > > > > manually translating the context, or by being dangerously
-> > > > > clever and 
-> > > > > marking flush as a command which takes one handle.
-> > > > 
-> > > > This is what the dangerously clever fix looks like.  With this
-> > > > and a
-> > > > few other changes, my smoke tests now pass.
-> > > > 
-> > > > James
-> > > 
-> > > I don't want to be clever here. I will rather intercept the body
-> > > and
-> > > try to keep the core code simple and easy to understand.
-> > 
-> > It came out quite clean actually.
-> > 
-> > I just encapsulated handle mapping and have this in the beginning
-> > of
-> > tpm2_map_command:
-> > 
-> > if (cc == TPM2_CC_FLUSH_CONTEXT)
-> > 	return tpm2_map_to_phandle(space, &cmd[TPM_HEADER_SIZE]);
-> > 
-> > I think this documents better what is actually going on than
-> > tinkering
-> > cc_attr_tbl.
-> > 
-> > /Jarkko
-> 
-> Actually what you suggested is much better idea because it will also
-> take care of validation.
+This patch set adds support for TPM spaces that provide a context
+for isolating and swapping transient objects. The content does
+not yet include support for policy and HMAC sessions.
 
-Yes, that's why it's clever ... I'm just always wary of clever code
-because of the Kernighan principle.
+There's a test script for trying out TPM spaces in
 
->  I'm still going to keep tpm2_map_to_phandle because it makes the 
-> code flow a lot cleaner and probably sessions have to anyway make it
-> even more complicated.
+  git://git.infradead.org/users/jjs/tpm2-scripts.git
 
-OK, there's one more thing that seems to be causing problems: when
-tpm2_save_context fails because the handle no longer exists (like it's
-been flushed) it returns TPM_RC_REFERENCE_H0 not TPM_RC_HANDLE (the
-session code does seem to return TPM_RC_HANDLE under some
-circumstances).
+A simple smoke test can be run by
 
-James
+  sudo python -m unittest -v tpm2_smoke.SpaceTest   
 
+v2:
+Changed to James' proposal of API. I did not make any other changes
+except split core TPM space code its own patch because I want to find
+consensus on the API before polishing the corners. Thus, this version
+also carries the RFC tag. I have not yet locked in my standpoint whether
+ioctl or a device file is a better deal.
+
+v3:
+- Check TPM return code in tpm_map_response.
+- Reference tracking for /dev/tpms0.
+- clear_bit(is_open) was removed from tpm-dev.c. Added it back.
+- Use response length as the buffer size limit in tpm2_commit_space.
+- This version now passes again my smoke tests.
+
+v4:
+- Lots of small bug fixes and clean ups.
+- Quirk for TPM2_CC_FlushHandle
+
+James Bottomley (2):
+  tpm: split out tpm-dev.c into tpm-dev.c and tpm-common-dev.c
+  tpm2: expose spaces via a device link /dev/tpms<n>
+
+Jarkko Sakkinen (3):
+  tpm: validate TPM 2.0 commands
+  tpm: export tpm2_flush_context_cmd
+  tpm: infrastructure for TPM spaces
+
+ drivers/char/tpm/Makefile         |   2 +-
+ drivers/char/tpm/tpm-chip.c       |  78 ++++++++-
+ drivers/char/tpm/tpm-dev-common.c | 145 ++++++++++++++++
+ drivers/char/tpm/tpm-dev.c        | 140 ++--------------
+ drivers/char/tpm/tpm-dev.h        |  27 +++
+ drivers/char/tpm/tpm-interface.c  | 113 +++++++++----
+ drivers/char/tpm/tpm-sysfs.c      |   2 +-
+ drivers/char/tpm/tpm.h            |  57 ++++++-
+ drivers/char/tpm/tpm2-cmd.c       | 150 ++++++++++++-----
+ drivers/char/tpm/tpm2-space.c     | 336 ++++++++++++++++++++++++++++++++++++++
+ drivers/char/tpm/tpms-dev.c       |  65 ++++++++
+ 11 files changed, 903 insertions(+), 212 deletions(-)
+ create mode 100644 drivers/char/tpm/tpm-dev-common.c
+ create mode 100644 drivers/char/tpm/tpm-dev.h
+ create mode 100644 drivers/char/tpm/tpm2-space.c
+ create mode 100644 drivers/char/tpm/tpms-dev.c
+
+-- 
+2.9.3
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
