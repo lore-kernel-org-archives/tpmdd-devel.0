@@ -1,15 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v9 0/2] securityfs support for TPM 2.0
-	firmware event log
-Date: Mon, 23 Jan 2017 17:04:22 +0200
-Message-ID: <20170123150422.a3xhupzbyie6er7t@intel.com>
+Subject: Re: [PATCH v9 2/2] tpm: add securityfs support for
+ TPM 2.0 firmware event log
+Date: Mon, 23 Jan 2017 17:13:50 +0200
+Message-ID: <20170123151350.staamgwzcbcfg6b6@intel.com>
 References: <1485156387-7735-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1485156387-7735-3-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1485156387-7735-1-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1485156387-7735-3-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,151 +23,430 @@ To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jan 23, 2017 at 02:26:25AM -0500, Nayna Jain wrote:
-> The TPM device driver defines ascii and binary methods for
-> displaying the TPM 1.2 event log via securityfs files, which are
-> needed for validating a TPM quote. The device driver for TPM 2.0
-> does not have similar support for displaying the TPM 2.0
-> event log. This patch set adds the support for displaying
-> TPM 2.0 event log in binary format.
+On Mon, Jan 23, 2017 at 02:26:27AM -0500, Nayna Jain wrote:
+> Unlike the device driver support for TPM 1.2, the TPM 2.0 does
+> not support the securityfs pseudo files for displaying the
+> firmware event log.
 > 
-> The parsing mechanism to display the TPM 2.0 event log in binary
-> format is implemented as defined in the TPM 2.0 TCG specification[1].
-> If the firmware event log support exists and is successfully read,
-> the securityfs file is created to provide the event log in binary
-> format for both the OF device tree and ACPI.
+> This patch enables support for providing the TPM 2.0 event log in
+> binary form. TPM 2.0 event log supports a crypto agile format that
+> records multiple digests, which is different from TPM 1.2. This
+> patch enables the tpm_bios_log_setup for TPM 2.0  and adds the
+> event log parser which understand the TPM 2.0 crypto agile format.
 > 
->    - Patch 1 adds the device tree bindings support for Physical TPM.
->    - Patch 2 adds the support for creating securityfs files and for
->      displaying the TPM 2.0 crypto agile event log in binary format.
-> 
-> [1] TCG EFI Protocol Specification, Family "2.0" - Section 5 "Event
-> Log Structure"
-> 
-> Changelog History
-> 
-> v9:
-> - Rebased to the Jarkko's latest master branch (9b7f425 tpm: Check size of 
->   response before accessing data)
-
-These rebase comments are something that you should not add to changelog
-as you obviously need to do it always.
-
-/Jarkko
-
-> - Patch "tpm: add securityfs support for TPM 2.0 firmware event log" 
->   - Renamed struct tpmt_ha to struct tpm2_hash.
->   - Removed struct tpml_digest_values.
-> 
-> v8:
-> - Rebased to the Jarkko's latest master branch (8e25809 tpm:
->   Do not print an error message when doing TPM auto startup)
-> - Patch "tpm: add securityfs support for TPM 2.0 firmware event log" 
->   - Added feedbacks from Jarkko
->     - tpm_read_log_acpi() returns -ENODEV for TPM 2.0.
->     - Fixed code formatting and comments.
-> 
-> v7:
-> - Rebased to the Jarkko's latest master branch (b2505f6 tpm/vtpm:
->   fix kdoc warnings)
-> - Included Jarkko's feedbacks on version v6.
-> - Cleaned up #defines in tpm2_eventlog.c
->   - renamed HASH_COUNT to TPM2_ACTIVE_PCR_BANKS
->   - deleted MAX_DIGEST_SIZE, used SHA384_DIGEST_SIZE directly from 
->   <crypto/hash_info.h>
->   - deleted MAX_TPM_LOG_MSG. Redefined event[MAX_TPM_LOG_MSG]
->   as event[0].
-> 
-> v6:
-> 
-> - Rebased to the Jarkko's latest master branch (e717b5c:tpm: vtpm_proxy: 
->   conditionally call tpm_chip_unregister)
-> - Retained securityfs setup functions in tpm_eventlog.c
-> - Renamed tpm_eventlog.c to tpm1_eventlog.c
-> - Fixed tpm_read_log_of() for NULL check and memcpy function.
-> 
-> v5:
-> 
-> - Upstreamed cleanup and fixes as different patchset
-> - Rebased to the Jarkko's latest master branch (e5be084 tpm: vtpm_proxy:
->   Do not access host's event log)
-> - Patch "tpm: enhance read_log_of() to support Physical TPM event log
->   - New Patch.
-> - Patch "tpm: add securityfs support for TPM 2.0 firmware event log"
->   - Moved the changes in read_log_of() to a different patch
->   - TPM 2.0 event log data types are declared in tpm_eventlog.h, tpm2.h
->   is removed.
->   - Included other feedbacks also from Jarkko on aligment and extra
->     line
-> 
-> v4:
-> 
-> - Includes feedbacks from Jarkko and Jason.
-> - Patch "tpm: define a generic open() method for ascii & bios
-> measurements".
->   - Fix indentation issue.
-> - Patch "tpm: replace the dynamically allocated bios_dir as
->   struct dentry array".
->   - Continue to use bios_dir_count variable to use is_bad() checks and
->     to maintain correct order for securityfs_remove() during teardown.
->   - Reset chip->bios_dir_count in teardown() function.
-> - Patch "tpm: validate the eventlog access before tpm_bios_log_setup".
->   - Retain TPM2 check which was removed in previous patch.
->   - Add tpm_bios_log_setup failure handling.
->   - Remove use of private data from v3 version of patch. Add a
->   new member to struct tpm_chip to achieve the same purpose.
-> - Patch "tpm: redefine the read_log method to check for ACPI/OF 
-> properties sequentially".
->   - Move replacement of CONFIG_TCG_IBMVTPM with CONFIG_OF to this
->     patch from patch 3.
->   - Replace -1 error code with -ENODEV.
-> - Patch "tpm: replace the of_find_node_by_name() with dev of_node
-> property".
->   - Uses chip->dev.parent->of_node.
->   - Created separate patch for cleanup of pr_err messages.
-> - Patch "tpm: remove printk error messages".
->   - New Patch.
-> - Patch "tpm: add the securityfs file support for TPM 2.0 eventlog".
->   - Parses event digests using event alg_id rather than event log header
->     alg_id.
->   - Uses of_property_match_string to differentiate tpm/vtpm compatible
-> 
-> v3:
-> 
-> - Includes the review feedbacks as suggested by Jason.
-> - Split of patches into one patch per idea.
-> - Generic open() method for ascii/bios measurements.
-> - Replacement of of **bios_dir with *bios_dir[3].
-> - Verifying readlog() is successful before creating securityfs entries.
-> - Generic readlog() to check for ACPI/OF in sequence.
-> - read_log_of() method now uses of_node propertry rather than
-> calling find_device_by_name.
-> - read_log differentiates vtpm/tpm using its compatible property.
-> - Cleans pr_err with dev_dbg.
-> - Commit msgs subject line prefixed with tpm.
-> 
-> v2:
-> 
-> - Fixes issues as given in feedback by Jason.
-> - Adds documentation for device tree.
-> 
-> Nayna Jain (2):
->   tpm: enhance read_log_of() to support Physical TPM event log
->   tpm: add securityfs support for TPM 2.0 firmware event log
-> 
+> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> ---
 >  drivers/char/tpm/Makefile                          |   2 +-
 >  .../char/tpm/{tpm_eventlog.c => tpm1_eventlog.c}   |  35 ++--
 >  drivers/char/tpm/tpm2_eventlog.c                   | 203 +++++++++++++++++++++
 >  drivers/char/tpm/tpm_acpi.c                        |   3 +
 >  drivers/char/tpm/tpm_eventlog.h                    |  59 ++++++
->  drivers/char/tpm/tpm_of.c                          |  27 ++-
->  6 files changed, 310 insertions(+), 19 deletions(-)
+>  5 files changed, 287 insertions(+), 15 deletions(-)
 >  rename drivers/char/tpm/{tpm_eventlog.c => tpm1_eventlog.c} (95%)
 >  create mode 100644 drivers/char/tpm/tpm2_eventlog.c
 > 
+> diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
+> index a05b1eb..3d386a8 100644
+> --- a/drivers/char/tpm/Makefile
+> +++ b/drivers/char/tpm/Makefile
+> @@ -3,7 +3,7 @@
+>  #
+>  obj-$(CONFIG_TCG_TPM) += tpm.o
+>  tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o \
+> -		tpm_eventlog.o
+> +		tpm1_eventlog.o tpm2_eventlog.o
+>  tpm-$(CONFIG_ACPI) += tpm_ppi.o tpm_acpi.o
+>  tpm-$(CONFIG_OF) += tpm_of.o
+>  obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
+> diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm1_eventlog.c
+> similarity index 95%
+> rename from drivers/char/tpm/tpm_eventlog.c
+> rename to drivers/char/tpm/tpm1_eventlog.c
+> index 11bb113..9a8605e 100644
+> --- a/drivers/char/tpm/tpm_eventlog.c
+> +++ b/drivers/char/tpm/tpm1_eventlog.c
+> @@ -390,9 +390,6 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+>  	unsigned int cnt;
+>  	int rc = 0;
+>  
+> -	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> -		return 0;
+> -
+>  	rc = tpm_read_log(chip);
+>  	if (rc)
+>  		return rc;
+> @@ -407,7 +404,13 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+>  	cnt++;
+>  
+>  	chip->bin_log_seqops.chip = chip;
+> -	chip->bin_log_seqops.seqops = &tpm_binary_b_measurements_seqops;
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		chip->bin_log_seqops.seqops =
+> +			&tpm2_binary_b_measurements_seqops;
+> +	else
+> +		chip->bin_log_seqops.seqops =
+> +			&tpm_binary_b_measurements_seqops;
+> +
+>  
+>  	chip->bios_dir[cnt] =
+>  	    securityfs_create_file("binary_bios_measurements",
+> @@ -418,17 +421,21 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+>  		goto err;
+>  	cnt++;
+>  
+> -	chip->ascii_log_seqops.chip = chip;
+> -	chip->ascii_log_seqops.seqops = &tpm_ascii_b_measurements_seqops;
+> +	if (!(chip->flags & TPM_CHIP_FLAG_TPM2)) {
+>  
+> -	chip->bios_dir[cnt] =
+> -	    securityfs_create_file("ascii_bios_measurements",
+> -				   0440, chip->bios_dir[0],
+> -				   (void *)&chip->ascii_log_seqops,
+> -				   &tpm_bios_measurements_ops);
+> -	if (IS_ERR(chip->bios_dir[cnt]))
+> -		goto err;
+> -	cnt++;
+> +		chip->ascii_log_seqops.chip = chip;
+> +		chip->ascii_log_seqops.seqops =
+> +			&tpm_ascii_b_measurements_seqops;
+> +
+> +		chip->bios_dir[cnt] =
+> +			securityfs_create_file("ascii_bios_measurements",
+> +					       0440, chip->bios_dir[0],
+> +					       (void *)&chip->ascii_log_seqops,
+> +					       &tpm_bios_measurements_ops);
+> +		if (IS_ERR(chip->bios_dir[cnt]))
+> +			goto err;
+> +		cnt++;
+> +	}
+>  
+>  	return 0;
+>  
+> diff --git a/drivers/char/tpm/tpm2_eventlog.c b/drivers/char/tpm/tpm2_eventlog.c
+> new file mode 100644
+> index 0000000..513897c
+> --- /dev/null
+> +++ b/drivers/char/tpm/tpm2_eventlog.c
+> @@ -0,0 +1,203 @@
+> +/*
+> + * Copyright (C) 2016 IBM Corporation
+> + *
+> + * Authors:
+> + *      Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> + *
+> + * Access to TPM 2.0 event log as written by Firmware.
+> + * It assumes that writer of event log has followed TCG Specification
+> + * for Family "2.0" and written the event data in little endian.
+> + * With that, it doesn't need any endian conversion for structure
+> + * content.
+> + *
+> + * This program is free software; you can redistribute it and/or
+> + * modify it under the terms of the GNU General Public License
+> + * as published by the Free Software Foundation; either version
+> + * 2 of the License, or (at your option) any later version.
+> + */
+> +
+> +#include <linux/seq_file.h>
+> +#include <linux/fs.h>
+> +#include <linux/security.h>
+> +#include <linux/module.h>
+> +#include <linux/slab.h>
+> +
+> +#include "tpm.h"
+> +#include "tpm_eventlog.h"
+> +
+> +/*
+> + * calc_tpm2_event_size() - calculate the event size, where event
+> + * is an entry in the TPM 2.0 event log. The event is of type Crypto
+> + * Agile Log Entry Format as defined in TCG EFI Protocol Specification
+> + * Family "2.0".
+> +
+> + * @event: event whose size is to be calculated.
+> + * @event_header: the first event in the event log.
+> + *
+> + * Returns size of the event. If it is an invalid event, returns 0.
+> + */
+> +static int calc_tpm2_event_size(struct tcg_pcr_event2 *event,
+> +				struct tcg_pcr_event *event_header)
+> +{
+> +	struct tcg_efi_specid_event *efispecid;
+> +	struct tcg_event_field *event_field;
+> +	void *marker;
+> +	void *marker_start;
+> +	u32 halg_size;
+> +	size_t size;
+> +	u16 halg;
+> +	int i;
+> +	int j;
+> +
+> +	marker = event;
+> +	marker_start = marker;
+> +	marker = marker + sizeof(event->pcr_idx) + sizeof(event->event_type)
+> +		+ sizeof(event->count);
+> +
+> +	efispecid = (struct tcg_efi_specid_event *)event_header->event;
+> +
+> +	for (i = 0; (i < event->count) && (i < TPM2_ACTIVE_PCR_BANKS);
+> +	     i++) {
+> +		halg_size = sizeof(event->digests[i].alg_id);
+> +		memcpy(&halg, marker, halg_size);
+> +		marker = marker + halg_size;
+> +		for (j = 0; (j < efispecid->num_algs); j++) {
+> +			if (halg == efispecid->digest_sizes[j].alg_id) {
+> +				marker = marker +
+> +					efispecid->digest_sizes[j].digest_size;
+> +				break;
+> +			}
+> +		}
+> +	}
+> +
+> +	event_field = (struct tcg_event_field *)marker;
+> +	marker = marker + sizeof(event_field->event_size)
+> +		+ event_field->event_size;
+> +	size = marker - marker_start;
+> +
+> +	if ((event->event_type == 0) && (event_field->event_size == 0))
+> +		return 0;
+> +
+> +	return size;
+> +}
+> +
+> +static void *tpm2_bios_measurements_start(struct seq_file *m, loff_t *pos)
+> +{
+> +	struct tpm_chip *chip = m->private;
+> +	struct tpm_bios_log *log = &chip->log;
+> +	void *addr = log->bios_event_log;
+> +	void *limit = log->bios_event_log_end;
+> +	struct tcg_pcr_event *event_header;
+> +	struct tcg_pcr_event2 *event;
+> +	size_t size;
+> +	int i;
+> +
+> +	event_header = addr;
+> +	size = sizeof(struct tcg_pcr_event) - sizeof(event_header->event)
+> +		+ event_header->event_size;
+> +
+> +	if (*pos == 0) {
+> +		if (addr + size < limit) {
+> +			if ((event_header->event_type == 0) &&
+> +			    (event_header->event_size == 0))
+> +				return NULL;
+> +			return SEQ_START_TOKEN;
+> +		}
+> +	}
+> +
+> +	if (*pos > 0) {
+> +		addr += size;
+> +		event = addr;
+> +		size = calc_tpm2_event_size(event, event_header);
+> +		if ((addr + size >=  limit) || (size == 0))
+> +			return NULL;
+> +	}
+> +
+> +	for (i = 0; i < (*pos - 1); i++) {
+> +		event = addr;
+> +		size = calc_tpm2_event_size(event, event_header);
+> +
+> +		if ((addr + size >= limit) || (size == 0))
+> +			return NULL;
+> +		addr += size;
+> +	}
+> +
+> +	return addr;
+> +}
+> +
+> +static void *tpm2_bios_measurements_next(struct seq_file *m, void *v,
+> +					 loff_t *pos)
+> +{
+> +	struct tcg_pcr_event *event_header;
+> +	struct tcg_pcr_event2 *event;
+> +	struct tpm_chip *chip = m->private;
+> +	struct tpm_bios_log *log = &chip->log;
+> +	void *limit = log->bios_event_log_end;
+> +	size_t event_size;
+> +	void *marker;
+> +
+> +	event_header = log->bios_event_log;
+> +
+> +	if (v == SEQ_START_TOKEN) {
+> +		event_size = sizeof(struct tcg_pcr_event) -
+> +			sizeof(event_header->event) + event_header->event_size;
+> +		marker = event_header;
+> +	} else {
+> +		event = v;
+> +		event_size = calc_tpm2_event_size(event, event_header);
+> +		if (event_size == 0)
+> +			return NULL;
+> +		marker = event;
+> +	}
+> +
+> +	marker = marker + event_size;
+> +	if (marker >= limit)
+> +		return NULL;
+> +	v = marker;
+> +	event = v;
+> +
+> +	event_size = calc_tpm2_event_size(event, event_header);
+> +	if (((v + event_size) >= limit) || (event_size == 0))
+> +		return NULL;
+> +
+> +	(*pos)++;
+> +	return v;
+> +}
+> +
+> +static void tpm2_bios_measurements_stop(struct seq_file *m, void *v)
+> +{
+> +}
+> +
+> +static int tpm2_binary_bios_measurements_show(struct seq_file *m, void *v)
+> +{
+> +	struct tpm_chip *chip = m->private;
+> +	struct tpm_bios_log *log = &chip->log;
+> +	struct tcg_pcr_event *event_header = log->bios_event_log;
+> +	struct tcg_pcr_event2 *event = v;
+> +	void *temp_ptr;
+> +	size_t size;
+> +
+> +	if (v == SEQ_START_TOKEN) {
+> +		size = sizeof(struct tcg_pcr_event) -
+> +			sizeof(event_header->event) + event_header->event_size;
+> +
+> +		temp_ptr = event_header;
+> +
+> +		if (size > 0)
+> +			seq_write(m, temp_ptr, size);
+> +	} else {
+> +		size = calc_tpm2_event_size(event, event_header);
+> +		temp_ptr = event;
+> +		if (size > 0)
+> +			seq_write(m, temp_ptr, size);
+> +	}
+> +
+> +	return 0;
+> +}
+> +
+> +const struct seq_operations tpm2_binary_b_measurements_seqops = {
+> +	.start = tpm2_bios_measurements_start,
+> +	.next = tpm2_bios_measurements_next,
+> +	.stop = tpm2_bios_measurements_stop,
+> +	.show = tpm2_binary_bios_measurements_show,
+> +};
+> diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
+> index b7718c9..169edf3 100644
+> --- a/drivers/char/tpm/tpm_acpi.c
+> +++ b/drivers/char/tpm/tpm_acpi.c
+> @@ -54,6 +54,9 @@ int tpm_read_log_acpi(struct tpm_chip *chip)
+>  	u64 len, start;
+>  	struct tpm_bios_log *log;
+>  
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		return -ENODEV;
+> +
+>  	log = &chip->log;
+>  
+>  	/* Unfortuntely ACPI does not associate the event log with a specific
+> diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
+> index 1660d74..8d43328 100644
+> --- a/drivers/char/tpm/tpm_eventlog.h
+> +++ b/drivers/char/tpm/tpm_eventlog.h
+> @@ -2,9 +2,12 @@
+>  #ifndef __TPM_EVENTLOG_H__
+>  #define __TPM_EVENTLOG_H__
+>  
+> +#include <crypto/hash_info.h>
+> +
+>  #define TCG_EVENT_NAME_LEN_MAX	255
+>  #define MAX_TEXT_EVENT		1000	/* Max event string length */
+>  #define ACPI_TCPA_SIG		"TCPA"	/* 0x41504354 /'TCPA' */
+> +#define TPM2_ACTIVE_PCR_BANKS	3
+>  
+>  #ifdef CONFIG_PPC64
+>  #define do_endian_conversion(x) be32_to_cpu(x)
+> @@ -73,6 +76,62 @@ enum tcpa_pc_event_ids {
+>  	HOST_TABLE_OF_DEVICES,
+>  };
+>  
+> +/*
+> + * All the structures related to TPM 2.0 Event Log are taken from TCG EFI
+> + * Protocol Specification, Family "2.0". Document is available on link
+> + * http://www.trustedcomputinggroup.org/tcg-efi-protocol-specification/ .
+> + * Information is also available on TCG PC Client Platform Firmware Profile
+> + * Specification, Family "2.0".
+> + * Detailed digest structures for TPM 2.0 are defined in document
+> + * Trusted Platform Module Library Part 2: Structures, Family "2.0".
+> + */
+
+I think I asked you remove this comment before. Only useful part is the
+link. Everything else in it serves no purpose of any kind.
+
+If you really want to comment in some way this is a version that
+contains the useful information from above:
+
+/* Even Log structures:
+ * http://www.trustedcomputinggroup.org/tcg-efi-protocol-specification/
+ */
+
+Because of this you don't need to send anything. I'm just complaining
+because it is still there :-)
+
+> +
+> +struct tcg_efi_specid_event_algs {
+> +	u16 alg_id;
+> +	u16 digest_size;
+> +} __packed;
+> +
+> +struct tcg_efi_specid_event {
+> +	u8 signature[16];
+> +	u32 platform_class;
+> +	u8 spec_version_minor;
+> +	u8 spec_version_major;
+> +	u8 spec_errata;
+> +	u8 uintnsize;
+> +	u32 num_algs;
+> +	struct tcg_efi_specid_event_algs digest_sizes[TPM2_ACTIVE_PCR_BANKS];
+> +	u8 vendor_info_size;
+> +	u8 vendor_info[0];
+> +} __packed;
+> +
+> +struct tcg_pcr_event {
+> +	u32 pcr_idx;
+> +	u32 event_type;
+> +	u8 digest[20];
+> +	u32 event_size;
+> +	u8 event[0];
+> +} __packed;
+> +
+> +struct tpm2_digest {
+> +	u16 alg_id;
+> +	u8 digest[SHA512_DIGEST_SIZE];
+> +} __packed;
+> +
+> +struct tcg_event_field {
+> +	u32 event_size;
+> +	u8 event[0];
+> +} __packed;
+> +
+> +struct tcg_pcr_event2 {
+> +	u32 pcr_idx;
+> +	u32 event_type;
+> +	u32 count;
+> +	struct tpm2_digest digests[TPM2_ACTIVE_PCR_BANKS];
+> +	struct tcg_event_field event;
+> +} __packed;
+> +
+> +extern const struct seq_operations tpm2_binary_b_measurements_seqops;
+> +
+>  #if defined(CONFIG_ACPI)
+>  int tpm_read_log_acpi(struct tpm_chip *chip);
+>  #else
 > -- 
 > 2.5.0
 > 
+
+I guess that this is OK but since the code isn't peer tested I cannot
+apply.
+
+/Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
