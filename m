@@ -1,188 +1,161 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [PATCH RFC v3 5/5] tpm2: expose resource manager
- via	a device link /dev/tpms<n>
-Date: Mon, 23 Jan 2017 14:16:37 -0800
-Message-ID: <1485209797.2534.29.camel@HansenPartnership.com>
-References: <20170120133914.2wk43nteh2hh7n3c@intel.com>
-	<20170120210522.glx4y4oui36oimld@intel.com>
-	<1485107342.2504.7.camel@HansenPartnership.com>
-	<1485110892.2504.12.camel@HansenPartnership.com>
-	<20170122203055.zg52yraahqvn4rbv@intel.com>
-	<20170122210107.zwrvuhnelrvaoe5h@intel.com>
-	<20170122210441.ivzujugb3urzndhj@intel.com>
-	<1485120988.2504.21.camel@HansenPartnership.com>
-	<20170123140942.svnurymdxsyo6cum@intel.com>
-	<20170123165823.hbgwphsqqpn6jwiz@intel.com>
-	<20170123214255.vt2dumjm6jo5oxd3@intel.com>
+From: Andrey Pronin <apronin@chromium.org>
+Subject: Re: [PATCH] tpm/tpm_i2c_infineon: ensure no ongoing commands on
+ shutdown
+Date: Mon, 23 Jan 2017 14:19:29 -0800
+Message-ID: <20170123221929.GA75281@apronin>
+References: <20170114004230.GA21035@apronin>
+ <20170116161919.GA20238@obsidianresearch.com>
+ <20170117175827.GA124090@apronin>
+ <20170117192728.GF27528@obsidianresearch.com>
+ <20170117201336.GA140854@apronin>
+ <20170117205933.GA9604@obsidianresearch.com>
+ <20170117230053.GA16227@apronin>
+ <20170117232207.GA12127@obsidianresearch.com>
+ <20170123200246.GA63214@apronin>
+ <20170123203901.GA13029@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170123214255.vt2dumjm6jo5oxd3-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20170123203901.GA13029@obsidianresearch.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, semenzato@chromium.org, groeck@chromium.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, 2017-01-23 at 23:42 +0200, Jarkko Sakkinen wrote:
-> On Mon, Jan 23, 2017 at 06:58:23PM +0200, Jarkko Sakkinen wrote:
-> > On Mon, Jan 23, 2017 at 04:09:42PM +0200, Jarkko Sakkinen wrote:
-> > > On Sun, Jan 22, 2017 at 01:36:28PM -0800, James Bottomley wrote:
-> > > > On Sun, 2017-01-22 at 23:04 +0200, Jarkko Sakkinen wrote:
-> > > > > On Sun, Jan 22, 2017 at 11:01:07PM +0200, Jarkko Sakkinen
-> > > > > wrote:
-> > > > > > On Sun, Jan 22, 2017 at 10:30:55PM +0200, Jarkko Sakkinen
-> > > > > > wrote:
-> > > > > > > On Sun, Jan 22, 2017 at 10:48:12AM -0800, James Bottomley
-> > > > > > > wrote:
-> > > > > > > > On Sun, 2017-01-22 at 09:49 -0800, James Bottomley
-> > > > > > > > wrote:
-> > > > > > > > > On Fri, 2017-01-20 at 23:05 +0200, Jarkko Sakkinen
-> > > > > > > > > wrote:
-> > > > > > > > > > 'tabrm4' branch has been now rebased. It's now on
-> > > > > > > > > > top of
-> > > > > > > > > > master
-> > > > > > > > > > branch that contains Stefan's latest patch (min
-> > > > > > > > > > body length
-> > > > > > > > > > check) 
-> > > > > > > > > > that I've reviewed and tested. It also contains
-> > > > > > > > > > your
-> > > > > > > > > > updated
-> > > > > > > > > > /dev/tpms patch.
-> > > > > > > > > > 
-> > > > > > > > > > I guess the 5 commits that are there now are such
-> > > > > > > > > > that we
-> > > > > > > > > > have 
-> > > > > > > > > > fairly good consensus, don't we? If so, can I add
-> > > > > > > > > > your
-> > > > > > > > > > reviewed-by 
-> > > > > > > > > > and tested-by to my commits and vice versa?
-> > > > > > > > > 
-> > > > > > > > > We're still failing my test_transients.  This is the
-> > > > > > > > > full
-> > > > > > > > > python of 
-> > > > > > > > > the test case:
-> > > > > > > > > 
-> > > > > > > > > 
-> > > > > > > > >     def test_transients(self):
-> > > > > > > > >         k = self.open_transients()
-> > > > > > > > >         self.c.flush_context(k[0])
-> > > > > > > > >         self.c.change_auth(self.c.SRK, k[1], None,
-> > > > > > > > > pwd1)
-> > > > > > > > >         ...
-> > > > > > > > > 
-> > > > > > > > > It's failing at self.c.flush_context(k[0]) with
-> > > > > > > > > TPM_RC_VALUE.
-> > > > > > > > >   It's 
-> > > > > > > > > the same problem Ken complained about:
-> > > > > > > > > TPM2_FlushContext
-> > > > > > > > > doesn't have 
-> > > > > > > > > a declared handle area so we don't translate the
-> > > > > > > > > handle being
-> > > > > > > > > sent
-> > > > > > > > > down.  We have to fix this either by intercepting the
-> > > > > > > > > flush
-> > > > > > > > > and 
-> > > > > > > > > manually translating the context, or by being
-> > > > > > > > > dangerously
-> > > > > > > > > clever and 
-> > > > > > > > > marking flush as a command which takes one handle.
-> > > > > > > > 
-> > > > > > > > This is what the dangerously clever fix looks like. 
-> > > > > > > >  With this
-> > > > > > > > and a
-> > > > > > > > few other changes, my smoke tests now pass.
-> > > > > > > > 
-> > > > > > > > James
-> > > > > > > 
-> > > > > > > I don't want to be clever here. I will rather intercept
-> > > > > > > the body
-> > > > > > > and
-> > > > > > > try to keep the core code simple and easy to understand.
-> > > > > > 
-> > > > > > It came out quite clean actually.
-> > > > > > 
-> > > > > > I just encapsulated handle mapping and have this in the
-> > > > > > beginning
-> > > > > > of
-> > > > > > tpm2_map_command:
-> > > > > > 
-> > > > > > if (cc == TPM2_CC_FLUSH_CONTEXT)
-> > > > > > 	return tpm2_map_to_phandle(space,
-> > > > > > &cmd[TPM_HEADER_SIZE]);
-> > > > > > 
-> > > > > > I think this documents better what is actually going on
-> > > > > > than
-> > > > > > tinkering
-> > > > > > cc_attr_tbl.
-> > > > > > 
-> > > > > > /Jarkko
-> > > > > 
-> > > > > Actually what you suggested is much better idea because it
-> > > > > will also
-> > > > > take care of validation.
-> > > > 
-> > > > Yes, that's why it's clever ... I'm just always wary of clever
-> > > > code
-> > > > because of the Kernighan principle.
-> > > > 
-> > > > >  I'm still going to keep tpm2_map_to_phandle because it makes
-> > > > > the 
-> > > > > code flow a lot cleaner and probably sessions have to anyway
-> > > > > make it
-> > > > > even more complicated.
-> > > > 
-> > > > OK, there's one more thing that seems to be causing problems:
-> > > > when
-> > > > tpm2_save_context fails because the handle no longer exists
-> > > > (like it's
-> > > > been flushed) it returns TPM_RC_REFERENCE_H0 not TPM_RC_HANDLE
-> > > > (the
-> > > > session code does seem to return TPM_RC_HANDLE under some
-> > > > circumstances).
-> > > > 
-> > > > James
-> > > 
-> > > What is your way for reproducing this issue? Just want to add
-> > > a test case for my smoke test suite so that I can verify that
-> > > the issue is fixed once I've fixed it.
-> > 
-> > Right. Too easy. Sorry about this. I'll push a fix for this to
-> > tabrm4 branch.
+On Mon, Jan 23, 2017 at 01:39:01PM -0700, Jason Gunthorpe wrote:
+> On Mon, Jan 23, 2017 at 12:02:46PM -0800, Andrey Pronin wrote:
 > 
-> 1. I pushed a fix to the repository.
+> > > But if there is no actual need to do this right now then don't worry
+> > > about overdesigning things..
+> > 
+> > OK, I can live with chip->id specific logic in probe/shutdown, if that's
+> > the current approach.
+> 
+> It is where we are heading.. If it becomes prevelent we will need chip
+> and bus drivers.
+> 
+> > > First class then driver is the usual model, which is OK for TPM.
+> > 
+> > If "first class then driver", then the already existing
+> > register_reboot_notifier() can play the role of the class handler,
+> > since those hooks are called before drivers' shutdown handlers.
+> 
+> Okay.. But maybe fire off patch doing this via the device code, as if
+> that is accepted it is better than the reboot handler in terms of
+> guaranteeing ordering/etc.
+>
 
-I don't think the fix is right; this is what you now have
+You mean introducing shutdown in struct class? Hmm, we can try,
+but...
 
-	} else if ((rc & TPM2_RC_REFERENCE_H0) == TPM2_RC_REFERENCE_H0)
-{
+If we do something in 'struct class' for shutdown, that should
+probably be modeled after power management, for which class
+handlers are already supported. So, I looked more closely at
+how this logic is implemented for suspend in
+drivers/base/power/main.c.
 
-That should be
+Simplifying to class vs driver handlers, it checks class suspend
+first. And if it exists, calls it. Otherwise, it calls driver
+suspend. So, it's "either-or", not "first one, then another".
+Unless I'm missing something obvious, of course...
 
-} else if (rc == TPM2_RC_REFERENCE_H0)
+If we want "first one, then another" it might be better to
+go the register_reboot_notifier() path, instead of trying
+to add something inconsistent with how it is handled for
+power management to the core logic. I suspect those
+notifiers is the mechanism of choice if we need to do
+both class-level and device-level handling.
 
-because the 0x9XX return codes don't have any parameter information
-that needs stripping and (rc & TPM2_RC_REFERENCE_H0) ==
-TPM2_RC_REFERENCE_H0)  will match any error code that has bits 11, 8
-and 5 set.
+And I don't want to implement a class-level handler that'd
+prevent driver handlers from doing device-specific handling,
+if it is needed. Even if we reverse the order and do "driver
+first, and iff it doesn't exist, then class", we'd still
+need to create and export 'tpm_shutdown' for drivers to use
+in their custom handlers. Otherwise, there's no way for
+them to zero out chip->ops and prevent further access to
+the chip.
 
-I think the handle check was wrong too, it should have been
+Thus, after looking at that, I'd still suggest doing one of
+the following:
 
-if (rc & 0xff) == TPM2_RC_HANDLE)
+We can go the register_reboot_notifier() route. Which already
+explicitly supports priorites for those notify handlers, so one
+can be sure that lower-prio handlers are called first. And,
+in any case, all these handlers are called before driver->shutdown
+routines. So, the ordering is very predictable, and we can design
+whatever fits our needs with it.
 
-Because all you need to do is strip off the parameter information
+Or, again, keep it even simpler, but require changes to all tpm
+drivers. Create and export 'tpm_shutdown' in the core, and let
+all the tpm drivers register their own shutdown handlers and
+call it from there, adding their own logic to it, if they want.
+Sorry, f we go this way, looks like we made the full cycle. But
+I only now got to checking what's there in kernel for power
+management.
 
-James
+I don't have strong preferences. In both cases, driver writers
+need to be aware of the shutdown convention. Either (1) know
+that there's a registered notifier, and they won't be able to
+use tpm_transmit from driver->shutdown. Or, (2) know that they
+need to implement driver->shutdown if they support TPM 2.0 or
+can have problems if the chip is reset in the middle of command.
+(1) sounds better (fewer drivers will be affected), but not
+decisively.
 
+> 
+> > 	down_write(&chip->ops_sem);
+> > 	if (chip->ops) {
+> > 		if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> > 			tpm2_shutdown(chip, TPM2_SU_CLEAR);
+> > 		chip->ops = NULL;
+> > 	}
+> > 	up_write(&chip->ops_sem);
+> > on shutdown in registered "reboot notifier".
+> 
+> Sure, seems like a good starting point.
+> 
+> > I went through the places that access chip->ops to see what's
+> > going on at the moment with protecting them with tpm_try_get_ops().
+> > Here is the current state:
+> > 
+> >  - tpm_transmit/tpm_transmit_cmd. Not exported and are only called
+> >    by the core after tpm_try_get_ops() except for one place in
+> >    sysfs - pubek_show().
+> 
+> Most of sysfs calls functions like tpm_pcr_read_dev, tpm_getcap, etc,
+> etc that boil down the tpm_transmit_cmd, so many more need it than you
+> listed.
+> 
 
+Yes, you're right, of course. I definitely needed more coffee before
+writing that. I ended up adding tpm_try_get_ops/tpm_put_ops to almost
+every sysfs call once I started looking into them.
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+> > But it looks a bit brittle. So, before I submit my next patch:
+> > Do you think it's ok to leave wait_for_tpm_stat() and
+> > tpm_get_timeouts() and just continue be mindful when using those
+> > low-level functions?
+> 
+> For xenfront we should someday move it to use TPM_OPS_AUTO_STARTUP and
+> drop the tpm_get_timeouts.
+> 
+> I think it is fine to leave those two low level commands as is..
+> 
+> Like I said, it would be more robust to acquire a lock directly in
+> places like transmit_cmd, but I suspect that is too hard to retrofit
+> at this time...
+> 
+> > and checking for ops == NULL inside those low-level functions:
+> > tpm_transmit, wait_for_tpm_stat, tpm_get_timeout. It then should
+> > probably be separated from get_device(), which can be kept inside
+> > tpm_try_get_ops().
+> 
+> No sense checking for ops=null if you also can't guarentee the lock is
+> held, it is just confusing.
+
+Oh, absolutely. I just meant calling tpm_try_get_ops(), which does both:
+acquires the lock and checks that ops != NULL.
+
+> 
+> Jason
