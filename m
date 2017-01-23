@@ -1,94 +1,74 @@
-From: James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH RFC v4 0/5] RFC: in-kernel resource manager
-Date: Mon, 23 Jan 2017 09:01:03 -0800
-Message-ID: <1485190863.2534.10.camel@linux.vnet.ibm.com>
-References: <20170122234438.12102-1-jarkko.sakkinen@linux.intel.com>
+From: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>
+Subject: Re: [PATCH] tpm_tis: use default timeout value if chip reports it as
+ zero
+Date: Mon, 23 Jan 2017 18:23:55 +0100
+Message-ID: <8f971cbc-a4f6-22c9-fd6d-982bf4691530@maciej.szmigiero.name>
+References: <d5469294-34e6-2e5e-43e8-9ff82579fc2a@maciej.szmigiero.name>
+ <20170116094202.bng7zfznepw7s5la@intel.com>
+ <20170116134612.uuzbb6xi7pw7czyo@intel.com>
+ <20170116135539.4qtrylwt3m2yfapx@intel.com>
+ <17fd82a8-d6fd-d4ec-0965-3ebba25fca0e@maciej.szmigiero.name>
+ <20170116163927.od5coufxvctgknot@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset=windows-1252
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170122234438.12102-1-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20170116163927.od5coufxvctgknot@intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel <linux-kernel@vger.kernel.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Christophe Ricard <christophe.ricard@gmail.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, 2017-01-23 at 01:44 +0200, Jarkko Sakkinen wrote:
-> This patch set adds support for TPM spaces that provide a context
-> for isolating and swapping transient objects. The content does
-> not yet include support for policy and HMAC sessions.
+On 16.01.2017 17:39, Jarkko Sakkinen wrote:
+> On Mon, Jan 16, 2017 at 03:58:26PM +0100, Maciej S. Szmigiero wrote:
+>> On 16.01.2017 14:55, Jarkko Sakkinen wrote:
+>>> On Mon, Jan 16, 2017 at 03:46:12PM +0200, Jarkko Sakkinen wrote:
+>>>> On Mon, Jan 16, 2017 at 11:42:02AM +0200, Jarkko Sakkinen wrote:
+>>>>> On Fri, Jan 13, 2017 at 10:37:00PM +0100, Maciej S. Szmigiero wrote:
+>>>>>> Since commit 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM
+>>>>>> access") Atmel 3203 TPM on ThinkPad X61S (TPM firmware version 13.9) no
+>>>>>> longer works.
+>>>>>> The initialization proceeds fine until we get and start using chip-reported
+>>>>>> timeouts - and the chip reports C and D timeouts of zero.
+>>>>>>
+>>>>>> It turns out that until commit 8e54caf407b98e ("tpm: Provide a generic
+>>>>>> means to override the chip returned timeouts") we had actually let default
+>>>>>> timeout values remain in this case, so let's bring back this behavior to
+>>>>>> make chips like Atmel 3203 work again.
+>>>>>>
+>>>>>> Use a common code that was introduced by that commit so a warning is
+>>>>>> printed in this case and /sys/class/tpm/tpm*/timeouts correctly says the
+>>>>>> timeouts aren't chip-original.
+>>>>>>
+>>>>>> Signed-off-by: Maciej S. Szmigiero <mail@maciej.szmigiero.name>
+>>>>>>
+>>>>>> Fixes: 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM access")
+>>>>>> Cc: stable@vger.kernel.org
+>>>>>
+>>>>> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+>>>>
+>>>> It's now applied to my master branch so if someone wants to
+>>>> test it, it should be fairly easy.
+>>>
+>>> And I decided to squash the rename commit to it.
+>>
+>> Wouldn't it be better to squash the rename commit into "fix iTPM probe via
+>> probe_itpm() function" patch (if it isn't too late), since they touch the
+>> same functionality?
 > 
-> There's a test script for trying out TPM spaces in
-> 
->   git://git.infradead.org/users/jjs/tpm2-scripts.git
-> 
-> A simple smoke test can be run by
-> 
->   sudo python -m unittest -v tpm2_smoke.SpaceTest   
-> 
-> v2:
-> Changed to James' proposal of API. I did not make any other changes
-> except split core TPM space code its own patch because I want to find
-> consensus on the API before polishing the corners. Thus, this version
-> also carries the RFC tag. I have not yet locked in my standpoint
-> whether
-> ioctl or a device file is a better deal.
-> 
-> v3:
-> - Check TPM return code in tpm_map_response.
-> - Reference tracking for /dev/tpms0.
-> - clear_bit(is_open) was removed from tpm-dev.c. Added it back.
-> - Use response length as the buffer size limit in tpm2_commit_space.
-> - This version now passes again my smoke tests.
-> 
-> v4:
-> - Lots of small bug fixes and clean ups.
-> - Quirk for TPM2_CC_FlushHandle
+> It can be renamed, modified and even dropped as long as it is in my
+> master branch and I haven't sent pull request to James Morris.
 
-It's still failing my flush test.  This time the problem is the return
-code on context save failure: it's TPM_RC_REFERENCE_H0 not
-TPM_RC_HANDLE.  This is the fix.  The manual implies TPM_RC_HANDLE
-could also be the return, so I kept both.
+I see that "fix iTPM probe via probe_itpm() function" patch isn't present
+in your pull request for 4.11.
 
-James
+What I meant in previous message was that you squashed and "rename
+TPM_TIS_ITPM_POSSIBLE to TPM_TIS_ITPM_WORKAROUND" patch into "use default timeout
+value if chip reports it as zero" patch while it was logically connected with
+"fix iTPM probe via probe_itpm() function" patch instead (which now isn't present
+at all in the tree).
+Sorry if it wasn't 100% clear.
 
----
+> /Jarkkok
 
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 62e8421..cc1db77 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -106,6 +106,7 @@ enum tpm2_algorithms {
- 	TPM2_ALG_SHA512		= 0x000D,
- 	TPM2_ALG_NULL		= 0x0010,
- 	TPM2_ALG_SM3_256	= 0x0012,
-+	TPM2_RC_REFERENCE_H0	= 0x0910,
- };
- 
- enum tpm2_command_codes {
-diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2-space.c
-index 83e9708..b36337a 100644
---- a/drivers/char/tpm/tpm2-space.c
-+++ b/drivers/char/tpm/tpm2-space.c
-@@ -104,7 +104,8 @@ static int tpm2_save_context(struct tpm_chip *chip, u32 handle, u8 *buf,
- 			 __func__, rc);
- 		tpm_buf_destroy(&tbuf);
- 		return -EFAULT;
--	} else if ((rc & TPM2_RC_HANDLE) == TPM2_RC_HANDLE) {
-+	} else if ((rc & TPM2_RC_HANDLE) == TPM2_RC_HANDLE ||
-+		   rc == TPM2_RC_REFERENCE_H0) {
- 		tpm_buf_destroy(&tbuf);
- 		return -ENOENT;
- 	} else if (rc) {
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+Maciej
