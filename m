@@ -1,16 +1,24 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH RFC v4 1/5] tpm: validate TPM 2.0 commands
-Date: Mon, 23 Jan 2017 23:44:35 +0200
-Message-ID: <20170123214435.6aa75rgy6b3gdfpv@intel.com>
-References: <20170122234438.12102-1-jarkko.sakkinen@linux.intel.com>
-	<20170122234438.12102-2-jarkko.sakkinen@linux.intel.com>
-	<b5837ab8-0edd-86cf-c17d-36d55754219e@linux.vnet.ibm.com>
+From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Subject: Re: [PATCH RFC v3 5/5] tpm2: expose resource manager
+ via	a device link /dev/tpms<n>
+Date: Mon, 23 Jan 2017 14:16:37 -0800
+Message-ID: <1485209797.2534.29.camel@HansenPartnership.com>
+References: <20170120133914.2wk43nteh2hh7n3c@intel.com>
+	<20170120210522.glx4y4oui36oimld@intel.com>
+	<1485107342.2504.7.camel@HansenPartnership.com>
+	<1485110892.2504.12.camel@HansenPartnership.com>
+	<20170122203055.zg52yraahqvn4rbv@intel.com>
+	<20170122210107.zwrvuhnelrvaoe5h@intel.com>
+	<20170122210441.ivzujugb3urzndhj@intel.com>
+	<1485120988.2504.21.camel@HansenPartnership.com>
+	<20170123140942.svnurymdxsyo6cum@intel.com>
+	<20170123165823.hbgwphsqqpn6jwiz@intel.com>
+	<20170123214255.vt2dumjm6jo5oxd3@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <b5837ab8-0edd-86cf-c17d-36d55754219e-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <20170123214255.vt2dumjm6jo5oxd3-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,44 +27,161 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Jan 22, 2017 at 09:02:17PM -0500, Stefan Berger wrote:
-> On 01/22/2017 06:44 PM, Jarkko Sakkinen wrote:
-> > @@ -1025,8 +1029,60 @@ int tpm2_auto_startup(struct tpm_chip *chip)
-> >   		}
-> >   	}
+On Mon, 2017-01-23 at 23:42 +0200, Jarkko Sakkinen wrote:
+> On Mon, Jan 23, 2017 at 06:58:23PM +0200, Jarkko Sakkinen wrote:
+> > On Mon, Jan 23, 2017 at 04:09:42PM +0200, Jarkko Sakkinen wrote:
+> > > On Sun, Jan 22, 2017 at 01:36:28PM -0800, James Bottomley wrote:
+> > > > On Sun, 2017-01-22 at 23:04 +0200, Jarkko Sakkinen wrote:
+> > > > > On Sun, Jan 22, 2017 at 11:01:07PM +0200, Jarkko Sakkinen
+> > > > > wrote:
+> > > > > > On Sun, Jan 22, 2017 at 10:30:55PM +0200, Jarkko Sakkinen
+> > > > > > wrote:
+> > > > > > > On Sun, Jan 22, 2017 at 10:48:12AM -0800, James Bottomley
+> > > > > > > wrote:
+> > > > > > > > On Sun, 2017-01-22 at 09:49 -0800, James Bottomley
+> > > > > > > > wrote:
+> > > > > > > > > On Fri, 2017-01-20 at 23:05 +0200, Jarkko Sakkinen
+> > > > > > > > > wrote:
+> > > > > > > > > > 'tabrm4' branch has been now rebased. It's now on
+> > > > > > > > > > top of
+> > > > > > > > > > master
+> > > > > > > > > > branch that contains Stefan's latest patch (min
+> > > > > > > > > > body length
+> > > > > > > > > > check) 
+> > > > > > > > > > that I've reviewed and tested. It also contains
+> > > > > > > > > > your
+> > > > > > > > > > updated
+> > > > > > > > > > /dev/tpms patch.
+> > > > > > > > > > 
+> > > > > > > > > > I guess the 5 commits that are there now are such
+> > > > > > > > > > that we
+> > > > > > > > > > have 
+> > > > > > > > > > fairly good consensus, don't we? If so, can I add
+> > > > > > > > > > your
+> > > > > > > > > > reviewed-by 
+> > > > > > > > > > and tested-by to my commits and vice versa?
+> > > > > > > > > 
+> > > > > > > > > We're still failing my test_transients.  This is the
+> > > > > > > > > full
+> > > > > > > > > python of 
+> > > > > > > > > the test case:
+> > > > > > > > > 
+> > > > > > > > > 
+> > > > > > > > >     def test_transients(self):
+> > > > > > > > >         k = self.open_transients()
+> > > > > > > > >         self.c.flush_context(k[0])
+> > > > > > > > >         self.c.change_auth(self.c.SRK, k[1], None,
+> > > > > > > > > pwd1)
+> > > > > > > > >         ...
+> > > > > > > > > 
+> > > > > > > > > It's failing at self.c.flush_context(k[0]) with
+> > > > > > > > > TPM_RC_VALUE.
+> > > > > > > > >   It's 
+> > > > > > > > > the same problem Ken complained about:
+> > > > > > > > > TPM2_FlushContext
+> > > > > > > > > doesn't have 
+> > > > > > > > > a declared handle area so we don't translate the
+> > > > > > > > > handle being
+> > > > > > > > > sent
+> > > > > > > > > down.  We have to fix this either by intercepting the
+> > > > > > > > > flush
+> > > > > > > > > and 
+> > > > > > > > > manually translating the context, or by being
+> > > > > > > > > dangerously
+> > > > > > > > > clever and 
+> > > > > > > > > marking flush as a command which takes one handle.
+> > > > > > > > 
+> > > > > > > > This is what the dangerously clever fix looks like. 
+> > > > > > > >  With this
+> > > > > > > > and a
+> > > > > > > > few other changes, my smoke tests now pass.
+> > > > > > > > 
+> > > > > > > > James
+> > > > > > > 
+> > > > > > > I don't want to be clever here. I will rather intercept
+> > > > > > > the body
+> > > > > > > and
+> > > > > > > try to keep the core code simple and easy to understand.
+> > > > > > 
+> > > > > > It came out quite clean actually.
+> > > > > > 
+> > > > > > I just encapsulated handle mapping and have this in the
+> > > > > > beginning
+> > > > > > of
+> > > > > > tpm2_map_command:
+> > > > > > 
+> > > > > > if (cc == TPM2_CC_FLUSH_CONTEXT)
+> > > > > > 	return tpm2_map_to_phandle(space,
+> > > > > > &cmd[TPM_HEADER_SIZE]);
+> > > > > > 
+> > > > > > I think this documents better what is actually going on
+> > > > > > than
+> > > > > > tinkering
+> > > > > > cc_attr_tbl.
+> > > > > > 
+> > > > > > /Jarkko
+> > > > > 
+> > > > > Actually what you suggested is much better idea because it
+> > > > > will also
+> > > > > take care of validation.
+> > > > 
+> > > > Yes, that's why it's clever ... I'm just always wary of clever
+> > > > code
+> > > > because of the Kernighan principle.
+> > > > 
+> > > > >  I'm still going to keep tpm2_map_to_phandle because it makes
+> > > > > the 
+> > > > > code flow a lot cleaner and probably sessions have to anyway
+> > > > > make it
+> > > > > even more complicated.
+> > > > 
+> > > > OK, there's one more thing that seems to be causing problems:
+> > > > when
+> > > > tpm2_save_context fails because the handle no longer exists
+> > > > (like it's
+> > > > been flushed) it returns TPM_RC_REFERENCE_H0 not TPM_RC_HANDLE
+> > > > (the
+> > > > session code does seem to return TPM_RC_HANDLE under some
+> > > > circumstances).
+> > > > 
+> > > > James
+> > > 
+> > > What is your way for reproducing this issue? Just want to add
+> > > a test case for my smoke test suite so that I can verify that
+> > > the issue is fixed once I've fixed it.
 > > 
-> > +	rc = tpm2_get_tpm_pt(chip, TPM_PT_TOTAL_COMMANDS, &nr_commands, NULL);
-> > +	if (rc)
-> > +		goto out;
-> > +
-> > +	/* sanity check */
-> > +	if (nr_commands > INT_MAX) {
-> > +		rc = -E2BIG;
-> > +		goto out;
-> > +	}
-> > +
-> > +	chip->cc_attrs_tbl = devm_kzalloc(&chip->dev, 4 * nr_commands,
-> > +					  GFP_KERNEL);
-> > +
-> > +	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_GET_CAPABILITY);
-> > +	if (rc)
-> > +		goto out;
-> > +
-> > +	tpm_buf_append_u32(&buf, TPM2_CAP_COMMANDS);
-> > +	tpm_buf_append_u32(&buf, TPM2_CC_FIRST);
-> > +	tpm_buf_append_u32(&buf, nr_commands);
-> > +
-> > +	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 0, 0, NULL);
+> > Right. Too easy. Sorry about this. I'll push a fix for this to
+> > tabrm4 branch.
 > 
-> You should probably pass the min_rsp_body_size as 5 + 4 + nr_commands * 4
+> 1. I pushed a fix to the repository.
 
-Thanks. I'll put 9 + 4 * nr_commands as the expected size.
+I don't think the fix is right; this is what you now have
 
-/Jarkko
+	} else if ((rc & TPM2_RC_REFERENCE_H0) == TPM2_RC_REFERENCE_H0)
+{
+
+That should be
+
+} else if (rc == TPM2_RC_REFERENCE_H0)
+
+because the 0x9XX return codes don't have any parameter information
+that needs stripping and (rc & TPM2_RC_REFERENCE_H0) ==
+TPM2_RC_REFERENCE_H0)  will match any error code that has bits 11, 8
+and 5 set.
+
+I think the handle check was wrong too, it should have been
+
+if (rc & 0xff) == TPM2_RC_HANDLE)
+
+Because all you need to do is strip off the parameter information
+
+James
+
+
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
