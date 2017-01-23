@@ -1,16 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v9 2/2] tpm: add securityfs support for
- TPM 2.0 firmware event log
-Date: Mon, 23 Jan 2017 17:13:50 +0200
-Message-ID: <20170123151350.staamgwzcbcfg6b6@intel.com>
-References: <1485156387-7735-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<1485156387-7735-3-git-send-email-nayna@linux.vnet.ibm.com>
+Subject: Re: [PATCH v6 2/2] tpm: enhance TPM 2.0 PCR extend to
+ support multiple banks
+Date: Mon, 23 Jan 2017 17:19:07 +0200
+Message-ID: <20170123151907.ki2bqt5dlmbvl2ol@intel.com>
+References: <1484931913-24909-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<1484931913-24909-3-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1485156387-7735-3-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1484931913-24909-3-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,333 +23,233 @@ To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jan 23, 2017 at 02:26:27AM -0500, Nayna Jain wrote:
-> Unlike the device driver support for TPM 1.2, the TPM 2.0 does
-> not support the securityfs pseudo files for displaying the
-> firmware event log.
+On Fri, Jan 20, 2017 at 12:05:13PM -0500, Nayna Jain wrote:
+> The current TPM 2.0 device driver extends only the SHA1 PCR bank
+> but the TCG Specification[1] recommends extending all active PCR
+> banks, to prevent malicious users from setting unused PCR banks with
+> fake measurements and quoting them.
 > 
-> This patch enables support for providing the TPM 2.0 event log in
-> binary form. TPM 2.0 event log supports a crypto agile format that
-> records multiple digests, which is different from TPM 1.2. This
-> patch enables the tpm_bios_log_setup for TPM 2.0  and adds the
-> event log parser which understand the TPM 2.0 crypto agile format.
+> The existing in-kernel interface(tpm_pcr_extend()) expects only a
+> SHA1 digest.  To extend all active PCR banks with differing
+> digest sizes, the SHA1 digest is padded with trailing 0's as needed.
+> 
+> This patch reuses the defined digest sizes from the crypto subsystem,
+> adding a dependency on CRYPTO_HASH_INFO module.
+> 
+> [1] TPM 2.0 Specification referred here is "TCG PC Client Specific
+> Platform Firmware Profile for TPM 2.0"
 > 
 > Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 > ---
->  drivers/char/tpm/Makefile                          |   2 +-
->  .../char/tpm/{tpm_eventlog.c => tpm1_eventlog.c}   |  35 ++--
->  drivers/char/tpm/tpm2_eventlog.c                   | 203 +++++++++++++++++++++
->  drivers/char/tpm/tpm_acpi.c                        |   3 +
->  drivers/char/tpm/tpm_eventlog.h                    |  59 ++++++
->  5 files changed, 287 insertions(+), 15 deletions(-)
->  rename drivers/char/tpm/{tpm_eventlog.c => tpm1_eventlog.c} (95%)
->  create mode 100644 drivers/char/tpm/tpm2_eventlog.c
+>  drivers/char/tpm/Kconfig         |  1 +
+>  drivers/char/tpm/tpm-interface.c | 15 ++++++-
+>  drivers/char/tpm/tpm.h           |  3 +-
+>  drivers/char/tpm/tpm2-cmd.c      | 91 +++++++++++++++++++++-------------------
+>  drivers/char/tpm/tpm_eventlog.h  |  7 ++++
+>  5 files changed, 73 insertions(+), 44 deletions(-)
 > 
-> diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
-> index a05b1eb..3d386a8 100644
-> --- a/drivers/char/tpm/Makefile
-> +++ b/drivers/char/tpm/Makefile
-> @@ -3,7 +3,7 @@
->  #
->  obj-$(CONFIG_TCG_TPM) += tpm.o
->  tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o \
-> -		tpm_eventlog.o
-> +		tpm1_eventlog.o tpm2_eventlog.o
->  tpm-$(CONFIG_ACPI) += tpm_ppi.o tpm_acpi.o
->  tpm-$(CONFIG_OF) += tpm_of.o
->  obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
-> diff --git a/drivers/char/tpm/tpm_eventlog.c b/drivers/char/tpm/tpm1_eventlog.c
-> similarity index 95%
-> rename from drivers/char/tpm/tpm_eventlog.c
-> rename to drivers/char/tpm/tpm1_eventlog.c
-> index 11bb113..9a8605e 100644
-> --- a/drivers/char/tpm/tpm_eventlog.c
-> +++ b/drivers/char/tpm/tpm1_eventlog.c
-> @@ -390,9 +390,6 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
->  	unsigned int cnt;
->  	int rc = 0;
+> diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
+> index 277186d..af985cc 100644
+> --- a/drivers/char/tpm/Kconfig
+> +++ b/drivers/char/tpm/Kconfig
+> @@ -6,6 +6,7 @@ menuconfig TCG_TPM
+>  	tristate "TPM Hardware Support"
+>  	depends on HAS_IOMEM
+>  	select SECURITYFS
+> +	select CRYPTO_HASH_INFO
+>  	---help---
+>  	  If you have a TPM security chip in your system, which
+>  	  implements the Trusted Computing Group's specification,
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index a3461cb..cf959c3 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -772,13 +772,26 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
+>  	struct tpm_cmd_t cmd;
+>  	int rc;
+>  	struct tpm_chip *chip;
+> +	int max_active_banks = ARRAY_SIZE(chip->active_banks);
+> +	struct tpm2_digest digest_list[max_active_banks];
+> +	u32 count = 0;
+> +	int i;
 >  
-> -	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> -		return 0;
-> -
->  	rc = tpm_read_log(chip);
->  	if (rc)
+>  	chip = tpm_chip_find_get(chip_num);
+>  	if (chip == NULL)
+>  		return -ENODEV;
+>  
+>  	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+> -		rc = tpm2_pcr_extend(chip, pcr_idx, hash);
+> +		memset(digest_list, 0, sizeof(digest_list));
+> +
+> +		for (i = 0; (chip->active_banks[i] != TPM2_ALG_ERROR) &&
+> +		     (i < max_active_banks); i++) {
+> +			digest_list[i].alg_id = chip->active_banks[i];
+> +			memcpy(digest_list[i].digest, hash, TPM_DIGEST_SIZE);
+> +			count++;
+> +		}
+> +
+> +		rc = tpm2_pcr_extend(chip, pcr_idx, count, digest_list);
+>  		tpm_put_ops(chip);
 >  		return rc;
-> @@ -407,7 +404,13 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
->  	cnt++;
+>  	}
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index c291f19..07a0677 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -534,7 +534,8 @@ static inline void tpm_add_ppi(struct tpm_chip *chip)
+>  #endif
 >  
->  	chip->bin_log_seqops.chip = chip;
-> -	chip->bin_log_seqops.seqops = &tpm_binary_b_measurements_seqops;
-> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> +		chip->bin_log_seqops.seqops =
-> +			&tpm2_binary_b_measurements_seqops;
-> +	else
-> +		chip->bin_log_seqops.seqops =
-> +			&tpm_binary_b_measurements_seqops;
-> +
+>  int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf);
+> -int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash);
+> +int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
+> +		    struct tpm2_digest *digests);
+>  int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max);
+>  int tpm2_seal_trusted(struct tpm_chip *chip,
+>  		      struct trusted_key_payload *payload,
+> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+> index 0e000a3..d78adb8 100644
+> --- a/drivers/char/tpm/tpm2-cmd.c
+> +++ b/drivers/char/tpm/tpm2-cmd.c
+> @@ -53,22 +53,6 @@ struct tpm2_pcr_read_out {
+>  	u8	digest[TPM_DIGEST_SIZE];
+>  } __packed;
 >  
->  	chip->bios_dir[cnt] =
->  	    securityfs_create_file("binary_bios_measurements",
-> @@ -418,17 +421,21 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
->  		goto err;
->  	cnt++;
+> -struct tpm2_null_auth_area {
+> -	__be32			handle;
+> -	__be16			nonce_size;
+> -	u8			attributes;
+> -	__be16			auth_size;
+> -} __packed;
+> -
+> -struct tpm2_pcr_extend_in {
+> -	__be32				pcr_idx;
+> -	__be32				auth_area_size;
+> -	struct tpm2_null_auth_area	auth_area;
+> -	__be32				digest_cnt;
+> -	__be16				hash_alg;
+> -	u8				digest[TPM_DIGEST_SIZE];
+> -} __packed;
+> -
+>  struct tpm2_get_tpm_pt_in {
+>  	__be32	cap_id;
+>  	__be32	property_id;
+> @@ -97,7 +81,6 @@ union tpm2_cmd_params {
+>  	struct	tpm2_self_test_in	selftest_in;
+>  	struct	tpm2_pcr_read_in	pcrread_in;
+>  	struct	tpm2_pcr_read_out	pcrread_out;
+> -	struct	tpm2_pcr_extend_in	pcrextend_in;
+>  	struct	tpm2_get_tpm_pt_in	get_tpm_pt_in;
+>  	struct	tpm2_get_tpm_pt_out	get_tpm_pt_out;
+>  	struct	tpm2_get_random_in	getrandom_in;
+> @@ -290,46 +273,68 @@ int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
+>  	return rc;
+>  }
 >  
-> -	chip->ascii_log_seqops.chip = chip;
-> -	chip->ascii_log_seqops.seqops = &tpm_ascii_b_measurements_seqops;
-> +	if (!(chip->flags & TPM_CHIP_FLAG_TPM2)) {
+> -#define TPM2_GET_PCREXTEND_IN_SIZE \
+> -	(sizeof(struct tpm_input_header) + \
+> -	 sizeof(struct tpm2_pcr_extend_in))
+> -
+> -static const struct tpm_input_header tpm2_pcrextend_header = {
+> -	.tag = cpu_to_be16(TPM2_ST_SESSIONS),
+> -	.length = cpu_to_be32(TPM2_GET_PCREXTEND_IN_SIZE),
+> -	.ordinal = cpu_to_be32(TPM2_CC_PCR_EXTEND)
+> -};
+> +struct tpm2_null_auth_area {
+> +	__be32  handle;
+> +	__be16  nonce_size;
+> +	u8  attributes;
+> +	__be16  auth_size;
+> +} __packed;
 >  
-> -	chip->bios_dir[cnt] =
-> -	    securityfs_create_file("ascii_bios_measurements",
-> -				   0440, chip->bios_dir[0],
-> -				   (void *)&chip->ascii_log_seqops,
-> -				   &tpm_bios_measurements_ops);
-> -	if (IS_ERR(chip->bios_dir[cnt]))
-> -		goto err;
-> -	cnt++;
-> +		chip->ascii_log_seqops.chip = chip;
-> +		chip->ascii_log_seqops.seqops =
-> +			&tpm_ascii_b_measurements_seqops;
-> +
-> +		chip->bios_dir[cnt] =
-> +			securityfs_create_file("ascii_bios_measurements",
-> +					       0440, chip->bios_dir[0],
-> +					       (void *)&chip->ascii_log_seqops,
-> +					       &tpm_bios_measurements_ops);
-> +		if (IS_ERR(chip->bios_dir[cnt]))
-> +			goto err;
-> +		cnt++;
-> +	}
->  
->  	return 0;
->  
-> diff --git a/drivers/char/tpm/tpm2_eventlog.c b/drivers/char/tpm/tpm2_eventlog.c
-> new file mode 100644
-> index 0000000..513897c
-> --- /dev/null
-> +++ b/drivers/char/tpm/tpm2_eventlog.c
-> @@ -0,0 +1,203 @@
-> +/*
-> + * Copyright (C) 2016 IBM Corporation
-> + *
-> + * Authors:
-> + *      Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-> + *
-> + * Access to TPM 2.0 event log as written by Firmware.
-> + * It assumes that writer of event log has followed TCG Specification
-> + * for Family "2.0" and written the event data in little endian.
-> + * With that, it doesn't need any endian conversion for structure
-> + * content.
-> + *
-> + * This program is free software; you can redistribute it and/or
-> + * modify it under the terms of the GNU General Public License
-> + * as published by the Free Software Foundation; either version
-> + * 2 of the License, or (at your option) any later version.
-> + */
-> +
-> +#include <linux/seq_file.h>
-> +#include <linux/fs.h>
-> +#include <linux/security.h>
-> +#include <linux/module.h>
-> +#include <linux/slab.h>
-> +
-> +#include "tpm.h"
-> +#include "tpm_eventlog.h"
-> +
-> +/*
-> + * calc_tpm2_event_size() - calculate the event size, where event
-> + * is an entry in the TPM 2.0 event log. The event is of type Crypto
-> + * Agile Log Entry Format as defined in TCG EFI Protocol Specification
-> + * Family "2.0".
-> +
-> + * @event: event whose size is to be calculated.
-> + * @event_header: the first event in the event log.
-> + *
-> + * Returns size of the event. If it is an invalid event, returns 0.
-> + */
-> +static int calc_tpm2_event_size(struct tcg_pcr_event2 *event,
-> +				struct tcg_pcr_event *event_header)
-> +{
-> +	struct tcg_efi_specid_event *efispecid;
-> +	struct tcg_event_field *event_field;
-> +	void *marker;
-> +	void *marker_start;
-> +	u32 halg_size;
-> +	size_t size;
-> +	u16 halg;
+>  /**
+>   * tpm2_pcr_extend() - extend a PCR value
+>   *
+>   * @chip:	TPM chip to use.
+>   * @pcr_idx:	index of the PCR.
+> - * @hash:	hash value to use for the extend operation.
+> + * @count:	number of digests passed.
+> + * @digests:	list of pcr banks and corresponding digest values to extend.
+>   *
+>   * Return: Same as with tpm_transmit_cmd.
+>   */
+> -int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash)
+> +int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
+> +		    struct tpm2_digest *digests)
+>  {
+> -	struct tpm2_cmd cmd;
+> +	struct tpm_buf buf;
+> +	struct tpm2_null_auth_area auth_area;
+>  	int rc;
 > +	int i;
 > +	int j;
 > +
-> +	marker = event;
-> +	marker_start = marker;
-> +	marker = marker + sizeof(event->pcr_idx) + sizeof(event->event_type)
-> +		+ sizeof(event->count);
+> +	if (count > ARRAY_SIZE(chip->active_banks))
+> +		return -EINVAL;
+>  
+> -	cmd.header.in = tpm2_pcrextend_header;
+> -	cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(pcr_idx);
+> -	cmd.params.pcrextend_in.auth_area_size =
+> -		cpu_to_be32(sizeof(struct tpm2_null_auth_area));
+> -	cmd.params.pcrextend_in.auth_area.handle =
+> -		cpu_to_be32(TPM2_RS_PW);
+> -	cmd.params.pcrextend_in.auth_area.nonce_size = 0;
+> -	cmd.params.pcrextend_in.auth_area.attributes = 0;
+> -	cmd.params.pcrextend_in.auth_area.auth_size = 0;
+> -	cmd.params.pcrextend_in.digest_cnt = cpu_to_be32(1);
+> -	cmd.params.pcrextend_in.hash_alg = cpu_to_be16(TPM2_ALG_SHA1);
+> -	memcpy(cmd.params.pcrextend_in.digest, hash, TPM_DIGEST_SIZE);
+> +	rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS, TPM2_CC_PCR_EXTEND);
+> +	if (rc)
+> +		return rc;
+>  
+> -	rc = tpm_transmit_cmd(chip, &cmd, sizeof(cmd), 0,
+> +	tpm_buf_append_u32(&buf, pcr_idx);
 > +
-> +	efispecid = (struct tcg_efi_specid_event *)event_header->event;
+> +	auth_area.handle = cpu_to_be32(TPM2_RS_PW);
+> +	auth_area.nonce_size = 0;
+> +	auth_area.attributes = 0;
+> +	auth_area.auth_size = 0;
 > +
-> +	for (i = 0; (i < event->count) && (i < TPM2_ACTIVE_PCR_BANKS);
-> +	     i++) {
-> +		halg_size = sizeof(event->digests[i].alg_id);
-> +		memcpy(&halg, marker, halg_size);
-> +		marker = marker + halg_size;
-> +		for (j = 0; (j < efispecid->num_algs); j++) {
-> +			if (halg == efispecid->digest_sizes[j].alg_id) {
-> +				marker = marker +
-> +					efispecid->digest_sizes[j].digest_size;
-> +				break;
-> +			}
+> +	tpm_buf_append_u32(&buf, sizeof(struct tpm2_null_auth_area));
+> +	tpm_buf_append(&buf, (const unsigned char *)&auth_area,
+> +		       sizeof(auth_area));
+> +	tpm_buf_append_u32(&buf, count);
+> +
+> +	for (i = 0; i < count; i++) {
+> +		for (j = 0; j < ARRAY_SIZE(tpm2_hash_map); j++) {
+> +			if (digests[i].alg_id != tpm2_hash_map[j].tpm_id)
+> +				continue;
+> +
+> +			tpm_buf_append_u16(&buf, digests[i].alg_id);
+> +			tpm_buf_append(&buf, (const unsigned char
+> +					      *)&digests[i].digest,
+> +				hash_digest_size[tpm2_hash_map[j].crypto_id]);
 > +		}
 > +	}
 > +
-> +	event_field = (struct tcg_event_field *)marker;
-> +	marker = marker + sizeof(event_field->event_size)
-> +		+ event_field->event_size;
-> +	size = marker - marker_start;
-> +
-> +	if ((event->event_type == 0) && (event_field->event_size == 0))
-> +		return 0;
-> +
-> +	return size;
-> +}
-> +
-> +static void *tpm2_bios_measurements_start(struct seq_file *m, loff_t *pos)
-> +{
-> +	struct tpm_chip *chip = m->private;
-> +	struct tpm_bios_log *log = &chip->log;
-> +	void *addr = log->bios_event_log;
-> +	void *limit = log->bios_event_log_end;
-> +	struct tcg_pcr_event *event_header;
-> +	struct tcg_pcr_event2 *event;
-> +	size_t size;
-> +	int i;
-> +
-> +	event_header = addr;
-> +	size = sizeof(struct tcg_pcr_event) - sizeof(event_header->event)
-> +		+ event_header->event_size;
-> +
-> +	if (*pos == 0) {
-> +		if (addr + size < limit) {
-> +			if ((event_header->event_type == 0) &&
-> +			    (event_header->event_size == 0))
-> +				return NULL;
-> +			return SEQ_START_TOKEN;
-> +		}
-> +	}
-> +
-> +	if (*pos > 0) {
-> +		addr += size;
-> +		event = addr;
-> +		size = calc_tpm2_event_size(event, event_header);
-> +		if ((addr + size >=  limit) || (size == 0))
-> +			return NULL;
-> +	}
-> +
-> +	for (i = 0; i < (*pos - 1); i++) {
-> +		event = addr;
-> +		size = calc_tpm2_event_size(event, event_header);
-> +
-> +		if ((addr + size >= limit) || (size == 0))
-> +			return NULL;
-> +		addr += size;
-> +	}
-> +
-> +	return addr;
-> +}
-> +
-> +static void *tpm2_bios_measurements_next(struct seq_file *m, void *v,
-> +					 loff_t *pos)
-> +{
-> +	struct tcg_pcr_event *event_header;
-> +	struct tcg_pcr_event2 *event;
-> +	struct tpm_chip *chip = m->private;
-> +	struct tpm_bios_log *log = &chip->log;
-> +	void *limit = log->bios_event_log_end;
-> +	size_t event_size;
-> +	void *marker;
-> +
-> +	event_header = log->bios_event_log;
-> +
-> +	if (v == SEQ_START_TOKEN) {
-> +		event_size = sizeof(struct tcg_pcr_event) -
-> +			sizeof(event_header->event) + event_header->event_size;
-> +		marker = event_header;
-> +	} else {
-> +		event = v;
-> +		event_size = calc_tpm2_event_size(event, event_header);
-> +		if (event_size == 0)
-> +			return NULL;
-> +		marker = event;
-> +	}
-> +
-> +	marker = marker + event_size;
-> +	if (marker >= limit)
-> +		return NULL;
-> +	v = marker;
-> +	event = v;
-> +
-> +	event_size = calc_tpm2_event_size(event, event_header);
-> +	if (((v + event_size) >= limit) || (event_size == 0))
-> +		return NULL;
-> +
-> +	(*pos)++;
-> +	return v;
-> +}
-> +
-> +static void tpm2_bios_measurements_stop(struct seq_file *m, void *v)
-> +{
-> +}
-> +
-> +static int tpm2_binary_bios_measurements_show(struct seq_file *m, void *v)
-> +{
-> +	struct tpm_chip *chip = m->private;
-> +	struct tpm_bios_log *log = &chip->log;
-> +	struct tcg_pcr_event *event_header = log->bios_event_log;
-> +	struct tcg_pcr_event2 *event = v;
-> +	void *temp_ptr;
-> +	size_t size;
-> +
-> +	if (v == SEQ_START_TOKEN) {
-> +		size = sizeof(struct tcg_pcr_event) -
-> +			sizeof(event_header->event) + event_header->event_size;
-> +
-> +		temp_ptr = event_header;
-> +
-> +		if (size > 0)
-> +			seq_write(m, temp_ptr, size);
-> +	} else {
-> +		size = calc_tpm2_event_size(event, event_header);
-> +		temp_ptr = event;
-> +		if (size > 0)
-> +			seq_write(m, temp_ptr, size);
-> +	}
-> +
-> +	return 0;
-> +}
-> +
-> +const struct seq_operations tpm2_binary_b_measurements_seqops = {
-> +	.start = tpm2_bios_measurements_start,
-> +	.next = tpm2_bios_measurements_next,
-> +	.stop = tpm2_bios_measurements_stop,
-> +	.show = tpm2_binary_bios_measurements_show,
-> +};
-> diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
-> index b7718c9..169edf3 100644
-> --- a/drivers/char/tpm/tpm_acpi.c
-> +++ b/drivers/char/tpm/tpm_acpi.c
-> @@ -54,6 +54,9 @@ int tpm_read_log_acpi(struct tpm_chip *chip)
->  	u64 len, start;
->  	struct tpm_bios_log *log;
+> +	rc = tpm_transmit_cmd(chip, buf.data, tpm_buf_length(&buf), 0,
+>  			      "attempting extend a PCR value");
 >  
-> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> +		return -ENODEV;
+> +	tpm_buf_destroy(&buf);
 > +
->  	log = &chip->log;
+>  	return rc;
+>  }
 >  
->  	/* Unfortuntely ACPI does not associate the event log with a specific
+> @@ -993,6 +998,8 @@ int tpm2_auto_startup(struct tpm_chip *chip)
+>  		}
+>  	}
+>  
+> +	rc = tpm2_get_pcr_allocation(chip);
+> +
+>  out:
+>  	if (rc > 0)
+>  		rc = -ENODEV;
 > diff --git a/drivers/char/tpm/tpm_eventlog.h b/drivers/char/tpm/tpm_eventlog.h
-> index 1660d74..8d43328 100644
+> index 1660d74..b5ae372 100644
 > --- a/drivers/char/tpm/tpm_eventlog.h
 > +++ b/drivers/char/tpm/tpm_eventlog.h
-> @@ -2,9 +2,12 @@
+> @@ -2,6 +2,8 @@
 >  #ifndef __TPM_EVENTLOG_H__
 >  #define __TPM_EVENTLOG_H__
 >  
@@ -358,93 +258,16 @@ On Mon, Jan 23, 2017 at 02:26:27AM -0500, Nayna Jain wrote:
 >  #define TCG_EVENT_NAME_LEN_MAX	255
 >  #define MAX_TEXT_EVENT		1000	/* Max event string length */
 >  #define ACPI_TCPA_SIG		"TCPA"	/* 0x41504354 /'TCPA' */
-> +#define TPM2_ACTIVE_PCR_BANKS	3
->  
->  #ifdef CONFIG_PPC64
->  #define do_endian_conversion(x) be32_to_cpu(x)
-> @@ -73,6 +76,62 @@ enum tcpa_pc_event_ids {
+> @@ -73,6 +75,11 @@ enum tcpa_pc_event_ids {
 >  	HOST_TABLE_OF_DEVICES,
 >  };
 >  
-> +/*
-> + * All the structures related to TPM 2.0 Event Log are taken from TCG EFI
-> + * Protocol Specification, Family "2.0". Document is available on link
-> + * http://www.trustedcomputinggroup.org/tcg-efi-protocol-specification/ .
-> + * Information is also available on TCG PC Client Platform Firmware Profile
-> + * Specification, Family "2.0".
-> + * Detailed digest structures for TPM 2.0 are defined in document
-> + * Trusted Platform Module Library Part 2: Structures, Family "2.0".
-> + */
-
-I think I asked you remove this comment before. Only useful part is the
-link. Everything else in it serves no purpose of any kind.
-
-If you really want to comment in some way this is a version that
-contains the useful information from above:
-
-/* Even Log structures:
- * http://www.trustedcomputinggroup.org/tcg-efi-protocol-specification/
- */
-
-Because of this you don't need to send anything. I'm just complaining
-because it is still there :-)
-
-> +
-> +struct tcg_efi_specid_event_algs {
-> +	u16 alg_id;
-> +	u16 digest_size;
-> +} __packed;
-> +
-> +struct tcg_efi_specid_event {
-> +	u8 signature[16];
-> +	u32 platform_class;
-> +	u8 spec_version_minor;
-> +	u8 spec_version_major;
-> +	u8 spec_errata;
-> +	u8 uintnsize;
-> +	u32 num_algs;
-> +	struct tcg_efi_specid_event_algs digest_sizes[TPM2_ACTIVE_PCR_BANKS];
-> +	u8 vendor_info_size;
-> +	u8 vendor_info[0];
-> +} __packed;
-> +
-> +struct tcg_pcr_event {
-> +	u32 pcr_idx;
-> +	u32 event_type;
-> +	u8 digest[20];
-> +	u32 event_size;
-> +	u8 event[0];
-> +} __packed;
-> +
 > +struct tpm2_digest {
 > +	u16 alg_id;
 > +	u8 digest[SHA512_DIGEST_SIZE];
 > +} __packed;
-> +
-> +struct tcg_event_field {
-> +	u32 event_size;
-> +	u8 event[0];
-> +} __packed;
-> +
-> +struct tcg_pcr_event2 {
-> +	u32 pcr_idx;
-> +	u32 event_type;
-> +	u32 count;
-> +	struct tpm2_digest digests[TPM2_ACTIVE_PCR_BANKS];
-> +	struct tcg_event_field event;
-> +} __packed;
-> +
-> +extern const struct seq_operations tpm2_binary_b_measurements_seqops;
-> +
->  #if defined(CONFIG_ACPI)
->  int tpm_read_log_acpi(struct tpm_chip *chip);
->  #else
-> -- 
-> 2.5.0
-> 
 
-I guess that this is OK but since the code isn't peer tested I cannot
-apply.
+Shouldn't this be in tpm.h?
 
 /Jarkko
 
