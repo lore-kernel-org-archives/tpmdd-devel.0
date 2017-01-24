@@ -1,64 +1,71 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm: Begin the process to deprecate user_read_timer
-Date: Tue, 24 Jan 2017 16:32:12 +0200
-Message-ID: <20170124143212.w6k6i7jzal5wamir@intel.com>
-References: <20170124000608.GA29708@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH RFC] tpm: define a command filter
+Date: Tue, 24 Jan 2017 16:36:00 +0200
+Message-ID: <20170124143600.siyhblj67qaatewi@intel.com>
+References: <20170124000258.16818-1-jarkko.sakkinen@linux.intel.com>
+	<20170124001918.GA29735@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170124000608.GA29708@obsidianresearch.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, open list <linux-kernel@vger.kernel.org>
+In-Reply-To: <20170124001918.GA29735-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jan 23, 2017 at 05:06:08PM -0700, Jason Gunthorpe wrote:
-> For a long time the cdev read/write interface had this strange
-> idea that userspace had to read the result within 60 seconds otherwise
-> it is discarded. Perhaps this made sense under some older locking regime,
-> but in the modern kernel it is not required and is just dangerous.
+On Mon, Jan 23, 2017 at 05:19:18PM -0700, Jason Gunthorpe wrote:
+> On Tue, Jan 24, 2017 at 02:02:52AM +0200, Jarkko Sakkinen wrote:
+> > This commit adds a command filter for whitelisting a set of commands in
+> > a TPM space. When a TPM space is created through /dev/tpms0, no
+> > commands are allowed. The user of the TPM space must explicitly define
+> > the list of commands allowed before sending any commands. This ioctl is
+> > a one shot call so that a resource manager daemon can call it before
+> > sending the file descriptor to the client.
 > 
-> Since something may be relying on this, double the timeout and print a
-> warning. We can remove the code in a few years, but this should be
-> enough to prevent new users.
+> I don't think it makes sense to have a daemon in user space that
+> passes an open'd /dev/tpms0 FD directly to a client..
 > 
-> Suggested-by: James Bottomley <James.Bottomley@HansenPartnership.com>
-> Signed-off-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+> It is trivial and more powerful to just proxy the messages. Can you
+> see some reason why passing a FD through a daemon would make sense?
+> 
+> The earlier discussion with James was to have some way to apply a
+> global command filter to all tpms0 users with the idea that the
+> 'right' restricted command set would enable a 0666 cdev node, and no
+> daemon.
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Is that a conflicting goal?
 
-Thanks. I'll include this to my next PR for 4.11 as it does not add
-any new features.
+Maybe the ioctl could be restricted by CAP_MAC_ADMIN in that case?
+
+How would you propose to change the code below? I guess the "core
+code" is about right and this is more about API, am I right?
 
 /Jarkko
 
-> ---
->  drivers/char/tpm/tpm-dev.c | 5 ++++-
->  1 file changed, 4 insertions(+), 1 deletion(-)
 > 
-> diff --git a/drivers/char/tpm/tpm-dev.c b/drivers/char/tpm/tpm-dev.c
-> index 826d4eaf84fcd6..06d7c8a6e7063c 100644
-> --- a/drivers/char/tpm/tpm-dev.c
-> +++ b/drivers/char/tpm/tpm-dev.c
-> @@ -38,6 +38,9 @@ static void user_reader_timeout(unsigned long ptr)
->  {
->  	struct file_priv *priv = (struct file_priv *)ptr;
->  
-> +	pr_warn("TPM user space timeout is deprecated (pid=%d)\n",
-> +		task_tgid_nr(current));
-> +
->  	schedule_work(&priv->work);
->  }
->  
-> @@ -159,7 +162,7 @@ static ssize_t tpm_write(struct file *file, const char __user *buf,
->  	mutex_unlock(&priv->buffer_mutex);
->  
->  	/* Set a timeout by which the reader must come claim the result */
-> -	mod_timer(&priv->user_read_timer, jiffies + (60 * HZ));
-> +	mod_timer(&priv->user_read_timer, jiffies + (120 * HZ));
->  
->  	return in_size;
->  }
-> -- 
-> 2.7.4
+> > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> > 1. This patch applies on top of 'tabrm4' brach.
+> > 2. Only compilation is tested (just drafted the idea)
+> >  drivers/char/tpm/tpm-interface.c | 12 +++++--
+> >  drivers/char/tpm/tpm.h           |  1 +
+> >  drivers/char/tpm/tpm2-space.c    |  7 ++++
+> >  drivers/char/tpm/tpms-dev.c      | 75 ++++++++++++++++++++++++++++++++++++++++
+> >  include/uapi/linux/tpms.h        | 29 ++++++++++++++++
+> 
+> BTW, don't forget to update kbuild when you add uapi files... Applies
+> to other patches..
+> 
+> Jason
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
