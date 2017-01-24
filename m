@@ -1,80 +1,158 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm_tis: use default timeout value if chip reports it as
- zero
-Date: Tue, 24 Jan 2017 14:01:24 +0200
-Message-ID: <20170124120124.ycq2maroibtesjhu@intel.com>
-References: <d5469294-34e6-2e5e-43e8-9ff82579fc2a@maciej.szmigiero.name>
- <20170116094202.bng7zfznepw7s5la@intel.com>
- <20170116134612.uuzbb6xi7pw7czyo@intel.com>
- <20170116135539.4qtrylwt3m2yfapx@intel.com>
- <17fd82a8-d6fd-d4ec-0965-3ebba25fca0e@maciej.szmigiero.name>
- <20170116163927.od5coufxvctgknot@intel.com>
- <8f971cbc-a4f6-22c9-fd6d-982bf4691530@maciej.szmigiero.name>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH RFC v3 5/5] tpm2: expose resource manager
+ via a device link /dev/tpms<n>
+Date: Tue, 24 Jan 2017 14:03:44 +0200
+Message-ID: <20170124120344.iso5su7oqhednoeo@intel.com>
+References: <20170120133914.2wk43nteh2hh7n3c@intel.com>
+	<20170120210522.glx4y4oui36oimld@intel.com>
+	<1485107342.2504.7.camel@HansenPartnership.com>
+	<1485110892.2504.12.camel@HansenPartnership.com>
+	<20170122203055.zg52yraahqvn4rbv@intel.com>
+	<20170122210107.zwrvuhnelrvaoe5h@intel.com>
+	<20170122210441.ivzujugb3urzndhj@intel.com>
+	<1485120988.2504.21.camel@HansenPartnership.com>
+	<20170123140942.svnurymdxsyo6cum@intel.com>
+	<1485188095.2534.6.camel@HansenPartnership.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <8f971cbc-a4f6-22c9-fd6d-982bf4691530@maciej.szmigiero.name>
-Sender: linux-kernel-owner@vger.kernel.org
-To: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel <linux-kernel@vger.kernel.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Christophe Ricard <christophe.ricard@gmail.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+In-Reply-To: <1485188095.2534.6.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jan 23, 2017 at 06:23:55PM +0100, Maciej S. Szmigiero wrote:
-> On 16.01.2017 17:39, Jarkko Sakkinen wrote:
-> > On Mon, Jan 16, 2017 at 03:58:26PM +0100, Maciej S. Szmigiero wrote:
-> >> On 16.01.2017 14:55, Jarkko Sakkinen wrote:
-> >>> On Mon, Jan 16, 2017 at 03:46:12PM +0200, Jarkko Sakkinen wrote:
-> >>>> On Mon, Jan 16, 2017 at 11:42:02AM +0200, Jarkko Sakkinen wrote:
-> >>>>> On Fri, Jan 13, 2017 at 10:37:00PM +0100, Maciej S. Szmigiero wrote:
-> >>>>>> Since commit 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM
-> >>>>>> access") Atmel 3203 TPM on ThinkPad X61S (TPM firmware version 13.9) no
-> >>>>>> longer works.
-> >>>>>> The initialization proceeds fine until we get and start using chip-reported
-> >>>>>> timeouts - and the chip reports C and D timeouts of zero.
-> >>>>>>
-> >>>>>> It turns out that until commit 8e54caf407b98e ("tpm: Provide a generic
-> >>>>>> means to override the chip returned timeouts") we had actually let default
-> >>>>>> timeout values remain in this case, so let's bring back this behavior to
-> >>>>>> make chips like Atmel 3203 work again.
-> >>>>>>
-> >>>>>> Use a common code that was introduced by that commit so a warning is
-> >>>>>> printed in this case and /sys/class/tpm/tpm*/timeouts correctly says the
-> >>>>>> timeouts aren't chip-original.
-> >>>>>>
-> >>>>>> Signed-off-by: Maciej S. Szmigiero <mail@maciej.szmigiero.name>
-> >>>>>>
-> >>>>>> Fixes: 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM access")
-> >>>>>> Cc: stable@vger.kernel.org
-> >>>>>
-> >>>>> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-> >>>>
-> >>>> It's now applied to my master branch so if someone wants to
-> >>>> test it, it should be fairly easy.
-> >>>
-> >>> And I decided to squash the rename commit to it.
-> >>
-> >> Wouldn't it be better to squash the rename commit into "fix iTPM probe via
-> >> probe_itpm() function" patch (if it isn't too late), since they touch the
-> >> same functionality?
+On Mon, Jan 23, 2017 at 08:14:55AM -0800, James Bottomley wrote:
+> On Mon, 2017-01-23 at 16:09 +0200, Jarkko Sakkinen wrote:
+> > On Sun, Jan 22, 2017 at 01:36:28PM -0800, James Bottomley wrote:
+> > > On Sun, 2017-01-22 at 23:04 +0200, Jarkko Sakkinen wrote:
+> > > > On Sun, Jan 22, 2017 at 11:01:07PM +0200, Jarkko Sakkinen wrote:
+> > > > > On Sun, Jan 22, 2017 at 10:30:55PM +0200, Jarkko Sakkinen
+> > > > > wrote:
+> > > > > > On Sun, Jan 22, 2017 at 10:48:12AM -0800, James Bottomley
+> > > > > > wrote:
+> > > > > > > On Sun, 2017-01-22 at 09:49 -0800, James Bottomley wrote:
+> > > > > > > > On Fri, 2017-01-20 at 23:05 +0200, Jarkko Sakkinen wrote:
+> > > > > > > > > 'tabrm4' branch has been now rebased. It's now on top
+> > > > > > > > > of
+> > > > > > > > > master
+> > > > > > > > > branch that contains Stefan's latest patch (min body
+> > > > > > > > > length
+> > > > > > > > > check) 
+> > > > > > > > > that I've reviewed and tested. It also contains your
+> > > > > > > > > updated
+> > > > > > > > > /dev/tpms patch.
+> > > > > > > > > 
+> > > > > > > > > I guess the 5 commits that are there now are such that
+> > > > > > > > > we
+> > > > > > > > > have 
+> > > > > > > > > fairly good consensus, don't we? If so, can I add your
+> > > > > > > > > reviewed-by 
+> > > > > > > > > and tested-by to my commits and vice versa?
+> > > > > > > > 
+> > > > > > > > We're still failing my test_transients.  This is the full
+> > > > > > > > python of 
+> > > > > > > > the test case:
+> > > > > > > > 
+> > > > > > > > 
+> > > > > > > >     def test_transients(self):
+> > > > > > > >         k = self.open_transients()
+> > > > > > > >         self.c.flush_context(k[0])
+> > > > > > > >         self.c.change_auth(self.c.SRK, k[1], None, pwd1)
+> > > > > > > >         ...
+> > > > > > > > 
+> > > > > > > > It's failing at self.c.flush_context(k[0]) with
+> > > > > > > > TPM_RC_VALUE.
+> > > > > > > >   It's 
+> > > > > > > > the same problem Ken complained about: TPM2_FlushContext
+> > > > > > > > doesn't have 
+> > > > > > > > a declared handle area so we don't translate the handle
+> > > > > > > > being
+> > > > > > > > sent
+> > > > > > > > down.  We have to fix this either by intercepting the
+> > > > > > > > flush
+> > > > > > > > and 
+> > > > > > > > manually translating the context, or by being dangerously
+> > > > > > > > clever and 
+> > > > > > > > marking flush as a command which takes one handle.
+> > > > > > > 
+> > > > > > > This is what the dangerously clever fix looks like.  With
+> > > > > > > this
+> > > > > > > and a
+> > > > > > > few other changes, my smoke tests now pass.
+> > > > > > > 
+> > > > > > > James
+> > > > > > 
+> > > > > > I don't want to be clever here. I will rather intercept the
+> > > > > > body
+> > > > > > and
+> > > > > > try to keep the core code simple and easy to understand.
+> > > > > 
+> > > > > It came out quite clean actually.
+> > > > > 
+> > > > > I just encapsulated handle mapping and have this in the
+> > > > > beginning
+> > > > > of
+> > > > > tpm2_map_command:
+> > > > > 
+> > > > > if (cc == TPM2_CC_FLUSH_CONTEXT)
+> > > > > 	return tpm2_map_to_phandle(space,
+> > > > > &cmd[TPM_HEADER_SIZE]);
+> > > > > 
+> > > > > I think this documents better what is actually going on than
+> > > > > tinkering
+> > > > > cc_attr_tbl.
+> > > > > 
+> > > > > /Jarkko
+> > > > 
+> > > > Actually what you suggested is much better idea because it will
+> > > > also
+> > > > take care of validation.
+> > > 
+> > > Yes, that's why it's clever ... I'm just always wary of clever code
+> > > because of the Kernighan principle.
+> > > 
+> > > >  I'm still going to keep tpm2_map_to_phandle because it makes the
+> > > > code flow a lot cleaner and probably sessions have to anyway make
+> > > > it
+> > > > even more complicated.
+> > > 
+> > > OK, there's one more thing that seems to be causing problems: when
+> > > tpm2_save_context fails because the handle no longer exists (like
+> > > it's
+> > > been flushed) it returns TPM_RC_REFERENCE_H0 not TPM_RC_HANDLE (the
+> > > session code does seem to return TPM_RC_HANDLE under some
+> > > circumstances).
+> > > 
+> > > James
 > > 
-> > It can be renamed, modified and even dropped as long as it is in my
-> > master branch and I haven't sent pull request to James Morris.
+> > What is your way for reproducing this issue? Just want to add
+> > a test case for my smoke test suite so that I can verify that
+> > the issue is fixed once I've fixed it.
 > 
-> I see that "fix iTPM probe via probe_itpm() function" patch isn't present
-> in your pull request for 4.11.
 > 
-> What I meant in previous message was that you squashed and "rename
-> TPM_TIS_ITPM_POSSIBLE to TPM_TIS_ITPM_WORKAROUND" patch into "use default timeout
-> value if chip reports it as zero" patch while it was logically connected with
-> "fix iTPM probe via probe_itpm() function" patch instead (which now isn't present
-> at all in the tree).
-> Sorry if it wasn't 100% clear.
+> It's the test_handle_clearing test in tpm2_sessions_smoke.py.  It's
+> probably easier if I publish the current state of my mods to your tpm2
+> -scripts, so here they are:
+> 
+> http://git.kernel.org/cgit/linux/kernel/git/jejb/tpm2-scripts.git/
 
-I see.
+Thanks. I think you can use also this list to send updates to my
+test scripts in future.
 
-I'll probably send later on pull request with fixes for release content
-I can include that commit into that pull request. Does that work for
-you?
+> James
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
