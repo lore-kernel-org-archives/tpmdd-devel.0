@@ -1,181 +1,99 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC v3 5/5] tpm2: expose resource manager
- via    a device link /dev/tpms<n>
-Date: Wed, 25 Jan 2017 15:42:38 +0200
-Message-ID: <20170125134238.luz5uknzdcdvfljy@intel.com>
-References: <1485110892.2504.12.camel@HansenPartnership.com>
- <20170122203055.zg52yraahqvn4rbv@intel.com>
- <20170122210107.zwrvuhnelrvaoe5h@intel.com>
- <20170122210441.ivzujugb3urzndhj@intel.com>
- <1485120988.2504.21.camel@HansenPartnership.com>
- <20170123140942.svnurymdxsyo6cum@intel.com>
- <20170123165823.hbgwphsqqpn6jwiz@intel.com>
- <20170123214255.vt2dumjm6jo5oxd3@intel.com>
- <1485209797.2534.29.camel@HansenPartnership.com>
- <20170125134004.g77ezmfkkhya643y@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: [PATCH] tpm: remove tpm_read_index and
+	tpm_write_index from tpm.h
+Date: Wed, 25 Jan 2017 16:48:58 +0200
+Message-ID: <20170125144858.24889-1-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20170125134004.g77ezmfkkhya643y@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: James Bottomley <James.Bottomley@HansenPartnership.com>
-Cc: linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, open list <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jan 25, 2017 at 03:40:04PM +0200, Jarkko Sakkinen wrote:
-> On Mon, Jan 23, 2017 at 02:16:37PM -0800, James Bottomley wrote:
-> > On Mon, 2017-01-23 at 23:42 +0200, Jarkko Sakkinen wrote:
-> > > On Mon, Jan 23, 2017 at 06:58:23PM +0200, Jarkko Sakkinen wrote:
-> > > > On Mon, Jan 23, 2017 at 04:09:42PM +0200, Jarkko Sakkinen wrote:
-> > > > > On Sun, Jan 22, 2017 at 01:36:28PM -0800, James Bottomley wrote:
-> > > > > > On Sun, 2017-01-22 at 23:04 +0200, Jarkko Sakkinen wrote:
-> > > > > > > On Sun, Jan 22, 2017 at 11:01:07PM +0200, Jarkko Sakkinen
-> > > > > > > wrote:
-> > > > > > > > On Sun, Jan 22, 2017 at 10:30:55PM +0200, Jarkko Sakkinen
-> > > > > > > > wrote:
-> > > > > > > > > On Sun, Jan 22, 2017 at 10:48:12AM -0800, James Bottomley
-> > > > > > > > > wrote:
-> > > > > > > > > > On Sun, 2017-01-22 at 09:49 -0800, James Bottomley
-> > > > > > > > > > wrote:
-> > > > > > > > > > > On Fri, 2017-01-20 at 23:05 +0200, Jarkko Sakkinen
-> > > > > > > > > > > wrote:
-> > > > > > > > > > > > 'tabrm4' branch has been now rebased. It's now on
-> > > > > > > > > > > > top of
-> > > > > > > > > > > > master
-> > > > > > > > > > > > branch that contains Stefan's latest patch (min
-> > > > > > > > > > > > body length
-> > > > > > > > > > > > check) 
-> > > > > > > > > > > > that I've reviewed and tested. It also contains
-> > > > > > > > > > > > your
-> > > > > > > > > > > > updated
-> > > > > > > > > > > > /dev/tpms patch.
-> > > > > > > > > > > > 
-> > > > > > > > > > > > I guess the 5 commits that are there now are such
-> > > > > > > > > > > > that we
-> > > > > > > > > > > > have 
-> > > > > > > > > > > > fairly good consensus, don't we? If so, can I add
-> > > > > > > > > > > > your
-> > > > > > > > > > > > reviewed-by 
-> > > > > > > > > > > > and tested-by to my commits and vice versa?
-> > > > > > > > > > > 
-> > > > > > > > > > > We're still failing my test_transients.  This is the
-> > > > > > > > > > > full
-> > > > > > > > > > > python of 
-> > > > > > > > > > > the test case:
-> > > > > > > > > > > 
-> > > > > > > > > > > 
-> > > > > > > > > > >     def test_transients(self):
-> > > > > > > > > > >         k = self.open_transients()
-> > > > > > > > > > >         self.c.flush_context(k[0])
-> > > > > > > > > > >         self.c.change_auth(self.c.SRK, k[1], None,
-> > > > > > > > > > > pwd1)
-> > > > > > > > > > >         ...
-> > > > > > > > > > > 
-> > > > > > > > > > > It's failing at self.c.flush_context(k[0]) with
-> > > > > > > > > > > TPM_RC_VALUE.
-> > > > > > > > > > >   It's 
-> > > > > > > > > > > the same problem Ken complained about:
-> > > > > > > > > > > TPM2_FlushContext
-> > > > > > > > > > > doesn't have 
-> > > > > > > > > > > a declared handle area so we don't translate the
-> > > > > > > > > > > handle being
-> > > > > > > > > > > sent
-> > > > > > > > > > > down.  We have to fix this either by intercepting the
-> > > > > > > > > > > flush
-> > > > > > > > > > > and 
-> > > > > > > > > > > manually translating the context, or by being
-> > > > > > > > > > > dangerously
-> > > > > > > > > > > clever and 
-> > > > > > > > > > > marking flush as a command which takes one handle.
-> > > > > > > > > > 
-> > > > > > > > > > This is what the dangerously clever fix looks like. 
-> > > > > > > > > >  With this
-> > > > > > > > > > and a
-> > > > > > > > > > few other changes, my smoke tests now pass.
-> > > > > > > > > > 
-> > > > > > > > > > James
-> > > > > > > > > 
-> > > > > > > > > I don't want to be clever here. I will rather intercept
-> > > > > > > > > the body
-> > > > > > > > > and
-> > > > > > > > > try to keep the core code simple and easy to understand.
-> > > > > > > > 
-> > > > > > > > It came out quite clean actually.
-> > > > > > > > 
-> > > > > > > > I just encapsulated handle mapping and have this in the
-> > > > > > > > beginning
-> > > > > > > > of
-> > > > > > > > tpm2_map_command:
-> > > > > > > > 
-> > > > > > > > if (cc == TPM2_CC_FLUSH_CONTEXT)
-> > > > > > > > 	return tpm2_map_to_phandle(space,
-> > > > > > > > &cmd[TPM_HEADER_SIZE]);
-> > > > > > > > 
-> > > > > > > > I think this documents better what is actually going on
-> > > > > > > > than
-> > > > > > > > tinkering
-> > > > > > > > cc_attr_tbl.
-> > > > > > > > 
-> > > > > > > > /Jarkko
-> > > > > > > 
-> > > > > > > Actually what you suggested is much better idea because it
-> > > > > > > will also
-> > > > > > > take care of validation.
-> > > > > > 
-> > > > > > Yes, that's why it's clever ... I'm just always wary of clever
-> > > > > > code
-> > > > > > because of the Kernighan principle.
-> > > > > > 
-> > > > > > >  I'm still going to keep tpm2_map_to_phandle because it makes
-> > > > > > > the 
-> > > > > > > code flow a lot cleaner and probably sessions have to anyway
-> > > > > > > make it
-> > > > > > > even more complicated.
-> > > > > > 
-> > > > > > OK, there's one more thing that seems to be causing problems:
-> > > > > > when
-> > > > > > tpm2_save_context fails because the handle no longer exists
-> > > > > > (like it's
-> > > > > > been flushed) it returns TPM_RC_REFERENCE_H0 not TPM_RC_HANDLE
-> > > > > > (the
-> > > > > > session code does seem to return TPM_RC_HANDLE under some
-> > > > > > circumstances).
-> > > > > > 
-> > > > > > James
-> > > > > 
-> > > > > What is your way for reproducing this issue? Just want to add
-> > > > > a test case for my smoke test suite so that I can verify that
-> > > > > the issue is fixed once I've fixed it.
-> > > > 
-> > > > Right. Too easy. Sorry about this. I'll push a fix for this to
-> > > > tabrm4 branch.
-> > > 
-> > > 1. I pushed a fix to the repository.
-> > 
-> > I don't think the fix is right; this is what you now have
-> > 
-> > 	} else if ((rc & TPM2_RC_REFERENCE_H0) == TPM2_RC_REFERENCE_H0)
-> > {
-> > 
-> > That should be
-> > 
-> > } else if (rc == TPM2_RC_REFERENCE_H0)
-> 
-> Right I see your point.
-> 
-> And yes, also for RC_HANDLE the error handling was done incorrectly.  It
-> should be masked like you said with 0xff to catch error number and the F
-> flag (bit 7).
-> 
-> As it is format zero error code it should be fine to check without any
-> mask.
-> 
-> Thanks for noting this. It is easy to shoot yourself into foot when
-> there's lot of stuff packed :-)
-> 
-> /Jarkko
+These are non-generic functions and do not belong to tpm.h.
 
-I think I actually add a helper to tpm.h to get the error number.
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+---
+ drivers/char/tpm/tpm.h       | 11 -----------
+ drivers/char/tpm/tpm_atmel.h |  6 ++++++
+ drivers/char/tpm/tpm_nsc.c   | 12 ++++++++++++
+ 3 files changed, 18 insertions(+), 11 deletions(-)
 
-/Jarkko
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 7216bd7..244fcff 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -195,17 +195,6 @@ struct tpm_chip {
+ 
+ #define to_tpm_chip(d) container_of(d, struct tpm_chip, dev)
+ 
+-static inline int tpm_read_index(int base, int index)
+-{
+-	outb(index, base);
+-	return inb(base+1) & 0xFF;
+-}
+-
+-static inline void tpm_write_index(int base, int index, int value)
+-{
+-	outb(index, base);
+-	outb(value & 0xFF, base+1);
+-}
+ struct tpm_input_header {
+ 	__be16	tag;
+ 	__be32	length;
+diff --git a/drivers/char/tpm/tpm_atmel.h b/drivers/char/tpm/tpm_atmel.h
+index 4f96d80..5c82eb4 100644
+--- a/drivers/char/tpm/tpm_atmel.h
++++ b/drivers/char/tpm/tpm_atmel.h
+@@ -96,6 +96,12 @@ enum tpm_atmel_addr {
+ 	TPM_ATMEL_BASE_ADDR_HI = 0x09
+ };
+ 
++static inline int tpm_read_index(int base, int index)
++{
++	outb(index, base);
++	return inb(base+1) & 0xFF;
++}
++
+ /* Verify this is a 1.1 Atmel TPM */
+ static int atmel_verify_tpm11(void)
+ {
+diff --git a/drivers/char/tpm/tpm_nsc.c b/drivers/char/tpm/tpm_nsc.c
+index 9ff0e07..5d6cce7 100644
+--- a/drivers/char/tpm/tpm_nsc.c
++++ b/drivers/char/tpm/tpm_nsc.c
+@@ -278,6 +278,18 @@ static struct platform_driver nsc_drv = {
+ 	},
+ };
+ 
++static inline int tpm_read_index(int base, int index)
++{
++	outb(index, base);
++	return inb(base+1) & 0xFF;
++}
++
++static inline void tpm_write_index(int base, int index, int value)
++{
++	outb(index, base);
++	outb(value & 0xFF, base+1);
++}
++
+ static int __init init_nsc(void)
+ {
+ 	int rc = 0;
+-- 
+2.9.3
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
