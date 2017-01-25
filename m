@@ -1,63 +1,56 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH] tpm: fix RC value check in tpm2_seal_trusted
-Date: Wed, 25 Jan 2017 23:03:48 +0200
-Message-ID: <20170125210348.13790-1-jarkko.sakkinen@linux.intel.com>
+From: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Subject: Re: [tpmdd-devel] [PATCH v6 0/2] enhance TPM 2.0 extend function to
+ support multiple PCR banks
+Date: Wed, 25 Jan 2017 16:08:55 -0500
+Message-ID: <03751871-ab12-9413-4034-e4efbf020ab4@linux.vnet.ibm.com>
+References: <1484931913-24909-1-git-send-email-nayna@linux.vnet.ibm.com>
+ <20170125204535.bduqiywtlvgidoj6@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset=windows-1252; format=flowed
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170125204535.bduqiywtlvgidoj6@intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Nayna Jain <nayna@linux.vnet.ibm.com>
+Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Fixes: 5ca4c20cfd37 ("keys, trusted: select hash algorithm for TPM2 chips")
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
----
- drivers/char/tpm/tpm.h      | 5 +++++
- drivers/char/tpm/tpm2-cmd.c | 2 +-
- 2 files changed, 6 insertions(+), 1 deletion(-)
+On 01/25/2017 03:45 PM, Jarkko Sakkinen wrote:
+> On Fri, Jan 20, 2017 at 12:05:11PM -0500, Nayna Jain wrote:
+>> IMA extends its hash measurements in the TPM PCRs, based on policy.
+>> The existing in-kernel TPM extend function extends only the SHA1
+>> PCR bank. TPM 2.0 defines multiple PCR banks, to support different
+>> hash algorithms. The TCG TPM 2.0 Specification[1] recommends
+>> extending all active PCR banks to prevent malicious users from
+>> setting unused PCR banks with fake measurements and quoting them.
+>> This patch set adds support for extending all active PCR banks,
+>> as recommended.
+>>
+>> The first patch implements the TPM 2.0 capability to retrieve
+>> the list of active PCR banks.
+>>
+>> The second patch modifies the tpm_pcr_extend() and tpm2_pcr_extend()
+>> interface to support extending multiple PCR banks. The existing
+>> tpm_pcr_extend() interface expects only a SHA1 digest. Hence, to
+>> extend all active PCR banks with differing digest sizes for TPM 2.0,
+>> the SHA1 digest is padded with 0's as needed.
+>>
+>> [1] TPM 2.0 Specification referred here is "TCG PC Client Specific
+>> Platform Firmware Profile for TPM 2.0"
+> I pushed these patches. I had to resolve merge conflicts caused
+> by the min_rsp_body_length parameter in tpm_transmit_cmd. Can you
+> verify that I didn't break anything?
 
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 4e5fb22..abc621e 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -523,6 +523,11 @@ static inline void tpm_add_ppi(struct tpm_chip *chip)
- }
- #endif
- 
-+static inline inline u32 tpm2_rc_value(u32 rc)
-+{
-+	return (rc & BIT(7)) ? rc & 0xff : rc;
-+}
-+
- int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf);
- int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
- 		    struct tpm2_digest *digests);
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 6c8174a..40b09ca 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -551,7 +551,7 @@ int tpm2_seal_trusted(struct tpm_chip *chip,
- 	tpm_buf_destroy(&buf);
- 
- 	if (rc > 0) {
--		if ((rc & TPM2_RC_HASH) == TPM2_RC_HASH)
-+		if (tpm2_rc_value(rc) == TPM2_RC_HASH)
- 			rc = -EINVAL;
- 		else
- 			rc = -EPERM;
--- 
-2.9.3
+It looks like this hunk here got into the wrong patch:
+
+@@ -1061,7 +1068,7 @@ ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
+         tpm_buf_append_u32(&buf, 0);
+         tpm_buf_append_u32(&buf, 1);
+
+-       rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 0,
++       rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 9, 0,
+                               "get tpm pcr allocation");
+         if (rc < 0)
+                 goto out;
 
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
