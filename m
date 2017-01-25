@@ -1,56 +1,28 @@
-From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: Re: [tpmdd-devel] [PATCH v6 0/2] enhance TPM 2.0 extend function to
- support multiple PCR banks
-Date: Wed, 25 Jan 2017 16:08:55 -0500
-Message-ID: <03751871-ab12-9413-4034-e4efbf020ab4@linux.vnet.ibm.com>
-References: <1484931913-24909-1-git-send-email-nayna@linux.vnet.ibm.com>
- <20170125204535.bduqiywtlvgidoj6@intel.com>
+From: Ken Goldman <kgold@linux.vnet.ibm.com>
+Subject: Re: [tpmdd-devel] [PATCH v9 2/2] tpm: add securityfs support,for TPM
+ 2.0 firmware event log
+Date: Wed, 25 Jan 2017 16:22:45 -0500
+Message-ID: <de409ad1-de39-20d2-bda6-5d2a965e7256@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=windows-1252; format=flowed
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170125204535.bduqiywtlvgidoj6@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Nayna Jain <nayna@linux.vnet.ibm.com>
-Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 01/25/2017 03:45 PM, Jarkko Sakkinen wrote:
-> On Fri, Jan 20, 2017 at 12:05:11PM -0500, Nayna Jain wrote:
->> IMA extends its hash measurements in the TPM PCRs, based on policy.
->> The existing in-kernel TPM extend function extends only the SHA1
->> PCR bank. TPM 2.0 defines multiple PCR banks, to support different
->> hash algorithms. The TCG TPM 2.0 Specification[1] recommends
->> extending all active PCR banks to prevent malicious users from
->> setting unused PCR banks with fake measurements and quoting them.
->> This patch set adds support for extending all active PCR banks,
->> as recommended.
->>
->> The first patch implements the TPM 2.0 capability to retrieve
->> the list of active PCR banks.
->>
->> The second patch modifies the tpm_pcr_extend() and tpm2_pcr_extend()
->> interface to support extending multiple PCR banks. The existing
->> tpm_pcr_extend() interface expects only a SHA1 digest. Hence, to
->> extend all active PCR banks with differing digest sizes for TPM 2.0,
->> the SHA1 digest is padded with 0's as needed.
->>
->> [1] TPM 2.0 Specification referred here is "TCG PC Client Specific
->> Platform Firmware Profile for TPM 2.0"
-> I pushed these patches. I had to resolve merge conflicts caused
-> by the min_rsp_body_length parameter in tpm_transmit_cmd. Can you
-> verify that I didn't break anything?
+> You do not need to send a new patch set version as long as this
+> one gets peer tested. And it needs to be tested without hacks
+> like plumbing TCPA with TPM 2.0 in QEMU. OF code paths needs to
+> be peer tested to be more specific.
+>
+> For me the code itself looks good but I simply cannot take it in
+> in the current situation.
+>
+> /Jarkko
 
-It looks like this hunk here got into the wrong patch:
+Tested-by: Kenneth Goldman <kgold@linux.vnet.ibm.com>
 
-@@ -1061,7 +1068,7 @@ ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
-         tpm_buf_append_u32(&buf, 0);
-         tpm_buf_append_u32(&buf, 1);
-
--       rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 0,
-+       rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 9, 0,
-                               "get tpm pcr allocation");
-         if (rc < 0)
-                 goto out;
-
-
+I validated a firmware event log taken from a Power 8 against PCR 0-7 
+values for the SHA-1 and SHA-256 banks from a Nuvoton TPM 2.0 chip on 
+that same platform.
