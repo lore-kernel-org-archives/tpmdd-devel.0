@@ -1,60 +1,57 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH v6 0/2] enhance TPM 2.0 extend function to
- support multiple PCR banks
-Date: Thu, 26 Jan 2017 00:04:01 +0200
-Message-ID: <20170125220401.6i2icwp4ruiebwpj@intel.com>
-References: <1484931913-24909-1-git-send-email-nayna@linux.vnet.ibm.com>
- <20170125204535.bduqiywtlvgidoj6@intel.com>
- <03751871-ab12-9413-4034-e4efbf020ab4@linux.vnet.ibm.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH RFC] tpm: define a command filter
+Date: Wed, 25 Jan 2017 15:11:36 -0700
+Message-ID: <20170125221136.GA713@obsidianresearch.com>
+References: <20170124000258.16818-1-jarkko.sakkinen@linux.intel.com>
+	<20170124001918.GA29735@obsidianresearch.com>
+	<20170124143600.siyhblj67qaatewi@intel.com>
+	<20170124190707.GA9899@obsidianresearch.com>
+	<20170125202137.7bsv7lptvpzl2fjz@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <03751871-ab12-9413-4034-e4efbf020ab4@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Cc: Nayna Jain <nayna@linux.vnet.ibm.com>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+In-Reply-To: <20170125202137.7bsv7lptvpzl2fjz-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jan 25, 2017 at 04:08:55PM -0500, Stefan Berger wrote:
-> On 01/25/2017 03:45 PM, Jarkko Sakkinen wrote:
-> > On Fri, Jan 20, 2017 at 12:05:11PM -0500, Nayna Jain wrote:
-> > > IMA extends its hash measurements in the TPM PCRs, based on policy.
-> > > The existing in-kernel TPM extend function extends only the SHA1
-> > > PCR bank. TPM 2.0 defines multiple PCR banks, to support different
-> > > hash algorithms. The TCG TPM 2.0 Specification[1] recommends
-> > > extending all active PCR banks to prevent malicious users from
-> > > setting unused PCR banks with fake measurements and quoting them.
-> > > This patch set adds support for extending all active PCR banks,
-> > > as recommended.
-> > > 
-> > > The first patch implements the TPM 2.0 capability to retrieve
-> > > the list of active PCR banks.
-> > > 
-> > > The second patch modifies the tpm_pcr_extend() and tpm2_pcr_extend()
-> > > interface to support extending multiple PCR banks. The existing
-> > > tpm_pcr_extend() interface expects only a SHA1 digest. Hence, to
-> > > extend all active PCR banks with differing digest sizes for TPM 2.0,
-> > > the SHA1 digest is padded with 0's as needed.
-> > > 
-> > > [1] TPM 2.0 Specification referred here is "TCG PC Client Specific
-> > > Platform Firmware Profile for TPM 2.0"
-> > I pushed these patches. I had to resolve merge conflicts caused
-> > by the min_rsp_body_length parameter in tpm_transmit_cmd. Can you
-> > verify that I didn't break anything?
-> 
-> It looks like this hunk here got into the wrong patch:
-> 
-> @@ -1061,7 +1068,7 @@ ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
->         tpm_buf_append_u32(&buf, 0);
->         tpm_buf_append_u32(&buf, 1);
-> 
-> -       rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 0,
-> +       rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 9, 0,
->                               "get tpm pcr allocation");
->         if (rc < 0)
->                 goto out;
+On Wed, Jan 25, 2017 at 10:21:37PM +0200, Jarkko Sakkinen wrote:
 
-Thanks. I'll eventually fix this before sending the next pull request.
+> There should be anyway someway to limit what commands can be sent but
+> I understand your point.
 
-/Jarkko
+What is the filter for?
+
+James and I talked about a filter to create a safer cdev for use by
+users. However tpms0 cannot be that 'safer' cdev - it is now the 'all
+access' path.
+
+I also suggested a filter in the kernel to ensure that the RM is only
+passing commands it actually knows it handles properly. eg you would
+filter out list handles. That is hardwired into the kernel, and does
+not ge to be configured by user space.
+
+> Would it make more sense to have a sysfs file for configuring the
+> global filter that would get the data in the same format (list of
+> 16-bit words)?
+
+Probably not, then there is no way to escape the filter in userspace,
+so some command just become impossible even for root. (And no,
+something like tpm should not test CAP_ flags, that is putting
+too much policy into the kernel)
+
+Jason
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
