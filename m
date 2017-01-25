@@ -1,45 +1,23 @@
-From: Ken Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v6 2/2] tpm: enhance TPM 2.0 PCR extend to,
- support multiple banks
-Date: Wed, 25 Jan 2017 17:11:42 -0500
-Message-ID: <beaf57a6-67a1-dd26-6e45-243dd46eb3f0@linux.vnet.ibm.com>
+From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Subject: Re: [PATCH] tpm: fix RC value check in tpm2_seal_trusted
+Date: Wed, 25 Jan 2017 15:12:45 -0700
+Message-ID: <20170125221245.GB713@obsidianresearch.com>
+References: <20170125210348.13790-1-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20170125210348.13790-1-jarkko.sakkinen@linux.intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-> The current TPM 2.0 device driver extends only the SHA1 PCR bank
-> but the TCG Specification[1] recommends extending all active PCR
-> banks, to prevent malicious users from setting unused PCR banks with
-> fake measurements and quoting them.
->
-> The existing in-kernel interface(tpm_pcr_extend()) expects only a
-> SHA1 digest.  To extend all active PCR banks with differing
-> digest sizes, the SHA1 digest is padded with trailing 0's as needed.
->
-> This patch reuses the defined digest sizes from the crypto subsystem,
-> adding a dependency on CRYPTO_HASH_INFO module.
->
-> [1] TPM 2.0 Specification referred here is "TCG PC Client Specific
-> Platform Firmware Profile for TPM 2.0"
+On Wed, Jan 25, 2017 at 11:03:48PM +0200, Jarkko Sakkinen wrote:
+> Fixes: 5ca4c20cfd37 ("keys, trusted: select hash algorithm for TPM2 chips")
+> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
-Tested-by: Kenneth Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+I think you need a commit message for this.. Is this following the
+spec?
 
-I obtained an IMA event log from a Power platform, along with the PCR 10 
-value from both the SHA-1 and SHA-256 banks of its Nuvoton TPM 2.0.  I 
-independently validated that the event log matches the TPM PCR values.
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+Jason
