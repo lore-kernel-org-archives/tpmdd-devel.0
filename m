@@ -1,18 +1,12 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH RFC] tpm: define a command filter
-Date: Wed, 25 Jan 2017 15:11:36 -0700
-Message-ID: <20170125221136.GA713@obsidianresearch.com>
-References: <20170124000258.16818-1-jarkko.sakkinen@linux.intel.com>
-	<20170124001918.GA29735@obsidianresearch.com>
-	<20170124143600.siyhblj67qaatewi@intel.com>
-	<20170124190707.GA9899@obsidianresearch.com>
-	<20170125202137.7bsv7lptvpzl2fjz@intel.com>
+From: Ken Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH v6 2/2] tpm: enhance TPM 2.0 PCR extend to,
+ support multiple banks
+Date: Wed, 25 Jan 2017 17:11:42 -0500
+Message-ID: <beaf57a6-67a1-dd26-6e45-243dd46eb3f0@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170125202137.7bsv7lptvpzl2fjz-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,36 +15,30 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jan 25, 2017 at 10:21:37PM +0200, Jarkko Sakkinen wrote:
+> The current TPM 2.0 device driver extends only the SHA1 PCR bank
+> but the TCG Specification[1] recommends extending all active PCR
+> banks, to prevent malicious users from setting unused PCR banks with
+> fake measurements and quoting them.
+>
+> The existing in-kernel interface(tpm_pcr_extend()) expects only a
+> SHA1 digest.  To extend all active PCR banks with differing
+> digest sizes, the SHA1 digest is padded with trailing 0's as needed.
+>
+> This patch reuses the defined digest sizes from the crypto subsystem,
+> adding a dependency on CRYPTO_HASH_INFO module.
+>
+> [1] TPM 2.0 Specification referred here is "TCG PC Client Specific
+> Platform Firmware Profile for TPM 2.0"
 
-> There should be anyway someway to limit what commands can be sent but
-> I understand your point.
+Tested-by: Kenneth Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 
-What is the filter for?
+I obtained an IMA event log from a Power platform, along with the PCR 10 
+value from both the SHA-1 and SHA-256 banks of its Nuvoton TPM 2.0.  I 
+independently validated that the event log matches the TPM PCR values.
 
-James and I talked about a filter to create a safer cdev for use by
-users. However tpms0 cannot be that 'safer' cdev - it is now the 'all
-access' path.
-
-I also suggested a filter in the kernel to ensure that the RM is only
-passing commands it actually knows it handles properly. eg you would
-filter out list handles. That is hardwired into the kernel, and does
-not ge to be configured by user space.
-
-> Would it make more sense to have a sysfs file for configuring the
-> global filter that would get the data in the same format (list of
-> 16-bit words)?
-
-Probably not, then there is no way to escape the filter in userspace,
-so some command just become impossible even for root. (And no,
-something like tpm should not test CAP_ flags, that is putting
-too much policy into the kernel)
-
-Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
