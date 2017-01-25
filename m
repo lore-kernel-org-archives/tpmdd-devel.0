@@ -1,85 +1,181 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH RFC] tpm: define a command filter
-Date: Wed, 25 Jan 2017 22:21:37 +0200
-Message-ID: <20170125202137.7bsv7lptvpzl2fjz@intel.com>
-References: <20170124000258.16818-1-jarkko.sakkinen@linux.intel.com>
-	<20170124001918.GA29735@obsidianresearch.com>
-	<20170124143600.siyhblj67qaatewi@intel.com>
-	<20170124190707.GA9899@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [PATCH RFC v3 5/5] tpm2: expose resource manager
+ via    a device link /dev/tpms<n>
+Date: Wed, 25 Jan 2017 22:23:26 +0200
+Message-ID: <20170125202326.ralhgvmgusqngnbq@intel.com>
+References: <1485107342.2504.7.camel@HansenPartnership.com>
+ <1485110892.2504.12.camel@HansenPartnership.com>
+ <20170122203055.zg52yraahqvn4rbv@intel.com>
+ <20170122210107.zwrvuhnelrvaoe5h@intel.com>
+ <20170122210441.ivzujugb3urzndhj@intel.com>
+ <1485120988.2504.21.camel@HansenPartnership.com>
+ <20170123140942.svnurymdxsyo6cum@intel.com>
+ <20170123165823.hbgwphsqqpn6jwiz@intel.com>
+ <20170123214255.vt2dumjm6jo5oxd3@intel.com>
+ <1485209797.2534.29.camel@HansenPartnership.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170124190707.GA9899-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+In-Reply-To: <1485209797.2534.29.camel@HansenPartnership.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: James Bottomley <James.Bottomley@HansenPartnership.com>
+Cc: linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jan 24, 2017 at 12:07:07PM -0700, Jason Gunthorpe wrote:
-> On Tue, Jan 24, 2017 at 04:36:00PM +0200, Jarkko Sakkinen wrote:
-> > On Mon, Jan 23, 2017 at 05:19:18PM -0700, Jason Gunthorpe wrote:
-> > > On Tue, Jan 24, 2017 at 02:02:52AM +0200, Jarkko Sakkinen wrote:
-> > > > This commit adds a command filter for whitelisting a set of commands in
-> > > > a TPM space. When a TPM space is created through /dev/tpms0, no
-> > > > commands are allowed. The user of the TPM space must explicitly define
-> > > > the list of commands allowed before sending any commands. This ioctl is
-> > > > a one shot call so that a resource manager daemon can call it before
-> > > > sending the file descriptor to the client.
+On Mon, Jan 23, 2017 at 02:16:37PM -0800, James Bottomley wrote:
+> On Mon, 2017-01-23 at 23:42 +0200, Jarkko Sakkinen wrote:
+> > On Mon, Jan 23, 2017 at 06:58:23PM +0200, Jarkko Sakkinen wrote:
+> > > On Mon, Jan 23, 2017 at 04:09:42PM +0200, Jarkko Sakkinen wrote:
+> > > > On Sun, Jan 22, 2017 at 01:36:28PM -0800, James Bottomley wrote:
+> > > > > On Sun, 2017-01-22 at 23:04 +0200, Jarkko Sakkinen wrote:
+> > > > > > On Sun, Jan 22, 2017 at 11:01:07PM +0200, Jarkko Sakkinen
+> > > > > > wrote:
+> > > > > > > On Sun, Jan 22, 2017 at 10:30:55PM +0200, Jarkko Sakkinen
+> > > > > > > wrote:
+> > > > > > > > On Sun, Jan 22, 2017 at 10:48:12AM -0800, James Bottomley
+> > > > > > > > wrote:
+> > > > > > > > > On Sun, 2017-01-22 at 09:49 -0800, James Bottomley
+> > > > > > > > > wrote:
+> > > > > > > > > > On Fri, 2017-01-20 at 23:05 +0200, Jarkko Sakkinen
+> > > > > > > > > > wrote:
+> > > > > > > > > > > 'tabrm4' branch has been now rebased. It's now on
+> > > > > > > > > > > top of
+> > > > > > > > > > > master
+> > > > > > > > > > > branch that contains Stefan's latest patch (min
+> > > > > > > > > > > body length
+> > > > > > > > > > > check) 
+> > > > > > > > > > > that I've reviewed and tested. It also contains
+> > > > > > > > > > > your
+> > > > > > > > > > > updated
+> > > > > > > > > > > /dev/tpms patch.
+> > > > > > > > > > > 
+> > > > > > > > > > > I guess the 5 commits that are there now are such
+> > > > > > > > > > > that we
+> > > > > > > > > > > have 
+> > > > > > > > > > > fairly good consensus, don't we? If so, can I add
+> > > > > > > > > > > your
+> > > > > > > > > > > reviewed-by 
+> > > > > > > > > > > and tested-by to my commits and vice versa?
+> > > > > > > > > > 
+> > > > > > > > > > We're still failing my test_transients.  This is the
+> > > > > > > > > > full
+> > > > > > > > > > python of 
+> > > > > > > > > > the test case:
+> > > > > > > > > > 
+> > > > > > > > > > 
+> > > > > > > > > >     def test_transients(self):
+> > > > > > > > > >         k = self.open_transients()
+> > > > > > > > > >         self.c.flush_context(k[0])
+> > > > > > > > > >         self.c.change_auth(self.c.SRK, k[1], None,
+> > > > > > > > > > pwd1)
+> > > > > > > > > >         ...
+> > > > > > > > > > 
+> > > > > > > > > > It's failing at self.c.flush_context(k[0]) with
+> > > > > > > > > > TPM_RC_VALUE.
+> > > > > > > > > >   It's 
+> > > > > > > > > > the same problem Ken complained about:
+> > > > > > > > > > TPM2_FlushContext
+> > > > > > > > > > doesn't have 
+> > > > > > > > > > a declared handle area so we don't translate the
+> > > > > > > > > > handle being
+> > > > > > > > > > sent
+> > > > > > > > > > down.  We have to fix this either by intercepting the
+> > > > > > > > > > flush
+> > > > > > > > > > and 
+> > > > > > > > > > manually translating the context, or by being
+> > > > > > > > > > dangerously
+> > > > > > > > > > clever and 
+> > > > > > > > > > marking flush as a command which takes one handle.
+> > > > > > > > > 
+> > > > > > > > > This is what the dangerously clever fix looks like. 
+> > > > > > > > >  With this
+> > > > > > > > > and a
+> > > > > > > > > few other changes, my smoke tests now pass.
+> > > > > > > > > 
+> > > > > > > > > James
+> > > > > > > > 
+> > > > > > > > I don't want to be clever here. I will rather intercept
+> > > > > > > > the body
+> > > > > > > > and
+> > > > > > > > try to keep the core code simple and easy to understand.
+> > > > > > > 
+> > > > > > > It came out quite clean actually.
+> > > > > > > 
+> > > > > > > I just encapsulated handle mapping and have this in the
+> > > > > > > beginning
+> > > > > > > of
+> > > > > > > tpm2_map_command:
+> > > > > > > 
+> > > > > > > if (cc == TPM2_CC_FLUSH_CONTEXT)
+> > > > > > > 	return tpm2_map_to_phandle(space,
+> > > > > > > &cmd[TPM_HEADER_SIZE]);
+> > > > > > > 
+> > > > > > > I think this documents better what is actually going on
+> > > > > > > than
+> > > > > > > tinkering
+> > > > > > > cc_attr_tbl.
+> > > > > > > 
+> > > > > > > /Jarkko
+> > > > > > 
+> > > > > > Actually what you suggested is much better idea because it
+> > > > > > will also
+> > > > > > take care of validation.
+> > > > > 
+> > > > > Yes, that's why it's clever ... I'm just always wary of clever
+> > > > > code
+> > > > > because of the Kernighan principle.
+> > > > > 
+> > > > > >  I'm still going to keep tpm2_map_to_phandle because it makes
+> > > > > > the 
+> > > > > > code flow a lot cleaner and probably sessions have to anyway
+> > > > > > make it
+> > > > > > even more complicated.
+> > > > > 
+> > > > > OK, there's one more thing that seems to be causing problems:
+> > > > > when
+> > > > > tpm2_save_context fails because the handle no longer exists
+> > > > > (like it's
+> > > > > been flushed) it returns TPM_RC_REFERENCE_H0 not TPM_RC_HANDLE
+> > > > > (the
+> > > > > session code does seem to return TPM_RC_HANDLE under some
+> > > > > circumstances).
+> > > > > 
+> > > > > James
+> > > > 
+> > > > What is your way for reproducing this issue? Just want to add
+> > > > a test case for my smoke test suite so that I can verify that
+> > > > the issue is fixed once I've fixed it.
 > > > 
-> > > I don't think it makes sense to have a daemon in user space that
-> > > passes an open'd /dev/tpms0 FD directly to a client..
-> > > 
-> > > It is trivial and more powerful to just proxy the messages. Can you
-> > > see some reason why passing a FD through a daemon would make sense?
-> > > 
-> > > The earlier discussion with James was to have some way to apply a
-> > > global command filter to all tpms0 users with the idea that the
-> > > 'right' restricted command set would enable a 0666 cdev node, and no
-> > > daemon.
+> > > Right. Too easy. Sorry about this. I'll push a fix for this to
+> > > tabrm4 branch.
 > > 
-> > Is that a conflicting goal?
-> >
-> > Maybe the ioctl could be restricted by CAP_MAC_ADMIN in that case?
+> > 1. I pushed a fix to the repository.
 > 
-> I think you need to spell out a clear use case for how userspace
-> should use this filter feature and why having the kernel involved is a
-> necessary element.
+> I don't think the fix is right; this is what you now have
 > 
-> Driving userspace from the kernel uAPI design is a bit tricky without
-> participation from people writing the user space code.
+> 	} else if ((rc & TPM2_RC_REFERENCE_H0) == TPM2_RC_REFERENCE_H0)
+> {
 > 
-> > How would you propose to change the code below? I guess the "core
-> > code" is about right and this is more about API, am I right?
+> That should be
 > 
-> Generally, I'm of the opinion it is better to introduce the minimal
-> amount of uAPI at this point and wait until people working on
-> userspace figure out basic questions like, will there be a TPM2 daemon
-> or not..
+> } else if (rc == TPM2_RC_REFERENCE_H0)
 > 
-> I would focus now on getting the RFC series finished up, hook the
-> kAPI users into spaces and get it to the point where it does let
-> user & kernel safely share the TPM.
+> because the 0x9XX return codes don't have any parameter information
+> that needs stripping and (rc & TPM2_RC_REFERENCE_H0) ==
+> TPM2_RC_REFERENCE_H0)  will match any error code that has bits 11, 8
+> and 5 set.
 > 
-> Jason
+> I think the handle check was wrong too, it should have been
+> 
+> if (rc & 0xff) == TPM2_RC_HANDLE)
+> 
+> Because all you need to do is strip off the parameter information
+> 
+> James
 
-There should be anyway someway to limit what commands can be sent but
-I understand your point.
-
-Would it make more sense to have a sysfs file for configuring the
-global filter that would get the data in the same format (list of
-16-bit words)?
+Can you check if it is now what you would expect? There's now
+a helper called tpm2_rc_value(). I also created tabrm5 branch
+where everything is nicely squashed together...
 
 /Jarkko
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
