@@ -1,181 +1,139 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH RFC v3 5/5] tpm2: expose resource manager
- via    a device link /dev/tpms<n>
-Date: Wed, 25 Jan 2017 22:23:26 +0200
-Message-ID: <20170125202326.ralhgvmgusqngnbq@intel.com>
-References: <1485107342.2504.7.camel@HansenPartnership.com>
- <1485110892.2504.12.camel@HansenPartnership.com>
- <20170122203055.zg52yraahqvn4rbv@intel.com>
- <20170122210107.zwrvuhnelrvaoe5h@intel.com>
- <20170122210441.ivzujugb3urzndhj@intel.com>
- <1485120988.2504.21.camel@HansenPartnership.com>
- <20170123140942.svnurymdxsyo6cum@intel.com>
- <20170123165823.hbgwphsqqpn6jwiz@intel.com>
- <20170123214255.vt2dumjm6jo5oxd3@intel.com>
- <1485209797.2534.29.camel@HansenPartnership.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v6 0/2] enhance TPM 2.0 extend function to
+ support multiple PCR banks
+Date: Wed, 25 Jan 2017 22:45:35 +0200
+Message-ID: <20170125204535.bduqiywtlvgidoj6@intel.com>
+References: <1484931913-24909-1-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1485209797.2534.29.camel@HansenPartnership.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: James Bottomley <James.Bottomley@HansenPartnership.com>
-Cc: linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, open list <linux-kernel@vger.kernel.org>
+In-Reply-To: <1484931913-24909-1-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jan 23, 2017 at 02:16:37PM -0800, James Bottomley wrote:
-> On Mon, 2017-01-23 at 23:42 +0200, Jarkko Sakkinen wrote:
-> > On Mon, Jan 23, 2017 at 06:58:23PM +0200, Jarkko Sakkinen wrote:
-> > > On Mon, Jan 23, 2017 at 04:09:42PM +0200, Jarkko Sakkinen wrote:
-> > > > On Sun, Jan 22, 2017 at 01:36:28PM -0800, James Bottomley wrote:
-> > > > > On Sun, 2017-01-22 at 23:04 +0200, Jarkko Sakkinen wrote:
-> > > > > > On Sun, Jan 22, 2017 at 11:01:07PM +0200, Jarkko Sakkinen
-> > > > > > wrote:
-> > > > > > > On Sun, Jan 22, 2017 at 10:30:55PM +0200, Jarkko Sakkinen
-> > > > > > > wrote:
-> > > > > > > > On Sun, Jan 22, 2017 at 10:48:12AM -0800, James Bottomley
-> > > > > > > > wrote:
-> > > > > > > > > On Sun, 2017-01-22 at 09:49 -0800, James Bottomley
-> > > > > > > > > wrote:
-> > > > > > > > > > On Fri, 2017-01-20 at 23:05 +0200, Jarkko Sakkinen
-> > > > > > > > > > wrote:
-> > > > > > > > > > > 'tabrm4' branch has been now rebased. It's now on
-> > > > > > > > > > > top of
-> > > > > > > > > > > master
-> > > > > > > > > > > branch that contains Stefan's latest patch (min
-> > > > > > > > > > > body length
-> > > > > > > > > > > check) 
-> > > > > > > > > > > that I've reviewed and tested. It also contains
-> > > > > > > > > > > your
-> > > > > > > > > > > updated
-> > > > > > > > > > > /dev/tpms patch.
-> > > > > > > > > > > 
-> > > > > > > > > > > I guess the 5 commits that are there now are such
-> > > > > > > > > > > that we
-> > > > > > > > > > > have 
-> > > > > > > > > > > fairly good consensus, don't we? If so, can I add
-> > > > > > > > > > > your
-> > > > > > > > > > > reviewed-by 
-> > > > > > > > > > > and tested-by to my commits and vice versa?
-> > > > > > > > > > 
-> > > > > > > > > > We're still failing my test_transients.  This is the
-> > > > > > > > > > full
-> > > > > > > > > > python of 
-> > > > > > > > > > the test case:
-> > > > > > > > > > 
-> > > > > > > > > > 
-> > > > > > > > > >     def test_transients(self):
-> > > > > > > > > >         k = self.open_transients()
-> > > > > > > > > >         self.c.flush_context(k[0])
-> > > > > > > > > >         self.c.change_auth(self.c.SRK, k[1], None,
-> > > > > > > > > > pwd1)
-> > > > > > > > > >         ...
-> > > > > > > > > > 
-> > > > > > > > > > It's failing at self.c.flush_context(k[0]) with
-> > > > > > > > > > TPM_RC_VALUE.
-> > > > > > > > > >   It's 
-> > > > > > > > > > the same problem Ken complained about:
-> > > > > > > > > > TPM2_FlushContext
-> > > > > > > > > > doesn't have 
-> > > > > > > > > > a declared handle area so we don't translate the
-> > > > > > > > > > handle being
-> > > > > > > > > > sent
-> > > > > > > > > > down.  We have to fix this either by intercepting the
-> > > > > > > > > > flush
-> > > > > > > > > > and 
-> > > > > > > > > > manually translating the context, or by being
-> > > > > > > > > > dangerously
-> > > > > > > > > > clever and 
-> > > > > > > > > > marking flush as a command which takes one handle.
-> > > > > > > > > 
-> > > > > > > > > This is what the dangerously clever fix looks like. 
-> > > > > > > > >  With this
-> > > > > > > > > and a
-> > > > > > > > > few other changes, my smoke tests now pass.
-> > > > > > > > > 
-> > > > > > > > > James
-> > > > > > > > 
-> > > > > > > > I don't want to be clever here. I will rather intercept
-> > > > > > > > the body
-> > > > > > > > and
-> > > > > > > > try to keep the core code simple and easy to understand.
-> > > > > > > 
-> > > > > > > It came out quite clean actually.
-> > > > > > > 
-> > > > > > > I just encapsulated handle mapping and have this in the
-> > > > > > > beginning
-> > > > > > > of
-> > > > > > > tpm2_map_command:
-> > > > > > > 
-> > > > > > > if (cc == TPM2_CC_FLUSH_CONTEXT)
-> > > > > > > 	return tpm2_map_to_phandle(space,
-> > > > > > > &cmd[TPM_HEADER_SIZE]);
-> > > > > > > 
-> > > > > > > I think this documents better what is actually going on
-> > > > > > > than
-> > > > > > > tinkering
-> > > > > > > cc_attr_tbl.
-> > > > > > > 
-> > > > > > > /Jarkko
-> > > > > > 
-> > > > > > Actually what you suggested is much better idea because it
-> > > > > > will also
-> > > > > > take care of validation.
-> > > > > 
-> > > > > Yes, that's why it's clever ... I'm just always wary of clever
-> > > > > code
-> > > > > because of the Kernighan principle.
-> > > > > 
-> > > > > >  I'm still going to keep tpm2_map_to_phandle because it makes
-> > > > > > the 
-> > > > > > code flow a lot cleaner and probably sessions have to anyway
-> > > > > > make it
-> > > > > > even more complicated.
-> > > > > 
-> > > > > OK, there's one more thing that seems to be causing problems:
-> > > > > when
-> > > > > tpm2_save_context fails because the handle no longer exists
-> > > > > (like it's
-> > > > > been flushed) it returns TPM_RC_REFERENCE_H0 not TPM_RC_HANDLE
-> > > > > (the
-> > > > > session code does seem to return TPM_RC_HANDLE under some
-> > > > > circumstances).
-> > > > > 
-> > > > > James
-> > > > 
-> > > > What is your way for reproducing this issue? Just want to add
-> > > > a test case for my smoke test suite so that I can verify that
-> > > > the issue is fixed once I've fixed it.
-> > > 
-> > > Right. Too easy. Sorry about this. I'll push a fix for this to
-> > > tabrm4 branch.
-> > 
-> > 1. I pushed a fix to the repository.
+On Fri, Jan 20, 2017 at 12:05:11PM -0500, Nayna Jain wrote:
+> IMA extends its hash measurements in the TPM PCRs, based on policy.
+> The existing in-kernel TPM extend function extends only the SHA1
+> PCR bank. TPM 2.0 defines multiple PCR banks, to support different
+> hash algorithms. The TCG TPM 2.0 Specification[1] recommends
+> extending all active PCR banks to prevent malicious users from
+> setting unused PCR banks with fake measurements and quoting them.
+> This patch set adds support for extending all active PCR banks,
+> as recommended.
 > 
-> I don't think the fix is right; this is what you now have
+> The first patch implements the TPM 2.0 capability to retrieve
+> the list of active PCR banks.
 > 
-> 	} else if ((rc & TPM2_RC_REFERENCE_H0) == TPM2_RC_REFERENCE_H0)
-> {
+> The second patch modifies the tpm_pcr_extend() and tpm2_pcr_extend()
+> interface to support extending multiple PCR banks. The existing
+> tpm_pcr_extend() interface expects only a SHA1 digest. Hence, to
+> extend all active PCR banks with differing digest sizes for TPM 2.0,
+> the SHA1 digest is padded with 0's as needed.
 > 
-> That should be
-> 
-> } else if (rc == TPM2_RC_REFERENCE_H0)
-> 
-> because the 0x9XX return codes don't have any parameter information
-> that needs stripping and (rc & TPM2_RC_REFERENCE_H0) ==
-> TPM2_RC_REFERENCE_H0)  will match any error code that has bits 11, 8
-> and 5 set.
-> 
-> I think the handle check was wrong too, it should have been
-> 
-> if (rc & 0xff) == TPM2_RC_HANDLE)
-> 
-> Because all you need to do is strip off the parameter information
-> 
-> James
+> [1] TPM 2.0 Specification referred here is "TCG PC Client Specific
+> Platform Firmware Profile for TPM 2.0"
 
-Can you check if it is now what you would expect? There's now
-a helper called tpm2_rc_value(). I also created tabrm5 branch
-where everything is nicely squashed together...
+I pushed these patches. I had to resolve merge conflicts caused
+by the min_rsp_body_length parameter in tpm_transmit_cmd. Can you
+verify that I didn't break anything?
 
 /Jarkko
+
+> 
+> Changelog v6:
+> - Patch "tpm: implement TPM 2.0 capability to get active PCR banks"
+>   - Fixed the regression - missing tpm_buf_destroy() in
+>   in tpm2_get_pcr_allocation(). Thanks Jarkko for noticing.
+>   - Added TPM2_ALG_ERROR = 0x0000 to represent invalid algorithm.
+> 
+> Changelog v5:
+> - Patch "tpm: implement TPM 2.0 capability to get active PCR banks"
+>  - Included Jarkko's feedbacks
+>    - Moved variable declaration to start of function in
+>    tpm_pcr_extend()
+> 
+> 
+> Changelog v4:
+> - Updated cover letter as per Mimi's feedback.
+> - Rebased to Jarkko's latest master branch (4064b6b tpm_tis: use
+>   default timeout value if chip reports it as zero)
+> - Patch "tpm: implement TPM 2.0 capability to get active PCR banks"
+>  - Included Jarkko's feedbacks
+>    - Moved call to tpm2_get_pcr_allocation to Patch 2
+>    - Renamed struct tpm2_tpms_pcr_selection to struct tpm2_pcr_selection 
+>    and moved the struct to before tpm2_get_pcr_allocation()
+>    - Fixed code formatting
+> - Patch "tpm: enchance TPM 2.0 PCR extend to support multiple banks"
+>  - Included Jarkkos' feedbacks
+>    - Updated commit msg to mention dependency on CRYPTO_HASH_INFO
+>    - Renamed struct tpmt_hash to struct tpm2_digest 
+>    - Removed struct tpml_digest_values, tpm2_pcr_extend() now accepts
+>    count and digests list as two separate arguments. Added check for
+>    count of hashes passed.
+>  - Cleaned up struct tpm2_pcr_extend_in as not required anymore with
+>  use of tpm_buf
+>  - Moved struct tpm2_null_auth_area just before tpm2_pcr_extend() as
+>  it is the only function using it for now.
+>  - Fixed code formatting
+> 
+> Changelog v3:
+> - Rebased to the Jarkko's latest master branch (8e25809 tpm:
+>   Do not print an error message when doing TPM auto startup)
+> - Patch "tpm: implement TPM 2.0 capability to get active PCR banks"
+>   - Included Jarkko's feedbacks
+>      - Removed getcap_in, getcap_out and used tpm_buf for getting
+>      capability.
+>      - Used ARRAY_SIZE in place of TPM_MAX_PCR_BANKS and included
+>      other feedbacks.
+> - Patch "tpm: enhance TPM 2.0 PCR extend to support multiple banks"
+>      - Fixed kbuild errors
+>        - Fixed buf.data uninitialized warning.
+>        - Added TCG_TPM dependency on CONFIG_CRYPTO_HASH_INFO in Kconfig.
+> 
+> Changelog v2:
+> 
+> - Patch "tpm: implement TPM 2.0 capability to get active PCR banks"
+>   - defined structs definition in tpm2-cmd.c.
+>   - no_of_active_banks field is removed. Instead, constant
+>   TPM2_MAX_PCR_BANKS is defined.
+>   - renamed tpm2_get_active_pcr_banks() to tpm2_get_pcr_allocation()
+>   - removed generic function tpm2_get_capability().
+> 
+> - Patch "tpm: enchance TPM 2.0 PCR extend to support multiple banks"
+>  - Removed tpm2.h, and defined structs common for extend and event log
+>   in tpm_eventlog.h
+>  - uses tpm_buf in tpm2_pcr_extend().
+> 
+> Nayna Jain (2):
+>   tpm: implement TPM 2.0 capability to get active PCR banks
+>   tpm: enhance TPM 2.0 PCR extend to support multiple banks
+> 
+>  drivers/char/tpm/Kconfig         |   1 +
+>  drivers/char/tpm/tpm-interface.c |  15 +++-
+>  drivers/char/tpm/tpm.h           |   8 ++-
+>  drivers/char/tpm/tpm2-cmd.c      | 150 ++++++++++++++++++++++++++++-----------
+>  drivers/char/tpm/tpm_eventlog.h  |   7 ++
+>  5 files changed, 137 insertions(+), 44 deletions(-)
+> 
+> -- 
+> 2.5.0
+> 
+> --
+> To unsubscribe from this list: send the line "unsubscribe linux-security-module" in
+> the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+> More majordomo info at  http://vger.kernel.org/majordomo-info.html
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
