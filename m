@@ -1,18 +1,18 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH 1/2] tpm2: add session handle context
  saving and restoring to the space code
-Date: Fri, 27 Jan 2017 08:45:48 +0200
-Message-ID: <20170127064548.qakqjphmuhphtima@intel.com>
+Date: Fri, 27 Jan 2017 08:49:50 +0200
+Message-ID: <20170127064950.ndai4b3wxjys6vay@intel.com>
 References: <1485236113.2534.69.camel@HansenPartnership.com>
 	<1485236231.2534.71.camel@HansenPartnership.com>
 	<20170126125151.32sky3tajp6zigpd@intel.com>
-	<1485443929.2457.5.camel@HansenPartnership.com>
+	<1485447979.2457.23.camel@HansenPartnership.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1485443929.2457.5.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+In-Reply-To: <1485447979.2457.23.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -25,43 +25,123 @@ To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gma
 Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jan 26, 2017 at 07:18:49AM -0800, James Bottomley wrote:
+On Thu, Jan 26, 2017 at 08:26:19AM -0800, James Bottomley wrote:
 > On Thu, 2017-01-26 at 14:51 +0200, Jarkko Sakkinen wrote:
-> > On Mon, Jan 23, 2017 at 09:37:11PM -0800, James Bottomley wrote:
-> > > sessions are different from transient objects in that their handles
-> > > may not be virtualized (because they're used for some hmac
-> > > calculations).  Additionally when a session is context saved, a
-> > > vestigial memory remains in the TPM and if it is also flushed, that
-> > > will be lost and the session context will refuse to load next time, 
-> > > so the code is updated to flush only transient objects after a 
-> > > context save.  Add a separate array (chip->session_tbl) to save and 
-> > > restore sessions by handle.  Use the failure of a context save or 
-> > > load to signal that the session has been flushed from the TPM and 
-> > > we can remove its memory from chip->session_tbl.
-> > > 
-> > > Sessions are also isolated during each instance of a tpm space. 
-> > >  This means that spaces shouldn't be able to see each other's 
-> > > sessions and is enforced by ensuring that a space user may only 
-> > > refer to sessions handles that are present in their own chip
-> > > ->session_tbl.  Finally when a space is closed, all the sessions 
-> > > belonging to it should be flushed so the handles may be re-used by
-> > > other spaces.
-> > > 
-> > > Signed-off-by: James Bottomley <
-> > > James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+> [...]
+> > > diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> > > index c48255e..b77fc60 100644
+> > > --- a/drivers/char/tpm/tpm.h
+> > > +++ b/drivers/char/tpm/tpm.h
+> > > @@ -159,6 +159,8 @@ enum tpm2_cc_attrs {
+> > >  struct tpm_space {
+> > >  	u32 context_tbl[3];
+> > >  	u8 *context_buf;
+> > > +	u32 session_tbl[6];
+> > > +	u8 *session_buf;
+> > >  };
+> > >  
+> > >  enum tpm_chip_flags {
+> > > @@ -588,4 +590,5 @@ int tpm2_prepare_space(struct tpm_chip *chip,
+> > > struct tpm_space *space, u32 cc,
+> > >  		       u8 *cmd);
+> > >  int tpm2_commit_space(struct tpm_chip *chip, struct tpm_space
+> > > *space,
+> > >  		      u32 cc, u8 *buf, size_t bufsiz);
+> > > +void tpm2_flush_space(struct tpm_chip *chip, struct tpm_space
+> > > *space);
 > > 
-> > I'm wondering if you ever need more than two sessions at once? If we
-> > would limit the number of sessions to that you could probably 
-> > simplify a lot.
+> > Why the extra parameter?
 > 
-> Three seems to be the agreed maximum: hmac authority, parameter
-> encryption and command audit.
+> Because it was called from tpms-dev in release to flush all the
+> sessions still active.  At that point the work space is gone, so we
+> have to call it with the real space.  However, I realised that callsite
+> didn't hold the tpm_mutex like it should and that we don't need to
+> flush the contexts because they'll be guaranteed empty, so I added a
+> new function tpm2_kill_space() that does this.
 > 
-> I'll fix up the rest
+> > >  #endif
+> > > diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2
+> > > -space.c
+> > > index 7fd2fc5..ba4310a 100644
+> > > --- a/drivers/char/tpm/tpm2-space.c
+> > > +++ b/drivers/char/tpm/tpm2-space.c
+> > > @@ -59,11 +59,16 @@ static int tpm2_load_context(struct tpm_chip
+> > > *chip, u8 *buf,
+> > >  
+> > >  	rc = tpm_transmit_cmd(chip, NULL, tbuf.data, PAGE_SIZE, 4,
+> > >  			      TPM_TRANSMIT_UNLOCKED, NULL);
+> > > +
+> > 
+> > cruft
+> 
+> Removed.
+> 
+> [...] 
+> > > @@ -215,17 +265,20 @@ int tpm2_prepare_space(struct tpm_chip *chip,
+> > > struct tpm_space *space, u32 cc,
+> > >  
+> > >  	memcpy(&chip->work_space.context_tbl, &space->context_tbl,
+> > >  	       sizeof(space->context_tbl));
+> > > +	memcpy(&chip->work_space.session_tbl, &space->session_tbl,
+> > > +	       sizeof(space->session_tbl));
+> > >  	memcpy(chip->work_space.context_buf, space->context_buf,
+> > > PAGE_SIZE);
+> > > +	memcpy(chip->work_space.session_buf, space->session_buf,
+> > > PAGE_SIZE);
+> > 
+> > For transient objects the rollback is straight forward and totally
+> > predictable. Given that with sessions you always keep some 
+> > information in the TPM the rollback would be a bit more complicated.
+> 
+> There is basically no rollback unless you really want to understand
+> what the commands did.  If we get a fault on the context save or load
+> that isn't one we understand, like TPM_RC_HANDLE meaning the session
+> won't load or TPM_RC_REFERENCE_H0 meaning the session no longer exists,
+> then I think the only option is flushing everything.
+> 
+> I'd like us to agree on a hard failure model: if we get some
+> unexplained error during our context loads or saves, we should clear
+> out the entire space (which would allow us to use pointers instead of
+> copyring) but we don't.  So we follow the soft failure.  However,
+> sessions will mostly fail to load after this with RPM_RC_HANDLE, so we
+> get the equivalent of soft failure for transients and hard failure for
+> sessions.
+> 
+> > Now your code seems to just keep the previous session_buf, doesn't
+> > it? Does that always work or not?
+> 
+> Yes, after tpm_flush_space, the session memory is gone and all the
+> sessions will refuse to load with RC_HANDLE, so we end up effectively
+> clearing them out.  It seemed better to do it this way than to try to
+> special case all the session stuff.
+
+Maybe it would make sense to have a comment in code to state this?
+Otherwise, I'm fine with this semantics.
+
+> > PS. I have a high-level idea of attack vectors that are prevented by
+> > having meta-data for session inside the TPM but can you point me to
+> > the correct place in the TPM 2.0 specification that discusses about
+> > this?
+> 
+> The problem is replay.  If I'm snooping your TPM commands and I capture
+> your session context, if we don't have replay detection, I can re-load
+> your session HMAC and replay your command because the session has the
+> authorization or the encryption.  The TPM designers thought the only
+> way to avoid replay was to use a counter which was part of the session
+> context which increments every time a session is saved.  On loading you
+> check that the counters match and fail if they don't.  The only way to
+> implement this is to keep a memory of the counter in the TPM, hence the
+> annoying vestigial sessions.
+> 
+> It's note 2 of the architecture Part 1 guide, chapter "15.4 Session
+> Handles (MSO=02_16 and 03_16 )"
 > 
 > James
 
-Right. I've also set the limit for trasient objects to three.
+Thank you.
+
+Once these are in shape I think we have something that could be put into
+a release, don't you think?
 
 /Jarkko
 
