@@ -1,51 +1,90 @@
-From: David Laight <David.Laight@ACULAB.COM>
-Subject: RE: ibmvtpm byteswapping inconsistency
-Date: Fri, 27 Jan 2017 11:18:01 +0000
-Message-ID: <063D6719AE5E284EB5DD2968C1650D6DB0270A32@AcuExch.aculab.com>
-References: <20170126212248.3f3e9103@kitsune.suse.cz>
+From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH] tpm: add buffer access validation in
+	tpm2_get_pcr_allocation()
+Date: Fri, 27 Jan 2017 10:25:49 -0500
+Message-ID: <1485530749-22948-1-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="Windows-1252"
-Content-Transfer-Encoding: quoted-printable
-Return-path: <linuxppc-dev-bounces+glppe-linuxppc-embedded-2=m.gmane.org@lists.ozlabs.org>
-In-Reply-To: <20170126212248.3f3e9103@kitsune.suse.cz>
-Content-Language: en-US
-List-Unsubscribe: <https://lists.ozlabs.org/options/linuxppc-dev>,
- <mailto:linuxppc-dev-request@lists.ozlabs.org?subject=unsubscribe>
-List-Archive: <http://lists.ozlabs.org/pipermail/linuxppc-dev/>
-List-Post: <mailto:linuxppc-dev@lists.ozlabs.org>
-List-Help: <mailto:linuxppc-dev-request@lists.ozlabs.org?subject=help>
-List-Subscribe: <https://lists.ozlabs.org/listinfo/linuxppc-dev>,
- <mailto:linuxppc-dev-request@lists.ozlabs.org?subject=subscribe>
-Errors-To: linuxppc-dev-bounces+glppe-linuxppc-embedded-2=m.gmane.org@lists.ozlabs.org
-Sender: "Linuxppc-dev"
- <linuxppc-dev-bounces+glppe-linuxppc-embedded-2=m.gmane.org@lists.ozlabs.org>
-To: =?Windows-1252?Q?=27Michal_Such=E1nek=27?= <msuchanek@suse.de>, Ashley Lai <ashleydlai@gmail.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Michal Such=E1nek
-> building ibmvtpm I noticed gcc warning complaining that second word of
-> struct ibmvtpm_crq in tpm_ibmvtpm_suspend is uninitialized.
->=20
-> The structure is defined as
->=20
-> struct ibmvtpm_crq {
->         u8 valid;
->         u8 msg;
->         __be16 len;
->         __be32 data;
->         __be64 reserved;
-> } __attribute__((packed, aligned(8)));
->=20
-> initialized as
->=20
->         struct ibmvtpm_crq crq;
->         u64 *buf =3D (u64 *) &crq;
-...
+This patch add validation in tpm2_get_pcr_allocation to avoid
+access beyond response buffer length.
 
-Hrummfff....
-What is that attribute for, seems pretty confusing and pointless to me.
+Suggested-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+---
+ drivers/char/tpm/tpm2-cmd.c | 28 +++++++++++++++++++++++-----
+ 1 file changed, 23 insertions(+), 5 deletions(-)
 
-I also suspect that if you want to access it as two 64bit words it
-ought to be a union.
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index 4aad84c..02c1ea7 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -1008,9 +1008,13 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
+ 	struct tpm2_pcr_selection pcr_selection;
+ 	struct tpm_buf buf;
+ 	void *marker;
+-	unsigned int count = 0;
++	void *end;
++	void *pcr_select_offset;
++	unsigned int count;
++	u32 sizeof_pcr_selection;
++	u32 resp_len;
+ 	int rc;
+-	int i;
++	int i = 0;
+ 
+ 	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_GET_CAPABILITY);
+ 	if (rc)
+@@ -1034,15 +1038,29 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
+ 	}
+ 
+ 	marker = &buf.data[TPM_HEADER_SIZE + 9];
++
++	resp_len = be32_to_cpup((__be32 *)&buf.data[2]);
++	end = &buf.data[resp_len];
++
+ 	for (i = 0; i < count; i++) {
++		pcr_select_offset = marker +
++			offsetof(struct tpm2_pcr_selection, size_of_select);
++		if (pcr_select_offset >= end) {
++			rc = -EFAULT;
++			break;
++		}
++
+ 		memcpy(&pcr_selection, marker, sizeof(pcr_selection));
+ 		chip->active_banks[i] = be16_to_cpu(pcr_selection.hash_alg);
+-		marker = marker + sizeof(struct tpm2_pcr_selection);
++		sizeof_pcr_selection = sizeof(pcr_selection.hash_alg) +
++			sizeof(pcr_selection.size_of_select) +
++			sizeof(u8) * pcr_selection.size_of_select;
++		marker = marker + sizeof_pcr_selection;
+ 	}
+ 
+ out:
+-	if (count < ARRAY_SIZE(chip->active_banks))
+-		chip->active_banks[count] = TPM2_ALG_ERROR;
++	if (i < ARRAY_SIZE(chip->active_banks))
++		chip->active_banks[i] = TPM2_ALG_ERROR;
+ 
+ 	tpm_buf_destroy(&buf);
+ 
+-- 
+2.5.0
 
-	David
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
