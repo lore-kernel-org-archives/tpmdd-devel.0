@@ -1,71 +1,87 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [PATCH 2/2] tpm2-space: add handling for global
- session exhaustion
-Date: Thu, 26 Jan 2017 16:45:52 -0800
-Message-ID: <1485477952.2457.55.camel@HansenPartnership.com>
-References: <1485236113.2534.69.camel@HansenPartnership.com>
-	<1485236313.2534.73.camel@HansenPartnership.com>
-	<20170126125615.dt5hnfbpmtxk7xlq@intel.com>
+From: Tyrel Datwyler <tyreld@linux.vnet.ibm.com>
+Subject: Re: ibmvtpm byteswapping inconsistency
+Date: Thu, 26 Jan 2017 17:42:29 -0800
+Message-ID: <d55b06cc-cb7a-1ef1-05b7-d7d4114d0c48@linux.vnet.ibm.com>
+References: <20170126212248.3f3e9103@kitsune.suse.cz>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170126125615.dt5hnfbpmtxk7xlq-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 8bit
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20170126212248.3f3e9103@kitsune.suse.cz>
+Sender: linux-kernel-owner@vger.kernel.org
+To: =?UTF-8?Q?Michal_Such=c3=a1nek?= <msuchanek@suse.de>, Ashley Lai <ashleydlai@gmail.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linuxppc-dev@lists.ozlabs.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, 2017-01-26 at 14:56 +0200, Jarkko Sakkinen wrote:
-> On Mon, Jan 23, 2017 at 09:38:33PM -0800, James Bottomley wrote:
-> > In a TPM2, sessions can be globally exhausted once there are
-> > TPM_PT_ACTIVE_SESSION_MAX of them (even if they're all context 
-> > saved). The Strategy for handling this is to keep a global count of 
-> > all the sessions along with their creation time.  Then if we see 
-> > the TPM run out of sessions (via the TPM_RC_SESSION_HANDLES) we 
-> > first wait for one to become free, but if it doesn't, we forcibly 
-> > evict an existing one. The eviction strategy waits until the 
-> > current command is repeated to evict the session which should 
-> > guarantee there is an available slot.
-> > 
-> > On the force eviction case, we make sure that the victim session is 
-> > at least SESSION_TIMEOUT old (currently 2 seconds).  The wait queue
-> > for session slots is a FIFO one, ensuring that once we run out of
-> > sessions, everyone will get a session in a bounded time and once 
-> > they get one, they'll have SESSION_TIMEOUT to use it before it may 
-> > be subject to eviction.
-> > 
-> > Signed-off-by: James Bottomley <
-> > James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+On 01/26/2017 12:22 PM, Michal Suchánek wrote:
+> Hello,
 > 
-> This is not a proper review yet. Just quick question: why do you need
-> a real time (i.e. created)? Maybe in the force eviction case it would
-> be enough to sleep lets say 500 ms and pick the victim with smallest
-> number? I.e. just have increasing u64 counter instead of real time.
+> building ibmvtpm I noticed gcc warning complaining that second word of
+> struct ibmvtpm_crq in tpm_ibmvtpm_suspend is uninitialized.
+> 
+> The structure is defined as 
+> 
+> struct ibmvtpm_crq {
+>         u8 valid;
+>         u8 msg;
+>         __be16 len;
+>         __be32 data;
+>         __be64 reserved;
+> } __attribute__((packed, aligned(8)));
+> 
+> initialized as
+> 
+>         struct ibmvtpm_crq crq;
+>         u64 *buf = (u64 *) &crq;
+> ...
+>         crq.valid = (u8)IBMVTPM_VALID_CMD;
+>         crq.msg = (u8)VTPM_PREPARE_TO_SUSPEND;
+> 
+> and submitted with
+> 
+>         rc = ibmvtpm_send_crq(ibmvtpm->vdev, cpu_to_be64(buf[0]),
+>                               cpu_to_be64(buf[1]));
 
-So that if the oldest session has already been around for > 2s there's
-no need to wait.  In order to guarantee everyone gets a session for at
-least 2s without tracking the age of sessions, you'd have to sleep for
-2s after you find the oldest session.
+These should be be64_to_cpu() here. The underlying hcall made by
+ibmvtpm_send_crq() requires parameters to be in cpu endian unlike the
+RTAS interface which requires data in BE.
 
-> That would simplify this patch a lot and does not prevent to refine
-> later on if workloads show need for more complex logic.
+> 
+> which means that the second word indeed contains purely garbage.
+> 
+> This is repeated a few times in the driver so I added memset to quiet
+> gcc and make behavior deterministic in case the unused fields get some
+> meaning in the future.
+> 
+> However, in tpm_ibmvtpm_send the structure is initialized as
+> 
+> 	struct ibmvtpm_crq crq;
+>         __be64 *word = (__be64 *)&crq;
+> ...
+>         crq.valid = (u8)IBMVTPM_VALID_CMD;
+>         crq.msg = (u8)VTPM_TPM_COMMAND;
+>         crq.len = cpu_to_be16(count);
+>         crq.data = cpu_to_be32(ibmvtpm->rtce_dma_handle);
+> 
+> and submitted with
+> 
+> 	rc = ibmvtpm_send_crq(ibmvtpm->vdev, be64_to_cpu(word[0]),
+>                               be64_to_cpu(word[1]));
+> meaning it is swapped twice.
+> 
+> 
+> Where is the interface defined? Are the command arguments passed as BE
+> subfields (the second case was correct before adding the extra whole
+> word swap) or BE words (the first case doing whole word swap is
+> correct)?
 
-An increasing monotonic counter would actually not be much simpler: all
-you could really cut out would be the four lines and two comments at
-the bottom of the for loop in tpm2_session_wait() which check the age
-of the found session.
+The interface is defined in PAPR. The crq format is defined in BE terms.
+However, when we break the crq apart into high and low words they need
+to be in cpu endian as mentioned above.
 
-James
+-Tyrel
 
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+> 
+> Thanks
+> 
+> Michal
+> 
