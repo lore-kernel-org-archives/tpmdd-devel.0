@@ -1,170 +1,49 @@
-From: Tyrel Datwyler <tyreld@linux.vnet.ibm.com>
-Subject: Re: ibmvtpm byteswapping inconsistency
-Date: Fri, 27 Jan 2017 13:19:13 -0800
-Message-ID: <73c1e5be-0820-8dca-c86a-8cf3ffeb5efe@linux.vnet.ibm.com>
-References: <20170126212248.3f3e9103@kitsune.suse.cz>
- <d55b06cc-cb7a-1ef1-05b7-d7d4114d0c48@linux.vnet.ibm.com>
- <1485481819.2980.82.camel@kernel.crashing.org>
- <CAOMqctQtspCTTpfEUyUVyE9GKYOavZNhkXnRPUrPZrDZ6-eG0w@mail.gmail.com>
+From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Subject: Re: [RFC] tpm2-space: add handling for global session
+	exhaustion
+Date: Fri, 27 Jan 2017 16:20:08 -0500
+Message-ID: <o6gdhu$li$1@blaine.gmane.org>
+References: <1484772489.2396.2.camel@HansenPartnership.com>
+	<20170119122533.d7h5rgatpwl3qmcl@intel.com>
+	<20170119124101.nw7a7m735zhiivfo@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Return-path: <linuxppc-dev-bounces+glppe-linuxppc-embedded-2=m.gmane.org@lists.ozlabs.org>
-In-Reply-To: <CAOMqctQtspCTTpfEUyUVyE9GKYOavZNhkXnRPUrPZrDZ6-eG0w@mail.gmail.com>
-List-Unsubscribe: <https://lists.ozlabs.org/options/linuxppc-dev>,
- <mailto:linuxppc-dev-request@lists.ozlabs.org?subject=unsubscribe>
-List-Archive: <http://lists.ozlabs.org/pipermail/linuxppc-dev/>
-List-Post: <mailto:linuxppc-dev@lists.ozlabs.org>
-List-Help: <mailto:linuxppc-dev-request@lists.ozlabs.org?subject=help>
-List-Subscribe: <https://lists.ozlabs.org/listinfo/linuxppc-dev>,
- <mailto:linuxppc-dev-request@lists.ozlabs.org?subject=subscribe>
-Errors-To: linuxppc-dev-bounces+glppe-linuxppc-embedded-2=m.gmane.org@lists.ozlabs.org
-Sender: "Linuxppc-dev"
- <linuxppc-dev-bounces+glppe-linuxppc-embedded-2=m.gmane.org@lists.ozlabs.org>
-To: Michal Suchanek <hramrach@gmail.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>
-Cc: Marcel Selhorst <tpmdd@selhorst.net>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, Paul Mackerras <paulus@samba.org>, Ashley Lai <ashleydlai@gmail.com>, Peter Huewe <peterhuewe@gmx.de>, =?UTF-8?Q?Michal_Such=c3=a1nek?= <msuchanek@suse.de>, linuxppc-dev@lists.ozlabs.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170119124101.nw7a7m735zhiivfo-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 01/27/2017 01:03 AM, Michal Suchanek wrote:
-> On 27 January 2017 at 02:50, Benjamin Herrenschmidt
-> <benh@kernel.crashing.org> wrote:
->> On Thu, 2017-01-26 at 17:42 -0800, Tyrel Datwyler wrote:
->>> On 01/26/2017 12:22 PM, Michal Suchánek wrote:
->>>> Hello,
->>>>
->>>> building ibmvtpm I noticed gcc warning complaining that second word
->>>> of
->>>> struct ibmvtpm_crq in tpm_ibmvtpm_suspend is uninitialized.
->>>>
->>>> The structure is defined as
->>>>
->>>> struct ibmvtpm_crq {
->>>>         u8 valid;
->>>>         u8 msg;
->>>>         __be16 len;
->>>>         __be32 data;
->>>>         __be64 reserved;
->>>> } __attribute__((packed, aligned(8)));
->>>>
->>>> initialized as
->>>>
->>>>         struct ibmvtpm_crq crq;
->>>>         u64 *buf = (u64 *) &crq;
->>>> ...
->>>>         crq.valid = (u8)IBMVTPM_VALID_CMD;
->>>>         crq.msg = (u8)VTPM_PREPARE_TO_SUSPEND;
->>>>
->>>> and submitted with
->>>>
->>>>         rc = ibmvtpm_send_crq(ibmvtpm->vdev, cpu_to_be64(buf[0]),
->>>>                               cpu_to_be64(buf[1]));
->>>
->>> These should be be64_to_cpu() here. The underlying hcall made by
->>> ibmvtpm_send_crq() requires parameters to be in cpu endian unlike the
->>> RTAS interface which requires data in BE.
->>
->> Hrm... an hcall takes register arguments. Register arguments don't have
->> an endianness.
->>
->> The problem is that we are packing an in-memory structure into 2
->> registers and it's expected that this structure is laid out in the
->> registers as if it had been loaded by a BE CPU.
->>
->> So we have two things at play here:
->>
->>   - The >8-bit fields should be laid out BE in the memory image
->>   - That whole 128-bit structure should be loaded into 2 64-bit
->> registers MSB first.
->>
->> So the "double" swap is somewhat needed. The uglyness comes from the
->> passing-by-register of the h-call but it should work.
->>
->> That said, be64_to_cpup(buf) and be64_to_cpup(buf+1) might give you
->> better result (though recent gcc's might not make a difference).
-> 
-> If this should work then the below case that swaps the fields separately is
-> broken.
-> 
-> Anyway, structures have no endianess so when they start with a byte they
-> start with that byte no matter the host endian.
-> crq.valid is the first byte always. And then each field is to be swapped
-> separately.
-> 
-> On the other hand, bitfields are part of an integer and the field should be
-> swapped as part of the integer.
-> 
-> That is,
-> #define CRQ_VALID ((buf[0] >> 56) & 0xff)
-> CRQ_VALID is part of an integer in buf and would be laid out differently
-> on start or end depending on the host being BE or LE.
-> 
-> And the question is what the PAPR actually defines because both ways are
-> used in the code. You can describe an in-memory layout either way.
+On 1/19/2017 7:41 AM, Jarkko Sakkinen wrote:
+>
+> I actually think that the very best solution would be such that
+> sessions would be *always* lease based. So when you create a
+> session you would always loose within a time limit.
+>
+> There would not be any special victim selection mechanism. You
+> would just loose your session within a time limit.
 
-Byte  |   0   |   1   |   2   |   3   |   4   |   5   |   6   |   7
------------------------------------------------------------------------
-Word0 | Valid |	Type  |	    Length    |              Data
------------------------------------------------------------------------
-Word1 |				Reserved
------------------------------------------------------------------------
+I worry about the time limit.
 
-The following definition looks to match:
+I have a proposed use case (policy signed) where the user sends the 
+session nonce along with a "payment" to a vendor and receives back a 
+signature authorization over the nonce.
 
-struct ibmvtpm_crq {
-        u8 valid;
-        u8 msg;
-        __be16 len;
-        __be32 data;
-        __be64 reserved;
-} __attribute__((packed, aligned(8)));
+The time could be minutes or even hours.
 
-> 
->>>>
->>>> which means that the second word indeed contains purely garbage.
->>>>
->>>> This is repeated a few times in the driver so I added memset to
->>>> quiet
->>>> gcc and make behavior deterministic in case the unused fields get
->>>> some
->>>> meaning in the future.
->>>>
->>>> However, in tpm_ibmvtpm_send the structure is initialized as
->>>>
->>>>     struct ibmvtpm_crq crq;
->>>>         __be64 *word = (__be64 *)&crq;
->>>> ...
->>>>         crq.valid = (u8)IBMVTPM_VALID_CMD;
->>>>         crq.msg = (u8)VTPM_TPM_COMMAND;
->>>>         crq.len = cpu_to_be16(count);
->>>>         crq.data = cpu_to_be32(ibmvtpm->rtce_dma_handle);
->>>>
->>>> and submitted with
->>>>
->>>>     rc = ibmvtpm_send_crq(ibmvtpm->vdev, be64_to_cpu(word[0]),
->>>>                               be64_to_cpu(word[1]));
->>>> meaning it is swapped twice.
->>>>
->>>>
->>>> Where is the interface defined? Are the command arguments passed as
->>>> BE
->>>> subfields (the second case was correct before adding the extra
->>>> whole
->>>> word swap) or BE words (the first case doing whole word swap is
->>>> correct)?
->>>
->>> The interface is defined in PAPR. The crq format is defined in BE
->>> terms.
-> 
-> Which exact PAPR? Where can I get it?
-> The PAPR document I found does not say anything about vtpm. 
 
-Unfortunately, vtpm doesn't appear to be covered in the publicly
-available LoPAPR.
 
--Tyrel
 
-> 
-> Thanks
-> 
-> Michal
-> 
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
