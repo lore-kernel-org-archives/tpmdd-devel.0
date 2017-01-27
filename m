@@ -1,14 +1,17 @@
-From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 Subject: Re: [RFC] tpm2-space: add handling for global session
-	exhaustion
-Date: Fri, 27 Jan 2017 16:42:48 -0500
-Message-ID: <o6gese$pev$1@blaine.gmane.org>
+ exhaustion
+Date: Fri, 27 Jan 2017 13:59:15 -0800
+Message-ID: <1485554355.3229.15.camel@HansenPartnership.com>
 References: <1484772489.2396.2.camel@HansenPartnership.com>
+	<20170119122533.d7h5rgatpwl3qmcl@intel.com>
+	<20170119124101.nw7a7m735zhiivfo@intel.com>
+	<o6gdhu$li$1@blaine.gmane.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1484772489.2396.2.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+In-Reply-To: <o6gdhu$li$1@blaine.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,44 +20,39 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 1/18/2017 3:48 PM, James Bottomley wrote:
-> In a TPM2, sessions can be globally exhausted once there are
-> TPM_PT_ACTIVE_SESSION_MAX of them (even if they're all context saved).
-> The Strategy for handling this is to keep a global count of all the
-> sessions along with their creation time.  Then if we see the TPM run
-> out of sessions (via the TPM_RC_SESSION_HANDLES) we first wait for one
-> to become free, but if it doesn't, we forcibly evict an existing one.
-> The eviction strategy waits until the current command is repeated to
-> evict the session which should guarantee there is an available slot.
+On Fri, 2017-01-27 at 16:20 -0500, Ken Goldman wrote:
+> On 1/19/2017 7:41 AM, Jarkko Sakkinen wrote:
+> > 
+> > I actually think that the very best solution would be such that
+> > sessions would be *always* lease based. So when you create a
+> > session you would always loose within a time limit.
+> > 
+> > There would not be any special victim selection mechanism. You
+> > would just loose your session within a time limit.
+> 
+> I worry about the time limit.
+> 
+> I have a proposed use case (policy signed) where the user sends the 
+> session nonce along with a "payment" to a vendor and receives back a 
+> signature authorization over the nonce.
+> 
+> The time could be minutes or even hours.
 
-Beware the nasty corner case:
+So the problem is that sessions are a limited resource and we need a
+way to allocate them when under resource pressure.  Leasing is the
+fairest way I can think of but I'm open to other mechanisms if you
+propose them.
 
-- Application asks for a session and gets 02000000
+Note that the lease mechanism doesn't mean every session expires after
+the limit, it just means that every session becomes eligible for
+reclaim after the limit.  If there's no-one else waiting, you can keep
+your session for hours.
 
-- Time elapses and 02000000 gets forcibly flushed
-
-- Later, app comes back, asks for a second session and again gets 02000000.
-
-- App gets very confused.
-
-May it be better to close the connection completely, which the 
-application can detect, than flush a session and give this corner case?
-
-~~~~
-
-Part of me says to defer this.  That is:
-
-64 sessions / 3 = 21 simultaneous applications.  If we have 21 
-simultaneous TCG applications, we'll all celebrate.  For the DoS,
-chmod and chgrp /dev/tpm and let only well behaved applications in the 
-group.
-
-Agreed, it's not a long term solution.
-
+James
 
 
 
