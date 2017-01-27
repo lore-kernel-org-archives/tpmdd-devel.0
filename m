@@ -1,18 +1,18 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 1/2] tpm2: add session handle context
- saving and restoring to the space code
-Date: Fri, 27 Jan 2017 08:49:50 +0200
-Message-ID: <20170127064950.ndai4b3wxjys6vay@intel.com>
+Subject: Re: [PATCH 2/2] tpm2-space: add handling for global
+ session exhaustion
+Date: Fri, 27 Jan 2017 08:51:11 +0200
+Message-ID: <20170127065111.ytlbb5gsh3khnpay@intel.com>
 References: <1485236113.2534.69.camel@HansenPartnership.com>
-	<1485236231.2534.71.camel@HansenPartnership.com>
-	<20170126125151.32sky3tajp6zigpd@intel.com>
-	<1485447979.2457.23.camel@HansenPartnership.com>
+	<1485236313.2534.73.camel@HansenPartnership.com>
+	<20170126125615.dt5hnfbpmtxk7xlq@intel.com>
+	<1485477952.2457.55.camel@HansenPartnership.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1485447979.2457.23.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+In-Reply-To: <1485477952.2457.55.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -25,123 +25,51 @@ To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gma
 Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jan 26, 2017 at 08:26:19AM -0800, James Bottomley wrote:
-> On Thu, 2017-01-26 at 14:51 +0200, Jarkko Sakkinen wrote:
-> [...]
-> > > diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> > > index c48255e..b77fc60 100644
-> > > --- a/drivers/char/tpm/tpm.h
-> > > +++ b/drivers/char/tpm/tpm.h
-> > > @@ -159,6 +159,8 @@ enum tpm2_cc_attrs {
-> > >  struct tpm_space {
-> > >  	u32 context_tbl[3];
-> > >  	u8 *context_buf;
-> > > +	u32 session_tbl[6];
-> > > +	u8 *session_buf;
-> > >  };
-> > >  
-> > >  enum tpm_chip_flags {
-> > > @@ -588,4 +590,5 @@ int tpm2_prepare_space(struct tpm_chip *chip,
-> > > struct tpm_space *space, u32 cc,
-> > >  		       u8 *cmd);
-> > >  int tpm2_commit_space(struct tpm_chip *chip, struct tpm_space
-> > > *space,
-> > >  		      u32 cc, u8 *buf, size_t bufsiz);
-> > > +void tpm2_flush_space(struct tpm_chip *chip, struct tpm_space
-> > > *space);
+On Thu, Jan 26, 2017 at 04:45:52PM -0800, James Bottomley wrote:
+> On Thu, 2017-01-26 at 14:56 +0200, Jarkko Sakkinen wrote:
+> > On Mon, Jan 23, 2017 at 09:38:33PM -0800, James Bottomley wrote:
+> > > In a TPM2, sessions can be globally exhausted once there are
+> > > TPM_PT_ACTIVE_SESSION_MAX of them (even if they're all context 
+> > > saved). The Strategy for handling this is to keep a global count of 
+> > > all the sessions along with their creation time.  Then if we see 
+> > > the TPM run out of sessions (via the TPM_RC_SESSION_HANDLES) we 
+> > > first wait for one to become free, but if it doesn't, we forcibly 
+> > > evict an existing one. The eviction strategy waits until the 
+> > > current command is repeated to evict the session which should 
+> > > guarantee there is an available slot.
+> > > 
+> > > On the force eviction case, we make sure that the victim session is 
+> > > at least SESSION_TIMEOUT old (currently 2 seconds).  The wait queue
+> > > for session slots is a FIFO one, ensuring that once we run out of
+> > > sessions, everyone will get a session in a bounded time and once 
+> > > they get one, they'll have SESSION_TIMEOUT to use it before it may 
+> > > be subject to eviction.
+> > > 
+> > > Signed-off-by: James Bottomley <
+> > > James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 > > 
-> > Why the extra parameter?
+> > This is not a proper review yet. Just quick question: why do you need
+> > a real time (i.e. created)? Maybe in the force eviction case it would
+> > be enough to sleep lets say 500 ms and pick the victim with smallest
+> > number? I.e. just have increasing u64 counter instead of real time.
 > 
-> Because it was called from tpms-dev in release to flush all the
-> sessions still active.  At that point the work space is gone, so we
-> have to call it with the real space.  However, I realised that callsite
-> didn't hold the tpm_mutex like it should and that we don't need to
-> flush the contexts because they'll be guaranteed empty, so I added a
-> new function tpm2_kill_space() that does this.
+> So that if the oldest session has already been around for > 2s there's
+> no need to wait.  In order to guarantee everyone gets a session for at
+> least 2s without tracking the age of sessions, you'd have to sleep for
+> 2s after you find the oldest session.
 > 
-> > >  #endif
-> > > diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2
-> > > -space.c
-> > > index 7fd2fc5..ba4310a 100644
-> > > --- a/drivers/char/tpm/tpm2-space.c
-> > > +++ b/drivers/char/tpm/tpm2-space.c
-> > > @@ -59,11 +59,16 @@ static int tpm2_load_context(struct tpm_chip
-> > > *chip, u8 *buf,
-> > >  
-> > >  	rc = tpm_transmit_cmd(chip, NULL, tbuf.data, PAGE_SIZE, 4,
-> > >  			      TPM_TRANSMIT_UNLOCKED, NULL);
-> > > +
-> > 
-> > cruft
+> > That would simplify this patch a lot and does not prevent to refine
+> > later on if workloads show need for more complex logic.
 > 
-> Removed.
-> 
-> [...] 
-> > > @@ -215,17 +265,20 @@ int tpm2_prepare_space(struct tpm_chip *chip,
-> > > struct tpm_space *space, u32 cc,
-> > >  
-> > >  	memcpy(&chip->work_space.context_tbl, &space->context_tbl,
-> > >  	       sizeof(space->context_tbl));
-> > > +	memcpy(&chip->work_space.session_tbl, &space->session_tbl,
-> > > +	       sizeof(space->session_tbl));
-> > >  	memcpy(chip->work_space.context_buf, space->context_buf,
-> > > PAGE_SIZE);
-> > > +	memcpy(chip->work_space.session_buf, space->session_buf,
-> > > PAGE_SIZE);
-> > 
-> > For transient objects the rollback is straight forward and totally
-> > predictable. Given that with sessions you always keep some 
-> > information in the TPM the rollback would be a bit more complicated.
-> 
-> There is basically no rollback unless you really want to understand
-> what the commands did.  If we get a fault on the context save or load
-> that isn't one we understand, like TPM_RC_HANDLE meaning the session
-> won't load or TPM_RC_REFERENCE_H0 meaning the session no longer exists,
-> then I think the only option is flushing everything.
-> 
-> I'd like us to agree on a hard failure model: if we get some
-> unexplained error during our context loads or saves, we should clear
-> out the entire space (which would allow us to use pointers instead of
-> copyring) but we don't.  So we follow the soft failure.  However,
-> sessions will mostly fail to load after this with RPM_RC_HANDLE, so we
-> get the equivalent of soft failure for transients and hard failure for
-> sessions.
-> 
-> > Now your code seems to just keep the previous session_buf, doesn't
-> > it? Does that always work or not?
-> 
-> Yes, after tpm_flush_space, the session memory is gone and all the
-> sessions will refuse to load with RC_HANDLE, so we end up effectively
-> clearing them out.  It seemed better to do it this way than to try to
-> special case all the session stuff.
-
-Maybe it would make sense to have a comment in code to state this?
-Otherwise, I'm fine with this semantics.
-
-> > PS. I have a high-level idea of attack vectors that are prevented by
-> > having meta-data for session inside the TPM but can you point me to
-> > the correct place in the TPM 2.0 specification that discusses about
-> > this?
-> 
-> The problem is replay.  If I'm snooping your TPM commands and I capture
-> your session context, if we don't have replay detection, I can re-load
-> your session HMAC and replay your command because the session has the
-> authorization or the encryption.  The TPM designers thought the only
-> way to avoid replay was to use a counter which was part of the session
-> context which increments every time a session is saved.  On loading you
-> check that the counters match and fail if they don't.  The only way to
-> implement this is to keep a memory of the counter in the TPM, hence the
-> annoying vestigial sessions.
-> 
-> It's note 2 of the architecture Part 1 guide, chapter "15.4 Session
-> Handles (MSO=02_16 and 03_16 )"
+> An increasing monotonic counter would actually not be much simpler: all
+> you could really cut out would be the four lines and two comments at
+> the bottom of the for loop in tpm2_session_wait() which check the age
+> of the found session.
 > 
 > James
 
-Thank you.
-
-Once these are in shape I think we have something that could be put into
-a release, don't you think?
+Right. Thanks for explaining this. I'll check the code with more detail
+ASAP.
 
 /Jarkko
 
