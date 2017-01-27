@@ -1,123 +1,158 @@
-From: Benjamin Herrenschmidt <benh@kernel.crashing.org>
-Subject: Re: ibmvtpm byteswapping inconsistency
-Date: Fri, 27 Jan 2017 12:50:19 +1100
-Message-ID: <1485481819.2980.82.camel@kernel.crashing.org>
-References: <20170126212248.3f3e9103@kitsune.suse.cz>
- <d55b06cc-cb7a-1ef1-05b7-d7d4114d0c48@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [PATCH v6 1/2] tpm: implement TPM 2.0 capability
+ to get active PCR banks
+Date: Fri, 27 Jan 2017 08:30:27 +0200
+Message-ID: <20170127063027.kyghweghu27nakkc@intel.com>
+References: <1484931913-24909-1-git-send-email-nayna@linux.vnet.ibm.com>
+ <1484931913-24909-2-git-send-email-nayna@linux.vnet.ibm.com>
+ <fbd04459-2f98-8769-415e-9327dec73bd2@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: 8bit
-Return-path: <linuxppc-dev-bounces+glppe-linuxppc-embedded-2=m.gmane.org@lists.ozlabs.org>
-In-Reply-To: <d55b06cc-cb7a-1ef1-05b7-d7d4114d0c48@linux.vnet.ibm.com>
-List-Unsubscribe: <https://lists.ozlabs.org/options/linuxppc-dev>,
- <mailto:linuxppc-dev-request@lists.ozlabs.org?subject=unsubscribe>
-List-Archive: <http://lists.ozlabs.org/pipermail/linuxppc-dev/>
-List-Post: <mailto:linuxppc-dev@lists.ozlabs.org>
-List-Help: <mailto:linuxppc-dev-request@lists.ozlabs.org?subject=help>
-List-Subscribe: <https://lists.ozlabs.org/listinfo/linuxppc-dev>,
- <mailto:linuxppc-dev-request@lists.ozlabs.org?subject=subscribe>
-Errors-To: linuxppc-dev-bounces+glppe-linuxppc-embedded-2=m.gmane.org@lists.ozlabs.org
-Sender: "Linuxppc-dev"
- <linuxppc-dev-bounces+glppe-linuxppc-embedded-2=m.gmane.org@lists.ozlabs.org>
-To: Tyrel Datwyler <tyreld@linux.vnet.ibm.com>, Michal =?ISO-8859-1?Q?Such=E1nek?= <msuchanek@suse.de>, Ashley Lai <ashleydlai@gmail.com>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linuxppc-dev@lists.ozlabs.org, linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <fbd04459-2f98-8769-415e-9327dec73bd2@linux.vnet.ibm.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: Nayna Jain <nayna@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, 2017-01-26 at 17:42 -0800, Tyrel Datwyler wrote:
-> On 01/26/2017 12:22 PM, Michal Suchánek wrote:
-> > Hello,
-> > 
-> > building ibmvtpm I noticed gcc warning complaining that second word
-> > of
-> > struct ibmvtpm_crq in tpm_ibmvtpm_suspend is uninitialized.
-> > 
-> > The structure is defined as 
-> > 
-> > struct ibmvtpm_crq {
-> >         u8 valid;
-> >         u8 msg;
-> >         __be16 len;
-> >         __be32 data;
-> >         __be64 reserved;
-> > } __attribute__((packed, aligned(8)));
-> > 
-> > initialized as
-> > 
-> >         struct ibmvtpm_crq crq;
-> >         u64 *buf = (u64 *) &crq;
-> > ...
-> >         crq.valid = (u8)IBMVTPM_VALID_CMD;
-> >         crq.msg = (u8)VTPM_PREPARE_TO_SUSPEND;
-> > 
-> > and submitted with
-> > 
-> >         rc = ibmvtpm_send_crq(ibmvtpm->vdev, cpu_to_be64(buf[0]),
-> >                               cpu_to_be64(buf[1]));
+On Thu, Jan 26, 2017 at 07:23:15AM -0500, Stefan Berger wrote:
+> On 01/20/2017 12:05 PM, Nayna Jain wrote:
+> > This patch implements the TPM 2.0 capability TPM_CAP_PCRS to
+> > retrieve the active PCR banks from the TPM. This is needed
+> > to enable extending all active banks as recommended by TPM 2.0
+> > TCG Specification.
+> >
+> > Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
+> > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> > ---
+> >   drivers/char/tpm/tpm.h      |  5 ++++
+> >   drivers/char/tpm/tpm2-cmd.c | 59 +++++++++++++++++++++++++++++++++++++++++++++
+> >   2 files changed, 64 insertions(+)
+> >
+> > diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> > index 1ae9768..c291f19 100644
+> > --- a/drivers/char/tpm/tpm.h
+> > +++ b/drivers/char/tpm/tpm.h
+> > @@ -97,6 +97,7 @@ enum tpm2_return_codes {
+> >   };
+> >
+> >   enum tpm2_algorithms {
+> > +	TPM2_ALG_ERROR		= 0x0000,
+> >   	TPM2_ALG_SHA1		= 0x0004,
+> >   	TPM2_ALG_KEYEDHASH	= 0x0008,
+> >   	TPM2_ALG_SHA256		= 0x000B,
+> > @@ -127,6 +128,7 @@ enum tpm2_permanent_handles {
+> >   };
+> >
+> >   enum tpm2_capabilities {
+> > +	TPM2_CAP_PCRS		= 5,
+> >   	TPM2_CAP_TPM_PROPERTIES = 6,
+> >   };
+> >
+> > @@ -187,6 +189,8 @@ struct tpm_chip {
+> >
+> >   	const struct attribute_group *groups[3];
+> >   	unsigned int groups_cnt;
+> > +
+> > +	u16 active_banks[7];
+> >   #ifdef CONFIG_ACPI
+> >   	acpi_handle acpi_dev_handle;
+> >   	char ppi_version[TPM_PPI_VERSION_LEN + 1];
+> > @@ -545,4 +549,5 @@ int tpm2_auto_startup(struct tpm_chip *chip);
+> >   void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
+> >   unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
+> >   int tpm2_probe(struct tpm_chip *chip);
+> > +ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip);
+> >   #endif
+> > diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+> > index 6eda239..0e000a3 100644
+> > --- a/drivers/char/tpm/tpm2-cmd.c
+> > +++ b/drivers/char/tpm/tpm2-cmd.c
+> > @@ -998,3 +998,62 @@ int tpm2_auto_startup(struct tpm_chip *chip)
+> >   		rc = -ENODEV;
+> >   	return rc;
+> >   }
+> > +
+> > +struct tpm2_pcr_selection {
+> > +	__be16  hash_alg;
+> > +	u8  size_of_select;
+> > +	u8  pcr_select[3];
+> > +} __packed;
+> > +
+> > +/**
+> > + * tpm2_get_pcr_allocation() - get TPM active PCR banks.
+> > + *
+> > + * @chip: TPM chip to use.
+> > + *
+> > + * Return: Same as with tpm_transmit_cmd.
+> > + */
+> > +ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
+> > +{
+> > +	struct tpm2_pcr_selection pcr_selection;
+> > +	struct tpm_buf buf;
+> > +	void *marker;
+> > +	unsigned int count = 0;
+> > +	int rc;
+> > +	int i;
+> > +
+> > +	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_GET_CAPABILITY);
+> > +	if (rc)
+> > +		return rc;
+> > +
+> > +	tpm_buf_append_u32(&buf, TPM2_CAP_PCRS);
+> > +	tpm_buf_append_u32(&buf, 0);
+> > +	tpm_buf_append_u32(&buf, 1);
+> > +
+> > +	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 0,
+> > +			      "get tpm pcr allocation");
+> > +	if (rc < 0)
+> > +		goto out;
+> > +
+> > +	count = be32_to_cpup(
+> > +		(__be32 *)&buf.data[TPM_HEADER_SIZE + 5]);
+> > +
+> > +	if (count > ARRAY_SIZE(chip->active_banks)) {
+> > +		rc = -ENODEV;
+> > +		goto out;
+> > +	}
+> > +
+> > +	marker = &buf.data[TPM_HEADER_SIZE + 9];
 > 
-> These should be be64_to_cpu() here. The underlying hcall made by
-> ibmvtpm_send_crq() requires parameters to be in cpu endian unlike the
-> RTAS interface which requires data in BE.
-
-Hrm... an hcall takes register arguments. Register arguments don't have
-an endianness.
-
-The problem is that we are packing an in-memory structure into 2
-registers and it's expected that this structure is laid out in the
-registers as if it had been loaded by a BE CPU.
-
-So we have two things at play here:
-
-  - The >8-bit fields should be laid out BE in the memory image
-  - That whole 128-bit structure should be loaded into 2 64-bit
-registers MSB first.
-
-So the "double" swap is somewhat needed. The uglyness comes from the
-passing-by-register of the h-call but it should work.
-
-That said, be64_to_cpup(buf) and be64_to_cpup(buf+1) might give you
-better result (though recent gcc's might not make a difference).
-> > 
-> > which means that the second word indeed contains purely garbage.
-> > 
-> > This is repeated a few times in the driver so I added memset to
-> > quiet
-> > gcc and make behavior deterministic in case the unused fields get
-> > some
-> > meaning in the future.
-> > 
-> > However, in tpm_ibmvtpm_send the structure is initialized as
-> > 
-> > 	struct ibmvtpm_crq crq;
-> >         __be64 *word = (__be64 *)&crq;
-> > ...
-> >         crq.valid = (u8)IBMVTPM_VALID_CMD;
-> >         crq.msg = (u8)VTPM_TPM_COMMAND;
-> >         crq.len = cpu_to_be16(count);
-> >         crq.data = cpu_to_be32(ibmvtpm->rtce_dma_handle);
-> > 
-> > and submitted with
-> > 
-> > 	rc = ibmvtpm_send_crq(ibmvtpm->vdev, be64_to_cpu(word[0]),
-> >                               be64_to_cpu(word[1]));
-> > meaning it is swapped twice.
-> > 
-> > 
-> > Where is the interface defined? Are the command arguments passed as
-> > BE
-> > subfields (the second case was correct before adding the extra
-> > whole
-> > word swap) or BE words (the first case doing whole word swap is
-> > correct)?
+> Now that we are checking access to the returned buffer, we should do an 
+> additional check here:
 > 
-> The interface is defined in PAPR. The crq format is defined in BE
-> terms.
-> However, when we break the crq apart into high and low words they
-> need
-> to be in cpu endian as mentioned above.
+> end = &buf.data[TPM_HEADER_SIZE + rc];
 > 
-> -Tyrel
 > 
-> > 
-> > Thanks
-> > 
-> > Michal
-> > 
+> > +	for (i = 0; i < count; i++) {
+> 
+> if (marker + sizeof(pcr_selection) >= end) {
+>    rc = -EFAULT;
+>    goto out;
+> }
+> 
+> 
+> > +		memcpy(&pcr_selection, marker, sizeof(pcr_selection));
+> > +		chip->active_banks[i] = be16_to_cpu(pcr_selection.hash_alg);
+> > +		marker = marker + sizeof(struct tpm2_pcr_selection);
+> > +	}
+> > +
+> > +out:
+> > +	if (count < ARRAY_SIZE(chip->active_banks))
+> 
+> if (rc < 0 || count < ARRAY_SIZE(...))
+> 
+> 
+> I can send a separate patch for this. Let me know.
+> 
+> > +		chip->active_banks[count] = TPM2_ALG_ERROR;
+> > +
+> > +	tpm_buf_destroy(&buf);
+> > +
+> > +	return rc;
+> > +}
+
+Can you submit a fixup that I could squash into existing patch? Thanks.
+
+/Jarkko
