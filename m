@@ -1,17 +1,16 @@
 From: Tyrel Datwyler <tyreld@linux.vnet.ibm.com>
 Subject: Re: ibmvtpm byteswapping inconsistency
-Date: Fri, 27 Jan 2017 12:32:43 -0800
-Message-ID: <48dc15a0-eaba-29e4-f39e-500177f98638@linux.vnet.ibm.com>
+Date: Fri, 27 Jan 2017 13:19:13 -0800
+Message-ID: <73c1e5be-0820-8dca-c86a-8cf3ffeb5efe@linux.vnet.ibm.com>
 References: <20170126212248.3f3e9103@kitsune.suse.cz>
  <d55b06cc-cb7a-1ef1-05b7-d7d4114d0c48@linux.vnet.ibm.com>
  <1485481819.2980.82.camel@kernel.crashing.org>
- <e518682f-e563-9533-9ffd-f465c662e998@linux.vnet.ibm.com>
- <1485547137.2980.94.camel@kernel.crashing.org>
+ <CAOMqctQtspCTTpfEUyUVyE9GKYOavZNhkXnRPUrPZrDZ6-eG0w@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
+Content-Transfer-Encoding: 8bit
 Return-path: <linuxppc-dev-bounces+glppe-linuxppc-embedded-2=m.gmane.org@lists.ozlabs.org>
-In-Reply-To: <1485547137.2980.94.camel@kernel.crashing.org>
+In-Reply-To: <CAOMqctQtspCTTpfEUyUVyE9GKYOavZNhkXnRPUrPZrDZ6-eG0w@mail.gmail.com>
 List-Unsubscribe: <https://lists.ozlabs.org/options/linuxppc-dev>,
  <mailto:linuxppc-dev-request@lists.ozlabs.org?subject=unsubscribe>
 List-Archive: <http://lists.ozlabs.org/pipermail/linuxppc-dev/>
@@ -22,55 +21,150 @@ List-Subscribe: <https://lists.ozlabs.org/listinfo/linuxppc-dev>,
 Errors-To: linuxppc-dev-bounces+glppe-linuxppc-embedded-2=m.gmane.org@lists.ozlabs.org
 Sender: "Linuxppc-dev"
  <linuxppc-dev-bounces+glppe-linuxppc-embedded-2=m.gmane.org@lists.ozlabs.org>
-To: Benjamin Herrenschmidt <benh@kernel.crashing.org>, =?UTF-8?Q?Michal_Such=c3=a1nek?= <msuchanek@suse.de>, Ashley Lai <ashleydlai@gmail.com>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linuxppc-dev@lists.ozlabs.org, linux-kernel@vger.kernel.org
+To: Michal Suchanek <hramrach@gmail.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>
+Cc: Marcel Selhorst <tpmdd@selhorst.net>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, Paul Mackerras <paulus@samba.org>, Ashley Lai <ashleydlai@gmail.com>, Peter Huewe <peterhuewe@gmx.de>, =?UTF-8?Q?Michal_Such=c3=a1nek?= <msuchanek@suse.de>, linuxppc-dev@lists.ozlabs.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 01/27/2017 11:58 AM, Benjamin Herrenschmidt wrote:
-> On Fri, 2017-01-27 at 10:02 -0800, Tyrel Datwyler wrote:
->>> The problem is that we are packing an in-memory structure into 2
->>> registers and it's expected that this structure is laid out in the
->>> registers as if it had been loaded by a BE CPU.
+On 01/27/2017 01:03 AM, Michal Suchanek wrote:
+> On 27 January 2017 at 02:50, Benjamin Herrenschmidt
+> <benh@kernel.crashing.org> wrote:
+>> On Thu, 2017-01-26 at 17:42 -0800, Tyrel Datwyler wrote:
+>>> On 01/26/2017 12:22 PM, Michal Suchánek wrote:
+>>>> Hello,
+>>>>
+>>>> building ibmvtpm I noticed gcc warning complaining that second word
+>>>> of
+>>>> struct ibmvtpm_crq in tpm_ibmvtpm_suspend is uninitialized.
+>>>>
+>>>> The structure is defined as
+>>>>
+>>>> struct ibmvtpm_crq {
+>>>>         u8 valid;
+>>>>         u8 msg;
+>>>>         __be16 len;
+>>>>         __be32 data;
+>>>>         __be64 reserved;
+>>>> } __attribute__((packed, aligned(8)));
+>>>>
+>>>> initialized as
+>>>>
+>>>>         struct ibmvtpm_crq crq;
+>>>>         u64 *buf = (u64 *) &crq;
+>>>> ...
+>>>>         crq.valid = (u8)IBMVTPM_VALID_CMD;
+>>>>         crq.msg = (u8)VTPM_PREPARE_TO_SUSPEND;
+>>>>
+>>>> and submitted with
+>>>>
+>>>>         rc = ibmvtpm_send_crq(ibmvtpm->vdev, cpu_to_be64(buf[0]),
+>>>>                               cpu_to_be64(buf[1]));
+>>>
+>>> These should be be64_to_cpu() here. The underlying hcall made by
+>>> ibmvtpm_send_crq() requires parameters to be in cpu endian unlike the
+>>> RTAS interface which requires data in BE.
 >>
->> This is only the case if the cpu is BE. If the cpu is LE, regardless of
->> the fact that our in memory structure is laid out BE, when we break it
->> into 2 words each of those words needs to be loaded LE.
+>> Hrm... an hcall takes register arguments. Register arguments don't have
+>> an endianness.
+>>
+>> The problem is that we are packing an in-memory structure into 2
+>> registers and it's expected that this structure is laid out in the
+>> registers as if it had been loaded by a BE CPU.
+>>
+>> So we have two things at play here:
+>>
+>>   - The >8-bit fields should be laid out BE in the memory image
+>>   - That whole 128-bit structure should be loaded into 2 64-bit
+>> registers MSB first.
+>>
+>> So the "double" swap is somewhat needed. The uglyness comes from the
+>> passing-by-register of the h-call but it should work.
+>>
+>> That said, be64_to_cpup(buf) and be64_to_cpup(buf+1) might give you
+>> better result (though recent gcc's might not make a difference).
 > 
-> That doesn't make sense and doesn't match the code... The structure
-> needs to always have the same in-register layout regardless of the
-> endianness of the CPU, especially since the underlying hypervisor
-> will most likely be BE :-)
+> If this should work then the below case that swaps the fields separately is
+> broken.
 > 
-> Thta's why the code does a be64_to_cpu() when loading it, this in
-> effect performs a "BE" load, which on a BE CPU is just a normal load
-> and on LE is a swap to compensate for the CPU loading it the "wrong way
-> around".
+> Anyway, structures have no endianess so when they start with a byte they
+> start with that byte no matter the host endian.
+> crq.valid is the first byte always. And then each field is to be swapped
+> separately.
+> 
+> On the other hand, bitfields are part of an integer and the field should be
+> swapped as part of the integer.
+> 
+> That is,
+> #define CRQ_VALID ((buf[0] >> 56) & 0xff)
+> CRQ_VALID is part of an integer in buf and would be laid out differently
+> on start or end depending on the host being BE or LE.
+> 
+> And the question is what the PAPR actually defines because both ways are
+> used in the code. You can describe an in-memory layout either way.
 
-Its possible being the end of the week I'm just a little dense, but
-wouldn't be64_to_cpu() imply that we are byte-swapping something that is
-already, or supposedly already, in BE format to cpu endianness? Which on
-a BE cpu I would expect a no-op, and on a LE cpu the 64bit word to have
-been swapped from BE --> LE?
+Byte  |   0   |   1   |   2   |   3   |   4   |   5   |   6   |   7
+-----------------------------------------------------------------------
+Word0 | Valid |	Type  |	    Length    |              Data
+-----------------------------------------------------------------------
+Word1 |				Reserved
+-----------------------------------------------------------------------
 
-In my eyes the code does seem to support what I've argued. The same
-thing is done in the scsi VIO drivers. The CRQ structure is laid out and
-annotated BE. We use cpu_to_be() calls to load any non 8bit field.
-Finally, each word is swapped to cpu endian when we hand it off for the
-hcall.
+The following definition looks to match:
 
-from ibmvfc_send_event():
+struct ibmvtpm_crq {
+        u8 valid;
+        u8 msg;
+        __be16 len;
+        __be32 data;
+        __be64 reserved;
+} __attribute__((packed, aligned(8)));
 
-        __be64 *crq_as_u64 = (__be64 *) &evt->crq;
+> 
+>>>>
+>>>> which means that the second word indeed contains purely garbage.
+>>>>
+>>>> This is repeated a few times in the driver so I added memset to
+>>>> quiet
+>>>> gcc and make behavior deterministic in case the unused fields get
+>>>> some
+>>>> meaning in the future.
+>>>>
+>>>> However, in tpm_ibmvtpm_send the structure is initialized as
+>>>>
+>>>>     struct ibmvtpm_crq crq;
+>>>>         __be64 *word = (__be64 *)&crq;
+>>>> ...
+>>>>         crq.valid = (u8)IBMVTPM_VALID_CMD;
+>>>>         crq.msg = (u8)VTPM_TPM_COMMAND;
+>>>>         crq.len = cpu_to_be16(count);
+>>>>         crq.data = cpu_to_be32(ibmvtpm->rtce_dma_handle);
+>>>>
+>>>> and submitted with
+>>>>
+>>>>     rc = ibmvtpm_send_crq(ibmvtpm->vdev, be64_to_cpu(word[0]),
+>>>>                               be64_to_cpu(word[1]));
+>>>> meaning it is swapped twice.
+>>>>
+>>>>
+>>>> Where is the interface defined? Are the command arguments passed as
+>>>> BE
+>>>> subfields (the second case was correct before adding the extra
+>>>> whole
+>>>> word swap) or BE words (the first case doing whole word swap is
+>>>> correct)?
+>>>
+>>> The interface is defined in PAPR. The crq format is defined in BE
+>>> terms.
+> 
+> Which exact PAPR? Where can I get it?
+> The PAPR document I found does not say anything about vtpm. 
 
-	<..snip..>
-
-        if ((rc = ibmvfc_send_crq(vhost, be64_to_cpu(crq_as_u64[0]),
-                                  be64_to_cpu(crq_as_u64[1])))) {
-
-Again, maybe I'm missing something.
+Unfortunately, vtpm doesn't appear to be covered in the publicly
+available LoPAPR.
 
 -Tyrel
 
 > 
-> Cheers,
-> Ben.
+> Thanks
+> 
+> Michal
 > 
