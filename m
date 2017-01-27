@@ -1,24 +1,16 @@
 From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [PATCH RFC v3 5/5] tpm2: expose resource manager
- via a device link /dev/tpms<n>
-Date: Thu, 26 Jan 2017 16:29:02 -0800
-Message-ID: <1485476942.2457.45.camel@HansenPartnership.com>
-References: <1485107342.2504.7.camel@HansenPartnership.com>
-	<1485110892.2504.12.camel@HansenPartnership.com>
-	<20170122203055.zg52yraahqvn4rbv@intel.com>
-	<20170122210107.zwrvuhnelrvaoe5h@intel.com>
-	<20170122210441.ivzujugb3urzndhj@intel.com>
-	<1485120988.2504.21.camel@HansenPartnership.com>
-	<20170123140942.svnurymdxsyo6cum@intel.com>
-	<20170123165823.hbgwphsqqpn6jwiz@intel.com>
-	<20170123214255.vt2dumjm6jo5oxd3@intel.com>
-	<1485209797.2534.29.camel@HansenPartnership.com>
-	<20170125134004.g77ezmfkkhya643y@intel.com>
+Subject: Re: [PATCH 2/2] tpm2-space: add handling for global
+ session exhaustion
+Date: Thu, 26 Jan 2017 16:45:52 -0800
+Message-ID: <1485477952.2457.55.camel@HansenPartnership.com>
+References: <1485236113.2534.69.camel@HansenPartnership.com>
+	<1485236313.2534.73.camel@HansenPartnership.com>
+	<20170126125615.dt5hnfbpmtxk7xlq@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170125134004.g77ezmfkkhya643y-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20170126125615.dt5hnfbpmtxk7xlq-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -31,204 +23,47 @@ To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, 2017-01-25 at 15:40 +0200, Jarkko Sakkinen wrote:
-> On Mon, Jan 23, 2017 at 02:16:37PM -0800, James Bottomley wrote:
-> > On Mon, 2017-01-23 at 23:42 +0200, Jarkko Sakkinen wrote:
-> > > On Mon, Jan 23, 2017 at 06:58:23PM +0200, Jarkko Sakkinen wrote:
-> > > > On Mon, Jan 23, 2017 at 04:09:42PM +0200, Jarkko Sakkinen
-> > > > wrote:
-> > > > > On Sun, Jan 22, 2017 at 01:36:28PM -0800, James Bottomley
-> > > > > wrote:
-> > > > > > On Sun, 2017-01-22 at 23:04 +0200, Jarkko Sakkinen wrote:
-> > > > > > > On Sun, Jan 22, 2017 at 11:01:07PM +0200, Jarkko Sakkinen
-> > > > > > > wrote:
-> > > > > > > > On Sun, Jan 22, 2017 at 10:30:55PM +0200, Jarkko
-> > > > > > > > Sakkinen
-> > > > > > > > wrote:
-> > > > > > > > > On Sun, Jan 22, 2017 at 10:48:12AM -0800, James
-> > > > > > > > > Bottomley
-> > > > > > > > > wrote:
-> > > > > > > > > > On Sun, 2017-01-22 at 09:49 -0800, James Bottomley
-> > > > > > > > > > wrote:
-> > > > > > > > > > > On Fri, 2017-01-20 at 23:05 +0200, Jarkko
-> > > > > > > > > > > Sakkinen
-> > > > > > > > > > > wrote:
-> > > > > > > > > > > > 'tabrm4' branch has been now rebased. It's now
-> > > > > > > > > > > > on
-> > > > > > > > > > > > top of
-> > > > > > > > > > > > master
-> > > > > > > > > > > > branch that contains Stefan's latest patch (min
-> > > > > > > > > > > > body length
-> > > > > > > > > > > > check) 
-> > > > > > > > > > > > that I've reviewed and tested. It also contains
-> > > > > > > > > > > > your
-> > > > > > > > > > > > updated
-> > > > > > > > > > > > /dev/tpms patch.
-> > > > > > > > > > > > 
-> > > > > > > > > > > > I guess the 5 commits that are there now are
-> > > > > > > > > > > > such
-> > > > > > > > > > > > that we
-> > > > > > > > > > > > have 
-> > > > > > > > > > > > fairly good consensus, don't we? If so, can I
-> > > > > > > > > > > > add
-> > > > > > > > > > > > your
-> > > > > > > > > > > > reviewed-by 
-> > > > > > > > > > > > and tested-by to my commits and vice versa?
-> > > > > > > > > > > 
-> > > > > > > > > > > We're still failing my test_transients.  This is
-> > > > > > > > > > > the
-> > > > > > > > > > > full
-> > > > > > > > > > > python of 
-> > > > > > > > > > > the test case:
-> > > > > > > > > > > 
-> > > > > > > > > > > 
-> > > > > > > > > > >     def test_transients(self):
-> > > > > > > > > > >         k = self.open_transients()
-> > > > > > > > > > >         self.c.flush_context(k[0])
-> > > > > > > > > > >         self.c.change_auth(self.c.SRK, k[1],
-> > > > > > > > > > > None,
-> > > > > > > > > > > pwd1)
-> > > > > > > > > > >         ...
-> > > > > > > > > > > 
-> > > > > > > > > > > It's failing at self.c.flush_context(k[0]) with
-> > > > > > > > > > > TPM_RC_VALUE.
-> > > > > > > > > > >   It's 
-> > > > > > > > > > > the same problem Ken complained about:
-> > > > > > > > > > > TPM2_FlushContext
-> > > > > > > > > > > doesn't have 
-> > > > > > > > > > > a declared handle area so we don't translate the
-> > > > > > > > > > > handle being
-> > > > > > > > > > > sent
-> > > > > > > > > > > down.  We have to fix this either by intercepting
-> > > > > > > > > > > the
-> > > > > > > > > > > flush
-> > > > > > > > > > > and 
-> > > > > > > > > > > manually translating the context, or by being
-> > > > > > > > > > > dangerously
-> > > > > > > > > > > clever and 
-> > > > > > > > > > > marking flush as a command which takes one
-> > > > > > > > > > > handle.
-> > > > > > > > > > 
-> > > > > > > > > > This is what the dangerously clever fix looks like.
-> > > > > > > > > >  With this
-> > > > > > > > > > and a
-> > > > > > > > > > few other changes, my smoke tests now pass.
-> > > > > > > > > > 
-> > > > > > > > > > James
-> > > > > > > > > 
-> > > > > > > > > I don't want to be clever here. I will rather
-> > > > > > > > > intercept
-> > > > > > > > > the body
-> > > > > > > > > and
-> > > > > > > > > try to keep the core code simple and easy to
-> > > > > > > > > understand.
-> > > > > > > > 
-> > > > > > > > It came out quite clean actually.
-> > > > > > > > 
-> > > > > > > > I just encapsulated handle mapping and have this in the
-> > > > > > > > beginning
-> > > > > > > > of
-> > > > > > > > tpm2_map_command:
-> > > > > > > > 
-> > > > > > > > if (cc == TPM2_CC_FLUSH_CONTEXT)
-> > > > > > > > 	return tpm2_map_to_phandle(space,
-> > > > > > > > &cmd[TPM_HEADER_SIZE]);
-> > > > > > > > 
-> > > > > > > > I think this documents better what is actually going on
-> > > > > > > > than
-> > > > > > > > tinkering
-> > > > > > > > cc_attr_tbl.
-> > > > > > > > 
-> > > > > > > > /Jarkko
-> > > > > > > 
-> > > > > > > Actually what you suggested is much better idea because
-> > > > > > > it
-> > > > > > > will also
-> > > > > > > take care of validation.
-> > > > > > 
-> > > > > > Yes, that's why it's clever ... I'm just always wary of
-> > > > > > clever
-> > > > > > code
-> > > > > > because of the Kernighan principle.
-> > > > > > 
-> > > > > > >  I'm still going to keep tpm2_map_to_phandle because it
-> > > > > > > makes
-> > > > > > > the 
-> > > > > > > code flow a lot cleaner and probably sessions have to
-> > > > > > > anyway
-> > > > > > > make it
-> > > > > > > even more complicated.
-> > > > > > 
-> > > > > > OK, there's one more thing that seems to be causing
-> > > > > > problems:
-> > > > > > when
-> > > > > > tpm2_save_context fails because the handle no longer exists
-> > > > > > (like it's
-> > > > > > been flushed) it returns TPM_RC_REFERENCE_H0 not
-> > > > > > TPM_RC_HANDLE
-> > > > > > (the
-> > > > > > session code does seem to return TPM_RC_HANDLE under some
-> > > > > > circumstances).
-> > > > > > 
-> > > > > > James
-> > > > > 
-> > > > > What is your way for reproducing this issue? Just want to add
-> > > > > a test case for my smoke test suite so that I can verify that
-> > > > > the issue is fixed once I've fixed it.
-> > > > 
-> > > > Right. Too easy. Sorry about this. I'll push a fix for this to
-> > > > tabrm4 branch.
-> > > 
-> > > 1. I pushed a fix to the repository.
+On Thu, 2017-01-26 at 14:56 +0200, Jarkko Sakkinen wrote:
+> On Mon, Jan 23, 2017 at 09:38:33PM -0800, James Bottomley wrote:
+> > In a TPM2, sessions can be globally exhausted once there are
+> > TPM_PT_ACTIVE_SESSION_MAX of them (even if they're all context 
+> > saved). The Strategy for handling this is to keep a global count of 
+> > all the sessions along with their creation time.  Then if we see 
+> > the TPM run out of sessions (via the TPM_RC_SESSION_HANDLES) we 
+> > first wait for one to become free, but if it doesn't, we forcibly 
+> > evict an existing one. The eviction strategy waits until the 
+> > current command is repeated to evict the session which should 
+> > guarantee there is an available slot.
 > > 
-> > I don't think the fix is right; this is what you now have
+> > On the force eviction case, we make sure that the victim session is 
+> > at least SESSION_TIMEOUT old (currently 2 seconds).  The wait queue
+> > for session slots is a FIFO one, ensuring that once we run out of
+> > sessions, everyone will get a session in a bounded time and once 
+> > they get one, they'll have SESSION_TIMEOUT to use it before it may 
+> > be subject to eviction.
 > > 
-> > 	} else if ((rc & TPM2_RC_REFERENCE_H0) == TPM2_RC_REFERENCE_H0)
-> > {
-> > 
-> > That should be
-> > 
-> > } else if (rc == TPM2_RC_REFERENCE_H0)
+> > Signed-off-by: James Bottomley <
+> > James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 > 
-> Right I see your point.
-> 
-> And yes, also for RC_HANDLE the error handling was done incorrectly. 
->  It should be masked like you said with 0xff to catch error number 
-> and the F flag (bit 7).
-> 
-> As it is format zero error code it should be fine to check without 
-> any mask.
-> 
-> Thanks for noting this. It is easy to shoot yourself into foot when
-> there's lot of stuff packed :-)
+> This is not a proper review yet. Just quick question: why do you need
+> a real time (i.e. created)? Maybe in the force eviction case it would
+> be enough to sleep lets say 500 ms and pick the victim with smallest
+> number? I.e. just have increasing u64 counter instead of real time.
 
-OK, I've rebased and retested to tabrm5.  Apart from the obvious
-introduced bug into the last patch (fix below if you need it)
-everything works, so you can add my tested and reviewed bys.
+So that if the oldest session has already been around for > 2s there's
+no need to wait.  In order to guarantee everyone gets a session for at
+least 2s without tracking the age of sessions, you'd have to sleep for
+2s after you find the oldest session.
+
+> That would simplify this patch a lot and does not prevent to refine
+> later on if workloads show need for more complex logic.
+
+An increasing monotonic counter would actually not be much simpler: all
+you could really cut out would be the four lines and two comments at
+the bottom of the for loop in tpm2_session_wait() which check the age
+of the found session.
 
 James
-
----
-
-commit b63aa4b3a5dce31cbc874fa32bd7252b62f55813
-Author: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Date:   Thu Jan 26 08:43:55 2017 -0800
-
-    fix compile failure
-
-diff --git a/drivers/char/tpm/tpms-dev.c b/drivers/char/tpm/tpms-dev.c
-index 5030f8c..5720885 100644
---- a/drivers/char/tpm/tpms-dev.c
-+++ b/drivers/char/tpm/tpms-dev.c
-@@ -39,7 +39,7 @@ static int tpms_release(struct inode *inode, struct file *file)
- 	struct tpms_priv *priv = container_of(fpriv, struct tpms_priv, priv);
- 
- 	tpm_common_release(file, fpriv);
--	tpm2_del_space(&priv->space):
-+	tpm2_del_space(&priv->space);
- 	kfree(priv);
- 
- 	return 0; 
 
 
 ------------------------------------------------------------------------------
