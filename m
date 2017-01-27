@@ -1,150 +1,50 @@
-From: Tyrel Datwyler <tyreld@linux.vnet.ibm.com>
+From: Benjamin Herrenschmidt <benh-XVmvHMARGAS8U2dJNN8I7kB+6BGkLq7r@public.gmane.org>
 Subject: Re: ibmvtpm byteswapping inconsistency
-Date: Fri, 27 Jan 2017 10:02:34 -0800
-Message-ID: <e518682f-e563-9533-9ffd-f465c662e998@linux.vnet.ibm.com>
+Date: Sat, 28 Jan 2017 06:58:57 +1100
+Message-ID: <1485547137.2980.94.camel@kernel.crashing.org>
 References: <20170126212248.3f3e9103@kitsune.suse.cz>
- <d55b06cc-cb7a-1ef1-05b7-d7d4114d0c48@linux.vnet.ibm.com>
- <1485481819.2980.82.camel@kernel.crashing.org>
+	<d55b06cc-cb7a-1ef1-05b7-d7d4114d0c48@linux.vnet.ibm.com>
+	<1485481819.2980.82.camel@kernel.crashing.org>
+	<e518682f-e563-9533-9ffd-f465c662e998@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Return-path: <linuxppc-dev-bounces+glppe-linuxppc-embedded-2=m.gmane.org@lists.ozlabs.org>
-In-Reply-To: <1485481819.2980.82.camel@kernel.crashing.org>
-List-Unsubscribe: <https://lists.ozlabs.org/options/linuxppc-dev>,
- <mailto:linuxppc-dev-request@lists.ozlabs.org?subject=unsubscribe>
-List-Archive: <http://lists.ozlabs.org/pipermail/linuxppc-dev/>
-List-Post: <mailto:linuxppc-dev@lists.ozlabs.org>
-List-Help: <mailto:linuxppc-dev-request@lists.ozlabs.org?subject=help>
-List-Subscribe: <https://lists.ozlabs.org/listinfo/linuxppc-dev>,
- <mailto:linuxppc-dev-request@lists.ozlabs.org?subject=subscribe>
-Errors-To: linuxppc-dev-bounces+glppe-linuxppc-embedded-2=m.gmane.org@lists.ozlabs.org
-Sender: "Linuxppc-dev"
- <linuxppc-dev-bounces+glppe-linuxppc-embedded-2=m.gmane.org@lists.ozlabs.org>
-To: Benjamin Herrenschmidt <benh@kernel.crashing.org>, =?UTF-8?Q?Michal_Such=c3=a1nek?= <msuchanek@suse.de>, Ashley Lai <ashleydlai@gmail.com>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linuxppc-dev@lists.ozlabs.org, linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <e518682f-e563-9533-9ffd-f465c662e998-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Tyrel Datwyler <tyreld-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, Michal =?ISO-8859-1?Q?Such=E1nek?= <msuchanek-l3A5Bk7waGM@public.gmane.org>, Ashley Lai <ashleydlai-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Paul Mackerras <paulus-eUNUBHrolfbYtjvyW6yDsg@public.gmane.org>, Michael Ellerman <mpe-Gsx/Oe8HsFggBc27wqDAHg@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linuxppc-dev-uLR06cmDAlY/bJ5BZ2RsiQ@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 01/26/2017 05:50 PM, Benjamin Herrenschmidt wrote:
-> On Thu, 2017-01-26 at 17:42 -0800, Tyrel Datwyler wrote:
->> On 01/26/2017 12:22 PM, Michal Suchánek wrote:
->>> Hello,
->>>
->>> building ibmvtpm I noticed gcc warning complaining that second word
->>> of
->>> struct ibmvtpm_crq in tpm_ibmvtpm_suspend is uninitialized.
->>>
->>> The structure is defined as 
->>>
->>> struct ibmvtpm_crq {
->>>         u8 valid;
->>>         u8 msg;
->>>         __be16 len;
->>>         __be32 data;
->>>         __be64 reserved;
->>> } __attribute__((packed, aligned(8)));
->>>
->>> initialized as
->>>
->>>         struct ibmvtpm_crq crq;
->>>         u64 *buf = (u64 *) &crq;
->>> ...
->>>         crq.valid = (u8)IBMVTPM_VALID_CMD;
->>>         crq.msg = (u8)VTPM_PREPARE_TO_SUSPEND;
->>>
->>> and submitted with
->>>
->>>         rc = ibmvtpm_send_crq(ibmvtpm->vdev, cpu_to_be64(buf[0]),
->>>                               cpu_to_be64(buf[1]));
->>
->> These should be be64_to_cpu() here. The underlying hcall made by
->> ibmvtpm_send_crq() requires parameters to be in cpu endian unlike the
->> RTAS interface which requires data in BE.
+On Fri, 2017-01-27 at 10:02 -0800, Tyrel Datwyler wrote:
+> > The problem is that we are packing an in-memory structure into 2
+> > registers and it's expected that this structure is laid out in the
+> > registers as if it had been loaded by a BE CPU.
 > 
-> Hrm... an hcall takes register arguments. Register arguments don't have
-> an endianness.
+> This is only the case if the cpu is BE. If the cpu is LE, regardless of
+> the fact that our in memory structure is laid out BE, when we break it
+> into 2 words each of those words needs to be loaded LE.
 
-I wasn't suggesting that they do. However, I still believe my point is
-valid that the arguments need to be loaded into the registers according
-to the endianness of the cpu. We had several bugs during LE porting
-where assumptions were made that parameters should be loaded BE
-regardless of cpu endian. For example:
+That doesn't make sense and doesn't match the code... The structure
+needs to always have the same in-register layout regardless of the
+endianness of the CPU, especially since the underlying hypervisor
+will most likely be BE :-)
 
-commit 3df76a9dcc74d5f012b94ea01ed6e7aaf8362c5a
-Author: Cyril Bur <cyrilbur@gmail.com>
-Date:   Wed Jan 21 13:32:00 2015 +1100
+Thta's why the code does a be64_to_cpu() when loading it, this in
+effect performs a "BE" load, which on a BE CPU is just a normal load
+and on LE is a swap to compensate for the CPU loading it the "wrong way
+around".
 
-    powerpc/pseries: Fix endian problems with LE migration
+Cheers,
+Ben.
 
-    RTAS events require arguments be passed in big endian while
-    hypercalls have their arguments passed in registers and the values
-    should therefore be in CPU endian.
 
-> 
-> The problem is that we are packing an in-memory structure into 2
-> registers and it's expected that this structure is laid out in the
-> registers as if it had been loaded by a BE CPU.
-
-This is only the case if the cpu is BE. If the cpu is LE, regardless of
-the fact that our in memory structure is laid out BE, when we break it
-into 2 words each of those words needs to be loaded LE.
-
--Tyrel
-
-> 
-> So we have two things at play here:
-> 
->   - The >8-bit fields should be laid out BE in the memory image
->   - That whole 128-bit structure should be loaded into 2 64-bit
-> registers MSB first.
-> 
-> So the "double" swap is somewhat needed. The uglyness comes from the
-> passing-by-register of the h-call but it should work.
-> 
-> That said, be64_to_cpup(buf) and be64_to_cpup(buf+1) might give you
-> better result (though recent gcc's might not make a difference).
->>>
->>> which means that the second word indeed contains purely garbage.
->>>
->>> This is repeated a few times in the driver so I added memset to
->>> quiet
->>> gcc and make behavior deterministic in case the unused fields get
->>> some
->>> meaning in the future.
->>>
->>> However, in tpm_ibmvtpm_send the structure is initialized as
->>>
->>> 	struct ibmvtpm_crq crq;
->>>         __be64 *word = (__be64 *)&crq;
->>> ...
->>>         crq.valid = (u8)IBMVTPM_VALID_CMD;
->>>         crq.msg = (u8)VTPM_TPM_COMMAND;
->>>         crq.len = cpu_to_be16(count);
->>>         crq.data = cpu_to_be32(ibmvtpm->rtce_dma_handle);
->>>
->>> and submitted with
->>>
->>> 	rc = ibmvtpm_send_crq(ibmvtpm->vdev, be64_to_cpu(word[0]),
->>>                               be64_to_cpu(word[1]));
->>> meaning it is swapped twice.
->>>
->>>
->>> Where is the interface defined? Are the command arguments passed as
->>> BE
->>> subfields (the second case was correct before adding the extra
->>> whole
->>> word swap) or BE words (the first case doing whole word swap is
->>> correct)?
->>
->> The interface is defined in PAPR. The crq format is defined in BE
->> terms.
->> However, when we break the crq apart into high and low words they
->> need
->> to be in cpu endian as mentioned above.
->>
->> -Tyrel
->>
->>>
->>> Thanks
->>>
->>> Michal
->>>
-> 
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
