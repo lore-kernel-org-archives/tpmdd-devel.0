@@ -1,8 +1,8 @@
 From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Subject: Re: [PATCH v6 0/2] enhance TPM 2.0 extend function to
  support multiple PCR banks
-Date: Fri, 27 Jan 2017 22:53:11 +0530
-Message-ID: <588B81FF.40606@linux.vnet.ibm.com>
+Date: Fri, 27 Jan 2017 22:54:08 +0530
+Message-ID: <588B8238.9000405@linux.vnet.ibm.com>
 References: <1484931913-24909-1-git-send-email-nayna@linux.vnet.ibm.com>
 	<20170125204535.bduqiywtlvgidoj6@intel.com>
 Mime-Version: 1.0
@@ -52,9 +52,12 @@ On 01/26/2017 02:15 AM, Jarkko Sakkinen wrote:
 > verify that I didn't break anything?
 >
 
+Thanks Jarkko !!
+
 Yes, it looks fine, also tested with it.
 
-Just to understand.. how did you decide min_rsp_body_length to be 9.
+Just to understand..in tpm2_get_pcr_allocation(), how did you decide 
+min_rsp_body_length to be 9.
 If I understood correctly, I think it is the size after header, till 
 last fixed parameter i.e.  till count.
 Is the assumption is that count can be zero, such that there is no 
