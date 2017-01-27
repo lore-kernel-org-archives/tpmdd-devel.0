@@ -1,12 +1,19 @@
-From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH] tpm: add buffer access validation in
-	tpm2_get_pcr_allocation()
-Date: Fri, 27 Jan 2017 10:25:49 -0500
-Message-ID: <1485530749-22948-1-git-send-email-nayna@linux.vnet.ibm.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH] tpm: fix RC value check in
+	tpm2_seal_trusted
+Date: Fri, 27 Jan 2017 09:24:16 -0700
+Message-ID: <20170127162416.GA32330@obsidianresearch.com>
+References: <20170125210348.13790-1-jarkko.sakkinen@linux.intel.com>
+	<20170125221245.GB713@obsidianresearch.com>
+	<20170126112714.xvvvb72dybmfgitw@intel.com>
+	<20170126183252.GA16502@obsidianresearch.com>
+	<20170127064327.esussb6itanaqibq@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20170127064327.esussb6itanaqibq-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -15,75 +22,31 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This patch add validation in tpm2_get_pcr_allocation to avoid
-access beyond response buffer length.
+On Fri, Jan 27, 2017 at 08:43:27AM +0200, Jarkko Sakkinen wrote:
+> On Thu, Jan 26, 2017 at 11:32:52AM -0700, Jason Gunthorpe wrote:
+> > On Thu, Jan 26, 2017 at 01:27:14PM +0200, Jarkko Sakkinen wrote:
+> > 
+> > > "The error code handling is bogus as any error code that has the bits
+> > > set that TPM_RC_HASH could pass. Implemented tpm2_rc_value() helper to
+> > > parse the error value from FMT0 and FMT1 error codes to use to check the
+> > > error so that these types of mistakes is prevented in the future."
+> > 
+> > Great thanks
+> > 
+> > Jason
+> 
+> Can I put your Reviewed-by? I would like to get this into 4.11.
 
-Suggested-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
----
- drivers/char/tpm/tpm2-cmd.c | 28 +++++++++++++++++++++++-----
- 1 file changed, 23 insertions(+), 5 deletions(-)
+I'm not up to speed on the TPM2 parsing, but it looks OK based on your
+description.
 
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 4aad84c..02c1ea7 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -1008,9 +1008,13 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
- 	struct tpm2_pcr_selection pcr_selection;
- 	struct tpm_buf buf;
- 	void *marker;
--	unsigned int count = 0;
-+	void *end;
-+	void *pcr_select_offset;
-+	unsigned int count;
-+	u32 sizeof_pcr_selection;
-+	u32 resp_len;
- 	int rc;
--	int i;
-+	int i = 0;
- 
- 	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_GET_CAPABILITY);
- 	if (rc)
-@@ -1034,15 +1038,29 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
- 	}
- 
- 	marker = &buf.data[TPM_HEADER_SIZE + 9];
-+
-+	resp_len = be32_to_cpup((__be32 *)&buf.data[2]);
-+	end = &buf.data[resp_len];
-+
- 	for (i = 0; i < count; i++) {
-+		pcr_select_offset = marker +
-+			offsetof(struct tpm2_pcr_selection, size_of_select);
-+		if (pcr_select_offset >= end) {
-+			rc = -EFAULT;
-+			break;
-+		}
-+
- 		memcpy(&pcr_selection, marker, sizeof(pcr_selection));
- 		chip->active_banks[i] = be16_to_cpu(pcr_selection.hash_alg);
--		marker = marker + sizeof(struct tpm2_pcr_selection);
-+		sizeof_pcr_selection = sizeof(pcr_selection.hash_alg) +
-+			sizeof(pcr_selection.size_of_select) +
-+			sizeof(u8) * pcr_selection.size_of_select;
-+		marker = marker + sizeof_pcr_selection;
- 	}
- 
- out:
--	if (count < ARRAY_SIZE(chip->active_banks))
--		chip->active_banks[count] = TPM2_ALG_ERROR;
-+	if (i < ARRAY_SIZE(chip->active_banks))
-+		chip->active_banks[i] = TPM2_ALG_ERROR;
- 
- 	tpm_buf_destroy(&buf);
- 
--- 
-2.5.0
+Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 
+Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
