@@ -1,337 +1,494 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: [PATCH v2 1/2] tpm2: add session handle context
- saving and restoring to the space code
-Date: Fri, 27 Jan 2017 16:32:38 -0800
-Message-ID: <1485563558.3229.41.camel@HansenPartnership.com>
+From: James Bottomley <James.Bottomley@HansenPartnership.com>
+Subject: [PATCH 2/2] tpm2-space: add handling for global session exhaustion
+Date: Fri, 27 Jan 2017 16:33:54 -0800
+Message-ID: <1485563634.3229.43.camel@HansenPartnership.com>
 References: <1485563481.3229.39.camel@HansenPartnership.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1485563481.3229.39.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <1485563481.3229.39.camel@HansenPartnership.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net
+Cc: open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-sessions are different from transient objects in that their handles
-may not be virtualized (because they're used for some hmac
-calculations).  Additionally when a session is context saved, a
-vestigial memory remains in the TPM and if it is also flushed, that
-will be lost and the session context will refuse to load next time, so
-the code is updated to flush only transient objects after a context
-save.  Add a separate array (chip->session_tbl) to save and restore
-sessions by handle.  Use the failure of a context save or load to
-signal that the session has been flushed from the TPM and we can
-remove its memory from chip->session_tbl.
+In a TPM2, sessions can be globally exhausted once there are
+TPM_PT_ACTIVE_SESSION_MAX of them (even if they're all context saved).
+The Strategy for handling this is to keep a global count of all the
+sessions along with their creation time.  Then if we see the TPM run
+out of sessions (via the TPM_RC_SESSION_HANDLES) we first wait for one
+to become free, but if it doesn't, we forcibly evict an existing one.
+The eviction strategy waits until the current command is repeated to
+evict the session which should guarantee there is an available slot.
 
-Sessions are also isolated during each instance of a tpm space.  This
-means that spaces shouldn't be able to see each other's sessions and
-is enforced by ensuring that a space user may only refer to sessions
-handles that are present in their own chip->session_tbl.  Finally when
-a space is closed, all the sessions belonging to it should be flushed
-so the handles may be re-used by other spaces.
+On the force eviction case, we make sure that the victim session is at
+least SESSION_TIMEOUT old (currently 2 seconds).  The wait queue for
+session slots is a FIFO one, ensuring that once we run out of
+sessions, everyone will get a session in a bounded time and once they
+get one, they'll have SESSION_TIMEOUT to use it before it may be
+subject to eviction.
 
-Note that if we get a session save or load error, all sessions are
-effectively flushed.  Even though we restore the session buffer, all
-the old sessions will refuse to load after the flush and they'll be
-purged from our session memory.  This means that while transient
-context handling is still soft in the face of errors, session handling
-is hard (any failure of the model means all sessions are lost).
-
-Signed-off-by: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-
+Signed-off-by: James Bottomley <James.Bottomley@HansenPartnership.com>
 ---
-
-v2: - add kill space to remove sessions on close
-    - update changelog
-    - reduce session table to 3 entries
----
- drivers/char/tpm/tpm-chip.c   |   6 +++
- drivers/char/tpm/tpm.h        |   4 +-
- drivers/char/tpm/tpm2-space.c | 112 ++++++++++++++++++++++++++++++++++++++++--
- drivers/char/tpm/tpms-dev.c   |   2 +-
- 4 files changed, 118 insertions(+), 6 deletions(-)
+ drivers/char/tpm/tpm-chip.c   |   1 +
+ drivers/char/tpm/tpm.h        |  39 +++++++-
+ drivers/char/tpm/tpm2-cmd.c   |  15 +++
+ drivers/char/tpm/tpm2-space.c | 209 ++++++++++++++++++++++++++++++++++++++++--
+ drivers/char/tpm/tpms-dev.c   |  17 +++-
+ 5 files changed, 271 insertions(+), 10 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index ed4f887..6282ad0 100644
+index 6282ad0..150c6b8 100644
 --- a/drivers/char/tpm/tpm-chip.c
 +++ b/drivers/char/tpm/tpm-chip.c
-@@ -130,6 +130,7 @@ static void tpm_dev_release(struct device *dev)
+@@ -164,6 +164,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
  
- 	kfree(chip->log.bios_event_log);
- 	kfree(chip->work_space.context_buf);
-+	kfree(chip->work_space.session_buf);
- 	kfree(chip);
- }
+ 	mutex_init(&chip->tpm_mutex);
+ 	init_rwsem(&chip->ops_sem);
++	init_waitqueue_head(&chip->session_wait);
  
-@@ -223,6 +224,11 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
- 		rc = -ENOMEM;
- 		goto out;
- 	}
-+	chip->work_space.session_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
-+	if (!chip->work_space.session_buf) {
-+		rc = -ENOMEM;
-+		goto out;
-+	}
- 
- 	return chip;
+ 	chip->ops = ops;
  
 diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index c4b8ec9..10c57b9 100644
+index 10c57b9..658e5e2 100644
 --- a/drivers/char/tpm/tpm.h
 +++ b/drivers/char/tpm/tpm.h
-@@ -161,6 +161,8 @@ enum tpm2_cc_attrs {
- struct tpm_space {
- 	u32 context_tbl[3];
- 	u8 *context_buf;
-+	u32 session_tbl[3];
-+	u8 *session_buf;
+@@ -95,7 +95,8 @@ enum tpm2_return_codes {
+ 	TPM2_RC_HANDLE		= 0x008B,
+ 	TPM2_RC_INITIALIZE	= 0x0100, /* RC_VER1 */
+ 	TPM2_RC_DISABLED	= 0x0120,
+-	TPM2_RC_TESTING		= 0x090A, /* RC_WARN */
++	TPM2_RC_SESSION_HANDLES	= 0x0905, /* RC_WARN */
++	TPM2_RC_TESTING		= 0x090A,
+ 	TPM2_RC_REFERENCE_H0	= 0x0910,
  };
  
+@@ -139,7 +140,8 @@ enum tpm2_capabilities {
+ };
+ 
+ enum tpm2_properties {
+-	TPM_PT_TOTAL_COMMANDS	= 0x0129,
++	TPM_PT_TOTAL_COMMANDS		= 0x0129,
++	TPM_PT_ACTIVE_SESSIONS_MAX	= 0x0111,
+ };
+ 
+ enum tpm2_startup_types {
+@@ -163,8 +165,24 @@ struct tpm_space {
+ 	u8 *context_buf;
+ 	u32 session_tbl[3];
+ 	u8 *session_buf;
++	u32 reserved_handle;
+ };
+ 
++#define TPM2_HANDLE_FORCE_EVICT 0xFFFFFFFF
++
++static inline void tpm2_session_force_evict(struct tpm_space *space)
++{
++	/* if reserved handle is not empty, we already have a
++	 * session for eviction, so no need to force one
++	 */
++	if (space->reserved_handle == 0)
++		space->reserved_handle = TPM2_HANDLE_FORCE_EVICT;
++}
++static inline bool tpm2_is_session_force_evict(struct tpm_space *space)
++{
++	return space->reserved_handle == TPM2_HANDLE_FORCE_EVICT;
++}
++
  enum tpm_chip_flags {
-@@ -583,7 +585,7 @@ unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
- int tpm2_probe(struct tpm_chip *chip);
- int tpm2_find_cc(struct tpm_chip *chip, u32 cc);
- int tpm2_init_space(struct tpm_space *space);
--void tpm2_del_space(struct tpm_space *space);
-+void tpm2_del_space(struct tpm_chip *chip, struct tpm_space *space);
- int tpm2_prepare_space(struct tpm_chip *chip, struct tpm_space *space, u32 cc,
- 		       u8 *cmd);
- int tpm2_commit_space(struct tpm_chip *chip, struct tpm_space *space,
+ 	TPM_CHIP_FLAG_TPM2		= BIT(1),
+ 	TPM_CHIP_FLAG_IRQ		= BIT(2),
+@@ -177,6 +195,12 @@ struct tpm_chip_seqops {
+ 	const struct seq_operations *seqops;
+ };
+ 
++struct tpm_sessions {
++	struct tpm_space *space;
++	u32 handle;
++	unsigned long created;
++};
++
+ struct tpm_chip {
+ 	struct device dev;
+ 	struct device devs;
+@@ -221,8 +245,12 @@ struct tpm_chip {
+ #endif /* CONFIG_ACPI */
+ 
+ 	struct tpm_space work_space;
++	struct tpm_space *space;
+ 	u32 nr_commands;
+ 	u32 *cc_attrs_tbl;
++	struct tpm_sessions *sessions;
++	int max_sessions;
++	wait_queue_head_t session_wait;
+ };
+ 
+ #define to_tpm_chip(d) container_of(d, struct tpm_chip, dev)
+@@ -570,6 +598,13 @@ int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
+ int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max);
+ void tpm2_flush_context_cmd(struct tpm_chip *chip, u32 handle,
+ 			    unsigned int flags);
++static inline void tpm2_session_clear_reserved(struct tpm_chip *chip,
++					       struct tpm_space *space)
++{
++	if (space->reserved_handle && !tpm2_is_session_force_evict(space))
++		tpm2_flush_context_cmd(chip, space->reserved_handle, 0);
++	space->reserved_handle = 0;
++}
+ int tpm2_seal_trusted(struct tpm_chip *chip,
+ 		      struct trusted_key_payload *payload,
+ 		      struct trusted_key_options *options);
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index db9930a..4db0918 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -1050,6 +1050,7 @@ static int tpm2_get_cc_attrs_tbl(struct tpm_chip *chip)
+ {
+ 	struct tpm_buf buf;
+ 	u32 nr_commands;
++	u32 nr_sessions;
+ 	u32 *attrs;
+ 	int i;
+ 	int rc;
+@@ -1102,6 +1103,20 @@ static int tpm2_get_cc_attrs_tbl(struct tpm_chip *chip)
+ 
+ 	tpm_buf_destroy(&buf);
+ 
++	rc = tpm2_get_tpm_pt(chip, TPM_PT_ACTIVE_SESSIONS_MAX,
++			     &nr_sessions, NULL);
++	if (rc)
++		goto out;
++
++	if (nr_sessions > 256)
++		nr_sessions = 256;
++
++	chip->max_sessions = nr_sessions;
++	chip->sessions = devm_kzalloc(&chip->dev,
++				      nr_sessions * sizeof(*chip->sessions),
++				      GFP_KERNEL);
++	if (!chip->sessions)
++		rc = -ENOMEM;
+ out:
+ 	if (rc > 0)
+ 		rc = -ENODEV;
 diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2-space.c
-index d241c2a..2b3d1ad 100644
+index 2b3d1ad..3f21a2d 100644
 --- a/drivers/char/tpm/tpm2-space.c
 +++ b/drivers/char/tpm/tpm2-space.c
-@@ -32,18 +32,28 @@ struct tpm2_context {
- 	__be16 blob_size;
- } __packed;
+@@ -34,6 +34,170 @@ struct tpm2_context {
  
-+static void tpm2_kill_sessions(struct tpm_chip *chip, struct tpm_space *space);
+ static void tpm2_kill_sessions(struct tpm_chip *chip, struct tpm_space *space);
+ 
++static struct tpm_sessions *tpm2_session_chip_get(struct tpm_chip *chip, u32 h)
++{
++	int i;
++	struct tpm_sessions *sess = NULL;
 +
- int tpm2_init_space(struct tpm_space *space)
- {
- 	space->context_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
- 	if (!space->context_buf)
- 		return -ENOMEM;
- 
-+	space->session_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
-+	if (space->session_buf == NULL) {
-+		kfree(space->context_buf);
-+		return -ENOMEM;
++	for (i = 0; i < chip->max_sessions; i++) {
++		if (chip->sessions[i].handle == h)
++			return &chip->sessions[i];
++		if (!sess && !chip->sessions[i].space)
++			sess = &chip->sessions[i];
 +	}
 +
- 	return 0;
- }
- 
--void tpm2_del_space(struct tpm_space *space)
-+void tpm2_del_space(struct tpm_chip *chip, struct tpm_space *space)
- {
-+	tpm2_kill_sessions(chip, space);
- 	kfree(space->context_buf);
-+	kfree(space->session_buf);
- }
- 
- static int tpm2_load_context(struct tpm_chip *chip, u8 *buf,
-@@ -69,6 +79,10 @@ static int tpm2_load_context(struct tpm_chip *chip, u8 *buf,
- 			 __func__, rc);
- 		tpm_buf_destroy(&tbuf);
- 		return -EFAULT;
-+	} else if (tpm2_rc_value(rc) == TPM2_RC_HANDLE ||
-+		   rc == TPM2_RC_REFERENCE_H0) {
-+		rc = -ENOENT;
-+		tpm_buf_destroy(&tbuf);
- 	} else if (rc > 0) {
- 		dev_warn(&chip->dev, "%s: failed with a TPM error 0x%04X\n",
- 			 __func__, rc);
-@@ -121,12 +135,30 @@ static int tpm2_save_context(struct tpm_chip *chip, u32 handle, u8 *buf,
- 	}
- 
- 	memcpy(&buf[*offset], &tbuf.data[TPM_HEADER_SIZE], body_size);
--	tpm2_flush_context_cmd(chip, handle, TPM_TRANSMIT_UNLOCKED);
- 	*offset += body_size;
- 	tpm_buf_destroy(&tbuf);
- 	return 0;
- }
- 
-+static int tpm2_session_add(struct tpm_chip *chip, u32 handle)
++	return sess;
++}
++
++static struct tpm_sessions *tpm2_session_chip_find_oldest(struct tpm_chip *chip)
 +{
-+	struct tpm_space *space = &chip->work_space;
++	struct tpm_sessions *sess = NULL;
 +	int i;
 +
-+	for (i = 0; i < ARRAY_SIZE(space->session_tbl); i++)
-+		if (space->session_tbl[i] == 0)
-+			break;
-+	if (i == ARRAY_SIZE(space->session_tbl)) {
-+		dev_err(&chip->dev, "out of session slots\n");
-+		tpm2_flush_context_cmd(chip, handle, TPM_TRANSMIT_UNLOCKED);
-+		return -ENOMEM;
++	for (i = 0; i < chip->max_sessions; i++) {
++		if (chip->sessions[i].space == NULL)
++			continue;
++
++		if (!sess || time_after(sess->created,
++					chip->sessions[i].created))
++			sess = &chip->sessions[i];
 +	}
 +
-+	space->session_tbl[i] = handle;
++	return sess;
++}
++
++static void tpm2_session_chip_add(struct tpm_chip *chip,
++				  struct tpm_space *space, u32 h)
++{
++	struct tpm_sessions *sess = tpm2_session_chip_get(chip, h);
++
++	sess->space = space;
++	sess->handle = h;
++	sess->created = jiffies;
++}
++
++static void tpm2_session_chip_remove(struct tpm_chip *chip, u32 h)
++{
++	int i;
++
++	for (i = 0; i < chip->max_sessions; i++)
++		if (chip->sessions[i].handle == h)
++			break;
++	if (i == chip->max_sessions) {
++		dev_warn(&chip->dev, "Missing session %08x", h);
++		return;
++	}
++
++	memset(&chip->sessions[i], 0, sizeof(chip->sessions[i]));
++	wake_up(&chip->session_wait);
++}
++
++static int tpm2_session_forget(struct tpm_chip *chip, struct tpm_space *space,
++			       u32 handle)
++{
++	int i, j;
++	struct tpm2_context *ctx;
++
++	for (i = 0, j = 0; i < ARRAY_SIZE(space->session_tbl); i++) {
++		if (space->session_tbl[i] == 0)
++			continue;
++
++		ctx = (struct tpm2_context *)&space->session_buf[j];
++		j += sizeof(*ctx) + get_unaligned_be16(&ctx->blob_size);
++
++		if (space->session_tbl[i] != handle)
++			continue;
++
++		/* forget the session context */
++		memcpy(ctx, &space->session_buf[j], PAGE_SIZE - j);
++		space->session_tbl[i] = 0;
++		break;
++	}
++	if (i == ARRAY_SIZE(space->session_tbl))
++		return -EINVAL;
++	return 0;
++}
++
++static int tpm2_session_wait(struct tpm_chip *chip, struct tpm_space *space)
++{
++	int rc, failed;
++	struct tpm_sessions *sess;
++	const unsigned long min_timeout = msecs_to_jiffies(2000);
++	unsigned long timeout = min_timeout;
++	DEFINE_WAIT(wait);
++
++	for (failed = 0; ; ) {
++		prepare_to_wait(&chip->session_wait, &wait, TASK_INTERRUPTIBLE);
++
++		mutex_unlock(&chip->tpm_mutex);
++		rc = schedule_timeout_interruptible(timeout);
++		mutex_lock(&chip->tpm_mutex);
++
++		finish_wait(&chip->session_wait, &wait);
++
++		if (signal_pending(current))
++			/* got interrupted */
++			return -EINTR;
++
++		if (rc > 0 && !tpm2_is_session_force_evict(space))
++			/* got woken, so slot is free.  We don't
++			 * reserve the slot here because a) we can't
++			 * (no pending session in the TPM to evict)
++			 * and b) no-one is hogging sessions, so no
++			 * evidence of need.
++			 */
++			return 0;
++
++		/* timed out or victim required; select a victim
++		 * session to kill
++		 */
++		sess = tpm2_session_chip_find_oldest(chip);
++		if (sess == NULL) {
++			/* we get here when we can't create a session
++			 * but there are no listed active sessions
++			 * meaning they're all in various space
++			 * structures as victim sessions.  The wait
++			 * queue is a fair sequence, so we need to
++			 * wait a bit harder
++			 */
++			if (failed++ > 3)
++				break;
++			timeout *= 2;
++			dev_info(&chip->dev, "failed to get session, waiting for %us\n", jiffies_to_msecs(timeout)/1000);
++			continue;
++		}
++		/* is the victim old enough? */
++		timeout = jiffies - sess->created;
++		if (timeout > min_timeout)
++			break;
++		/* otherwise wait until the victim is old enough */
++		timeout = min_timeout - timeout;
++	}
++	if (sess == NULL)
++		/* still can't get a victim, give up */
++		return -EINVAL;
++
++	/* store the physical handle */
++	space->reserved_handle = sess->handle;
++	dev_info(&chip->dev, "Selecting handle %08x for eviction\n",
++		 space->reserved_handle);
++
++	/* cause a mapping failure if this session handle is
++	 * ever used in the victim space again
++	 */
++	tpm2_session_forget(chip, sess->space, sess->handle);
++	/* clear the session, but don't wake any other waiters */
++	memset(sess, 0, sizeof(*sess));
++	/* so now we have a saved physical handle but this handle is
++	 * still in the tpm.  After this we repeat the command, but
++	 * flush the handle once we obtain the tpm_mutex on the repeat
++	 * so, in theory, we should have a free handle to
++	 * re-execute
++	 */
 +
 +	return 0;
 +}
 +
- static void tpm2_flush_space(struct tpm_chip *chip)
+ int tpm2_init_space(struct tpm_space *space)
  {
- 	struct tpm_space *space = &chip->work_space;
-@@ -136,6 +168,25 @@ static void tpm2_flush_space(struct tpm_chip *chip)
- 		if (space->context_tbl[i] && ~space->context_tbl[i])
- 			tpm2_flush_context_cmd(chip, space->context_tbl[i],
- 					       TPM_TRANSMIT_UNLOCKED);
-+
-+	for (i = 0; i < ARRAY_SIZE(space->session_tbl); i++) {
-+		if (space->session_tbl[i])
-+			tpm2_flush_context_cmd(chip, space->session_tbl[i],
-+					       TPM_TRANSMIT_UNLOCKED);
-+	}
-+}
-+
-+static void tpm2_kill_sessions(struct tpm_chip *chip, struct tpm_space *space)
-+{
-+	int i;
-+
-+	mutex_lock(&chip->tpm_mutex);
-+	for (i = 0; i < ARRAY_SIZE(space->session_tbl); i++) {
-+		if (space->session_tbl[i])
-+			tpm2_flush_context_cmd(chip, space->session_tbl[i],
-+					       TPM_TRANSMIT_UNLOCKED);
-+	}
-+	mutex_unlock(&chip->tpm_mutex);
- }
- 
- static int tpm2_load_space(struct tpm_chip *chip)
-@@ -161,6 +212,28 @@ static int tpm2_load_space(struct tpm_chip *chip)
- 			return rc;
+ 	space->context_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
+@@ -155,6 +319,7 @@ static int tpm2_session_add(struct tpm_chip *chip, u32 handle)
  	}
  
-+	for (i = 0, offset = 0; i < ARRAY_SIZE(space->session_tbl); i++) {
-+		u32 handle;
-+
-+		if (!space->session_tbl[i])
-+			continue;
-+
-+		rc = tpm2_load_context(chip, space->session_buf,
-+				       &offset, &handle);
-+		if (rc == -ENOENT) {
-+			/* load failed, just forget session */
-+			space->session_tbl[i] = 0;
-+		} else if (rc) {
-+			tpm2_flush_space(chip);
-+			return rc;
-+		}
-+		if (handle != space->session_tbl[i]) {
-+			dev_warn(&chip->dev, "session restored to wrong handle\n");
-+			tpm2_flush_space(chip);
-+			return -EFAULT;
-+		}
-+	}
-+
+ 	space->session_tbl[i] = handle;
++	tpm2_session_chip_add(chip, chip->space, handle);
+ 
  	return 0;
  }
+@@ -181,10 +346,18 @@ static void tpm2_kill_sessions(struct tpm_chip *chip, struct tpm_space *space)
+ 	int i;
  
-@@ -220,7 +293,10 @@ int tpm2_prepare_space(struct tpm_chip *chip, struct tpm_space *space, u32 cc,
- 
- 	memcpy(&chip->work_space.context_tbl, &space->context_tbl,
- 	       sizeof(space->context_tbl));
-+	memcpy(&chip->work_space.session_tbl, &space->session_tbl,
-+	       sizeof(space->session_tbl));
+ 	mutex_lock(&chip->tpm_mutex);
+-	for (i = 0; i < ARRAY_SIZE(space->session_tbl); i++) {
+-		if (space->session_tbl[i])
+-			tpm2_flush_context_cmd(chip, space->session_tbl[i],
+-					       TPM_TRANSMIT_UNLOCKED);
++	if (space->reserved_handle) {
++		tpm2_flush_context_cmd(chip, space->reserved_handle,
++				       TPM_TRANSMIT_UNLOCKED);
++		space->reserved_handle = 0;
++	}
++	for (i = 0; i < chip->max_sessions; i++) {
++		if (chip->sessions[i].space != space)
++			continue;
++		tpm2_flush_context_cmd(chip, chip->sessions[i].handle,
++				       TPM_TRANSMIT_UNLOCKED);
++		memset(&chip->sessions[i], 0, sizeof(chip->sessions[i]));
++		wake_up(&chip->session_wait);
+ 	}
+ 	mutex_unlock(&chip->tpm_mutex);
+ }
+@@ -222,6 +395,7 @@ static int tpm2_load_space(struct tpm_chip *chip)
+ 				       &offset, &handle);
+ 		if (rc == -ENOENT) {
+ 			/* load failed, just forget session */
++			tpm2_session_chip_remove(chip, space->session_tbl[i]);
+ 			space->session_tbl[i] = 0;
+ 		} else if (rc) {
+ 			tpm2_flush_space(chip);
+@@ -297,6 +471,7 @@ int tpm2_prepare_space(struct tpm_chip *chip, struct tpm_space *space, u32 cc,
+ 	       sizeof(space->session_tbl));
  	memcpy(chip->work_space.context_buf, space->context_buf, PAGE_SIZE);
-+	memcpy(chip->work_space.session_buf, space->session_buf, PAGE_SIZE);
+ 	memcpy(chip->work_space.session_buf, space->session_buf, PAGE_SIZE);
++	chip->space = space;
  
  	rc = tpm2_load_space(chip);
  	if (rc) {
-@@ -240,7 +316,7 @@ int tpm2_prepare_space(struct tpm_chip *chip, struct tpm_space *space, u32 cc,
- static int tpm2_map_response(struct tpm_chip *chip, u32 cc, u8 *rsp, size_t len)
- {
- 	struct tpm_space *space = &chip->work_space;
--	u32 phandle;
-+	u32 phandle, phandle_type;
- 	u32 vhandle;
- 	u32 attrs;
- 	u32 return_code = get_unaligned_be32((__be32 *)&rsp[6]);
-@@ -259,9 +335,15 @@ static int tpm2_map_response(struct tpm_chip *chip, u32 cc, u8 *rsp, size_t len)
- 		return 0;
- 
- 	phandle = be32_to_cpup((__be32 *)&rsp[TPM_HEADER_SIZE]);
--	if ((phandle & 0xFF000000) != TPM2_HT_TRANSIENT)
-+	phandle_type = (phandle & 0xFF000000);
-+	if (phandle_type != TPM2_HT_TRANSIENT &&
-+	    phandle_type != TPM2_HT_HMAC_SESSION &&
-+	    phandle_type != TPM2_HT_POLICY_SESSION)
- 		return 0;
- 
-+	if (phandle_type != TPM2_HT_TRANSIENT)
-+		return tpm2_session_add(chip, phandle);
-+
- 	/* Garbage collect a dead context. */
- 	for (i = 0; i < ARRAY_SIZE(space->context_tbl); i++) {
- 		if (space->context_tbl[i] == phandle) {
-@@ -307,9 +389,28 @@ static int tpm2_save_space(struct tpm_chip *chip)
- 		} else if (rc)
- 			return rc;
- 
-+		tpm2_flush_context_cmd(chip, space->context_tbl[i],
-+				       TPM_TRANSMIT_UNLOCKED);
- 		space->context_tbl[i] = ~0;
+@@ -310,16 +485,28 @@ int tpm2_prepare_space(struct tpm_chip *chip, struct tpm_space *space, u32 cc,
+ 		return rc;
  	}
  
-+	for (i = 0, offset = 0; i < ARRAY_SIZE(space->session_tbl); i++) {
-+		if (!space->session_tbl[i])
-+			continue;
-+
-+		rc = tpm2_save_context(chip, space->session_tbl[i],
-+				       space->session_buf, PAGE_SIZE,
-+				       &offset);
-+
-+		if (rc == -ENOENT) {
-+			/* handle error saving session, just forget it */
-+			space->session_tbl[i] = 0;
-+		} else if (rc < 0) {
-+			tpm2_flush_space(chip);
-+			return rc;
-+		}
++	if (space->reserved_handle && !tpm2_is_session_force_evict(space)) {
++		/* this is a trick to allow a previous command which
++		 * failed because it was out of handle space to
++		 * succeed.  The handle is still in the TPM, so now we
++		 * flush it under the tpm_mutex which should ensure we
++		 * can create a new one
++		 */
++		tpm2_flush_context_cmd(chip, space->reserved_handle,
++				       TPM_TRANSMIT_UNLOCKED);
++		space->reserved_handle = 0;
 +	}
 +
  	return 0;
  }
  
-@@ -335,7 +436,10 @@ int tpm2_commit_space(struct tpm_chip *chip, struct tpm_space *space,
+-static int tpm2_map_response(struct tpm_chip *chip, u32 cc, u8 *rsp, size_t len)
++static int tpm2_map_response(struct tpm_chip *chip, u32 cc, u8 *rsp, size_t len,
++			     u32 return_code)
+ {
+ 	struct tpm_space *space = &chip->work_space;
+ 	u32 phandle, phandle_type;
+ 	u32 vhandle;
+ 	u32 attrs;
+-	u32 return_code = get_unaligned_be32((__be32 *)&rsp[6]);
+ 	int i;
  
- 	memcpy(&space->context_tbl, &chip->work_space.context_tbl,
- 	       sizeof(space->context_tbl));
-+	memcpy(&space->session_tbl, &chip->work_space.session_tbl,
-+	       sizeof(space->session_tbl));
+ 	if (return_code != TPM2_RC_SUCCESS)
+@@ -404,6 +591,7 @@ static int tpm2_save_space(struct tpm_chip *chip)
+ 
+ 		if (rc == -ENOENT) {
+ 			/* handle error saving session, just forget it */
++			tpm2_session_chip_remove(chip, space->session_tbl[i]);
+ 			space->session_tbl[i] = 0;
+ 		} else if (rc < 0) {
+ 			tpm2_flush_space(chip);
+@@ -418,11 +606,12 @@ int tpm2_commit_space(struct tpm_chip *chip, struct tpm_space *space,
+ 		      u32 cc, u8 *buf, size_t bufsiz)
+ {
+ 	int rc;
++	u32 return_code = get_unaligned_be32((__be32 *)&buf[6]);
+ 
+ 	if (!space)
+ 		return 0;
+ 
+-	rc = tpm2_map_response(chip, cc, buf, bufsiz);
++	rc = tpm2_map_response(chip, cc, buf, bufsiz, return_code);
+ 	if (rc) {
+ 		tpm2_flush_space(chip);
+ 		return rc;
+@@ -440,6 +629,12 @@ int tpm2_commit_space(struct tpm_chip *chip, struct tpm_space *space,
+ 	       sizeof(space->session_tbl));
  	memcpy(space->context_buf, chip->work_space.context_buf, PAGE_SIZE);
-+	memcpy(space->session_buf, chip->work_space.session_buf, PAGE_SIZE);
+ 	memcpy(space->session_buf, chip->work_space.session_buf, PAGE_SIZE);
++	chip->space = NULL;
++
++	if (return_code == TPM2_RC_SESSION_HANDLES) {
++		tpm2_session_wait(chip, space);
++		return -EAGAIN;
++	}
  
  	return 0;
  }
 diff --git a/drivers/char/tpm/tpms-dev.c b/drivers/char/tpm/tpms-dev.c
-index 5720885..4c98db8 100644
+index 4c98db8..cca43b9 100644
 --- a/drivers/char/tpm/tpms-dev.c
 +++ b/drivers/char/tpm/tpms-dev.c
-@@ -39,7 +39,7 @@ static int tpms_release(struct inode *inode, struct file *file)
+@@ -50,8 +50,23 @@ ssize_t tpms_write(struct file *file, const char __user *buf,
+ {
+ 	struct file_priv *fpriv = file->private_data;
  	struct tpms_priv *priv = container_of(fpriv, struct tpms_priv, priv);
++	int count = 0;
++	const int max_count = 3; /* number of retries */
++	int rc;
++
++	for (count = 0; count < max_count; count++) {
++		rc = tpm_common_write(file, buf, size, off, &priv->space);
++		if (rc != -EAGAIN)
++			break;
++		if (count == max_count - 2)
++			/* second to last go around, force an eviction if
++			 * this go fails, so final go should succeed
++			 */
++			tpm2_session_force_evict(&priv->space);
++	}
++	tpm2_session_clear_reserved(fpriv->chip, &priv->space);
  
- 	tpm_common_release(file, fpriv);
--	tpm2_del_space(&priv->space);
-+	tpm2_del_space(fpriv->chip, &priv->space);
- 	kfree(priv);
+-	return tpm_common_write(file, buf, size, off, &priv->space);
++	return rc;
+ }
  
- 	return 0;
+ const struct file_operations tpms_fops = {
 -- 
 2.6.6
 
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
