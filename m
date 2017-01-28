@@ -1,113 +1,56 @@
-From: msuchanek <msuchanek@suse.de>
+From: Benjamin Herrenschmidt <benh-XVmvHMARGAS8U2dJNN8I7kB+6BGkLq7r@public.gmane.org>
 Subject: Re: ibmvtpm byteswapping inconsistency
-Date: Sat, 28 Jan 2017 01:35:27 +0100
-Message-ID: <5420c93884aee76cbbf5b961d709ba3d@suse.de>
+Date: Sat, 28 Jan 2017 15:28:23 +1100
+Message-ID: <1485577703.2980.104.camel@kernel.crashing.org>
 References: <20170126212248.3f3e9103@kitsune.suse.cz>
- <d55b06cc-cb7a-1ef1-05b7-d7d4114d0c48@linux.vnet.ibm.com>
- <1485481819.2980.82.camel@kernel.crashing.org>
- <e518682f-e563-9533-9ffd-f465c662e998@linux.vnet.ibm.com>
- <1485547137.2980.94.camel@kernel.crashing.org>
- <48dc15a0-eaba-29e4-f39e-500177f98638@linux.vnet.ibm.com>
+	<d55b06cc-cb7a-1ef1-05b7-d7d4114d0c48@linux.vnet.ibm.com>
+	<1485481819.2980.82.camel@kernel.crashing.org>
+	<e518682f-e563-9533-9ffd-f465c662e998@linux.vnet.ibm.com>
+	<1485547137.2980.94.camel@kernel.crashing.org>
+	<48dc15a0-eaba-29e4-f39e-500177f98638@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII;
- format=flowed
-Content-Transfer-Encoding: 7bit
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <48dc15a0-eaba-29e4-f39e-500177f98638@linux.vnet.ibm.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Tyrel Datwyler <tyreld@linux.vnet.ibm.com>
-Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>, Ashley Lai <ashleydlai@gmail.com>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linuxppc-dev@lists.ozlabs.org, linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <48dc15a0-eaba-29e4-f39e-500177f98638-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Tyrel Datwyler <tyreld-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, Michal =?ISO-8859-1?Q?Such=E1nek?= <msuchanek-l3A5Bk7waGM@public.gmane.org>, Ashley Lai <ashleydlai-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Paul Mackerras <paulus-eUNUBHrolfbYtjvyW6yDsg@public.gmane.org>, Michael Ellerman <mpe-Gsx/Oe8HsFggBc27wqDAHg@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linuxppc-dev-uLR06cmDAlY/bJ5BZ2RsiQ@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hello,
-
-On 2017-01-27 21:32, Tyrel Datwyler wrote:
-> On 01/27/2017 11:58 AM, Benjamin Herrenschmidt wrote:
->> On Fri, 2017-01-27 at 10:02 -0800, Tyrel Datwyler wrote:
->>>> The problem is that we are packing an in-memory structure into 2
->>>> registers and it's expected that this structure is laid out in the
->>>> registers as if it had been loaded by a BE CPU.
->>> 
->>> This is only the case if the cpu is BE. If the cpu is LE, regardless 
->>> of
->>> the fact that our in memory structure is laid out BE, when we break 
->>> it
->>> into 2 words each of those words needs to be loaded LE.
->> 
->> That doesn't make sense and doesn't match the code... The structure
->> needs to always have the same in-register layout regardless of the
->> endianness of the CPU, especially since the underlying hypervisor
->> will most likely be BE :-)
->> 
->> Thta's why the code does a be64_to_cpu() when loading it, this in
->> effect performs a "BE" load, which on a BE CPU is just a normal load
->> and on LE is a swap to compensate for the CPU loading it the "wrong 
->> way
->> around".
-> 
-> Its possible being the end of the week I'm just a little dense, but
-> wouldn't be64_to_cpu() imply that we are byte-swapping something that 
-> is
-> already, or supposedly already, in BE format to cpu endianness? Which 
-> on
-> a BE cpu I would expect a no-op, and on a LE cpu the 64bit word to have
-> been swapped from BE --> LE?
-> 
-> In my eyes the code does seem to support what I've argued. The same
-> thing is done in the scsi VIO drivers. The CRQ structure is laid out 
-> and
-> annotated BE. We use cpu_to_be() calls to load any non 8bit field.
-> Finally, each word is swapped to cpu endian when we hand it off for the
-> hcall.
-> 
-> from ibmvfc_send_event():
-> 
->         __be64 *crq_as_u64 = (__be64 *) &evt->crq;
-> 
-> 	<..snip..>
-> 
->         if ((rc = ibmvfc_send_crq(vhost, be64_to_cpu(crq_as_u64[0]),
->                                   be64_to_cpu(crq_as_u64[1])))) {
-> 
-> Again, maybe I'm missing something.
-> 
-
-Ok, so you perform really difficult operation for no good reason. You 
-say
-that the ppc dual-endian works like this: there is an internal in-cpu
-representation of numbers which is always the same. What is affected by
-switching endian is how memory loads and stores work.
-
-If you pass these two words in registers you never need to swap 
-anything.
-
-> Byte  |   0   |   1   |   2   |   3   |   4   |   5   |   6   |   7
-> -----------------------------------------------------------------------
-> Word0 | Valid | Type  |     Length    |              Data
-> -----------------------------------------------------------------------
-> Word1 |                Reserved
-> -----------------------------------------------------------------------
-> 
-> The following definition looks to match:
-> 
-> struct ibmvtpm_crq {
->         u8 valid;
->         u8 msg;
->         __be16 len;
->         __be32 data;
->         __be64 reserved;
-> } __attribute__((packed, aligned(8)));
-
-If under BE valid is first byte then it is MSB and you would get value
-to pass in word 0 as (valid << 56) | (type << 48) | (length << 32 ) | 
-data.
-
-No swaps involved.
-
-To achieve same with structure and swaps you would indeed first swap the
-members and then the whole word. Much harder to read code that way, 
-though.
-
-Thanks
-
-Michal
+T24gRnJpLCAyMDE3LTAxLTI3IGF0IDEyOjMyIC0wODAwLCBUeXJlbCBEYXR3eWxlciB3cm90ZToK
+PiBJdHMgcG9zc2libGUgYmVpbmcgdGhlIGVuZCBvZiB0aGUgd2VlayBJJ20ganVzdCBhIGxpdHRs
+ZSBkZW5zZSwgYnV0Cj4gd291bGRuJ3QgYmU2NF90b19jcHUoKSBpbXBseSB0aGF0IHdlIGFyZSBi
+eXRlLXN3YXBwaW5nIHNvbWV0aGluZyB0aGF0IGlzCj4gYWxyZWFkeSwgb3Igc3VwcG9zZWRseSBh
+bHJlYWR5LCBpbiBCRSBmb3JtYXQgdG8gY3B1IGVuZGlhbm5lc3M/IFdoaWNoIG9uCj4gYSBCRSBj
+cHUgSSB3b3VsZCBleHBlY3QgYSBuby1vcCwgYW5kIG9uIGEgTEUgY3B1IHRoZSA2NGJpdCB3b3Jk
+IHRvIGhhdmUKPiBiZWVuIHN3YXBwZWQgZnJvbSBCRSAtLT4gTEU/CgpJdCdzIGluIEJFIGZvcm1h
+dCBpbiBtZW1vcnkuIEluIExFIG1vZGUsIGxvYWRpbmcgaXQgaW50byBhIHJlZ2lzdGVyIHdpbGwK
+Z2V0IGl0IHRoZSB3cm9uZyB3YXkgYXJvdW5kLCB0aHVzIHdlIGhhdmUgdG8gc3dhcCBpdCBhZ2Fp
+bi4gT25jZSBpbiBhCnJlZ2lzdGVyIGl0IGhhcyBubyAiZW5kaWFubmVzcyIgcGVyLXNlLCB3aGF0
+IG1hdHRlcnMgaXMgdGhhdCB0aGUgYWN0Cm9mIGxvYWRpbmcgZnJvbSBtZW1vcnkgdG8gYSByZWdp
+c3RlciB3b3VsZCBoYXZlIGxvYWRlZCBpdCB0aGUgd3JvbmcKd2F5IGFyb3VuZCBpbiBMRS4KCj4g
+SW4gbXkgZXllcyB0aGUgY29kZSBkb2VzIHNlZW0gdG8gc3VwcG9ydCB3aGF0IEkndmUgYXJndWVk
+LiBUaGUgc2FtZQo+IHRoaW5nIGlzIGRvbmUgaW4gdGhlIHNjc2kgVklPIGRyaXZlcnMuIFRoZSBD
+UlEgc3RydWN0dXJlIGlzIGxhaWQgb3V0IGFuZAo+IGFubm90YXRlZCBCRS4gV2UgdXNlIGNwdV90
+b19iZSgpIGNhbGxzIHRvIGxvYWQgYW55IG5vbiA4Yml0IGZpZWxkLgo+IEZpbmFsbHksIGVhY2gg
+d29yZCBpcyBzd2FwcGVkIHRvIGNwdSBlbmRpYW4gd2hlbiB3ZSBoYW5kIGl0IG9mZiBmb3IgdGhl
+Cj4gaGNhbGwuCj4gCj4gZnJvbSBpYm12ZmNfc2VuZF9ldmVudCgpOgo+IAo+IMKgwqDCoMKgwqDC
+oMKgIF9fYmU2NCAqY3JxX2FzX3U2NCA9IChfX2JlNjQgKikgJmV2dC0+Y3JxOwo+IAo+IMKgwqDC
+oMKgwqDCoMKgwqA8Li5zbmlwLi4+Cj4gCj4gwqDCoMKgwqDCoMKgwqAgaWYgKChyYyA9IGlibXZm
+Y19zZW5kX2NycSh2aG9zdCwgYmU2NF90b19jcHUoY3JxX2FzX3U2NFswXSksCj4gwqDCoMKgwqDC
+oMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKg
+IGJlNjRfdG9fY3B1KGNycV9hc191NjRbMV0pKSkpIHsKPiAKPiBBZ2FpbiwgbWF5YmUgSSdtIG1p
+c3Npbmcgc29tZXRoaW5nLgoKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCkNoZWNrIG91dCB0aGUgdmli
+cmFudCB0ZWNoIGNvbW11bml0eSBvbiBvbmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAplbmdhZ2luZyB0
+ZWNoIHNpdGVzLCBTbGFzaERvdC5vcmchIGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdApfX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwp0cG1kZC1kZXZlbCBtYWls
+aW5nIGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8vbGlzdHMu
+c291cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
