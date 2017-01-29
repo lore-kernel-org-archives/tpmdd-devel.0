@@ -1,15 +1,15 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: Fixing TPM_RC_CONTEXT_GAP
-Date: Sun, 29 Jan 2017 17:25:18 +0200
-Message-ID: <20170129152518.ddeqk257prml5cna@intel.com>
-References: <1485392679.2473.51.camel@linux.vnet.ibm.com>
-	<o6gf96$jgf$1@blaine.gmane.org>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH] tpm: add buffer access validation in
+ tpm2_get_pcr_allocation()
+Date: Sun, 29 Jan 2017 22:48:39 +0530
+Message-ID: <588E23EF.2050202@linux.vnet.ibm.com>
+References: <1485530749-22948-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<20170129144037.sdqd4vutt73isz2i@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <o6gf96$jgf$1@blaine.gmane.org>
+In-Reply-To: <20170129144037.sdqd4vutt73isz2i-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,33 +18,126 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jan 27, 2017 at 04:49:36PM -0500, Ken Goldman wrote:
-> On 1/25/2017 8:04 PM, James Bottomley wrote:
-> 
-> > This leads to a problem: we have to have access to the session context
-> > to pull this trick, and that means we have to disallow TPM users from
-> > calling ContextSave on a session otherwise they could DoS us by
-> > inducing an unremediable TPM_RC_CONTEXT_GAP error (simply by keeping
-> > the saved session and never loading it).
-> 
-> I think it's perfectly acceptable to block applications from calling 
-> context save for sessions.  I don't know of any use case that would 
-> require it.
-> 
-> (There are definitely use cases for context save on transient objects, 
-> but they don't have the replay / gap issue.)
 
-We should probably block the following from /dev/tpms0 by default:
 
-1. ContextLoad for sessions.
-2. ContextSave for sessions.
-3. Vendor specific commands.
+On 01/29/2017 08:10 PM, Jarkko Sakkinen wrote:
+> On Fri, Jan 27, 2017 at 10:25:49AM -0500, Nayna Jain wrote:
+>> This patch add validation in tpm2_get_pcr_allocation to avoid
+>> access beyond response buffer length.
+>>
+>> Suggested-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+>> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+>
+> This validation looks broken to me.
+>
+>> ---
+>>   drivers/char/tpm/tpm2-cmd.c | 28 +++++++++++++++++++++++-----
+>>   1 file changed, 23 insertions(+), 5 deletions(-)
+>>
+>> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+>> index 4aad84c..02c1ea7 100644
+>> --- a/drivers/char/tpm/tpm2-cmd.c
+>> +++ b/drivers/char/tpm/tpm2-cmd.c
+>> @@ -1008,9 +1008,13 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
+>>   	struct tpm2_pcr_selection pcr_selection;
+>>   	struct tpm_buf buf;
+>>   	void *marker;
+>> -	unsigned int count = 0;
+>> +	void *end;
+>> +	void *pcr_select_offset;
+>> +	unsigned int count;
+>> +	u32 sizeof_pcr_selection;
+>> +	u32 resp_len;
+>
+> Very cosmetic but we almos almost universally use the acronym 'rsp' in
+> the TPM driver.
 
-/Jarkko
+Sure will update.
+
+>
+>>   	int rc;
+>> -	int i;
+>> +	int i = 0;
+>
+> Why do you need to initialize it?
+
+Because in out: count is replaced with i.
+And it is replaced because  now for loop can break even before reaching 
+count, because of new buffer checks.
+>
+>>
+>>   	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_GET_CAPABILITY);
+>>   	if (rc)
+>> @@ -1034,15 +1038,29 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
+>>   	}
+>>
+>>   	marker = &buf.data[TPM_HEADER_SIZE + 9];
+>> +
+>> +	resp_len = be32_to_cpup((__be32 *)&buf.data[2]);
+>> +	end = &buf.data[resp_len];
+>
+> What if the response contains larger length than the buffer size?
+
+Isn't this check need to be done in tpm_transmit_cmd for all responses ?
+Though, it seems it is not done there as well.
+
+And to understand what do we expect max buffer length. PAGE_SIZE or 
+TPM_BUFSIZE ?
+
+>
+>> +
+>>   	for (i = 0; i < count; i++) {
+>> +		pcr_select_offset = marker +
+>> +			offsetof(struct tpm2_pcr_selection, size_of_select);
+>> +		if (pcr_select_offset >= end) {
+>> +			rc = -EFAULT;
+>> +			break;
+>> +		}
+>> +
+>>   		memcpy(&pcr_selection, marker, sizeof(pcr_selection));
+>>   		chip->active_banks[i] = be16_to_cpu(pcr_selection.hash_alg);
+>> -		marker = marker + sizeof(struct tpm2_pcr_selection);
+>> +		sizeof_pcr_selection = sizeof(pcr_selection.hash_alg) +
+>> +			sizeof(pcr_selection.size_of_select) +
+>> +			sizeof(u8) * pcr_selection.size_of_select;
+>
+> Remove "sizeof(u8) * ".
+
+Sure.
+>
+>> +		marker = marker + sizeof_pcr_selection;
+>>   	}
+>>
+>>   out:
+>> -	if (count < ARRAY_SIZE(chip->active_banks))
+>> -		chip->active_banks[count] = TPM2_ALG_ERROR;
+>> +	if (i < ARRAY_SIZE(chip->active_banks))
+>> +		chip->active_banks[i] = TPM2_ALG_ERROR;
+>>
+>>   	tpm_buf_destroy(&buf);
+>>
+>> --
+>> 2.5.0
+>>
+>
+> I'm sorry but this commit is changing too much. You need to redo the
+> whole commit and resend the patch set with these fixes. You can keep
+> Reviewed-by and Tested-by in 1/2 but have to remove them from 2/2.
+
+Sure, will do.
+
+Thanks & Regards,
+    - Nayna
+
+
+>
+> /Jarkko
+>
+
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
