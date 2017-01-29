@@ -1,18 +1,15 @@
-From: Benjamin Herrenschmidt <benh-XVmvHMARGAS8U2dJNN8I7kB+6BGkLq7r@public.gmane.org>
-Subject: Re: ibmvtpm byteswapping inconsistency
-Date: Sat, 28 Jan 2017 15:28:23 +1100
-Message-ID: <1485577703.2980.104.camel@kernel.crashing.org>
-References: <20170126212248.3f3e9103@kitsune.suse.cz>
-	<d55b06cc-cb7a-1ef1-05b7-d7d4114d0c48@linux.vnet.ibm.com>
-	<1485481819.2980.82.camel@kernel.crashing.org>
-	<e518682f-e563-9533-9ffd-f465c662e998@linux.vnet.ibm.com>
-	<1485547137.2980.94.camel@kernel.crashing.org>
-	<48dc15a0-eaba-29e4-f39e-500177f98638@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm: add buffer access validation in
+ tpm2_get_pcr_allocation()
+Date: Sun, 29 Jan 2017 16:40:37 +0200
+Message-ID: <20170129144037.sdqd4vutt73isz2i@intel.com>
+References: <1485530749-22948-1-git-send-email-nayna@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <48dc15a0-eaba-29e4-f39e-500177f98638-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <1485530749-22948-1-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,36 +18,99 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Tyrel Datwyler <tyreld-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, Michal =?ISO-8859-1?Q?Such=E1nek?= <msuchanek-l3A5Bk7waGM@public.gmane.org>, Ashley Lai <ashleydlai-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Paul Mackerras <paulus-eUNUBHrolfbYtjvyW6yDsg@public.gmane.org>, Michael Ellerman <mpe-Gsx/Oe8HsFggBc27wqDAHg@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linuxppc-dev-uLR06cmDAlY/bJ5BZ2RsiQ@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gRnJpLCAyMDE3LTAxLTI3IGF0IDEyOjMyIC0wODAwLCBUeXJlbCBEYXR3eWxlciB3cm90ZToK
-PiBJdHMgcG9zc2libGUgYmVpbmcgdGhlIGVuZCBvZiB0aGUgd2VlayBJJ20ganVzdCBhIGxpdHRs
-ZSBkZW5zZSwgYnV0Cj4gd291bGRuJ3QgYmU2NF90b19jcHUoKSBpbXBseSB0aGF0IHdlIGFyZSBi
-eXRlLXN3YXBwaW5nIHNvbWV0aGluZyB0aGF0IGlzCj4gYWxyZWFkeSwgb3Igc3VwcG9zZWRseSBh
-bHJlYWR5LCBpbiBCRSBmb3JtYXQgdG8gY3B1IGVuZGlhbm5lc3M/IFdoaWNoIG9uCj4gYSBCRSBj
-cHUgSSB3b3VsZCBleHBlY3QgYSBuby1vcCwgYW5kIG9uIGEgTEUgY3B1IHRoZSA2NGJpdCB3b3Jk
-IHRvIGhhdmUKPiBiZWVuIHN3YXBwZWQgZnJvbSBCRSAtLT4gTEU/CgpJdCdzIGluIEJFIGZvcm1h
-dCBpbiBtZW1vcnkuIEluIExFIG1vZGUsIGxvYWRpbmcgaXQgaW50byBhIHJlZ2lzdGVyIHdpbGwK
-Z2V0IGl0IHRoZSB3cm9uZyB3YXkgYXJvdW5kLCB0aHVzIHdlIGhhdmUgdG8gc3dhcCBpdCBhZ2Fp
-bi4gT25jZSBpbiBhCnJlZ2lzdGVyIGl0IGhhcyBubyAiZW5kaWFubmVzcyIgcGVyLXNlLCB3aGF0
-IG1hdHRlcnMgaXMgdGhhdCB0aGUgYWN0Cm9mIGxvYWRpbmcgZnJvbSBtZW1vcnkgdG8gYSByZWdp
-c3RlciB3b3VsZCBoYXZlIGxvYWRlZCBpdCB0aGUgd3JvbmcKd2F5IGFyb3VuZCBpbiBMRS4KCj4g
-SW4gbXkgZXllcyB0aGUgY29kZSBkb2VzIHNlZW0gdG8gc3VwcG9ydCB3aGF0IEkndmUgYXJndWVk
-LiBUaGUgc2FtZQo+IHRoaW5nIGlzIGRvbmUgaW4gdGhlIHNjc2kgVklPIGRyaXZlcnMuIFRoZSBD
-UlEgc3RydWN0dXJlIGlzIGxhaWQgb3V0IGFuZAo+IGFubm90YXRlZCBCRS4gV2UgdXNlIGNwdV90
-b19iZSgpIGNhbGxzIHRvIGxvYWQgYW55IG5vbiA4Yml0IGZpZWxkLgo+IEZpbmFsbHksIGVhY2gg
-d29yZCBpcyBzd2FwcGVkIHRvIGNwdSBlbmRpYW4gd2hlbiB3ZSBoYW5kIGl0IG9mZiBmb3IgdGhl
-Cj4gaGNhbGwuCj4gCj4gZnJvbSBpYm12ZmNfc2VuZF9ldmVudCgpOgo+IAo+IMKgwqDCoMKgwqDC
-oMKgIF9fYmU2NCAqY3JxX2FzX3U2NCA9IChfX2JlNjQgKikgJmV2dC0+Y3JxOwo+IAo+IMKgwqDC
-oMKgwqDCoMKgwqA8Li5zbmlwLi4+Cj4gCj4gwqDCoMKgwqDCoMKgwqAgaWYgKChyYyA9IGlibXZm
-Y19zZW5kX2NycSh2aG9zdCwgYmU2NF90b19jcHUoY3JxX2FzX3U2NFswXSksCj4gwqDCoMKgwqDC
-oMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKg
-IGJlNjRfdG9fY3B1KGNycV9hc191NjRbMV0pKSkpIHsKPiAKPiBBZ2FpbiwgbWF5YmUgSSdtIG1p
-c3Npbmcgc29tZXRoaW5nLgoKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCkNoZWNrIG91dCB0aGUgdmli
-cmFudCB0ZWNoIGNvbW11bml0eSBvbiBvbmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAplbmdhZ2luZyB0
-ZWNoIHNpdGVzLCBTbGFzaERvdC5vcmchIGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdApfX19fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwp0cG1kZC1kZXZlbCBtYWls
-aW5nIGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8vbGlzdHMu
-c291cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
+On Fri, Jan 27, 2017 at 10:25:49AM -0500, Nayna Jain wrote:
+> This patch add validation in tpm2_get_pcr_allocation to avoid
+> access beyond response buffer length.
+> 
+> Suggested-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+
+This validation looks broken to me.
+
+> ---
+>  drivers/char/tpm/tpm2-cmd.c | 28 +++++++++++++++++++++++-----
+>  1 file changed, 23 insertions(+), 5 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+> index 4aad84c..02c1ea7 100644
+> --- a/drivers/char/tpm/tpm2-cmd.c
+> +++ b/drivers/char/tpm/tpm2-cmd.c
+> @@ -1008,9 +1008,13 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
+>  	struct tpm2_pcr_selection pcr_selection;
+>  	struct tpm_buf buf;
+>  	void *marker;
+> -	unsigned int count = 0;
+> +	void *end;
+> +	void *pcr_select_offset;
+> +	unsigned int count;
+> +	u32 sizeof_pcr_selection;
+> +	u32 resp_len;
+
+Very cosmetic but we almos almost universally use the acronym 'rsp' in
+the TPM driver.
+
+>  	int rc;
+> -	int i;
+> +	int i = 0;
+
+Why do you need to initialize it?
+
+>  
+>  	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_GET_CAPABILITY);
+>  	if (rc)
+> @@ -1034,15 +1038,29 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
+>  	}
+>  
+>  	marker = &buf.data[TPM_HEADER_SIZE + 9];
+> +
+> +	resp_len = be32_to_cpup((__be32 *)&buf.data[2]);
+> +	end = &buf.data[resp_len];
+
+What if the response contains larger length than the buffer size?
+
+> +
+>  	for (i = 0; i < count; i++) {
+> +		pcr_select_offset = marker +
+> +			offsetof(struct tpm2_pcr_selection, size_of_select);
+> +		if (pcr_select_offset >= end) {
+> +			rc = -EFAULT;
+> +			break;
+> +		}
+> +
+>  		memcpy(&pcr_selection, marker, sizeof(pcr_selection));
+>  		chip->active_banks[i] = be16_to_cpu(pcr_selection.hash_alg);
+> -		marker = marker + sizeof(struct tpm2_pcr_selection);
+> +		sizeof_pcr_selection = sizeof(pcr_selection.hash_alg) +
+> +			sizeof(pcr_selection.size_of_select) +
+> +			sizeof(u8) * pcr_selection.size_of_select;
+
+Remove "sizeof(u8) * ".
+
+> +		marker = marker + sizeof_pcr_selection;
+>  	}
+>  
+>  out:
+> -	if (count < ARRAY_SIZE(chip->active_banks))
+> -		chip->active_banks[count] = TPM2_ALG_ERROR;
+> +	if (i < ARRAY_SIZE(chip->active_banks))
+> +		chip->active_banks[i] = TPM2_ALG_ERROR;
+>  
+>  	tpm_buf_destroy(&buf);
+>  
+> -- 
+> 2.5.0
+> 
+
+I'm sorry but this commit is changing too much. You need to redo the
+whole commit and resend the patch set with these fixes. You can keep
+Reviewed-by and Tested-by in 1/2 but have to remove them from 2/2.
+
+/Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
