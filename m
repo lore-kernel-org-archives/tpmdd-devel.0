@@ -1,20 +1,17 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix RC value check in
-	tpm2_seal_trusted
-Date: Sun, 29 Jan 2017 17:11:58 +0200
-Message-ID: <20170129151158.6gr4oxluj4tprbca@intel.com>
-References: <20170125210348.13790-1-jarkko.sakkinen@linux.intel.com>
-	<20170125221245.GB713@obsidianresearch.com>
-	<20170126112714.xvvvb72dybmfgitw@intel.com>
-	<20170126183252.GA16502@obsidianresearch.com>
-	<20170127064327.esussb6itanaqibq@intel.com>
-	<20170127162416.GA32330@obsidianresearch.com>
+Subject: Re: [PATCH v6 0/2] enhance TPM 2.0 extend function to
+ support multiple PCR banks
+Date: Sun, 29 Jan 2017 17:19:04 +0200
+Message-ID: <20170129151903.v7mpbwqxll4ho73v@intel.com>
+References: <1484931913-24909-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<20170125204535.bduqiywtlvgidoj6@intel.com>
+	<588B81FF.40606@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170127162416.GA32330-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <588B81FF.40606-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,34 +20,54 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jan 27, 2017 at 09:24:16AM -0700, Jason Gunthorpe wrote:
-> On Fri, Jan 27, 2017 at 08:43:27AM +0200, Jarkko Sakkinen wrote:
-> > On Thu, Jan 26, 2017 at 11:32:52AM -0700, Jason Gunthorpe wrote:
-> > > On Thu, Jan 26, 2017 at 01:27:14PM +0200, Jarkko Sakkinen wrote:
+On Fri, Jan 27, 2017 at 10:53:11PM +0530, Nayna wrote:
+> 
+> 
+> On 01/26/2017 02:15 AM, Jarkko Sakkinen wrote:
+> > On Fri, Jan 20, 2017 at 12:05:11PM -0500, Nayna Jain wrote:
+> > > IMA extends its hash measurements in the TPM PCRs, based on policy.
+> > > The existing in-kernel TPM extend function extends only the SHA1
+> > > PCR bank. TPM 2.0 defines multiple PCR banks, to support different
+> > > hash algorithms. The TCG TPM 2.0 Specification[1] recommends
+> > > extending all active PCR banks to prevent malicious users from
+> > > setting unused PCR banks with fake measurements and quoting them.
+> > > This patch set adds support for extending all active PCR banks,
+> > > as recommended.
 > > > 
-> > > > "The error code handling is bogus as any error code that has the bits
-> > > > set that TPM_RC_HASH could pass. Implemented tpm2_rc_value() helper to
-> > > > parse the error value from FMT0 and FMT1 error codes to use to check the
-> > > > error so that these types of mistakes is prevented in the future."
+> > > The first patch implements the TPM 2.0 capability to retrieve
+> > > the list of active PCR banks.
 > > > 
-> > > Great thanks
+> > > The second patch modifies the tpm_pcr_extend() and tpm2_pcr_extend()
+> > > interface to support extending multiple PCR banks. The existing
+> > > tpm_pcr_extend() interface expects only a SHA1 digest. Hence, to
+> > > extend all active PCR banks with differing digest sizes for TPM 2.0,
+> > > the SHA1 digest is padded with 0's as needed.
 > > > 
-> > > Jason
+> > > [1] TPM 2.0 Specification referred here is "TCG PC Client Specific
+> > > Platform Firmware Profile for TPM 2.0"
 > > 
-> > Can I put your Reviewed-by? I would like to get this into 4.11.
+> > I pushed these patches. I had to resolve merge conflicts caused
+> > by the min_rsp_body_length parameter in tpm_transmit_cmd. Can you
+> > verify that I didn't break anything?
+> > 
 > 
-> I'm not up to speed on the TPM2 parsing, but it looks OK based on your
-> description.
+> Yes, it looks fine, also tested with it.
 > 
-> Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> Just to understand.. how did you decide min_rsp_body_length to be 9.
+> If I understood correctly, I think it is the size after header, till last
+> fixed parameter i.e.  till count.
+> Is the assumption is that count can be zero, such that there is no active
+> bank for PCR and so no struct tpm2_pcr_selection ?
 > 
-> Jason
+> Thanks & Regards,
+>    - Nayna
 
-Thanks I applied this patch to master.
+Hmm.. I got it from "marker = &buf.data[TPM_HEADER_SIZE + 9];" i.e. must
+have at last 9 bytes after the header.
 
 /Jarkko
 
