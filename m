@@ -1,87 +1,111 @@
-From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [RFC] tpm2-space: add handling for global session
-	exhaustion
-Date: Sun, 29 Jan 2017 19:52:20 -0500
-Message-ID: <o6m2nv$g6n$1@blaine.gmane.org>
-References: <1484772489.2396.2.camel@HansenPartnership.com>
-	<o6gese$pev$1@blaine.gmane.org>
-	<1485554699.3229.20.camel@HansenPartnership.com>
+From: Nayna <nayna@linux.vnet.ibm.com>
+Subject: Re: [PATCH] tpm: add buffer access validation in
+ tpm2_get_pcr_allocation()
+Date: Mon, 30 Jan 2017 08:28:30 +0530
+Message-ID: <588EABD6.1040500@linux.vnet.ibm.com>
+References: <1485530749-22948-1-git-send-email-nayna@linux.vnet.ibm.com>
+ <20170129144037.sdqd4vutt73isz2i@intel.com>
+ <588E23EF.2050202@linux.vnet.ibm.com>
+ <20170129212020.xz3s4unx5lhxxrgs@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset=windows-1252; format=flowed
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1485554699.3229.20.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170129212020.xz3s4unx5lhxxrgs@intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 1/27/2017 5:04 PM, James Bottomley wrote:
 
->> Beware the nasty corner case:
+
+On 01/30/2017 02:50 AM, Jarkko Sakkinen wrote:
+> On Sun, Jan 29, 2017 at 10:48:39PM +0530, Nayna wrote:
 >>
->> - Application asks for a session and gets 02000000
 >>
->> - Time elapses and 02000000 gets forcibly flushed
+>> On 01/29/2017 08:10 PM, Jarkko Sakkinen wrote:
+>>> On Fri, Jan 27, 2017 at 10:25:49AM -0500, Nayna Jain wrote:
+>>>> This patch add validation in tpm2_get_pcr_allocation to avoid
+>>>> access beyond response buffer length.
+>>>>
+>>>> Suggested-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+>>>> Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
+>>>
+>>> This validation looks broken to me.
+>>>
+>>>> ---
+>>>>    drivers/char/tpm/tpm2-cmd.c | 28 +++++++++++++++++++++++-----
+>>>>    1 file changed, 23 insertions(+), 5 deletions(-)
+>>>>
+>>>> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+>>>> index 4aad84c..02c1ea7 100644
+>>>> --- a/drivers/char/tpm/tpm2-cmd.c
+>>>> +++ b/drivers/char/tpm/tpm2-cmd.c
+>>>> @@ -1008,9 +1008,13 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
+>>>>    	struct tpm2_pcr_selection pcr_selection;
+>>>>    	struct tpm_buf buf;
+>>>>    	void *marker;
+>>>> -	unsigned int count = 0;
+>>>> +	void *end;
+>>>> +	void *pcr_select_offset;
+>>>> +	unsigned int count;
+>>>> +	u32 sizeof_pcr_selection;
+>>>> +	u32 resp_len;
+>>>
+>>> Very cosmetic but we almos almost universally use the acronym 'rsp' in
+>>> the TPM driver.
 >>
->> - Later, app comes back, asks for a second session and again gets
->> 02000000.
+>> Sure will update.
 >>
->> - App gets very confused.
+>>>
+>>>>    	int rc;
+>>>> -	int i;
+>>>> +	int i = 0;
+>>>
+>>> Why do you need to initialize it?
 >>
->> May it be better to close the connection completely, which the
->> application can detect, than flush a session and give this corner
->> case?
+>> Because in out: count is replaced with i.
+>> And it is replaced because  now for loop can break even before reaching
+>> count, because of new buffer checks.
+>>>
+>>>>
+>>>>    	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_GET_CAPABILITY);
+>>>>    	if (rc)
+>>>> @@ -1034,15 +1038,29 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
+>>>>    	}
+>>>>
+>>>>    	marker = &buf.data[TPM_HEADER_SIZE + 9];
+>>>> +
+>>>> +	resp_len = be32_to_cpup((__be32 *)&buf.data[2]);
+>>>> +	end = &buf.data[resp_len];
+>>>
+>>> What if the response contains larger length than the buffer size?
+>>
+>> Isn't this check need to be done in tpm_transmit_cmd for all responses ?
+>> Though, it seems it is not done there as well.
+>>
+>> And to understand what do we expect max buffer length. PAGE_SIZE or
+>> TPM_BUFSIZE ?
 >
-> if I look at the code I've written, I don't know what the session
-> number is, I just save sessionHandle in a variable for later use (lets
-> say to v1).  If I got the same session number returned at a later time
-> and placed it in v2, all I'd notice is that an authorization using v1
-> would fail.  I'm not averse to killing the entire connection but,
-> assuming you have fallback, it might be kinder simply to ensure that
-> the operations with the reclaimed session fail (which is what the code
-> currently does).
+> Oops. You are correct it is done there:
+>
+> if (len != be32_to_cpu(header->length))
+> 	return -EFAULT;
+>
+> So need to do this.
 
-My worry is that this session failure cannot be detected by the 
-application.  An HMAC failure could cause the app to tell a user that 
-they entered the wrong password.  Misleading.  On the TPM, it could 
-trigger the dictionary attack lockout.  For a PIN index, it could 
-consume a failure count.  Killing a policy session that has e.g., a 
-policy signed term could cause the application to go back to some 
-external entity for another authorization signature.
+To be sure, means nothing need to be done in this. Right ?
 
-Let's go up to the stack.  What's the attack?
+And guess this was the only thing you meant by broken for this patch.
 
-If we're worried about many simultaneous applications (wouldn't that be 
-wonderful), why not just let startauthsession fail?  The application can 
-just retry periodically.  Just allocate them in triples so there's no 
-deadlock.
+I will do other two smaller changes as I send the whole new patchset.
 
-If we're worried about a DoS attack, killing a session just helps the 
-attacker.  The attacker can create a few connections and spin on 
-startauthsession, locking everyone out anyway.
+Thanks & Regards,
+   - Nayna
 
-~~
+>
+> /Jarkko
+>
+> /Jarkko
+>
 
-Also, let's remember that this is a rare application.  Sessions are only 
-needed for remote access (requiring encryption, HMAC or salt), or policy 
-sessions.
-
-~~
-
-Should the code also reserve a session for the kernel?  Mark it not 
-kill'able?
-
-
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
