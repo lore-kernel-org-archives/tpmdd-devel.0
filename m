@@ -1,67 +1,43 @@
-From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v6 2/2] tpm: enhance TPM 2.0 PCR extend to,
- support multiple banks
-Date: Mon, 30 Jan 2017 15:31:21 +0530
-Message-ID: <588F0EF1.1090300@linux.vnet.ibm.com>
-References: <beaf57a6-67a1-dd26-6e45-243dd46eb3f0@linux.vnet.ibm.com>
+From: David Laight <David.Laight@ACULAB.COM>
+Subject: RE: ibmvtpm byteswapping inconsistency
+Date: Mon, 30 Jan 2017 14:42:25 +0000
+Message-ID: <063D6719AE5E284EB5DD2968C1650D6DB0273BCA@AcuExch.aculab.com>
+References: <20170126212248.3f3e9103@kitsune.suse.cz>
+ <d55b06cc-cb7a-1ef1-05b7-d7d4114d0c48@linux.vnet.ibm.com>
+ <1485481819.2980.82.camel@kernel.crashing.org>
+ <e518682f-e563-9533-9ffd-f465c662e998@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <beaf57a6-67a1-dd26-6e45-243dd46eb3f0-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Ken Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <e518682f-e563-9533-9ffd-f465c662e998@linux.vnet.ibm.com>
+Content-Language: en-US
+Sender: linux-kernel-owner@vger.kernel.org
+To: 'Tyrel Datwyler' <tyreld@linux.vnet.ibm.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, =?utf-8?B?TWljaGFsIFN1Y2jDoW5law==?= <msuchanek@suse.de>, Ashley Lai <ashleydlai@gmail.com>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-
-
-On 01/26/2017 03:41 AM, Ken Goldman wrote:
->> The current TPM 2.0 device driver extends only the SHA1 PCR bank
->> but the TCG Specification[1] recommends extending all active PCR
->> banks, to prevent malicious users from setting unused PCR banks with
->> fake measurements and quoting them.
->>
->> The existing in-kernel interface(tpm_pcr_extend()) expects only a
->> SHA1 digest.  To extend all active PCR banks with differing
->> digest sizes, the SHA1 digest is padded with trailing 0's as needed.
->>
->> This patch reuses the defined digest sizes from the crypto subsystem,
->> adding a dependency on CRYPTO_HASH_INFO module.
->>
->> [1] TPM 2.0 Specification referred here is "TCG PC Client Specific
->> Platform Firmware Profile for TPM 2.0"
->
-> Tested-by: Kenneth Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
->
-> I obtained an IMA event log from a Power platform, along with the PCR 10
-> value from both the SHA-1 and SHA-256 banks of its Nuvoton TPM 2.0.  I
-> independently validated that the event log matches the TPM PCR values.
-
-Thank You Ken !!
-
-Thanks & Regards,
-    - Nayna
-
->
->
-> ------------------------------------------------------------------------------
-> Check out the vibrant tech community on one of the world's most
-> engaging tech sites, SlashDot.org! http://sdm.link/slashdot
-> _______________________________________________
-> tpmdd-devel mailing list
-> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
->
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+RnJvbTogVHlyZWwgRGF0d3lsZXINCj4gU2VudDogMjcgSmFudWFyeSAyMDE3IDE4OjAzDQo+IE9u
+IDAxLzI2LzIwMTcgMDU6NTAgUE0sIEJlbmphbWluIEhlcnJlbnNjaG1pZHQgd3JvdGU6DQo+ID4g
+T24gVGh1LCAyMDE3LTAxLTI2IGF0IDE3OjQyIC0wODAwLCBUeXJlbCBEYXR3eWxlciB3cm90ZToN
+Cj4gPj4gT24gMDEvMjYvMjAxNyAxMjoyMiBQTSwgTWljaGFsIFN1Y2huZWsgd3JvdGU6DQo+ID4+
+PiBIZWxsbywNCj4gPj4+DQo+ID4+PiBidWlsZGluZyBpYm12dHBtIEkgbm90aWNlZCBnY2Mgd2Fy
+bmluZyBjb21wbGFpbmluZyB0aGF0IHNlY29uZCB3b3JkDQo+ID4+PiBvZg0KPiA+Pj4gc3RydWN0
+IGlibXZ0cG1fY3JxIGluIHRwbV9pYm12dHBtX3N1c3BlbmQgaXMgdW5pbml0aWFsaXplZC4NCj4g
+Pj4+DQo+ID4+PiBUaGUgc3RydWN0dXJlIGlzIGRlZmluZWQgYXMNCj4gPj4+DQo+ID4+PiBzdHJ1
+Y3QgaWJtdnRwbV9jcnEgew0KPiA+Pj4gICAgICAgICB1OCB2YWxpZDsNCj4gPj4+ICAgICAgICAg
+dTggbXNnOw0KPiA+Pj4gICAgICAgICBfX2JlMTYgbGVuOw0KPiA+Pj4gICAgICAgICBfX2JlMzIg
+ZGF0YTsNCj4gPj4+ICAgICAgICAgX19iZTY0IHJlc2VydmVkOw0KPiA+Pj4gfSBfX2F0dHJpYnV0
+ZV9fKChwYWNrZWQsIGFsaWduZWQoOCkpKTsNCj4gPj4+DQo+ID4+PiBpbml0aWFsaXplZCBhcw0K
+PiA+Pj4NCj4gPj4+ICAgICAgICAgc3RydWN0IGlibXZ0cG1fY3JxIGNycTsNCj4gPj4+ICAgICAg
+ICAgdTY0ICpidWYgPSAodTY0ICopICZjcnE7DQo+ID4+PiAuLi4NCj4gPj4+ICAgICAgICAgY3Jx
+LnZhbGlkID0gKHU4KUlCTVZUUE1fVkFMSURfQ01EOw0KPiA+Pj4gICAgICAgICBjcnEubXNnID0g
+KHU4KVZUUE1fUFJFUEFSRV9UT19TVVNQRU5EOw0KPiA+Pj4NCj4gPj4+IGFuZCBzdWJtaXR0ZWQg
+d2l0aA0KPiA+Pj4NCj4gPj4+ICAgICAgICAgcmMgPSBpYm12dHBtX3NlbmRfY3JxKGlibXZ0cG0t
+PnZkZXYsIGNwdV90b19iZTY0KGJ1ZlswXSksDQo+ID4+PiAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICBjcHVfdG9fYmU2NChidWZbMV0pKTsNCg0KSXNuJ3QgdGhlIHJlYWwgZnViYXIgaGVy
+ZSB0aGUgdXNlIG9mIHRoYXQgbWVtb3J5IGxheW91dCBzdHJ1Y3R1cmUgYXQgYWxsPw0KSXQgd291
+bGQgcHJvYmFibHkgYWxsIGJlIGJldHRlciBpZiB0aGUgY2FsbCBsb29rZWQgbGlrZToNCglyYyA9
+IGlibXZ0cG1fc2VuZF9jcnEoaWJtdnRwbS0+dmRldiwgTUFLRV9SRVEoSUJNVlRQTV9WQUxJRF9D
+TUQsDQoJCVZUUE1fUFJFUEFSRV9UT19TVVNQRU5ELCB4eHhfbGVuLCB4eHhfZGF0YSksIDApOw0K
+YW5kIE1BS0VfUkVRKCkgZGlkIGFsbCB0aGUgcmVxdWlyZWQgZW5kaWFuIGluZGVwZW5kYW50IHNo
+aWZ0cyB0byBnZW5lcmF0ZQ0KdGhlIGNvcnJlY3QgMzJiaXQgdmFsdWUuDQoNCglEYXZpZA0KDQo=
