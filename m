@@ -1,62 +1,131 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: Fwd: Re: [tpmdd-devel] [PATCH v9 2/2] tpm: add securityfs
- support,for TPM 2.0 firmware event log
-Date: Mon, 30 Jan 2017 23:49:05 +0200
-Message-ID: <20170130214905.4bkvv2yrmzprn2la@intel.com>
-References: <de409ad1-de39-20d2-bda6-5d2a965e7256@linux.vnet.ibm.com>
- <CALAzByG474T_qSJ0Kry1LiNSsCQAHUagqcqtR_CnpporicZrdg@mail.gmail.com>
- <588F09A2.4090502@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [RFC] tpm2-space: add handling for global session
+ exhaustion
+Date: Mon, 30 Jan 2017 23:58:15 +0200
+Message-ID: <20170130215815.4lr42ob7e4cycwgi@intel.com>
+References: <1484772489.2396.2.camel@HansenPartnership.com>
+	<o6gese$pev$1@blaine.gmane.org>
+	<1485554699.3229.20.camel@HansenPartnership.com>
+	<o6m2nv$g6n$1@blaine.gmane.org>
+	<1485792295.2518.23.camel@HansenPartnership.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <588F09A2.4090502@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Nayna <nayna@linux.vnet.ibm.com>
-Cc: Kenneth Goldman <kgoldman@us.ibm.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
+In-Reply-To: <1485792295.2518.23.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jan 30, 2017 at 03:08:42PM +0530, Nayna wrote:
+On Mon, Jan 30, 2017 at 08:04:55AM -0800, James Bottomley wrote:
+> On Sun, 2017-01-29 at 19:52 -0500, Ken Goldman wrote:
+> > On 1/27/2017 5:04 PM, James Bottomley wrote:
+> > 
+> > > > Beware the nasty corner case:
+> > > > 
+> > > > - Application asks for a session and gets 02000000
+> > > > 
+> > > > - Time elapses and 02000000 gets forcibly flushed
+> > > > 
+> > > > - Later, app comes back, asks for a second session and again gets
+> > > > 02000000.
+> > > > 
+> > > > - App gets very confused.
+> > > > 
+> > > > May it be better to close the connection completely, which the
+> > > > application can detect, than flush a session and give this corner
+> > > > case?
+> > > 
+> > > if I look at the code I've written, I don't know what the session
+> > > number is, I just save sessionHandle in a variable for later use 
+> > > (lets say to v1).  If I got the same session number returned at a 
+> > > later time and placed it in v2, all I'd notice is that an 
+> > > authorization using v1 would fail.  I'm not averse to killing the 
+> > > entire connection but, assuming you have fallback, it might be 
+> > > kinder simply to ensure that the operations with the reclaimed 
+> > > session fail (which is what the code currently does).
+> > 
+> > My worry is that this session failure cannot be detected by the 
+> > application.  An HMAC failure could cause the app to tell a user that
+> > they entered the wrong password.  Misleading.  On the TPM, it could 
+> > trigger the dictionary attack lockout.  For a PIN index, it could 
+> > consume a failure count.  Killing a policy session that has e.g., a 
+> > policy signed term could cause the application to go back to some 
+> > external entity for another authorization signature.
+> > 
+> > Let's go up to the stack.  What's the attack?
+> > 
+> > If we're worried about many simultaneous applications (wouldn't that 
+> > be wonderful), why not just let startauthsession fail?  The 
+> > application can just retry periodically.
 > 
-> > From: "Ken Goldman" <kgold@linux.vnet.ibm.com
-> > <mailto:kgold@linux.vnet.ibm.com>>
-> > Date: 26-Jan-2017 2:53 AM
-> > Subject: Re: [tpmdd-devel] [PATCH v9 2/2] tpm: add securityfs
-> > support,for TPM 2.0 firmware event log
-> > To: <linux-kernel@vger.kernel.org
-> > <mailto:linux-kernel@vger.kernel.org>>,
-> > <linux-security-module@vger.kernel.org
-> > <mailto:linux-security-module@vger.kernel.org>>,
-> > <tpmdd-devel@lists.sourceforge.net
-> > <mailto:tpmdd-devel@lists.sourceforge.net>>
-> > Cc:
-> > 
-> >     You do not need to send a new patch set version as long as this
-> >     one gets peer tested. And it needs to be tested without hacks
-> >     like plumbing TCPA with TPM 2.0 in QEMU. OF code paths needs to
-> >     be peer tested to be more specific.
-> > 
-> >     For me the code itself looks good but I simply cannot take it in
-> >     in the current situation.
-> > 
-> >     /Jarkko
-> > 
-> > 
-> > Tested-by: Kenneth Goldman <kgold@linux.vnet.ibm.com
-> > <mailto:kgold@linux.vnet.ibm.com>>
-> > 
-> > I validated a firmware event log taken from a Power 8 against PCR 0-7
-> > values for the SHA-1 and SHA-256 banks from a Nuvoton TPM 2.0 chip on
-> > that same platform.
-> > 
+> How in that scenario do we ensure that a session becomes available? 
+>  Once that's established, there's no real difference between retrying
+> the startauthsession in the kernel when we know the session is
+> available and forcing userspace to do the retry except that the former
+> has a far greater chance of success (and it's only about 6 lines of
+> code).
 > 
-> Thank You Ken.
+> >   Just allocate them in triples so there's no deadlock.
 > 
-> Jarkko, I hope now these patches can be accepted for 4.11.
+> Is this the application or the kernel?  If it's the kernel, that adds a
+> lot of complexity.
 > 
-> Thanks & Regards,
->    - Nayna
+> > If we're worried about a DoS attack, killing a session just helps the
+> > attacker.  The attacker can create a few connections and spin on 
+> > startauthsession, locking everyone out anyway.
+> 
+> There are two considerations here: firstly we'd need to introduce a
+> mechanism to "kill" the connection.  Probably we'd simply error every
+> command on the space until it was closed.  The second is which scenario
+> is more reasonable: Say the application simply forgot to flush the
+> session and will never use it again.  Simply reclaiming the session
+> would produce no effect at all on the application in this scenario. 
+>  However, I have no data to say what's likely.
+> 
+> > ~~
+> > 
+> > Also, let's remember that this is a rare application.  Sessions are 
+> > only needed for remote access (requiring encryption, HMAC or salt), 
+> > or policy sessions.
+> 
+> This depends what your threat model is.  For ssh keys, you worry that
+> someone might be watching, so you use HMAC authority even for a local
+> TPM.  In the cloud, you don't quite know where the TPM is, so again
+> you'd use HMAC sessions ... however, in both use cases the sessions
+> should be very short lived.
+> 
+> > ~~
+> > 
+> > Should the code also reserve a session for the kernel?  Mark it not 
+> > kill'able?
+> 
+> At the moment, the kernel doesn't use sessions, so let's worry about
+> that problem at the point it arises (if it ever arises).
+> 
+> James
 
-Thanks Ken. I somehow managed to miss that response.
+It does. My trusted keys implementation actually uses sessions.
+
+I'm kind dilating to an opinion that we would leave this commit out from
+the first kernel release that will contain the resource manager with
+similar rationale as Jason gave me for whitelisting: get the basic stuff
+in and once it is used with some workloads whitelisting and exhaustion
+will take eventually the right form.
+
+How would you feel about this?
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
