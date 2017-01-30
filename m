@@ -1,14 +1,14 @@
-From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v7 1/2] tpm: implement TPM 2.0 capability to
-	get active PCR banks
-Date: Mon, 30 Jan 2017 04:59:40 -0500
-Message-ID: <1485770381-31642-2-git-send-email-nayna@linux.vnet.ibm.com>
-References: <1485770381-31642-1-git-send-email-nayna@linux.vnet.ibm.com>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH v6 2/2] tpm: enhance TPM 2.0 PCR extend to,
+ support multiple banks
+Date: Mon, 30 Jan 2017 15:31:21 +0530
+Message-ID: <588F0EF1.1090300@linux.vnet.ibm.com>
+References: <beaf57a6-67a1-dd26-6e45-243dd46eb3f0@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1485770381-31642-1-git-send-email-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <beaf57a6-67a1-dd26-6e45-243dd46eb3f0-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,145 +17,49 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Ken Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This patch implements the TPM 2.0 capability TPM_CAP_PCRS to
-retrieve the active PCR banks from the TPM. This is needed
-to enable extending all active banks as recommended by TPM 2.0
-TCG Specification.
 
-Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Tested-by: Kenneth Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
----
- drivers/char/tpm/tpm.h      |  5 +++
- drivers/char/tpm/tpm2-cmd.c | 77 +++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 82 insertions(+)
 
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index dbe0c5a..db0398a 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -97,6 +97,7 @@ enum tpm2_return_codes {
- };
- 
- enum tpm2_algorithms {
-+	TPM2_ALG_ERROR		= 0x0000,
- 	TPM2_ALG_SHA1		= 0x0004,
- 	TPM2_ALG_KEYEDHASH	= 0x0008,
- 	TPM2_ALG_SHA256		= 0x000B,
-@@ -127,6 +128,7 @@ enum tpm2_permanent_handles {
- };
- 
- enum tpm2_capabilities {
-+	TPM2_CAP_PCRS		= 5,
- 	TPM2_CAP_TPM_PROPERTIES = 6,
- };
- 
-@@ -187,6 +189,8 @@ struct tpm_chip {
- 
- 	const struct attribute_group *groups[3];
- 	unsigned int groups_cnt;
-+
-+	u16 active_banks[7];
- #ifdef CONFIG_ACPI
- 	acpi_handle acpi_dev_handle;
- 	char ppi_version[TPM_PPI_VERSION_LEN + 1];
-@@ -540,4 +544,5 @@ int tpm2_auto_startup(struct tpm_chip *chip);
- void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
- unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
- int tpm2_probe(struct tpm_chip *chip);
-+ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip);
- #endif
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 42fe3dd..6fbd42c 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -1030,3 +1030,80 @@ int tpm2_auto_startup(struct tpm_chip *chip)
- 		rc = -ENODEV;
- 	return rc;
- }
-+
-+struct tpm2_pcr_selection {
-+	__be16  hash_alg;
-+	u8  size_of_select;
-+	u8  pcr_select[3];
-+} __packed;
-+
-+/**
-+ * tpm2_get_pcr_allocation() - get TPM active PCR banks.
-+ *
-+ * @chip: TPM chip to use.
-+ *
-+ * Return: Same as with tpm_transmit_cmd.
-+ */
-+ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
-+{
-+	struct tpm2_pcr_selection pcr_selection;
-+	struct tpm_buf buf;
-+	void *marker;
-+	void *end;
-+	void *pcr_select_offset;
-+	unsigned int count;
-+	u32 sizeof_pcr_selection;
-+	u32 rsp_len;
-+	int rc;
-+	int i = 0;
-+
-+	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_GET_CAPABILITY);
-+	if (rc)
-+		return rc;
-+
-+	tpm_buf_append_u32(&buf, TPM2_CAP_PCRS);
-+	tpm_buf_append_u32(&buf, 0);
-+	tpm_buf_append_u32(&buf, 1);
-+
-+	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 9, 0,
-+			      "get tpm pcr allocation");
-+	if (rc)
-+		goto out;
-+
-+	count = be32_to_cpup(
-+		(__be32 *)&buf.data[TPM_HEADER_SIZE + 5]);
-+
-+	if (count > ARRAY_SIZE(chip->active_banks)) {
-+		rc = -ENODEV;
-+		goto out;
-+	}
-+
-+	marker = &buf.data[TPM_HEADER_SIZE + 9];
-+
-+	rsp_len = be32_to_cpup((__be32 *)&buf.data[2]);
-+	end = &buf.data[rsp_len];
-+
-+	for (i = 0; i < count; i++) {
-+		pcr_select_offset = marker +
-+			offsetof(struct tpm2_pcr_selection, size_of_select);
-+		if (pcr_select_offset >= end) {
-+			rc = -EFAULT;
-+			break;
-+		}
-+
-+		memcpy(&pcr_selection, marker, sizeof(pcr_selection));
-+		chip->active_banks[i] = be16_to_cpu(pcr_selection.hash_alg);
-+		sizeof_pcr_selection = sizeof(pcr_selection.hash_alg) +
-+			sizeof(pcr_selection.size_of_select) +
-+			pcr_selection.size_of_select;
-+		marker = marker + sizeof_pcr_selection;
-+	}
-+
-+out:
-+	if (i < ARRAY_SIZE(chip->active_banks))
-+		chip->active_banks[i] = TPM2_ALG_ERROR;
-+
-+	tpm_buf_destroy(&buf);
-+
-+	return rc;
-+}
--- 
-2.5.0
+On 01/26/2017 03:41 AM, Ken Goldman wrote:
+>> The current TPM 2.0 device driver extends only the SHA1 PCR bank
+>> but the TCG Specification[1] recommends extending all active PCR
+>> banks, to prevent malicious users from setting unused PCR banks with
+>> fake measurements and quoting them.
+>>
+>> The existing in-kernel interface(tpm_pcr_extend()) expects only a
+>> SHA1 digest.  To extend all active PCR banks with differing
+>> digest sizes, the SHA1 digest is padded with trailing 0's as needed.
+>>
+>> This patch reuses the defined digest sizes from the crypto subsystem,
+>> adding a dependency on CRYPTO_HASH_INFO module.
+>>
+>> [1] TPM 2.0 Specification referred here is "TCG PC Client Specific
+>> Platform Firmware Profile for TPM 2.0"
+>
+> Tested-by: Kenneth Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+>
+> I obtained an IMA event log from a Power platform, along with the PCR 10
+> value from both the SHA-1 and SHA-256 banks of its Nuvoton TPM 2.0.  I
+> independently validated that the event log matches the TPM PCR values.
+
+Thank You Ken !!
+
+Thanks & Regards,
+    - Nayna
+
+>
+>
+> ------------------------------------------------------------------------------
+> Check out the vibrant tech community on one of the world's most
+> engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+> _______________________________________________
+> tpmdd-devel mailing list
+> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+>
 
 
 ------------------------------------------------------------------------------
