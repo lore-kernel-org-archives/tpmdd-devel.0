@@ -1,43 +1,117 @@
-From: David Laight <David.Laight@ACULAB.COM>
-Subject: RE: ibmvtpm byteswapping inconsistency
-Date: Mon, 30 Jan 2017 14:42:25 +0000
-Message-ID: <063D6719AE5E284EB5DD2968C1650D6DB0273BCA@AcuExch.aculab.com>
-References: <20170126212248.3f3e9103@kitsune.suse.cz>
- <d55b06cc-cb7a-1ef1-05b7-d7d4114d0c48@linux.vnet.ibm.com>
- <1485481819.2980.82.camel@kernel.crashing.org>
- <e518682f-e563-9533-9ffd-f465c662e998@linux.vnet.ibm.com>
+From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Subject: Re: [RFC] tpm2-space: add handling for global session
+ exhaustion
+Date: Mon, 30 Jan 2017 08:04:55 -0800
+Message-ID: <1485792295.2518.23.camel@HansenPartnership.com>
+References: <1484772489.2396.2.camel@HansenPartnership.com>
+	<o6gese$pev$1@blaine.gmane.org>
+	<1485554699.3229.20.camel@HansenPartnership.com>
+	<o6m2nv$g6n$1@blaine.gmane.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <e518682f-e563-9533-9ffd-f465c662e998@linux.vnet.ibm.com>
-Content-Language: en-US
-Sender: linux-kernel-owner@vger.kernel.org
-To: 'Tyrel Datwyler' <tyreld@linux.vnet.ibm.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, =?utf-8?B?TWljaGFsIFN1Y2jDoW5law==?= <msuchanek@suse.de>, Ashley Lai <ashleydlai@gmail.com>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <o6m2nv$g6n$1@blaine.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-RnJvbTogVHlyZWwgRGF0d3lsZXINCj4gU2VudDogMjcgSmFudWFyeSAyMDE3IDE4OjAzDQo+IE9u
-IDAxLzI2LzIwMTcgMDU6NTAgUE0sIEJlbmphbWluIEhlcnJlbnNjaG1pZHQgd3JvdGU6DQo+ID4g
-T24gVGh1LCAyMDE3LTAxLTI2IGF0IDE3OjQyIC0wODAwLCBUeXJlbCBEYXR3eWxlciB3cm90ZToN
-Cj4gPj4gT24gMDEvMjYvMjAxNyAxMjoyMiBQTSwgTWljaGFsIFN1Y2huZWsgd3JvdGU6DQo+ID4+
-PiBIZWxsbywNCj4gPj4+DQo+ID4+PiBidWlsZGluZyBpYm12dHBtIEkgbm90aWNlZCBnY2Mgd2Fy
-bmluZyBjb21wbGFpbmluZyB0aGF0IHNlY29uZCB3b3JkDQo+ID4+PiBvZg0KPiA+Pj4gc3RydWN0
-IGlibXZ0cG1fY3JxIGluIHRwbV9pYm12dHBtX3N1c3BlbmQgaXMgdW5pbml0aWFsaXplZC4NCj4g
-Pj4+DQo+ID4+PiBUaGUgc3RydWN0dXJlIGlzIGRlZmluZWQgYXMNCj4gPj4+DQo+ID4+PiBzdHJ1
-Y3QgaWJtdnRwbV9jcnEgew0KPiA+Pj4gICAgICAgICB1OCB2YWxpZDsNCj4gPj4+ICAgICAgICAg
-dTggbXNnOw0KPiA+Pj4gICAgICAgICBfX2JlMTYgbGVuOw0KPiA+Pj4gICAgICAgICBfX2JlMzIg
-ZGF0YTsNCj4gPj4+ICAgICAgICAgX19iZTY0IHJlc2VydmVkOw0KPiA+Pj4gfSBfX2F0dHJpYnV0
-ZV9fKChwYWNrZWQsIGFsaWduZWQoOCkpKTsNCj4gPj4+DQo+ID4+PiBpbml0aWFsaXplZCBhcw0K
-PiA+Pj4NCj4gPj4+ICAgICAgICAgc3RydWN0IGlibXZ0cG1fY3JxIGNycTsNCj4gPj4+ICAgICAg
-ICAgdTY0ICpidWYgPSAodTY0ICopICZjcnE7DQo+ID4+PiAuLi4NCj4gPj4+ICAgICAgICAgY3Jx
-LnZhbGlkID0gKHU4KUlCTVZUUE1fVkFMSURfQ01EOw0KPiA+Pj4gICAgICAgICBjcnEubXNnID0g
-KHU4KVZUUE1fUFJFUEFSRV9UT19TVVNQRU5EOw0KPiA+Pj4NCj4gPj4+IGFuZCBzdWJtaXR0ZWQg
-d2l0aA0KPiA+Pj4NCj4gPj4+ICAgICAgICAgcmMgPSBpYm12dHBtX3NlbmRfY3JxKGlibXZ0cG0t
-PnZkZXYsIGNwdV90b19iZTY0KGJ1ZlswXSksDQo+ID4+PiAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICBjcHVfdG9fYmU2NChidWZbMV0pKTsNCg0KSXNuJ3QgdGhlIHJlYWwgZnViYXIgaGVy
-ZSB0aGUgdXNlIG9mIHRoYXQgbWVtb3J5IGxheW91dCBzdHJ1Y3R1cmUgYXQgYWxsPw0KSXQgd291
-bGQgcHJvYmFibHkgYWxsIGJlIGJldHRlciBpZiB0aGUgY2FsbCBsb29rZWQgbGlrZToNCglyYyA9
-IGlibXZ0cG1fc2VuZF9jcnEoaWJtdnRwbS0+dmRldiwgTUFLRV9SRVEoSUJNVlRQTV9WQUxJRF9D
-TUQsDQoJCVZUUE1fUFJFUEFSRV9UT19TVVNQRU5ELCB4eHhfbGVuLCB4eHhfZGF0YSksIDApOw0K
-YW5kIE1BS0VfUkVRKCkgZGlkIGFsbCB0aGUgcmVxdWlyZWQgZW5kaWFuIGluZGVwZW5kYW50IHNo
-aWZ0cyB0byBnZW5lcmF0ZQ0KdGhlIGNvcnJlY3QgMzJiaXQgdmFsdWUuDQoNCglEYXZpZA0KDQo=
+On Sun, 2017-01-29 at 19:52 -0500, Ken Goldman wrote:
+> On 1/27/2017 5:04 PM, James Bottomley wrote:
+> 
+> > > Beware the nasty corner case:
+> > > 
+> > > - Application asks for a session and gets 02000000
+> > > 
+> > > - Time elapses and 02000000 gets forcibly flushed
+> > > 
+> > > - Later, app comes back, asks for a second session and again gets
+> > > 02000000.
+> > > 
+> > > - App gets very confused.
+> > > 
+> > > May it be better to close the connection completely, which the
+> > > application can detect, than flush a session and give this corner
+> > > case?
+> > 
+> > if I look at the code I've written, I don't know what the session
+> > number is, I just save sessionHandle in a variable for later use 
+> > (lets say to v1).  If I got the same session number returned at a 
+> > later time and placed it in v2, all I'd notice is that an 
+> > authorization using v1 would fail.  I'm not averse to killing the 
+> > entire connection but, assuming you have fallback, it might be 
+> > kinder simply to ensure that the operations with the reclaimed 
+> > session fail (which is what the code currently does).
+> 
+> My worry is that this session failure cannot be detected by the 
+> application.  An HMAC failure could cause the app to tell a user that
+> they entered the wrong password.  Misleading.  On the TPM, it could 
+> trigger the dictionary attack lockout.  For a PIN index, it could 
+> consume a failure count.  Killing a policy session that has e.g., a 
+> policy signed term could cause the application to go back to some 
+> external entity for another authorization signature.
+> 
+> Let's go up to the stack.  What's the attack?
+> 
+> If we're worried about many simultaneous applications (wouldn't that 
+> be wonderful), why not just let startauthsession fail?  The 
+> application can just retry periodically.
+
+How in that scenario do we ensure that a session becomes available? 
+ Once that's established, there's no real difference between retrying
+the startauthsession in the kernel when we know the session is
+available and forcing userspace to do the retry except that the former
+has a far greater chance of success (and it's only about 6 lines of
+code).
+
+>   Just allocate them in triples so there's no deadlock.
+
+Is this the application or the kernel?  If it's the kernel, that adds a
+lot of complexity.
+
+> If we're worried about a DoS attack, killing a session just helps the
+> attacker.  The attacker can create a few connections and spin on 
+> startauthsession, locking everyone out anyway.
+
+There are two considerations here: firstly we'd need to introduce a
+mechanism to "kill" the connection.  Probably we'd simply error every
+command on the space until it was closed.  The second is which scenario
+is more reasonable: Say the application simply forgot to flush the
+session and will never use it again.  Simply reclaiming the session
+would produce no effect at all on the application in this scenario. 
+ However, I have no data to say what's likely.
+
+> ~~
+> 
+> Also, let's remember that this is a rare application.  Sessions are 
+> only needed for remote access (requiring encryption, HMAC or salt), 
+> or policy sessions.
+
+This depends what your threat model is.  For ssh keys, you worry that
+someone might be watching, so you use HMAC authority even for a local
+TPM.  In the cloud, you don't quite know where the TPM is, so again
+you'd use HMAC sessions ... however, in both use cases the sessions
+should be very short lived.
+
+> ~~
+> 
+> Should the code also reserve a session for the kernel?  Mark it not 
+> kill'able?
+
+At the moment, the kernel doesn't use sessions, so let's worry about
+that problem at the point it arises (if it ever arises).
+
+James
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
