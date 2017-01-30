@@ -1,36 +1,87 @@
-From: James Bottomley <James.Bottomley@HansenPartnership.com>
-Subject: Re: [tpmdd-devel] [PATCH v2 1/2] tpm2: add session handle context
- saving and restoring to the space code
-Date: Sun, 29 Jan 2017 16:55:14 -0800
-Message-ID: <1485737714.2491.13.camel@HansenPartnership.com>
-References: <1485563481.3229.39.camel@HansenPartnership.com>
-         <1485563558.3229.41.camel@HansenPartnership.com>
-         <o6m1oe$qhp$2@blaine.gmane.org>
+From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Subject: Re: [RFC] tpm2-space: add handling for global session
+	exhaustion
+Date: Sun, 29 Jan 2017 19:52:20 -0500
+Message-ID: <o6m2nv$g6n$1@blaine.gmane.org>
+References: <1484772489.2396.2.camel@HansenPartnership.com>
+	<o6gese$pev$1@blaine.gmane.org>
+	<1485554699.3229.20.camel@HansenPartnership.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <o6m1oe$qhp$2@blaine.gmane.org>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Ken Goldman <kgoldman@us.ibm.com>, tpmdd-devel@lists.sourceforge.net
-Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1485554699.3229.20.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, 2017-01-29 at 19:35 -0500, Ken Goldman wrote:
-> On 1/27/2017 7:32 PM, James Bottomley wrote:
-> > 
-> > Sessions are also isolated during each instance of a tpm space. 
-> >  This means that spaces shouldn't be able to see each other's 
-> > sessions and is enforced by ensuring that a space user may only 
-> > refer to sessions handles that are present in their own chip
-> > ->session_tbl.  Finally when a space is closed, all the sessions 
-> > belonging to it should be flushed so the handles may be re-used by
-> > other spaces.
-> 
-> This should be true for transient objects as well.
+On 1/27/2017 5:04 PM, James Bottomley wrote:
 
-It is ... it's just this patch only covers sessions.
+>> Beware the nasty corner case:
+>>
+>> - Application asks for a session and gets 02000000
+>>
+>> - Time elapses and 02000000 gets forcibly flushed
+>>
+>> - Later, app comes back, asks for a second session and again gets
+>> 02000000.
+>>
+>> - App gets very confused.
+>>
+>> May it be better to close the connection completely, which the
+>> application can detect, than flush a session and give this corner
+>> case?
+>
+> if I look at the code I've written, I don't know what the session
+> number is, I just save sessionHandle in a variable for later use (lets
+> say to v1).  If I got the same session number returned at a later time
+> and placed it in v2, all I'd notice is that an authorization using v1
+> would fail.  I'm not averse to killing the entire connection but,
+> assuming you have fallback, it might be kinder simply to ensure that
+> the operations with the reclaimed session fail (which is what the code
+> currently does).
 
-James
+My worry is that this session failure cannot be detected by the 
+application.  An HMAC failure could cause the app to tell a user that 
+they entered the wrong password.  Misleading.  On the TPM, it could 
+trigger the dictionary attack lockout.  For a PIN index, it could 
+consume a failure count.  Killing a policy session that has e.g., a 
+policy signed term could cause the application to go back to some 
+external entity for another authorization signature.
+
+Let's go up to the stack.  What's the attack?
+
+If we're worried about many simultaneous applications (wouldn't that be 
+wonderful), why not just let startauthsession fail?  The application can 
+just retry periodically.  Just allocate them in triples so there's no 
+deadlock.
+
+If we're worried about a DoS attack, killing a session just helps the 
+attacker.  The attacker can create a few connections and spin on 
+startauthsession, locking everyone out anyway.
+
+~~
+
+Also, let's remember that this is a rare application.  Sessions are only 
+needed for remote access (requiring encryption, HMAC or salt), or policy 
+sessions.
+
+~~
+
+Should the code also reserve a session for the kernel?  Mark it not 
+kill'able?
 
 
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
