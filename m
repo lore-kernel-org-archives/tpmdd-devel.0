@@ -1,18 +1,20 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [PATCH v2 1/2] tpm2: add session handle context
- saving and restoring to the space code
-Date: Mon, 30 Jan 2017 14:14:37 -0800
-Message-ID: <1485814477.2518.30.camel@HansenPartnership.com>
-References: <1485563481.3229.39.camel@HansenPartnership.com>
-	<1485563558.3229.41.camel@HansenPartnership.com>
-	<20170129213957.zx6v6g42kwcabc6y@intel.com>
-	<1485729418.2491.10.camel@HansenPartnership.com>
-	<20170130214526.56e4ai2k6zhzvgy4@intel.com>
+From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Subject: Re: [RFC] tpm2-space: add handling for global session
+	exhaustion
+Date: Mon, 30 Jan 2017 17:46:26 -0500
+Message-ID: <o6ofns$5ic$1@blaine.gmane.org>
+References: <1484772489.2396.2.camel@HansenPartnership.com>
+	<o6gese$pev$1@blaine.gmane.org>
+	<1485554699.3229.20.camel@HansenPartnership.com>
+	<o6m2nv$g6n$1@blaine.gmane.org>
+	<1485792295.2518.23.camel@HansenPartnership.com>
+	<20170130215815.4lr42ob7e4cycwgi@intel.com>
+	<1485814388.2518.28.camel@HansenPartnership.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170130214526.56e4ai2k6zhzvgy4-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <1485814388.2518.28.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,35 +23,31 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, 2017-01-30 at 23:45 +0200, Jarkko Sakkinen wrote:
-> On Sun, Jan 29, 2017 at 02:36:58PM -0800, James Bottomley wrote:
-[...]
-> > > 2. Can it really return both TPM_RC_HANDLE and
-> > > TPM_RC_REFERENCE_H0? 
-> > 
-> > Yes, it seems that a session that doesn't exist (because it's been
-> > flushed) then it returns TPM_RC_REFERNCE_H0, but if the context has 
-> > a sequence mismatch (because it's been flushed and reloaded) then 
-> > we get TPM_RC_HANDLE.
-> > 
-> > James
-> 
-> If it is flushed, wouldn't you just get TPM_RC_REFERENCE_H0 when you 
-> try to TPM2_ContextLoad? The "and reloaded" does not make sense to 
-> me. Once a session is flushed it cannot be reloaded.
-> 
-> Maybe you meant to say "beause it's been saved and reloaded"? That 
-> would make more sense and fits better what I see in the Commands 
-> specification.
+On 1/30/2017 5:13 PM, James Bottomley wrote:
+>
+> But as I read the code, I can't find where the kernel creates a
+> session.  It looks like the session and hmac are passed in as option
+> arguments, aren't they?
 
-I mean if you load a prior context instead of the current one for an
-existing handle, effectively a replay, you get TPM_RC_HANDLE.
+A bit of background.
 
-James
+Unlike TPM 1.2, which always required an HMAC, TPM 2.0 has plaintext
+password sessions, with the session number TPM_RS_PS.  This type of
+session does not have to be created or flushed.  Since the kernel has a 
+presumed trusted path to the TPM, I don't see any need for an HMAC session.
+
+However, TPM 2.0 does has policy sessions.  These do have to be
+created.  The kernel use case may be in the future.
+
+The first use I encountered for a policy session is use of the EK.  The 
+EK has no password of its own, but rather has a policy that points to 
+the endorsement hierarchy authorization - policy secret.
+
+
 
 
 ------------------------------------------------------------------------------
