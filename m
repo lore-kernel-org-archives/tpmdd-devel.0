@@ -1,117 +1,130 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [RFC] tpm2-space: add handling for global session
- exhaustion
-Date: Mon, 30 Jan 2017 08:04:55 -0800
-Message-ID: <1485792295.2518.23.camel@HansenPartnership.com>
-References: <1484772489.2396.2.camel@HansenPartnership.com>
-	<o6gese$pev$1@blaine.gmane.org>
-	<1485554699.3229.20.camel@HansenPartnership.com>
-	<o6m2nv$g6n$1@blaine.gmane.org>
+From: Tyrel Datwyler <tyreld@linux.vnet.ibm.com>
+Subject: Re: ibmvtpm byteswapping inconsistency
+Date: Mon, 30 Jan 2017 12:34:45 -0800
+Message-ID: <d2da4b82-9686-187c-c514-96a506e994cc@linux.vnet.ibm.com>
+References: <20170126212248.3f3e9103@kitsune.suse.cz>
+ <d55b06cc-cb7a-1ef1-05b7-d7d4114d0c48@linux.vnet.ibm.com>
+ <1485481819.2980.82.camel@kernel.crashing.org>
+ <CAOMqctQtspCTTpfEUyUVyE9GKYOavZNhkXnRPUrPZrDZ6-eG0w@mail.gmail.com>
+ <73c1e5be-0820-8dca-c86a-8cf3ffeb5efe@linux.vnet.ibm.com>
+ <87tw8hw4k7.fsf@concordia.ellerman.id.au>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <o6m2nv$g6n$1@blaine.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <87tw8hw4k7.fsf@concordia.ellerman.id.au>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Michael Ellerman <mpe@ellerman.id.au>, Tyrel Datwyler <tyreld@linux.vnet.ibm.com>, Michal Suchanek <hramrach@gmail.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>
+Cc: Marcel Selhorst <tpmdd@selhorst.net>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, Paul Mackerras <paulus@samba.org>, Ashley Lai <ashleydlai@gmail.com>, Peter Huewe <peterhuewe@gmx.de>, =?UTF-8?Q?Michal_Such=c3=a1nek?= <msuchanek@suse.de>, linuxppc-dev@lists.ozlabs.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, 2017-01-29 at 19:52 -0500, Ken Goldman wrote:
-> On 1/27/2017 5:04 PM, James Bottomley wrote:
+On 01/29/2017 08:32 PM, Michael Ellerman wrote:
+> Tyrel Datwyler <tyreld@linux.vnet.ibm.com> writes:
 > 
-> > > Beware the nasty corner case:
-> > > 
-> > > - Application asks for a session and gets 02000000
-> > > 
-> > > - Time elapses and 02000000 gets forcibly flushed
-> > > 
-> > > - Later, app comes back, asks for a second session and again gets
-> > > 02000000.
-> > > 
-> > > - App gets very confused.
-> > > 
-> > > May it be better to close the connection completely, which the
-> > > application can detect, than flush a session and give this corner
-> > > case?
-> > 
-> > if I look at the code I've written, I don't know what the session
-> > number is, I just save sessionHandle in a variable for later use 
-> > (lets say to v1).  If I got the same session number returned at a 
-> > later time and placed it in v2, all I'd notice is that an 
-> > authorization using v1 would fail.  I'm not averse to killing the 
-> > entire connection but, assuming you have fallback, it might be 
-> > kinder simply to ensure that the operations with the reclaimed 
-> > session fail (which is what the code currently does).
+>> On 01/27/2017 01:03 AM, Michal Suchanek wrote:
+>>> On 27 January 2017 at 02:50, Benjamin Herrenschmidt
+>>> <benh@kernel.crashing.org> wrote:
+>>>> On Thu, 2017-01-26 at 17:42 -0800, Tyrel Datwyler wrote:
+>>>>> On 01/26/2017 12:22 PM, Michal Suchánek wrote:
+>>>>>> Hello,
+>>>>>>
+>>>>>> building ibmvtpm I noticed gcc warning complaining that second word
+>>>>>> of
+>>>>>> struct ibmvtpm_crq in tpm_ibmvtpm_suspend is uninitialized.
+>>>>>>
+>>>>>> The structure is defined as
+>>>>>>
+>>>>>> struct ibmvtpm_crq {
+>>>>>>         u8 valid;
+>>>>>>         u8 msg;
+>>>>>>         __be16 len;
+>>>>>>         __be32 data;
+>>>>>>         __be64 reserved;
+>>>>>> } __attribute__((packed, aligned(8)));
+>>>>>>
+>>>>>> initialized as
+>>>>>>
+>>>>>>         struct ibmvtpm_crq crq;
+>>>>>>         u64 *buf = (u64 *) &crq;
+>>>>>> ...
+>>>>>>         crq.valid = (u8)IBMVTPM_VALID_CMD;
+>>>>>>         crq.msg = (u8)VTPM_PREPARE_TO_SUSPEND;
+>>>>>>
+>>>>>> and submitted with
+>>>>>>
+>>>>>>         rc = ibmvtpm_send_crq(ibmvtpm->vdev, cpu_to_be64(buf[0]),
+>>>>>>                               cpu_to_be64(buf[1]));
+>>>>>
+>>>>> These should be be64_to_cpu() here. The underlying hcall made by
+>>>>> ibmvtpm_send_crq() requires parameters to be in cpu endian unlike the
+>>>>> RTAS interface which requires data in BE.
+>>>>
+>>>> Hrm... an hcall takes register arguments. Register arguments don't have
+>>>> an endianness.
+>>>>
+>>>> The problem is that we are packing an in-memory structure into 2
+>>>> registers and it's expected that this structure is laid out in the
+>>>> registers as if it had been loaded by a BE CPU.
+>>>>
+>>>> So we have two things at play here:
+>>>>
+>>>>   - The >8-bit fields should be laid out BE in the memory image
+>>>>   - That whole 128-bit structure should be loaded into 2 64-bit
+>>>> registers MSB first.
+>>>>
+>>>> So the "double" swap is somewhat needed. The uglyness comes from the
+>>>> passing-by-register of the h-call but it should work.
+>>>>
+>>>> That said, be64_to_cpup(buf) and be64_to_cpup(buf+1) might give you
+>>>> better result (though recent gcc's might not make a difference).
+>>>
+>>> If this should work then the below case that swaps the fields separately is
+>>> broken.
+>>>
+>>> Anyway, structures have no endianess so when they start with a byte they
+>>> start with that byte no matter the host endian.
+>>> crq.valid is the first byte always. And then each field is to be swapped
+>>> separately.
+>>>
+>>> On the other hand, bitfields are part of an integer and the field should be
+>>> swapped as part of the integer.
+>>>
+>>> That is,
+>>> #define CRQ_VALID ((buf[0] >> 56) & 0xff)
+>>> CRQ_VALID is part of an integer in buf and would be laid out differently
+>>> on start or end depending on the host being BE or LE.
+>>>
+>>> And the question is what the PAPR actually defines because both ways are
+>>> used in the code. You can describe an in-memory layout either way.
+>>
+>> Byte  |   0   |   1   |   2   |   3   |   4   |   5   |   6   |   7
+>> -----------------------------------------------------------------------
+>> Word0 | Valid | Type  |     Length    |              Data
+>> -----------------------------------------------------------------------
+>> Word1 |				Reserved
+>> -----------------------------------------------------------------------
+>>
+>> The following definition looks to match:
+>>
+>> struct ibmvtpm_crq {
+>>         u8 valid;
+>>         u8 msg;
+>>         __be16 len;
+>>         __be32 data;
+>>         __be64 reserved;
+>> } __attribute__((packed, aligned(8)));
 > 
-> My worry is that this session failure cannot be detected by the 
-> application.  An HMAC failure could cause the app to tell a user that
-> they entered the wrong password.  Misleading.  On the TPM, it could 
-> trigger the dictionary attack lockout.  For a PIN index, it could 
-> consume a failure count.  Killing a policy session that has e.g., a 
-> policy signed term could cause the application to go back to some 
-> external entity for another authorization signature.
+> Well it's a partial match.
 > 
-> Let's go up to the stack.  What's the attack?
+> Your layout above doesn't define which byte of Length or Data is the MSB
+> or LSB. So going by that we still don't know the endianness of either
+
+I should have been explicit that PAPR uses Big Endian bit and byte
+numbering throughout the spec unless otherwise noted.
+
+-Tyrel
+
+> field.
 > 
-> If we're worried about many simultaneous applications (wouldn't that 
-> be wonderful), why not just let startauthsession fail?  The 
-> application can just retry periodically.
-
-How in that scenario do we ensure that a session becomes available? 
- Once that's established, there's no real difference between retrying
-the startauthsession in the kernel when we know the session is
-available and forcing userspace to do the retry except that the former
-has a far greater chance of success (and it's only about 6 lines of
-code).
-
->   Just allocate them in triples so there's no deadlock.
-
-Is this the application or the kernel?  If it's the kernel, that adds a
-lot of complexity.
-
-> If we're worried about a DoS attack, killing a session just helps the
-> attacker.  The attacker can create a few connections and spin on 
-> startauthsession, locking everyone out anyway.
-
-There are two considerations here: firstly we'd need to introduce a
-mechanism to "kill" the connection.  Probably we'd simply error every
-command on the space until it was closed.  The second is which scenario
-is more reasonable: Say the application simply forgot to flush the
-session and will never use it again.  Simply reclaiming the session
-would produce no effect at all on the application in this scenario. 
- However, I have no data to say what's likely.
-
-> ~~
+> cheers
 > 
-> Also, let's remember that this is a rare application.  Sessions are 
-> only needed for remote access (requiring encryption, HMAC or salt), 
-> or policy sessions.
-
-This depends what your threat model is.  For ssh keys, you worry that
-someone might be watching, so you use HMAC authority even for a local
-TPM.  In the cloud, you don't quite know where the TPM is, so again
-you'd use HMAC sessions ... however, in both use cases the sessions
-should be very short lived.
-
-> ~~
-> 
-> Should the code also reserve a session for the kernel?  Mark it not 
-> kill'able?
-
-At the moment, the kernel doesn't use sessions, so let's worry about
-that problem at the point it arises (if it ever arises).
-
-James
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
