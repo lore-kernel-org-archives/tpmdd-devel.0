@@ -1,25 +1,32 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: Fwd: Re: [tpmdd-devel] [PATCH v9 2/2] tpm: add securityfs
- support,for TPM 2.0 firmware event log
-Date: Wed, 1 Feb 2017 00:31:06 +0200
-Message-ID: <20170131223106.faap5tfrd4qquhqv@intel.com>
+From: Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: Fwd: Re: [PATCH v9 2/2] tpm: add securityfs
+ support, for TPM 2.0 firmware event log
+Date: Tue, 31 Jan 2017 17:31:50 -0500
+Message-ID: <1485901910.9008.1.camel@linux.vnet.ibm.com>
 References: <de409ad1-de39-20d2-bda6-5d2a965e7256@linux.vnet.ibm.com>
- <CALAzByG474T_qSJ0Kry1LiNSsCQAHUagqcqtR_CnpporicZrdg@mail.gmail.com>
- <588F09A2.4090502@linux.vnet.ibm.com>
- <20170131174659.b6njebycqzd5ur6f@intel.com>
- <20170131203452.523ckw4aphxdsndq@intel.com>
- <alpine.LRH.2.20.1702010842220.28891@namei.org>
+	<CALAzByG474T_qSJ0Kry1LiNSsCQAHUagqcqtR_CnpporicZrdg@mail.gmail.com>
+	<588F09A2.4090502@linux.vnet.ibm.com>
+	<20170131174659.b6njebycqzd5ur6f@intel.com>
+	<20170131203452.523ckw4aphxdsndq@intel.com>
+	<alpine.LRH.2.20.1702010842220.28891@namei.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <alpine.LRH.2.20.1702010842220.28891@namei.org>
-Sender: owner-linux-security-module@vger.kernel.org
-To: James Morris <jmorris@namei.org>
-Cc: Kenneth Goldman <kgoldman@us.ibm.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <alpine.LRH.2.20.1702010842220.28891-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: James Morris <jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Kenneth Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Feb 01, 2017 at 08:46:32AM +1100, James Morris wrote:
+On Wed, 2017-02-01 at 08:46 +1100, James Morris wrote:
 > On Tue, 31 Jan 2017, Jarkko Sakkinen wrote:
 > 
 > > James,
@@ -45,14 +52,12 @@ On Wed, Feb 01, 2017 at 08:46:32AM +1100, James Morris wrote:
 > 
 > I'll take this for 4.11.  IMA + TPM 2.0 is still developmental and not in 
 > wide use, afaik.
-> 
-> 
-> 
-> -- 
-> James Morris
-> <jmorris@namei.org>
 
-Great! I'll prepare the pull request tomorrow (it's now 12:30AM in
-Finland). Thank you.
+Thank you!   FYI, I've been running with them as well.
 
-/Jarkko
+Mimi
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
