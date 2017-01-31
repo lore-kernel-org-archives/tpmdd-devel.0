@@ -1,15 +1,20 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v9 2/2] tpm: add securityfs support,
- for TPM 2.0 firmware event log
-Date: Tue, 31 Jan 2017 15:13:51 +0200
-Message-ID: <20170131131351.akhihknjrqyoij6y@intel.com>
-References: <de409ad1-de39-20d2-bda6-5d2a965e7256@linux.vnet.ibm.com>
+Subject: Re: [PATCH v2 1/2] tpm2: add session handle context
+ saving and restoring to the space code
+Date: Tue, 31 Jan 2017 15:15:17 +0200
+Message-ID: <20170131131517.ewudypkagux2bg6e@intel.com>
+References: <1485563481.3229.39.camel@HansenPartnership.com>
+	<1485563558.3229.41.camel@HansenPartnership.com>
+	<20170129213957.zx6v6g42kwcabc6y@intel.com>
+	<1485729418.2491.10.camel@HansenPartnership.com>
+	<20170130214526.56e4ai2k6zhzvgy4@intel.com>
+	<1485814477.2518.30.camel@HansenPartnership.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <de409ad1-de39-20d2-bda6-5d2a965e7256-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1485814477.2518.30.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,25 +23,38 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Ken Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jan 25, 2017 at 04:22:45PM -0500, Ken Goldman wrote:
-> > You do not need to send a new patch set version as long as this
-> > one gets peer tested. And it needs to be tested without hacks
-> > like plumbing TCPA with TPM 2.0 in QEMU. OF code paths needs to
-> > be peer tested to be more specific.
-> >
-> > For me the code itself looks good but I simply cannot take it in
-> > in the current situation.
-> >
-> > /Jarkko
+On Mon, Jan 30, 2017 at 02:14:37PM -0800, James Bottomley wrote:
+> On Mon, 2017-01-30 at 23:45 +0200, Jarkko Sakkinen wrote:
+> > On Sun, Jan 29, 2017 at 02:36:58PM -0800, James Bottomley wrote:
+> [...]
+> > > > 2. Can it really return both TPM_RC_HANDLE and
+> > > > TPM_RC_REFERENCE_H0? 
+> > > 
+> > > Yes, it seems that a session that doesn't exist (because it's been
+> > > flushed) then it returns TPM_RC_REFERNCE_H0, but if the context has 
+> > > a sequence mismatch (because it's been flushed and reloaded) then 
+> > > we get TPM_RC_HANDLE.
+> > > 
+> > > James
+> > 
+> > If it is flushed, wouldn't you just get TPM_RC_REFERENCE_H0 when you 
+> > try to TPM2_ContextLoad? The "and reloaded" does not make sense to 
+> > me. Once a session is flushed it cannot be reloaded.
+> > 
+> > Maybe you meant to say "beause it's been saved and reloaded"? That 
+> > would make more sense and fits better what I see in the Commands 
+> > specification.
 > 
-> Tested-by: Kenneth Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> I mean if you load a prior context instead of the current one for an
+> existing handle, effectively a replay, you get TPM_RC_HANDLE.
+> 
+> James
 
-Thanks. This explains it. I got Naynas response before I got this one.
-That's why it went unnoticed.
+Thanks for clarifying this.
 
 /Jarkko
 
