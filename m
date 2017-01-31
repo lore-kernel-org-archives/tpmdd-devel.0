@@ -1,7 +1,7 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH] tpm, tpm_crb: fix a type error
-Date: Tue, 31 Jan 2017 20:34:28 +0200
-Message-ID: <20170131183428.9472-1-jarkko.sakkinen@linux.intel.com>
+From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH] tpm: fix a sparse error in tpm-sysfs.c
+Date: Tue, 31 Jan 2017 13:43:59 -0500
+Message-ID: <1485888239-7727-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
@@ -15,45 +15,32 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Fixes: 422eac3f7dea ("tpm_crb: fix mapping of the buffers")
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
----
- drivers/char/tpm/tpm_crb.c | 8 ++++----
- 1 file changed, 4 insertions(+), 4 deletions(-)
+drivers/char/tpm/tpm-sysfs.c:161:25: warning: expression using sizeof bool
 
-diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index 86f355b..4db7922 100644
---- a/drivers/char/tpm/tpm_crb.c
-+++ b/drivers/char/tpm/tpm_crb.c
-@@ -304,7 +304,7 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
- 	u32 pa_high, pa_low;
- 	u64 cmd_pa;
- 	u32 cmd_size;
--	u64 rsp_pa;
-+	__le64 rsp_pa;
- 	u32 rsp_size;
- 	int ret;
- 
-@@ -352,11 +352,11 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
- 	}
- 
- 	memcpy_fromio(&rsp_pa, &priv->cca->rsp_pa, 8);
--	rsp_pa = le64_to_cpu(rsp_pa);
- 	rsp_size = ioread32(&priv->cca->rsp_size);
- 
--	if (cmd_pa != rsp_pa) {
--		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa, rsp_size);
-+	if (cmd_pa != le64_to_cpu(rsp_pa)) {
-+		priv->rsp = crb_map_res(dev, priv, &io_res,
-+					le64_to_cpu(rsp_pa), rsp_size);
- 		ret = PTR_ERR_OR_ZERO(priv->rsp);
- 		goto out;
- 	}
+Fixes: c659af78eb7b ("tpm: Check size of response before accessing data")
+Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+---
+ drivers/char/tpm/tpm.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index bff37be..6b4e7aa 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -281,7 +281,7 @@ struct permanent_flags_t {
+ typedef union {
+ 	struct	permanent_flags_t perm_flags;
+ 	struct	stclear_flags_t	stclear_flags;
+-	bool	owned;
++	__u8	owned;
+ 	__be32	num_pcrs;
+ 	struct	tpm_version_t	tpm_version;
+ 	struct	tpm_version_1_2_t tpm_version_1_2;
 -- 
-2.9.3
+2.4.3
 
 
 ------------------------------------------------------------------------------
