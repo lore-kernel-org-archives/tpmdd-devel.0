@@ -1,181 +1,197 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [RFC] tpm2-space: add handling for global session
- exhaustion
-Date: Tue, 31 Jan 2017 15:31:48 +0200
-Message-ID: <20170131133148.r4xwwnpee7cdotlw@intel.com>
-References: <1484772489.2396.2.camel@HansenPartnership.com>
-	<o6gese$pev$1@blaine.gmane.org>
-	<1485554699.3229.20.camel@HansenPartnership.com>
-	<o6m2nv$g6n$1@blaine.gmane.org>
-	<1485792295.2518.23.camel@HansenPartnership.com>
-	<20170130215815.4lr42ob7e4cycwgi@intel.com>
-	<1485814388.2518.28.camel@HansenPartnership.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1485814388.2518.28.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Cc: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+From: Michal Suchanek <msuchanek@suse.de>
+Subject: [PATCH] tpm: ibmvtpm: simplify crq initialization and document crq format
+Date: Tue, 31 Jan 2017 15:17:34 +0100
+Message-ID: <20170131141734.28534-1-msuchanek@suse.de>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Ashley Lai <ashleydlai@gmail.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, linuxppc-dev@lists.ozlabs.org, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+Cc: Michal Suchanek <msuchanek@suse.de>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jan 30, 2017 at 02:13:08PM -0800, James Bottomley wrote:
-> On Mon, 2017-01-30 at 23:58 +0200, Jarkko Sakkinen wrote:
-> > On Mon, Jan 30, 2017 at 08:04:55AM -0800, James Bottomley wrote:
-> > > On Sun, 2017-01-29 at 19:52 -0500, Ken Goldman wrote:
-> > > > On 1/27/2017 5:04 PM, James Bottomley wrote:
-> > > > 
-> > > > > > Beware the nasty corner case:
-> > > > > > 
-> > > > > > - Application asks for a session and gets 02000000
-> > > > > > 
-> > > > > > - Time elapses and 02000000 gets forcibly flushed
-> > > > > > 
-> > > > > > - Later, app comes back, asks for a second session and again
-> > > > > > gets
-> > > > > > 02000000.
-> > > > > > 
-> > > > > > - App gets very confused.
-> > > > > > 
-> > > > > > May it be better to close the connection completely, which
-> > > > > > the
-> > > > > > application can detect, than flush a session and give this
-> > > > > > corner
-> > > > > > case?
-> > > > > 
-> > > > > if I look at the code I've written, I don't know what the
-> > > > > session
-> > > > > number is, I just save sessionHandle in a variable for later
-> > > > > use 
-> > > > > (lets say to v1).  If I got the same session number returned at
-> > > > > a 
-> > > > > later time and placed it in v2, all I'd notice is that an 
-> > > > > authorization using v1 would fail.  I'm not averse to killing
-> > > > > the 
-> > > > > entire connection but, assuming you have fallback, it might be 
-> > > > > kinder simply to ensure that the operations with the reclaimed 
-> > > > > session fail (which is what the code currently does).
-> > > > 
-> > > > My worry is that this session failure cannot be detected by the 
-> > > > application.  An HMAC failure could cause the app to tell a user
-> > > > that
-> > > > they entered the wrong password.  Misleading.  On the TPM, it
-> > > > could 
-> > > > trigger the dictionary attack lockout.  For a PIN index, it could
-> > > > consume a failure count.  Killing a policy session that has e.g.,
-> > > > a 
-> > > > policy signed term could cause the application to go back to some
-> > > > external entity for another authorization signature.
-> > > > 
-> > > > Let's go up to the stack.  What's the attack?
-> > > > 
-> > > > If we're worried about many simultaneous applications (wouldn't
-> > > > that 
-> > > > be wonderful), why not just let startauthsession fail?  The 
-> > > > application can just retry periodically.
-> > > 
-> > > How in that scenario do we ensure that a session becomes available?
-> > >  Once that's established, there's no real difference between
-> > > retrying
-> > > the startauthsession in the kernel when we know the session is
-> > > available and forcing userspace to do the retry except that the
-> > > former
-> > > has a far greater chance of success (and it's only about 6 lines of
-> > > code).
-> > > 
-> > > >   Just allocate them in triples so there's no deadlock.
-> > > 
-> > > Is this the application or the kernel?  If it's the kernel, that
-> > > adds a
-> > > lot of complexity.
-> > > 
-> > > > If we're worried about a DoS attack, killing a session just helps
-> > > > the
-> > > > attacker.  The attacker can create a few connections and spin on 
-> > > > startauthsession, locking everyone out anyway.
-> > > 
-> > > There are two considerations here: firstly we'd need to introduce a
-> > > mechanism to "kill" the connection.  Probably we'd simply error
-> > > every
-> > > command on the space until it was closed.  The second is which
-> > > scenario
-> > > is more reasonable: Say the application simply forgot to flush the
-> > > session and will never use it again.  Simply reclaiming the session
-> > > would produce no effect at all on the application in this scenario.
-> > >  However, I have no data to say what's likely.
-> > > 
-> > > > ~~
-> > > > 
-> > > > Also, let's remember that this is a rare application.  Sessions
-> > > > are 
-> > > > only needed for remote access (requiring encryption, HMAC or
-> > > > salt), 
-> > > > or policy sessions.
-> > > 
-> > > This depends what your threat model is.  For ssh keys, you worry
-> > > that
-> > > someone might be watching, so you use HMAC authority even for a
-> > > local
-> > > TPM.  In the cloud, you don't quite know where the TPM is, so again
-> > > you'd use HMAC sessions ... however, in both use cases the sessions
-> > > should be very short lived.
-> > > 
-> > > > ~~
-> > > > 
-> > > > Should the code also reserve a session for the kernel?  Mark it
-> > > > not 
-> > > > kill'able?
-> > > 
-> > > At the moment, the kernel doesn't use sessions, so let's worry
-> > > about
-> > > that problem at the point it arises (if it ever arises).
-> > > 
-> > > James
-> > 
-> > It does. My trusted keys implementation actually uses sessions.
-> 
-> But as I read the code, I can't find where the kernel creates a
-> session.  It looks like the session and hmac are passed in as option
-> arguments, aren't they?
 
-Yes. Sorry, I mixed up things.
+The crq is passed in registers so is the same on BE and LE hosts.
+However, current implementation allocates a structure on-stack to
+represent the crq, initializes the members swapping them to BE, and
+loads the structure swapping it from BE. This is pointless and causes
+GCC warnings about ununitialized members. Get rid of the structure and
+the warnings.
 
-> > I'm kind dilating to an opinion that we would leave this commit out 
-> > from the first kernel release that will contain the resource manager 
-> > with similar rationale as Jason gave me for whitelisting: get the 
-> > basic stuff in and once it is used with some workloads whitelisting 
-> > and exhaustion will take eventually the right form.
-> > 
-> > How would you feel about this?
-> 
-> As long as we get patch 1/2 then applications using sessions will
-> actually work with spaces, so taking more time with 2/2 is fine by me.
-> 
-> James
+Signed-off-by: Michal Suchanek <msuchanek@suse.de>
+---
+ drivers/char/tpm/tpm_ibmvtpm.c | 92 +++++++++++++++++++++++++-----------------
+ 1 file changed, 56 insertions(+), 36 deletions(-)
 
-1/2 contains code that with a few iterations it is in the form that I'm
-able to merge it.
-
-With 2/2 I'm not saying it is wrong approach but I cannot yet say that
-I'm confident that it would be the best approach.
-
-I think that the transient object and infrastructure stuff that is
-already in the patch set and 1/2 session is the subset of commits where
-we can be fairly confident that we are doing the right thing.
-
-I'll start preparing a patch set with this content without RFC tag.
-
-/Jarkko
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+diff --git a/drivers/char/tpm/tpm_ibmvtpm.c b/drivers/char/tpm/tpm_ibmvtpm.c
+index 946025a7413b..b6402b1b76fe 100644
+--- a/drivers/char/tpm/tpm_ibmvtpm.c
++++ b/drivers/char/tpm/tpm_ibmvtpm.c
+@@ -39,18 +39,58 @@ static struct vio_device_id tpm_ibmvtpm_device_table[] = {
+ MODULE_DEVICE_TABLE(vio, tpm_ibmvtpm_device_table);
+ 
+ /**
++ *
++ * ibmvtpm_send_crq_word - Send a CRQ request
++ * @vdev:	vio device struct
++ * @w1:		pre-constructed first word of tmp crq (second word is reserved)
++ *
++ * Return value:
++ *	0 - Success
++ *	Non-zero - Failure
++ */
++static int ibmvtpm_send_crq_word(struct vio_dev *vdev, u64 w1)
++{
++	return plpar_hcall_norets(H_SEND_CRQ, vdev->unit_address, w1, 0);
++}
++
++/**
++ *
+  * ibmvtpm_send_crq - Send a CRQ request
+  * @vdev:	vio device struct
+- * @w1:		first word
+- * @w2:		second word
++ *
++ * The ibmvtpm crq is defined as follows:
++ *
++ * Byte  |   0   |   1   |   2   |   3   |   4   |   5   |   6   |   7
++ * -----------------------------------------------------------------------
++ * Word0 | Valid | Type  |     Length    |              Data
++ * -----------------------------------------------------------------------
++ * Word1 |                Reserved
++ * -----------------------------------------------------------------------
++ *
++ * Which matches the following structure (on bigendian host):
++ *
++ * struct ibmvtpm_crq {
++ *         u8 valid;
++ *         u8 msg;
++ *         __be16 len;
++ *         __be32 data;
++ *         __be64 reserved;
++ * } __attribute__((packed, aligned(8)));
++ *
++ * However, the value is passed in a register so just compute the numeric value
++ * to load into the registar avoiding byteswap altogether. Endian only affects
++ * memory loads and stores - registers are internally represented the same.
+  *
+  * Return value:
+- *	0 -Sucess
++ *	0 (H_SUCCESS) - Success
+  *	Non-zero - Failure
+  */
+-static int ibmvtpm_send_crq(struct vio_dev *vdev, u64 w1, u64 w2)
++static int ibmvtpm_send_crq(struct vio_dev *vdev,
++		u8 valid, u8 msg, u16 len, u32 data)
+ {
+-	return plpar_hcall_norets(H_SEND_CRQ, vdev->unit_address, w1, w2);
++	u64 w1 = ((u64)valid << 56) | ((u64)msg << 48) | ((u64)len << 32) |
++		(u64)data;
++	return ibmvtpm_send_crq_word(vdev, w1);
+ }
+ 
+ /**
+@@ -106,8 +146,6 @@ static int tpm_ibmvtpm_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+ static int tpm_ibmvtpm_send(struct tpm_chip *chip, u8 *buf, size_t count)
+ {
+ 	struct ibmvtpm_dev *ibmvtpm = dev_get_drvdata(&chip->dev);
+-	struct ibmvtpm_crq crq;
+-	__be64 *word = (__be64 *)&crq;
+ 	int rc, sig;
+ 
+ 	if (!ibmvtpm->rtce_buf) {
+@@ -134,10 +172,6 @@ static int tpm_ibmvtpm_send(struct tpm_chip *chip, u8 *buf, size_t count)
+ 	spin_lock(&ibmvtpm->rtce_lock);
+ 	ibmvtpm->res_len = 0;
+ 	memcpy((void *)ibmvtpm->rtce_buf, (void *)buf, count);
+-	crq.valid = (u8)IBMVTPM_VALID_CMD;
+-	crq.msg = (u8)VTPM_TPM_COMMAND;
+-	crq.len = cpu_to_be16(count);
+-	crq.data = cpu_to_be32(ibmvtpm->rtce_dma_handle);
+ 
+ 	/*
+ 	 * set the processing flag before the Hcall, since we may get the
+@@ -145,8 +179,9 @@ static int tpm_ibmvtpm_send(struct tpm_chip *chip, u8 *buf, size_t count)
+ 	 */
+ 	ibmvtpm->tpm_processing_cmd = true;
+ 
+-	rc = ibmvtpm_send_crq(ibmvtpm->vdev, be64_to_cpu(word[0]),
+-			      be64_to_cpu(word[1]));
++	rc = ibmvtpm_send_crq(ibmvtpm->vdev,
++			IBMVTPM_VALID_CMD, VTPM_TPM_COMMAND,
++			count, ibmvtpm->rtce_dma_handle);
+ 	if (rc != H_SUCCESS) {
+ 		dev_err(ibmvtpm->dev, "tpm_ibmvtpm_send failed rc=%d\n", rc);
+ 		rc = 0;
+@@ -178,15 +213,10 @@ static u8 tpm_ibmvtpm_status(struct tpm_chip *chip)
+  */
+ static int ibmvtpm_crq_get_rtce_size(struct ibmvtpm_dev *ibmvtpm)
+ {
+-	struct ibmvtpm_crq crq;
+-	u64 *buf = (u64 *) &crq;
+ 	int rc;
+ 
+-	crq.valid = (u8)IBMVTPM_VALID_CMD;
+-	crq.msg = (u8)VTPM_GET_RTCE_BUFFER_SIZE;
+-
+-	rc = ibmvtpm_send_crq(ibmvtpm->vdev, cpu_to_be64(buf[0]),
+-			      cpu_to_be64(buf[1]));
++	rc = ibmvtpm_send_crq(ibmvtpm->vdev,
++			IBMVTPM_VALID_CMD, VTPM_GET_RTCE_BUFFER_SIZE, 0, 0);
+ 	if (rc != H_SUCCESS)
+ 		dev_err(ibmvtpm->dev,
+ 			"ibmvtpm_crq_get_rtce_size failed rc=%d\n", rc);
+@@ -205,15 +235,10 @@ static int ibmvtpm_crq_get_rtce_size(struct ibmvtpm_dev *ibmvtpm)
+  */
+ static int ibmvtpm_crq_get_version(struct ibmvtpm_dev *ibmvtpm)
+ {
+-	struct ibmvtpm_crq crq;
+-	u64 *buf = (u64 *) &crq;
+ 	int rc;
+ 
+-	crq.valid = (u8)IBMVTPM_VALID_CMD;
+-	crq.msg = (u8)VTPM_GET_VERSION;
+-
+-	rc = ibmvtpm_send_crq(ibmvtpm->vdev, cpu_to_be64(buf[0]),
+-			      cpu_to_be64(buf[1]));
++	rc = ibmvtpm_send_crq(ibmvtpm->vdev,
++			IBMVTPM_VALID_CMD, VTPM_GET_VERSION, 0, 0);
+ 	if (rc != H_SUCCESS)
+ 		dev_err(ibmvtpm->dev,
+ 			"ibmvtpm_crq_get_version failed rc=%d\n", rc);
+@@ -233,7 +258,7 @@ static int ibmvtpm_crq_send_init_complete(struct ibmvtpm_dev *ibmvtpm)
+ {
+ 	int rc;
+ 
+-	rc = ibmvtpm_send_crq(ibmvtpm->vdev, INIT_CRQ_COMP_CMD, 0);
++	rc = ibmvtpm_send_crq_word(ibmvtpm->vdev, INIT_CRQ_COMP_CMD);
+ 	if (rc != H_SUCCESS)
+ 		dev_err(ibmvtpm->dev,
+ 			"ibmvtpm_crq_send_init_complete failed rc=%d\n", rc);
+@@ -253,7 +278,7 @@ static int ibmvtpm_crq_send_init(struct ibmvtpm_dev *ibmvtpm)
+ {
+ 	int rc;
+ 
+-	rc = ibmvtpm_send_crq(ibmvtpm->vdev, INIT_CRQ_CMD, 0);
++	rc = ibmvtpm_send_crq_word(ibmvtpm->vdev, INIT_CRQ_CMD);
+ 	if (rc != H_SUCCESS)
+ 		dev_err(ibmvtpm->dev,
+ 			"ibmvtpm_crq_send_init failed rc=%d\n", rc);
+@@ -332,15 +357,10 @@ static int tpm_ibmvtpm_suspend(struct device *dev)
+ {
+ 	struct tpm_chip *chip = dev_get_drvdata(dev);
+ 	struct ibmvtpm_dev *ibmvtpm = dev_get_drvdata(&chip->dev);
+-	struct ibmvtpm_crq crq;
+-	u64 *buf = (u64 *) &crq;
+ 	int rc = 0;
+ 
+-	crq.valid = (u8)IBMVTPM_VALID_CMD;
+-	crq.msg = (u8)VTPM_PREPARE_TO_SUSPEND;
+-
+-	rc = ibmvtpm_send_crq(ibmvtpm->vdev, cpu_to_be64(buf[0]),
+-			      cpu_to_be64(buf[1]));
++	rc = ibmvtpm_send_crq(ibmvtpm->vdev,
++			IBMVTPM_VALID_CMD, VTPM_PREPARE_TO_SUSPEND, 0, 0);
+ 	if (rc != H_SUCCESS)
+ 		dev_err(ibmvtpm->dev,
+ 			"tpm_ibmvtpm_suspend failed rc=%d\n", rc);
+-- 
+2.10.2
