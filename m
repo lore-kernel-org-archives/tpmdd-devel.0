@@ -1,11 +1,17 @@
-From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH] tpm: fix a sparse error in tpm-sysfs.c
-Date: Tue, 31 Jan 2017 13:43:59 -0500
-Message-ID: <1485888239-7727-1-git-send-email-stefanb@linux.vnet.ibm.com>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: Fwd: Re: [PATCH v9 2/2] tpm: add securityfs
+ support, for TPM 2.0 firmware event log
+Date: Wed, 1 Feb 2017 00:14:12 +0530
+Message-ID: <5890DAFC.9030407@linux.vnet.ibm.com>
+References: <de409ad1-de39-20d2-bda6-5d2a965e7256@linux.vnet.ibm.com>
+	<CALAzByG474T_qSJ0Kry1LiNSsCQAHUagqcqtR_CnpporicZrdg@mail.gmail.com>
+	<588F09A2.4090502@linux.vnet.ibm.com>
+	<20170131174659.b6njebycqzd5ur6f@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170131174659.b6njebycqzd5ur6f-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -14,33 +20,76 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Kenneth Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-drivers/char/tpm/tpm-sysfs.c:161:25: warning: expression using sizeof bool
 
-Fixes: c659af78eb7b ("tpm: Check size of response before accessing data")
-Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
----
- drivers/char/tpm/tpm.h | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index bff37be..6b4e7aa 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -281,7 +281,7 @@ struct permanent_flags_t {
- typedef union {
- 	struct	permanent_flags_t perm_flags;
- 	struct	stclear_flags_t	stclear_flags;
--	bool	owned;
-+	__u8	owned;
- 	__be32	num_pcrs;
- 	struct	tpm_version_t	tpm_version;
- 	struct	tpm_version_1_2_t tpm_version_1_2;
--- 
-2.4.3
+On 01/31/2017 11:16 PM, Jarkko Sakkinen wrote:
+> On Mon, Jan 30, 2017 at 03:08:42PM +0530, Nayna wrote:
+>>
+>>> From: "Ken Goldman" <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org
+>>> <mailto:kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>>
+>>> Date: 26-Jan-2017 2:53 AM
+>>> Subject: Re: [tpmdd-devel] [PATCH v9 2/2] tpm: add securityfs
+>>> support,for TPM 2.0 firmware event log
+>>> To: <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+>>> <mailto:linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>>,
+>>> <linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+>>> <mailto:linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>>,
+>>> <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+>>> <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>>
+>>> Cc:
+>>>
+>>>      You do not need to send a new patch set version as long as this
+>>>      one gets peer tested. And it needs to be tested without hacks
+>>>      like plumbing TCPA with TPM 2.0 in QEMU. OF code paths needs to
+>>>      be peer tested to be more specific.
+>>>
+>>>      For me the code itself looks good but I simply cannot take it in
+>>>      in the current situation.
+>>>
+>>>      /Jarkko
+>>>
+>>>
+>>> Tested-by: Kenneth Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org
+>>> <mailto:kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>>
+>>>
+>>> I validated a firmware event log taken from a Power 8 against PCR 0-7
+>>> values for the SHA-1 and SHA-256 banks from a Nuvoton TPM 2.0 chip on
+>>> that same platform.
+>>>
+>>
+>> Thank You Ken.
+>>
+>> Jarkko, I hope now these patches can be accepted for 4.11.
+>>
+>> Thanks & Regards,
+>>     - Nayna
+>
+> I already sent my pull request to 4.11 and even today I found something
+> fishy. You declared a function local array by using a variable in "tpm:
+> enhance TPM 2.0 PCR extend to support multiple banks" (max_active_banks
+> or something). And the event log patches have just passed the review.
+
+Yes. I have checked using clang and it has passed the clang.. and I also 
+verified there were no complains during build.
+
+What type of problem do you see ?
+
+Also, to understand, this is related to multi-bank patchset. I mean how 
+does it affect for event log patchset ?
+
+Thanks & Regards,
+    - Nayna
+
+>
+> I've applied them to my tree but I'll only include bug fixes for 4.11
+> pull requests. You'll have to wait till' 4.12.
+>
+> /Jarkko
+>
 
 
 ------------------------------------------------------------------------------
