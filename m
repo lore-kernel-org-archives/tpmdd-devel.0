@@ -1,49 +1,69 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH] tpm: fix a sparse error in tpm-interface.c
-Date: Tue, 31 Jan 2017 20:07:42 +0200
-Message-ID: <20170131180742.28460-1-jarkko.sakkinen@linux.intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH] tpm: fix type errors in tpm_tis_spi.c
+Date: Tue, 31 Jan 2017 20:24:00 +0200
+Message-ID: <20170131182400.15466-1-jarkko.sakkinen@linux.intel.com>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Sender: owner-linux-security-module@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net
+Cc: linux-security-module@vger.kernel.org, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-drivers/char/tpm//tpm-interface.c:492:42: warning: bad assignment (-=)
-to restricted __be32
+In these functions u16 or u32 was used as __le16 or __le32:
 
-Fixes: 0883743825e3 ("TPM: sysfs functions consolidation")
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+- tpm_tis_spi_read16
+- tpm_tis_spi_read32
+- tpm_tis_spi_write32
+
+Fixes: 0edbfea537d1 ("tpm/tpm_tis_spi: Add support for spi phy")
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 ---
- drivers/char/tpm/tpm-interface.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ drivers/char/tpm/tpm_tis_spi.c | 17 ++++++++++-------
+ 1 file changed, 10 insertions(+), 7 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 423938e..746bc54 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -489,7 +489,7 @@ ssize_t tpm_getcap(struct tpm_chip *chip, u32 subcap_id, cap_t *cap,
- 		tpm_cmd.params.getcap_in.cap = cpu_to_be32(subcap_id);
- 		/*subcap field not necessary */
- 		tpm_cmd.params.getcap_in.subcap_size = cpu_to_be32(0);
--		tpm_cmd.header.in.length -= cpu_to_be32(sizeof(__be32));
-+		tpm_cmd.header.in.length = cpu_to_be32(18);
- 	} else {
- 		if (subcap_id == TPM_CAP_FLAG_PERM ||
- 		    subcap_id == TPM_CAP_FLAG_VOL)
+diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
+index 5292e57..d3b0b30 100644
+--- a/drivers/char/tpm/tpm_tis_spi.c
++++ b/drivers/char/tpm/tpm_tis_spi.c
+@@ -174,29 +174,32 @@ static int tpm_tis_spi_write_bytes(struct tpm_tis_data *data, u32 addr,
+ 
+ static int tpm_tis_spi_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
+ {
++	__le16 tmp;
+ 	int rc;
+ 
+-	rc = data->phy_ops->read_bytes(data, addr, sizeof(u16), (u8 *)result);
++	rc = data->phy_ops->read_bytes(data, addr, sizeof(u16), (u8 *)&tmp);
+ 	if (!rc)
+-		*result = le16_to_cpu(*result);
++		*result = le16_to_cpu(tmp);
+ 	return rc;
+ }
+ 
+ static int tpm_tis_spi_read32(struct tpm_tis_data *data, u32 addr, u32 *result)
+ {
++	__le32 tmp;
+ 	int rc;
+ 
+-	rc = data->phy_ops->read_bytes(data, addr, sizeof(u32), (u8 *)result);
++	rc = data->phy_ops->read_bytes(data, addr, sizeof(u32), (u8 *)&tmp);
+ 	if (!rc)
+-		*result = le32_to_cpu(*result);
++		*result = le32_to_cpu(tmp);
+ 	return rc;
+ }
+ 
+ static int tpm_tis_spi_write32(struct tpm_tis_data *data, u32 addr, u32 value)
+ {
+-	value = cpu_to_le32(value);
+-	return data->phy_ops->write_bytes(data, addr, sizeof(u32),
+-					   (u8 *)&value);
++	__le32 tmp;
++
++	tmp = cpu_to_le32(value);
++	return data->phy_ops->write_bytes(data, addr, sizeof(u32), (u8 *)&tmp);
+ }
+ 
+ static const struct tpm_tis_phy_ops tpm_spi_phy_ops = {
 -- 
 2.9.3
 
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
