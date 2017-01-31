@@ -1,48 +1,55 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm: fix a sparse error in tpm-sysfs.c
-Date: Tue, 31 Jan 2017 22:37:14 +0200
-Message-ID: <20170131203714.phz6dpmbyaynbs44@intel.com>
-References: <1485888239-7727-1-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: Re: Fwd: Re: [tpmdd-devel] [PATCH v9 2/2] tpm: add securityfs
+ support,for TPM 2.0 firmware event log
+Date: Tue, 31 Jan 2017 22:50:06 +0200
+Message-ID: <20170131205006.fljtxsy4s6lyhkvv@intel.com>
+References: <de409ad1-de39-20d2-bda6-5d2a965e7256@linux.vnet.ibm.com>
+ <CALAzByG474T_qSJ0Kry1LiNSsCQAHUagqcqtR_CnpporicZrdg@mail.gmail.com>
+ <588F09A2.4090502@linux.vnet.ibm.com>
+ <20170131174659.b6njebycqzd5ur6f@intel.com>
+ <5890DAFC.9030407@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1485888239-7727-1-git-send-email-stefanb@linux.vnet.ibm.com>
+In-Reply-To: <5890DAFC.9030407@linux.vnet.ibm.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+To: Nayna <nayna@linux.vnet.ibm.com>
+Cc: Kenneth Goldman <kgoldman@us.ibm.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jan 31, 2017 at 01:43:59PM -0500, Stefan Berger wrote:
-> drivers/char/tpm/tpm-sysfs.c:161:25: warning: expression using sizeof bool
+On Wed, Feb 01, 2017 at 12:14:12AM +0530, Nayna wrote:
+> > I already sent my pull request to 4.11 and even today I found something
+> > fishy. You declared a function local array by using a variable in "tpm:
+> > enhance TPM 2.0 PCR extend to support multiple banks" (max_active_banks
+> > or something). And the event log patches have just passed the review.
 > 
-> Fixes: c659af78eb7b ("tpm: Check size of response before accessing data")
-> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
-> ---
->  drivers/char/tpm/tpm.h | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
-> 
-> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> index bff37be..6b4e7aa 100644
-> --- a/drivers/char/tpm/tpm.h
-> +++ b/drivers/char/tpm/tpm.h
-> @@ -281,7 +281,7 @@ struct permanent_flags_t {
->  typedef union {
->  	struct	permanent_flags_t perm_flags;
->  	struct	stclear_flags_t	stclear_flags;
-> -	bool	owned;
-> +	__u8	owned;
->  	__be32	num_pcrs;
->  	struct	tpm_version_t	tpm_version;
->  	struct	tpm_version_1_2_t tpm_version_1_2;
-> -- 
-> 2.4.3
+> Yes. I have checked using clang and it has passed the clang.. and I also
+> verified there were no complains during build.
 
-A better description would be:
+What we can deduce from that is that they didn't expose the issue in
+question.
 
-  The field owned has wrong sized type. This commit fixes the
-  issue.
+I found this by running sparse with make C=2 M=drives/char/tpm
 
-?
+> What type of problem do you see ?
+
+It is disallowed to do stack allocation in the kernel code even if C
+standard would allow it. Stack is scarce resource so you need to know
+its usage at compile time.
+
+In this case you actually know the allocation because the value is not
+changed during the course of the function but it is still bad. Probably
+compiler will optimize it out. Still it is not a good practice.
+
+> Also, to understand, this is related to multi-bank patchset. I mean how does
+> it affect for event log patchset ?
+
+Well in both cases these have landed fairly late but I asked from James
+whether I'll have to postpone these to 4.12.
+
+Usually when I've sent my release pull request I do not want to make any
+radical changes to the codebase because they always require extra QA and
+thus take extra time.
 
 /Jarkko
