@@ -1,13 +1,18 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix a sparse error in tpm-interface.c
-Date: Tue, 31 Jan 2017 11:10:41 -0800
-Message-ID: <1485889841.3199.57.camel@HansenPartnership.com>
-References: <20170131180742.28460-1-jarkko.sakkinen@linux.intel.com>
+From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Subject: Re: [RFC] tpm2-space: add handling for global session
+	exhaustion
+Date: Tue, 31 Jan 2017 14:28:06 -0500
+Message-ID: <o6qog0$30l$1@blaine.gmane.org>
+References: <1484772489.2396.2.camel@HansenPartnership.com>
+	<o6gese$pev$1@blaine.gmane.org>
+	<1485554699.3229.20.camel@HansenPartnership.com>
+	<o6m2nv$g6n$1@blaine.gmane.org>
+	<1485792295.2518.23.camel@HansenPartnership.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170131180742.28460-1-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+In-Reply-To: <1485792295.2518.23.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -16,46 +21,33 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, 2017-01-31 at 20:07 +0200, Jarkko Sakkinen wrote:
-> drivers/char/tpm//tpm-interface.c:492:42: warning: bad assignment (
-> -=)
-> to restricted __be32
-> 
-> Fixes: 0883743825e3 ("TPM: sysfs functions consolidation")
-> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> ---
->  drivers/char/tpm/tpm-interface.c | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
-> 
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm
-> -interface.c
-> index 423938e..746bc54 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -489,7 +489,7 @@ ssize_t tpm_getcap(struct tpm_chip *chip, u32
-> subcap_id, cap_t *cap,
->  		tpm_cmd.params.getcap_in.cap =
-> cpu_to_be32(subcap_id);
->  		/*subcap field not necessary */
->  		tpm_cmd.params.getcap_in.subcap_size =
-> cpu_to_be32(0);
-> -		tpm_cmd.header.in.length -=
-> cpu_to_be32(sizeof(__be32));
-> +		tpm_cmd.header.in.length = cpu_to_be32(18);
+On 1/30/2017 11:04 AM, James Bottomley wrote:
+>
+> This depends what your threat model is.  For ssh keys, you worry
+> that someone might be watching, so you use HMAC authority even for a
+> local TPM.
 
-using bare numbers here without comment isn't really best practice. 
- What about setting header.in.length in both legs of the if() to either
+If someone can "watch" my local process, they can capture my password 
+anyway.  Does using a password that the attacker knows to HMAC the 
+command help?
 
-tpm_cmd.header.in.length = cpu_to_be32(HEADER_SIZE + sizeof(struct tpm_getcap_params_in))
+> In the cloud, you don't quite know where the TPM is, so again you'd
+> use HMAC sessions ... however, in both use cases the sessions should
+> be very short lived.
 
-or 
+If your entire application is in the cloud, then I think the same 
+question as above applies.
 
-/* setting subcap_size to zero allows us to elimnate the subcap field */
-tpm_cmd.header.in.length = cpu_to_be32(HEADER_SIZE + sizeof(struct tpm_getcap_params_in) - sizeof(tpm_cmd.params.getcap_in.subcap))
+If you have your application on one platform (that you trust) and the 
+TPM is on another (that you don't trust), then I absolutely agree that 
+HMAC (and parameter encryption) are necessary.
+
+
+
 
 
 
