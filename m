@@ -1,46 +1,45 @@
-From: Michael Ellerman <mpe@ellerman.id.au>
-Subject: Re: ibmvtpm byteswapping inconsistency
-Date: Tue, 31 Jan 2017 19:38:32 +1100
-Message-ID: <87a8a7vd2v.fsf@concordia.ellerman.id.au>
-References: <20170126212248.3f3e9103@kitsune.suse.cz> <d55b06cc-cb7a-1ef1-05b7-d7d4114d0c48@linux.vnet.ibm.com> <1485481819.2980.82.camel@kernel.crashing.org> <CAOMqctQtspCTTpfEUyUVyE9GKYOavZNhkXnRPUrPZrDZ6-eG0w@mail.gmail.com> <73c1e5be-0820-8dca-c86a-8cf3ffeb5efe@linux.vnet.ibm.com> <87tw8hw4k7.fsf@concordia.ellerman.id.au> <d2da4b82-9686-187c-c514-96a506e994cc@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v9 2/2] tpm: add securityfs support,
+ for TPM 2.0 firmware event log
+Date: Tue, 31 Jan 2017 15:13:51 +0200
+Message-ID: <20170131131351.akhihknjrqyoij6y@intel.com>
+References: <de409ad1-de39-20d2-bda6-5d2a965e7256@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <d2da4b82-9686-187c-c514-96a506e994cc@linux.vnet.ibm.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Tyrel Datwyler <tyreld@linux.vnet.ibm.com>Tyrel Datwyler <tyreld@linux.vnet.ibm.com>, Michal Suchanek <hramrach@gmail.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>
-Cc: Marcel Selhorst <tpmdd@selhorst.net>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, Paul Mackerras <paulus@samba.org>, Ashley Lai <ashleydlai@gmail.com>, Peter Huewe <peterhuewe@gmx.de>, Michal =?utf-8?Q?Such=C3=A1nek?= <msuchanek@suse.de>, linuxppc-dev@lists.ozlabs.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <de409ad1-de39-20d2-bda6-5d2a965e7256-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Ken Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Tyrel Datwyler <tyreld@linux.vnet.ibm.com> writes:
-> On 01/29/2017 08:32 PM, Michael Ellerman wrote:
->> Tyrel Datwyler <tyreld@linux.vnet.ibm.com> writes:
->>>
->>> Byte  |   0   |   1   |   2   |   3   |   4   |   5   |   6   |   7
->>> -----------------------------------------------------------------------
->>> Word0 | Valid | Type  |     Length    |              Data
->>> -----------------------------------------------------------------------
->>> Word1 |				Reserved
->>> -----------------------------------------------------------------------
->>>
->>> The following definition looks to match:
->>>
->>> struct ibmvtpm_crq {
->>>         u8 valid;
->>>         u8 msg;
->>>         __be16 len;
->>>         __be32 data;
->>>         __be64 reserved;
->>> } __attribute__((packed, aligned(8)));
->> 
->> Well it's a partial match.
->> 
->> Your layout above doesn't define which byte of Length or Data is the MSB
->> or LSB. So going by that we still don't know the endianness of either
->
-> I should have been explicit that PAPR uses Big Endian bit and byte
-> numbering throughout the spec unless otherwise noted.
+On Wed, Jan 25, 2017 at 04:22:45PM -0500, Ken Goldman wrote:
+> > You do not need to send a new patch set version as long as this
+> > one gets peer tested. And it needs to be tested without hacks
+> > like plumbing TCPA with TPM 2.0 in QEMU. OF code paths needs to
+> > be peer tested to be more specific.
+> >
+> > For me the code itself looks good but I simply cannot take it in
+> > in the current situation.
+> >
+> > /Jarkko
+> 
+> Tested-by: Kenneth Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 
-OK. I didn't actually remember that so yeah good to be explicit.
+Thanks. This explains it. I got Naynas response before I got this one.
+That's why it went unnoticed.
 
-cheers
+/Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
