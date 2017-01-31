@@ -1,69 +1,61 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [PATCH] tpm: fix type errors in tpm_tis_spi.c
-Date: Tue, 31 Jan 2017 20:24:00 +0200
-Message-ID: <20170131182400.15466-1-jarkko.sakkinen@linux.intel.com>
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Sender: owner-linux-security-module@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: linux-security-module@vger.kernel.org, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: [PATCH] tpm, tpm_crb: fix a type error
+Date: Tue, 31 Jan 2017 20:34:28 +0200
+Message-ID: <20170131183428.9472-1-jarkko.sakkinen@linux.intel.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-In these functions u16 or u32 was used as __le16 or __le32:
-
-- tpm_tis_spi_read16
-- tpm_tis_spi_read32
-- tpm_tis_spi_write32
-
-Fixes: 0edbfea537d1 ("tpm/tpm_tis_spi: Add support for spi phy")
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Fixes: 422eac3f7dea ("tpm_crb: fix mapping of the buffers")
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm_tis_spi.c | 17 ++++++++++-------
- 1 file changed, 10 insertions(+), 7 deletions(-)
+ drivers/char/tpm/tpm_crb.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
-index 5292e57..d3b0b30 100644
---- a/drivers/char/tpm/tpm_tis_spi.c
-+++ b/drivers/char/tpm/tpm_tis_spi.c
-@@ -174,29 +174,32 @@ static int tpm_tis_spi_write_bytes(struct tpm_tis_data *data, u32 addr,
+diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+index 86f355b..4db7922 100644
+--- a/drivers/char/tpm/tpm_crb.c
++++ b/drivers/char/tpm/tpm_crb.c
+@@ -304,7 +304,7 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+ 	u32 pa_high, pa_low;
+ 	u64 cmd_pa;
+ 	u32 cmd_size;
+-	u64 rsp_pa;
++	__le64 rsp_pa;
+ 	u32 rsp_size;
+ 	int ret;
  
- static int tpm_tis_spi_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
- {
-+	__le16 tmp;
- 	int rc;
+@@ -352,11 +352,11 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+ 	}
  
--	rc = data->phy_ops->read_bytes(data, addr, sizeof(u16), (u8 *)result);
-+	rc = data->phy_ops->read_bytes(data, addr, sizeof(u16), (u8 *)&tmp);
- 	if (!rc)
--		*result = le16_to_cpu(*result);
-+		*result = le16_to_cpu(tmp);
- 	return rc;
- }
+ 	memcpy_fromio(&rsp_pa, &priv->cca->rsp_pa, 8);
+-	rsp_pa = le64_to_cpu(rsp_pa);
+ 	rsp_size = ioread32(&priv->cca->rsp_size);
  
- static int tpm_tis_spi_read32(struct tpm_tis_data *data, u32 addr, u32 *result)
- {
-+	__le32 tmp;
- 	int rc;
- 
--	rc = data->phy_ops->read_bytes(data, addr, sizeof(u32), (u8 *)result);
-+	rc = data->phy_ops->read_bytes(data, addr, sizeof(u32), (u8 *)&tmp);
- 	if (!rc)
--		*result = le32_to_cpu(*result);
-+		*result = le32_to_cpu(tmp);
- 	return rc;
- }
- 
- static int tpm_tis_spi_write32(struct tpm_tis_data *data, u32 addr, u32 value)
- {
--	value = cpu_to_le32(value);
--	return data->phy_ops->write_bytes(data, addr, sizeof(u32),
--					   (u8 *)&value);
-+	__le32 tmp;
-+
-+	tmp = cpu_to_le32(value);
-+	return data->phy_ops->write_bytes(data, addr, sizeof(u32), (u8 *)&tmp);
- }
- 
- static const struct tpm_tis_phy_ops tpm_spi_phy_ops = {
+-	if (cmd_pa != rsp_pa) {
+-		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa, rsp_size);
++	if (cmd_pa != le64_to_cpu(rsp_pa)) {
++		priv->rsp = crb_map_res(dev, priv, &io_res,
++					le64_to_cpu(rsp_pa), rsp_size);
+ 		ret = PTR_ERR_OR_ZERO(priv->rsp);
+ 		goto out;
+ 	}
 -- 
 2.9.3
 
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
