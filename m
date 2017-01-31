@@ -1,51 +1,48 @@
-From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: Resource manager tabrm5 fails sessions
-Date: Tue, 31 Jan 2017 15:57:59 -0500
-Message-ID: <o6qtoh$9nn$1@blaine.gmane.org>
+From: James Morris <jmorris@namei.org>
+Subject: Re: Fwd: Re: [tpmdd-devel] [PATCH v9 2/2] tpm: add securityfs
+ support,for TPM 2.0 firmware event log
+Date: Wed, 1 Feb 2017 08:46:32 +1100 (AEDT)
+Message-ID: <alpine.LRH.2.20.1702010842220.28891@namei.org>
+References: <de409ad1-de39-20d2-bda6-5d2a965e7256@linux.vnet.ibm.com> <CALAzByG474T_qSJ0Kry1LiNSsCQAHUagqcqtR_CnpporicZrdg@mail.gmail.com> <588F09A2.4090502@linux.vnet.ibm.com> <20170131174659.b6njebycqzd5ur6f@intel.com>
+ <20170131203452.523ckw4aphxdsndq@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=US-ASCII
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170131203452.523ckw4aphxdsndq@intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: Kenneth Goldman <kgoldman@us.ibm.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Should tabrm5 have the session swapping yet?  Is there a different head 
-I should be using?
+On Tue, 31 Jan 2017, Jarkko Sakkinen wrote:
 
-~~~~
+> James,
+> 
+> The discussion is about two features:
+> 
+> 1. Extension to tpm_pcr_extend() (used by IMA) to extend all PCR banks
+>    instead of just SHA-1 banks. It is recommended by TCG to do so in
+>    order to prevent malicious use of PCRs.
+> 2. TPM 2.0 event log with backend support for OF device tree (for
+>    getting address where you can grab it).
+> 
+> These are required as baseline to implement full TPM 2.0 support for
+> IMA. The commits are fairly well baked and went through many iterations.
+> I've tested tpm_pcr_extend() patches. I haven't tested event log patches
+> but have extensively reviewed them and Ken Goldman has tested them with
+> POWER hardware.
+> 
+> I don't believe that there is major risk to put them already into 4.11
+> but it is fairly late so I just want a second opinion before putting
+> them into pull request.
+> 
 
-I have the following test:
-
-    create a primary storage key
-    create 2 signing keys under the storage key, each with a different 
-password
-    load all 2 keys
-    create an hmac session
-    sign with each key
-
-~~~~
-
-When I run three of these processes, it passes.  Each test has 3 loaded 
-keys (all slots filled) and one session slot filled. This indicates that 
-transient object swapping is working.
-
-When I start fourth process, it fails creating the session.  The error
-is:
-
-rc 00000903
-TPM_RC_SESSION_MEMORY - out of memory for session contexts
-
-This indicates that session swapping is not occurring.
+I'll take this for 4.11.  IMA + TPM 2.0 is still developmental and not in 
+wide use, afaik.
 
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+
+-- 
+James Morris
+<jmorris@namei.org>
+
