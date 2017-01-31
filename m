@@ -1,55 +1,71 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: Fwd: Re: [tpmdd-devel] [PATCH v9 2/2] tpm: add securityfs
- support,for TPM 2.0 firmware event log
-Date: Tue, 31 Jan 2017 22:50:06 +0200
-Message-ID: <20170131205006.fljtxsy4s6lyhkvv@intel.com>
-References: <de409ad1-de39-20d2-bda6-5d2a965e7256@linux.vnet.ibm.com>
- <CALAzByG474T_qSJ0Kry1LiNSsCQAHUagqcqtR_CnpporicZrdg@mail.gmail.com>
- <588F09A2.4090502@linux.vnet.ibm.com>
- <20170131174659.b6njebycqzd5ur6f@intel.com>
- <5890DAFC.9030407@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm: fix a sparse error in tpm-interface.c
+Date: Tue, 31 Jan 2017 22:52:09 +0200
+Message-ID: <20170131205209.5552qjqaxjsrycxe@intel.com>
+References: <20170131180742.28460-1-jarkko.sakkinen@linux.intel.com>
+	<1485889841.3199.57.camel@HansenPartnership.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <5890DAFC.9030407@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Nayna <nayna@linux.vnet.ibm.com>
-Cc: Kenneth Goldman <kgoldman@us.ibm.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
+In-Reply-To: <1485889841.3199.57.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Feb 01, 2017 at 12:14:12AM +0530, Nayna wrote:
-> > I already sent my pull request to 4.11 and even today I found something
-> > fishy. You declared a function local array by using a variable in "tpm:
-> > enhance TPM 2.0 PCR extend to support multiple banks" (max_active_banks
-> > or something). And the event log patches have just passed the review.
+On Tue, Jan 31, 2017 at 11:10:41AM -0800, James Bottomley wrote:
+> On Tue, 2017-01-31 at 20:07 +0200, Jarkko Sakkinen wrote:
+> > drivers/char/tpm//tpm-interface.c:492:42: warning: bad assignment (
+> > -=)
+> > to restricted __be32
+> > 
+> > Fixes: 0883743825e3 ("TPM: sysfs functions consolidation")
+> > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> > ---
+> >  drivers/char/tpm/tpm-interface.c | 2 +-
+> >  1 file changed, 1 insertion(+), 1 deletion(-)
+> > 
+> > diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm
+> > -interface.c
+> > index 423938e..746bc54 100644
+> > --- a/drivers/char/tpm/tpm-interface.c
+> > +++ b/drivers/char/tpm/tpm-interface.c
+> > @@ -489,7 +489,7 @@ ssize_t tpm_getcap(struct tpm_chip *chip, u32
+> > subcap_id, cap_t *cap,
+> >  		tpm_cmd.params.getcap_in.cap =
+> > cpu_to_be32(subcap_id);
+> >  		/*subcap field not necessary */
+> >  		tpm_cmd.params.getcap_in.subcap_size =
+> > cpu_to_be32(0);
+> > -		tpm_cmd.header.in.length -=
+> > cpu_to_be32(sizeof(__be32));
+> > +		tpm_cmd.header.in.length = cpu_to_be32(18);
 > 
-> Yes. I have checked using clang and it has passed the clang.. and I also
-> verified there were no complains during build.
+> using bare numbers here without comment isn't really best practice. 
+>  What about setting header.in.length in both legs of the if() to either
+> 
+> tpm_cmd.header.in.length = cpu_to_be32(HEADER_SIZE + sizeof(struct tpm_getcap_params_in))
+> 
+> or 
+> 
+> /* setting subcap_size to zero allows us to elimnate the subcap field */
+> tpm_cmd.header.in.length = cpu_to_be32(HEADER_SIZE + sizeof(struct tpm_getcap_params_in) - sizeof(tpm_cmd.params.getcap_in.subcap))
 
-What we can deduce from that is that they didn't expose the issue in
-question.
-
-I found this by running sparse with make C=2 M=drives/char/tpm
-
-> What type of problem do you see ?
-
-It is disallowed to do stack allocation in the kernel code even if C
-standard would allow it. Stack is scarce resource so you need to know
-its usage at compile time.
-
-In this case you actually know the allocation because the value is not
-changed during the course of the function but it is still bad. Probably
-compiler will optimize it out. Still it is not a good practice.
-
-> Also, to understand, this is related to multi-bank patchset. I mean how does
-> it affect for event log patchset ?
-
-Well in both cases these have landed fairly late but I asked from James
-whether I'll have to postpone these to 4.12.
-
-Usually when I've sent my release pull request I do not want to make any
-radical changes to the codebase because they always require extra QA and
-thus take extra time.
+Yeah, also the commit message should be updated rather than
+referring to the static checking tool. I'll update the commit
+along the lines you proposed...
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
