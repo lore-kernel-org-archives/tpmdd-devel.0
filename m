@@ -1,55 +1,46 @@
-From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [RFC] tpm2-space: add handling for global session
-	exhaustion
-Date: Mon, 30 Jan 2017 17:46:26 -0500
-Message-ID: <o6ofns$5ic$1@blaine.gmane.org>
-References: <1484772489.2396.2.camel@HansenPartnership.com>
-	<o6gese$pev$1@blaine.gmane.org>
-	<1485554699.3229.20.camel@HansenPartnership.com>
-	<o6m2nv$g6n$1@blaine.gmane.org>
-	<1485792295.2518.23.camel@HansenPartnership.com>
-	<20170130215815.4lr42ob7e4cycwgi@intel.com>
-	<1485814388.2518.28.camel@HansenPartnership.com>
+From: Michael Ellerman <mpe@ellerman.id.au>
+Subject: Re: ibmvtpm byteswapping inconsistency
+Date: Tue, 31 Jan 2017 19:38:32 +1100
+Message-ID: <87a8a7vd2v.fsf@concordia.ellerman.id.au>
+References: <20170126212248.3f3e9103@kitsune.suse.cz> <d55b06cc-cb7a-1ef1-05b7-d7d4114d0c48@linux.vnet.ibm.com> <1485481819.2980.82.camel@kernel.crashing.org> <CAOMqctQtspCTTpfEUyUVyE9GKYOavZNhkXnRPUrPZrDZ6-eG0w@mail.gmail.com> <73c1e5be-0820-8dca-c86a-8cf3ffeb5efe@linux.vnet.ibm.com> <87tw8hw4k7.fsf@concordia.ellerman.id.au> <d2da4b82-9686-187c-c514-96a506e994cc@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1485814388.2518.28.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Content-Type: text/plain
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <d2da4b82-9686-187c-c514-96a506e994cc@linux.vnet.ibm.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Tyrel Datwyler <tyreld@linux.vnet.ibm.com>Tyrel Datwyler <tyreld@linux.vnet.ibm.com>, Michal Suchanek <hramrach@gmail.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>
+Cc: Marcel Selhorst <tpmdd@selhorst.net>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, Paul Mackerras <paulus@samba.org>, Ashley Lai <ashleydlai@gmail.com>, Peter Huewe <peterhuewe@gmx.de>, Michal =?utf-8?Q?Such=C3=A1nek?= <msuchanek@suse.de>, linuxppc-dev@lists.ozlabs.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 1/30/2017 5:13 PM, James Bottomley wrote:
+Tyrel Datwyler <tyreld@linux.vnet.ibm.com> writes:
+> On 01/29/2017 08:32 PM, Michael Ellerman wrote:
+>> Tyrel Datwyler <tyreld@linux.vnet.ibm.com> writes:
+>>>
+>>> Byte  |   0   |   1   |   2   |   3   |   4   |   5   |   6   |   7
+>>> -----------------------------------------------------------------------
+>>> Word0 | Valid | Type  |     Length    |              Data
+>>> -----------------------------------------------------------------------
+>>> Word1 |				Reserved
+>>> -----------------------------------------------------------------------
+>>>
+>>> The following definition looks to match:
+>>>
+>>> struct ibmvtpm_crq {
+>>>         u8 valid;
+>>>         u8 msg;
+>>>         __be16 len;
+>>>         __be32 data;
+>>>         __be64 reserved;
+>>> } __attribute__((packed, aligned(8)));
+>> 
+>> Well it's a partial match.
+>> 
+>> Your layout above doesn't define which byte of Length or Data is the MSB
+>> or LSB. So going by that we still don't know the endianness of either
 >
-> But as I read the code, I can't find where the kernel creates a
-> session.  It looks like the session and hmac are passed in as option
-> arguments, aren't they?
+> I should have been explicit that PAPR uses Big Endian bit and byte
+> numbering throughout the spec unless otherwise noted.
 
-A bit of background.
+OK. I didn't actually remember that so yeah good to be explicit.
 
-Unlike TPM 1.2, which always required an HMAC, TPM 2.0 has plaintext
-password sessions, with the session number TPM_RS_PS.  This type of
-session does not have to be created or flushed.  Since the kernel has a 
-presumed trusted path to the TPM, I don't see any need for an HMAC session.
-
-However, TPM 2.0 does has policy sessions.  These do have to be
-created.  The kernel use case may be in the future.
-
-The first use I encountered for a policy session is use of the EK.  The 
-EK has no password of its own, but rather has a policy that points to 
-the endorsement hierarchy authorization - policy secret.
-
-
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+cheers
