@@ -1,56 +1,42 @@
-From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH v2 1/2] tpm2: add session handle context
- saving and restoring to the space code
-Date: Wed, 1 Feb 2017 17:11:16 -0500
-Message-ID: <o6tmdu$3dc$1@blaine.gmane.org>
+From: Ken Goldman <kgoldman@us.ibm.com>
+Subject: Re: [tpmdd-devel] [PATCH 2/2] tpm2-space: add handling for global
+ session exhaustion
+Date: Wed, 1 Feb 2017 17:17:16 -0500
+Message-ID: <o6tmp7$ihn$1@blaine.gmane.org>
 References: <1485563481.3229.39.camel@HansenPartnership.com>
-	<1485563558.3229.41.camel@HansenPartnership.com>
-	<20170131162115.vptki5ykmpnx27ym@intel.com>
-	<1485903340.3199.107.camel@HansenPartnership.com>
+ <1485563634.3229.43.camel@HansenPartnership.com>
+ <20170129220219.oqv7fuofvcqy3gzh@intel.com>
+ <1485905084.3199.114.camel@HansenPartnership.com>
+ <20170201102906.y67owrhw4clvlge7@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset=windows-1252; format=flowed
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1485903340.3199.107.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170201102906.y67owrhw4clvlge7@intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: linux-security-module@vger.kernel.org
+Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 1/31/2017 5:55 PM, James Bottomley wrote:
+On 2/1/2017 5:29 AM, Jarkko Sakkinen wrote:
 >
-> I can do that, but I think this should be higher than debug.  If this
-> trips, something an application was doing will fail with a non TPM
-> error and someone may wish to investigate why.  Having a kernel message
-> would help with that (but they won't see it if it's debug).
->
-> I'm also leaning towards the idea that we should actually have one more
-> _tbl slot than we know the TPM does, so that if someone goes over it's
-> the TPM that gives them a real TPM out of memory error rather than the
-> space code returning -ENOMEM.
+> I've been observing the discussion that you've been going with Ken and
+> I've started to think: "why this needs to be put into kernel?" We still
+> have quite narrow perspective of TPM 2.0 applications. It's so much more
+> capable than TPM 1.2 that it will be definitely have a wider set of
+> use cases.
 
-I endorse this as a general principle.
+Just session swapping, or the whole resource manager?
 
-1 - When a TPM application does something wrong, the developer will be 
-looking for a specific TPM error, not a kernel read() error.
+Session swapping has to be in the kernel because the TPM typically only 
+has 3 session slots.  Something has to do the swapping.
 
-Reserve the kernel errors for when something goes wrong in the device 
-driver, not in the application.
+The RM is far better in the kernel because the kernel also needs access 
+to the TPM, keys and sessions.  If a user space RM fills all the slots, 
+the kernel has to either flush an application's resource (bad) or block 
+(really bad).
 
-2 - As much as possible, the RM should be transparent to the 
-application.  The RM should report a failure the same way the SW TPM 
-would fail.
+Putting the RM in the kernel is IMHO the right architecture.
 
 
 
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
