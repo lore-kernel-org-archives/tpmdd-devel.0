@@ -1,57 +1,61 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: Fwd: Re: [tpmdd-devel] [PATCH v9 2/2] tpm: add securityfs
- support,for TPM 2.0 firmware event log
-Date: Wed, 1 Feb 2017 12:30:03 +0200
-Message-ID: <20170201103003.ltiqrfukfyoognx2@intel.com>
-References: <de409ad1-de39-20d2-bda6-5d2a965e7256@linux.vnet.ibm.com>
- <CALAzByG474T_qSJ0Kry1LiNSsCQAHUagqcqtR_CnpporicZrdg@mail.gmail.com>
- <588F09A2.4090502@linux.vnet.ibm.com>
- <20170131174659.b6njebycqzd5ur6f@intel.com>
- <20170131203452.523ckw4aphxdsndq@intel.com>
- <alpine.LRH.2.20.1702010842220.28891@namei.org>
- <1485901910.9008.1.camel@linux.vnet.ibm.com>
+Subject: Re: [tpmdd-devel] [PATCH] tpm: fix a sparse error in tpm-sysfs.c
+Date: Wed, 1 Feb 2017 13:17:34 +0200
+Message-ID: <20170201111734.77s4j7zuptik5epx@intel.com>
+References: <1485888239-7727-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <20170131203714.phz6dpmbyaynbs44@intel.com>
+ <20170201080839.l46vyziwwgusnu7a@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1485901910.9008.1.camel@linux.vnet.ibm.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Cc: James Morris <jmorris@namei.org>, Kenneth Goldman <kgoldman@us.ibm.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
+In-Reply-To: <20170201080839.l46vyziwwgusnu7a@intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jan 31, 2017 at 05:31:50PM -0500, Mimi Zohar wrote:
-> On Wed, 2017-02-01 at 08:46 +1100, James Morris wrote:
-> > On Tue, 31 Jan 2017, Jarkko Sakkinen wrote:
+On Wed, Feb 01, 2017 at 10:08:39AM +0200, Jarkko Sakkinen wrote:
+> On Tue, Jan 31, 2017 at 10:37:14PM +0200, Jarkko Sakkinen wrote:
+> > On Tue, Jan 31, 2017 at 01:43:59PM -0500, Stefan Berger wrote:
+> > > drivers/char/tpm/tpm-sysfs.c:161:25: warning: expression using sizeof bool
+> > > 
+> > > Fixes: c659af78eb7b ("tpm: Check size of response before accessing data")
+> > > Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+> > > ---
+> > >  drivers/char/tpm/tpm.h | 2 +-
+> > >  1 file changed, 1 insertion(+), 1 deletion(-)
+> > > 
+> > > diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> > > index bff37be..6b4e7aa 100644
+> > > --- a/drivers/char/tpm/tpm.h
+> > > +++ b/drivers/char/tpm/tpm.h
+> > > @@ -281,7 +281,7 @@ struct permanent_flags_t {
+> > >  typedef union {
+> > >  	struct	permanent_flags_t perm_flags;
+> > >  	struct	stclear_flags_t	stclear_flags;
+> > > -	bool	owned;
+> > > +	__u8	owned;
+> > >  	__be32	num_pcrs;
+> > >  	struct	tpm_version_t	tpm_version;
+> > >  	struct	tpm_version_1_2_t tpm_version_1_2;
+> > > -- 
+> > > 2.4.3
 > > 
-> > > James,
-> > > 
-> > > The discussion is about two features:
-> > > 
-> > > 1. Extension to tpm_pcr_extend() (used by IMA) to extend all PCR banks
-> > >    instead of just SHA-1 banks. It is recommended by TCG to do so in
-> > >    order to prevent malicious use of PCRs.
-> > > 2. TPM 2.0 event log with backend support for OF device tree (for
-> > >    getting address where you can grab it).
-> > > 
-> > > These are required as baseline to implement full TPM 2.0 support for
-> > > IMA. The commits are fairly well baked and went through many iterations.
-> > > I've tested tpm_pcr_extend() patches. I haven't tested event log patches
-> > > but have extensively reviewed them and Ken Goldman has tested them with
-> > > POWER hardware.
-> > > 
-> > > I don't believe that there is major risk to put them already into 4.11
-> > > but it is fairly late so I just want a second opinion before putting
-> > > them into pull request.
-> > > 
+> > A better description would be:
 > > 
-> > I'll take this for 4.11.  IMA + TPM 2.0 is still developmental and not in 
-> > wide use, afaik.
+> >   The field owned has wrong sized type. This commit fixes the
+> >   issue.
+> > 
+> > ?
+> > 
+> > /Jarkko
 > 
-> Thank you!   FYI, I've been running with them as well.
-> 
-> Mimi
+> And doesn't owned print invalid results on a big endian system
+> i.e. 0x1000000? The commit message needs to be rewritten to capture
+> the problem.
 
-OK, so can I also add your Tested-by to these four commits?
+Please ignore this, the conversion is done in tpm_getcap(). I'll
+update the commit message.
 
 /Jarkko
