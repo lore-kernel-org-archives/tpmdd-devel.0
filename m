@@ -1,67 +1,72 @@
-From: Mimi Zohar <zohar@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 Subject: Re: Fwd: Re: [tpmdd-devel] [PATCH v9 2/2] tpm: add securityfs
  support,for TPM 2.0 firmware event log
-Date: Wed, 01 Feb 2017 08:49:30 -0500
-Message-ID: <1485956970.4068.31.camel@linux.vnet.ibm.com>
+Date: Wed, 1 Feb 2017 16:48:59 +0200
+Message-ID: <20170201144837.aenzg5cauzl2ofbt@intel.com>
 References: <de409ad1-de39-20d2-bda6-5d2a965e7256@linux.vnet.ibm.com>
-         <CALAzByG474T_qSJ0Kry1LiNSsCQAHUagqcqtR_CnpporicZrdg@mail.gmail.com>
-         <588F09A2.4090502@linux.vnet.ibm.com>
-         <20170131174659.b6njebycqzd5ur6f@intel.com>
-         <20170131203452.523ckw4aphxdsndq@intel.com>
-         <alpine.LRH.2.20.1702010842220.28891@namei.org>
-         <1485901910.9008.1.camel@linux.vnet.ibm.com>
-         <20170201103003.ltiqrfukfyoognx2@intel.com>
+ <CALAzByG474T_qSJ0Kry1LiNSsCQAHUagqcqtR_CnpporicZrdg@mail.gmail.com>
+ <588F09A2.4090502@linux.vnet.ibm.com>
+ <20170131174659.b6njebycqzd5ur6f@intel.com>
+ <5890DAFC.9030407@linux.vnet.ibm.com>
+ <20170131205006.fljtxsy4s6lyhkvv@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170201103003.ltiqrfukfyoognx2@intel.com>
+Content-Disposition: inline
+In-Reply-To: <20170131205006.fljtxsy4s6lyhkvv@intel.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: James Morris <jmorris@namei.org>, Kenneth Goldman <kgoldman@us.ibm.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
+To: Nayna <nayna@linux.vnet.ibm.com>
+Cc: Kenneth Goldman <kgoldman@us.ibm.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, 2017-02-01 at 12:30 +0200, Jarkko Sakkinen wrote:
-> On Tue, Jan 31, 2017 at 05:31:50PM -0500, Mimi Zohar wrote:
-> > On Wed, 2017-02-01 at 08:46 +1100, James Morris wrote:
-> > > On Tue, 31 Jan 2017, Jarkko Sakkinen wrote:
-> > > 
-> > > > James,
-> > > > 
-> > > > The discussion is about two features:
-> > > > 
-> > > > 1. Extension to tpm_pcr_extend() (used by IMA) to extend all PCR banks
-> > > >    instead of just SHA-1 banks. It is recommended by TCG to do so in
-> > > >    order to prevent malicious use of PCRs.
-> > > > 2. TPM 2.0 event log with backend support for OF device tree (for
-> > > >    getting address where you can grab it).
-> > > > 
-> > > > These are required as baseline to implement full TPM 2.0 support for
-> > > > IMA. The commits are fairly well baked and went through many iterations.
-> > > > I've tested tpm_pcr_extend() patches. I haven't tested event log patches
-> > > > but have extensively reviewed them and Ken Goldman has tested them with
-> > > > POWER hardware.
-> > > > 
-> > > > I don't believe that there is major risk to put them already into 4.11
-> > > > but it is fairly late so I just want a second opinion before putting
-> > > > them into pull request.
-> > > > 
-> > > 
-> > > I'll take this for 4.11.  IMA + TPM 2.0 is still developmental and not in 
-> > > wide use, afaik.
+On Tue, Jan 31, 2017 at 10:50:06PM +0200, Jarkko Sakkinen wrote:
+> On Wed, Feb 01, 2017 at 12:14:12AM +0530, Nayna wrote:
+> > > I already sent my pull request to 4.11 and even today I found something
+> > > fishy. You declared a function local array by using a variable in "tpm:
+> > > enhance TPM 2.0 PCR extend to support multiple banks" (max_active_banks
+> > > or something). And the event log patches have just passed the review.
 > > 
-> > Thank you!   FYI, I've been running with them as well.
-> > 
-> > Mimi
+> > Yes. I have checked using clang and it has passed the clang.. and I also
+> > verified there were no complains during build.
 > 
-> OK, so can I also add your Tested-by to these four commits?
+> What we can deduce from that is that they didn't expose the issue in
+> question.
+> 
+> I found this by running sparse with make C=2 M=drives/char/tpm
+> 
+> > What type of problem do you see ?
+> 
+> It is disallowed to do stack allocation in the kernel code even if C
+> standard would allow it. Stack is scarce resource so you need to know
+> its usage at compile time.
+> 
+> In this case you actually know the allocation because the value is not
+> changed during the course of the function but it is still bad. Probably
+> compiler will optimize it out. Still it is not a good practice.
+> 
+> > Also, to understand, this is related to multi-bank patchset. I mean how does
+> > it affect for event log patchset ?
+> 
+> Well in both cases these have landed fairly late but I asked from James
+> whether I'll have to postpone these to 4.12.
+> 
+> Usually when I've sent my release pull request I do not want to make any
+> radical changes to the codebase because they always require extra QA and
+> thus take extra time.
 
-I provided Ken with the firmware event log, IMA measurement list, and
-the PCRs for testing.   Ken's tested-by is fine.  Missing is Stefan's
-tested-by - https://sourceforge.net/p/tpmdd/mailman/message/35602588/
-I would really appreciate your adding his tested-by.
+rc = tpm_transmit_cmd(chip, buf.data, tpm_buf_length(&buf), 0, 0,
+		      "attempting extend a PCR value");
 
-thanks,
+This should be
 
-Mimi
+rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 0, 0,
+		      "attempting extend a PCR value");
+
+The second parameter is the size of the buffer, not length of the input
+data.
+
+I'll update this...
+
+/Jarkko
+
 
