@@ -1,82 +1,98 @@
-From: Vicky <honclo-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+From: Michael Ellerman <mpe@ellerman.id.au>
 Subject: Re: ibmvtpm byteswapping inconsistency
-Date: Wed, 1 Feb 2017 23:40:33 -0500
-Message-ID: <F14AC3E9-E04F-4EF0-9C7E-999D481EA577@linux.vnet.ibm.com>
-References: <20170126212248.3f3e9103@kitsune.suse.cz>
-	<20170126220536.GB31937@obsidianresearch.com>
-	<024dadba-a75c-ab59-9d12-a9bea81f9bda@gmail.com>
-Mime-Version: 1.0 (Mac OS X Mail 9.3 \(3124\))
-Content-Type: text/plain; charset="windows-1252"
-Content-Transfer-Encoding: quoted-printable
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <024dadba-a75c-ab59-9d12-a9bea81f9bda-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Ashley Lai <ashleydlai-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Cc: Benjamin Herrenschmidt <benh-XVmvHMARGAS8U2dJNN8I7kB+6BGkLq7r@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Paul Mackerras <paulus-eUNUBHrolfbYtjvyW6yDsg@public.gmane.org>, Michael Ellerman <mpe-Gsx/Oe8HsFggBc27wqDAHg@public.gmane.org>, Michal Such??nek <msuchanek-l3A5Bk7waGM@public.gmane.org>, linuxppc-dev-uLR06cmDAlY/bJ5BZ2RsiQ@public.gmane.org
+Date: Thu, 02 Feb 2017 21:55:57 +1100
+Message-ID: <87k298c14y.fsf@concordia.ellerman.id.au>
+References: <20170126212248.3f3e9103@kitsune.suse.cz> <20170126220536.GB31937@obsidianresearch.com> <024dadba-a75c-ab59-9d12-a9bea81f9bda@gmail.com> <F14AC3E9-E04F-4EF0-9C7E-999D481EA577@linux.vnet.ibm.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8BIT
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <F14AC3E9-E04F-4EF0-9C7E-999D481EA577@linux.vnet.ibm.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Vicky <honclo@linux.vnet.ibm.com>, Ashley Lai <ashleydlai@gmail.com>
+Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Michal Such??nek <msuchanek@suse.de>, Nayna Jain <nayna@linux.vnet.ibm.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net, linuxppc-dev@lists.ozlabs.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+Vicky <honclo@linux.vnet.ibm.com> writes:
 
-> On Jan 26, 2017, at 5:58 PM, Ashley Lai <ashleydlai-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org> wrote:
-> =
+>> On Jan 26, 2017, at 5:58 PM, Ashley Lai <ashleydlai@gmail.com> wrote:
+>> 
+>> Adding Vicky from IBM.
+>> 
+>> 
+>> On 01/26/2017 04:05 PM, Jason Gunthorpe wrote:
+>>> On Thu, Jan 26, 2017 at 09:22:48PM +0100, Michal Such??nek wrote:
+>>> 
+>>>> This is repeated a few times in the driver so I added memset to quiet
+>>>> gcc and make behavior deterministic in case the unused fields get some
+>>>> meaning in the future.
+>>> Yep, reserved certainly needs to be zeroed.. Can you send a patch?
+>>> memset is overkill...
+>>> 
+>>>> However, in tpm_ibmvtpm_send the structure is initialized as
+>>>> 
+>>>> 	struct ibmvtpm_crq crq;
+>>>>         __be64 *word = (__be64 *)&crq;
+>>>> ...
+>>>>         crq.valid = (u8)IBMVTPM_VALID_CMD;
+>>>>         crq.msg = (u8)VTPM_TPM_COMMAND;
+>>>>         crq.len = cpu_to_be16(count);
+>>>>         crq.data = cpu_to_be32(ibmvtpm->rtce_dma_handle);
+>>>> 
+>>>> and submitted with
+>>>> 
+>>>> 	rc = ibmvtpm_send_crq(ibmvtpm->vdev, be64_to_cpu(word[0]),
+>>>>                               be64_to_cpu(word[1]));
+>>>> meaning it is swapped twice.
+>>> No idea, Nayna may know.
+>>> 
+>>> My guess is that '__be64 *word' should be 'u64 *word'...
+>>> 
+>>> Jason
+>> 
+>
+> I don’t think we want ‘word' to be changed back to be of type ‘u64’.   Please see commit 62dfd912ab3b5405b6fe72d0135c37e9648071f1
 
-> Adding Vicky from IBM.
-> =
+The type of word is basically irrelevant. Unless you're running sparse
+and actually checking the errors, which it seems you're not doing:
 
-> =
-
-> On 01/26/2017 04:05 PM, Jason Gunthorpe wrote:
->> On Thu, Jan 26, 2017 at 09:22:48PM +0100, Michal Such??nek wrote:
->> =
-
->>> This is repeated a few times in the driver so I added memset to quiet
->>> gcc and make behavior deterministic in case the unused fields get some
->>> meaning in the future.
->> Yep, reserved certainly needs to be zeroed.. Can you send a patch?
->> memset is overkill...
->> =
-
->>> However, in tpm_ibmvtpm_send the structure is initialized as
->>> =
-
->>> 	struct ibmvtpm_crq crq;
->>>         __be64 *word =3D (__be64 *)&crq;
->>> ...
->>>         crq.valid =3D (u8)IBMVTPM_VALID_CMD;
->>>         crq.msg =3D (u8)VTPM_TPM_COMMAND;
->>>         crq.len =3D cpu_to_be16(count);
->>>         crq.data =3D cpu_to_be32(ibmvtpm->rtce_dma_handle);
->>> =
-
->>> and submitted with
->>> =
-
->>> 	rc =3D ibmvtpm_send_crq(ibmvtpm->vdev, be64_to_cpu(word[0]),
->>>                               be64_to_cpu(word[1]));
->>> meaning it is swapped twice.
->> No idea, Nayna may know.
->> =
-
->> My guess is that '__be64 *word' should be 'u64 *word'...
->> =
-
->> Jason
-> =
+  drivers/char/tpm/tpm_ibmvtpm.c:90:30: warning: cast removes address space of expression
+  drivers/char/tpm/tpm_ibmvtpm.c:91:23: warning: incorrect type in argument 1 (different address spaces)
+  drivers/char/tpm/tpm_ibmvtpm.c:91:23:    expected void *<noident>
+  drivers/char/tpm/tpm_ibmvtpm.c:91:23:    got void [noderef] <asn:2>*rtce_buf
+  drivers/char/tpm/tpm_ibmvtpm.c:136:17: warning: cast removes address space of expression
+  drivers/char/tpm/tpm_ibmvtpm.c:188:46: warning: incorrect type in argument 2 (different base types)
+  drivers/char/tpm/tpm_ibmvtpm.c:188:46:    expected unsigned long long [unsigned] [usertype] w1
+  drivers/char/tpm/tpm_ibmvtpm.c:188:46:    got restricted __be64 [usertype] <noident>
+  drivers/char/tpm/tpm_ibmvtpm.c:189:31: warning: incorrect type in argument 3 (different base types)
+  drivers/char/tpm/tpm_ibmvtpm.c:189:31:    expected unsigned long long [unsigned] [usertype] w2
+  drivers/char/tpm/tpm_ibmvtpm.c:189:31:    got restricted __be64 [usertype] <noident>
+  drivers/char/tpm/tpm_ibmvtpm.c:215:46: warning: incorrect type in argument 2 (different base types)
+  drivers/char/tpm/tpm_ibmvtpm.c:215:46:    expected unsigned long long [unsigned] [usertype] w1
+  drivers/char/tpm/tpm_ibmvtpm.c:215:46:    got restricted __be64 [usertype] <noident>
+  drivers/char/tpm/tpm_ibmvtpm.c:216:31: warning: incorrect type in argument 3 (different base types)
+  drivers/char/tpm/tpm_ibmvtpm.c:216:31:    expected unsigned long long [unsigned] [usertype] w2
+  drivers/char/tpm/tpm_ibmvtpm.c:216:31:    got restricted __be64 [usertype] <noident>
+  drivers/char/tpm/tpm_ibmvtpm.c:294:30: warning: incorrect type in argument 1 (different address spaces)
+  drivers/char/tpm/tpm_ibmvtpm.c:294:30:    expected void const *<noident>
+  drivers/char/tpm/tpm_ibmvtpm.c:294:30:    got void [noderef] <asn:2>*rtce_buf
+  drivers/char/tpm/tpm_ibmvtpm.c:342:46: warning: incorrect type in argument 2 (different base types)
+  drivers/char/tpm/tpm_ibmvtpm.c:342:46:    expected unsigned long long [unsigned] [usertype] w1
+  drivers/char/tpm/tpm_ibmvtpm.c:342:46:    got restricted __be64 [usertype] <noident>
+  drivers/char/tpm/tpm_ibmvtpm.c:343:31: warning: incorrect type in argument 3 (different base types)
+  drivers/char/tpm/tpm_ibmvtpm.c:343:31:    expected unsigned long long [unsigned] [usertype] w2
+  drivers/char/tpm/tpm_ibmvtpm.c:343:31:    got restricted __be64 [usertype] <noident>
+  drivers/char/tpm/tpm_ibmvtpm.c:494:43: warning: incorrect type in assignment (different address spaces)
+  drivers/char/tpm/tpm_ibmvtpm.c:494:43:    expected void [noderef] <asn:2>*rtce_buf
+  drivers/char/tpm/tpm_ibmvtpm.c:494:43:    got void *
+  drivers/char/tpm/tpm_ibmvtpm.c:501:52: warning: incorrect type in argument 2 (different address spaces)
+  drivers/char/tpm/tpm_ibmvtpm.c:501:52:    expected void *ptr
+  drivers/char/tpm/tpm_ibmvtpm.c:501:52:    got void [noderef] <asn:2>*rtce_buf
+  drivers/char/tpm/tpm_ibmvtpm.c:507:46: warning: incorrect type in argument 1 (different address spaces)
+  drivers/char/tpm/tpm_ibmvtpm.c:507:46:    expected void const *<noident>
+  drivers/char/tpm/tpm_ibmvtpm.c:507:46:    got void [noderef] <asn:2>*rtce_buf
 
 
-I don=92t think we want =91word' to be changed back to be of type =91u64=92=
-.   Please see commit 62dfd912ab3b5405b6fe72d0135c37e9648071f1
+What matters is how you actually do the byte swaps.
 
-
-Vicky
-
----------------------------------------------------------------------------=
----
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+cheers
