@@ -1,61 +1,30 @@
-From: Micka <mickamusset-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: Contact in Paris, France
-Date: Thu, 02 Feb 2017 14:37:35 +0000
-Message-ID: <CAF+MRt=2+ckeRFB6J==VQJhz_0-VZb5u9mm4bNH3Ogp3Tn5Seg@mail.gmail.com>
+From: David Laight <David.Laight@ACULAB.COM>
+Subject: RE: ibmvtpm byteswapping inconsistency
+Date: Thu, 2 Feb 2017 15:17:19 +0000
+Message-ID: <063D6719AE5E284EB5DD2968C1650D6DB0278B33@AcuExch.aculab.com>
+References: <20170126212248.3f3e9103@kitsune.suse.cz>
+ <20170126220536.GB31937@obsidianresearch.com>
+ <024dadba-a75c-ab59-9d12-a9bea81f9bda@gmail.com>
+ <F14AC3E9-E04F-4EF0-9C7E-999D481EA577@linux.vnet.ibm.com>
+ <20170202122942.7fd9988d@kitsune.suse.cz>
 Mime-Version: 1.0
-Content-Type: multipart/mixed; boundary="===============2561273490619613468=="
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20170202122942.7fd9988d@kitsune.suse.cz>
+Content-Language: en-US
+Sender: linux-kernel-owner@vger.kernel.org
+To: =?utf-8?B?J01pY2hhbCBTdWNow6FuZWsn?= <msuchanek@suse.de>, Vicky <honclo@linux.vnet.ibm.com>
+Cc: Nayna Jain <nayna@linux.vnet.ibm.com>, Marcel Selhorst <tpmdd@selhorst.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, Paul Mackerras <paulus@samba.org>, Ashley Lai <ashleydlai@gmail.com>, Peter Huewe <peterhuewe@gmx.de>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
---===============2561273490619613468==
-Content-Type: multipart/alternative; boundary=001a11436048c53ce605478d1b3f
-
---001a11436048c53ce605478d1b3f
-Content-Type: text/plain; charset=UTF-8
-
-Hi,
-
-I would like to find a contact in France that can help me with TPM and
-LINUX. If that person is in a company, I am interested about a formation.
-
-
-Micka,
-
---001a11436048c53ce605478d1b3f
-Content-Type: text/html; charset=UTF-8
-
-<div dir="ltr">Hi,<br><br>I would like to find a contact in France that can help me with TPM and LINUX. If that person is in a company, I am interested about a formation.<div><br></div><div><br></div><div>Micka,<br><br><br><br></div></div>
-
---001a11436048c53ce605478d1b3f--
-
-
---===============2561273490619613468==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
---===============2561273490619613468==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-_______________________________________________
-tpmdd-devel mailing list
-tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-
---===============2561273490619613468==--
+RnJvbTogTWljaGFsIFN1Y2jDoW5law0KPiBTZW50OiAwMiBGZWJydWFyeSAyMDE3IDExOjMwDQou
+Li4NCj4gVGhlIHdvcmQgaXMgbWFya2VkIGNvcnJlY3RseSBhcyBfX2JlNjQgaW4gdGhhdCBwYXRj
+aCBiZWNhdXNlIGNvdW50IGFuZA0KPiBoYW5kbGUgYXJlIHN3YXBwZWQgdG8gQkUgd2hlbiBzYXZl
+ZCB0byBpdCBhbmQgdGhlIHdob2xlIHdvcmQgaXMgdGhlbg0KPiBzd2FwcGVkIGFnYWluIHdoZW4g
+bG9hZGVkLiBJZiB5b3UganVzdCBsb2FkICgodTY0KUlCTVZUUE1fVkFMSURfQ01EIDw8DQo+IDU2
+IHwgKCh1NjQpVlRQTV9UUE1fQ09NTUFORCA8PCA0OCkgfCAoKHU2NCljb3VudCA8PCAzMikgfA0K
+PiBpYm12dHBtLT5ydGNlX2RtYV9oYW5kbGUgaW4gYSByZWdpc3RlciBpdCB3b3JrcyBlcXVhbGx5
+IHdlbGwNCj4gd2l0aG91dCBhbnkgX19iZSBhbmQgc3dhcHMgaW52b2x2ZWQuDQoNCkFuZCB0aGF0
+IHZlcnNpb24gd2lsbCBhbG1vc3QgY2VydGFpbmx5IGdlbmVyYXRlIG11Y2ggYmV0dGVyIGNvZGUu
+DQoNCglEYXZpZA0KDQo=
