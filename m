@@ -1,74 +1,81 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH] tpm: fix type issues in tpm_getcap()
-Date: Fri, 3 Feb 2017 21:06:42 +0200
-Message-ID: <20170203190642.fahf7wlx77nh3xjy@intel.com>
-References: <20170201175347.2035-1-jarkko.sakkinen@linux.intel.com>
- <58947D8E.20000@linux.vnet.ibm.com>
- <20170203181523.mu4hqhb7epqmthfd@intel.com>
- <5894D007.6060207@linux.vnet.ibm.com>
+Subject: [GIT PULL] tpmdd updates for Linux 4.11
+Date: Fri, 3 Feb 2017 22:41:55 +0200
+Message-ID: <20170203204155.wjycqoojowivn24u@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <5894D007.6060207@linux.vnet.ibm.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: Nayna <nayna@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
+To: James Morris <jmorris@namei.org>
+Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat, Feb 04, 2017 at 12:16:31AM +0530, Nayna wrote:
-> 
-> 
-> On 02/03/2017 11:45 PM, Jarkko Sakkinen wrote:
-> > On Fri, Feb 03, 2017 at 06:24:38PM +0530, Nayna wrote:
-> > > 
-> > > 
-> > > On 02/01/2017 11:23 PM, Jarkko Sakkinen wrote:
-> > > > There are two type issues associated with tpm_getcap().
-> > > > 
-> > > > You must not do arithmetic with __be32 or __le32 types because sometimes
-> > > > it results incorrect results. Calculations must be done only with data
-> > > > that is in CPU byte order. This commit migrates tpm_getcap() to struct
-> > > > tpm_buf in order to sort out these issues.
-> > > > 
-> > > > The second issue is with struct cap_t as the size of the type bool is
-> > > > assumed to be one byte. This commit sorts out the issue by changing the
-> > > > type to u8.
-> > > > 
-> > > > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-> > > > ---
-> > > > v2:
-> > > > - Use struct tpm_buf.
-> > > > - Merge the type change of 'owned' to this patch.
-> > > >    drivers/char/tpm/tpm-interface.c | 33 ++++++++++++++++++---------------
-> > > >    drivers/char/tpm/tpm.h           | 15 +--------------
-> > > >    2 files changed, 19 insertions(+), 29 deletions(-)
-> > > > 
-> > > > diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> > > > index 423938e..7af1e8c 100644
-> > > > --- a/drivers/char/tpm/tpm-interface.c
-> > > > +++ b/drivers/char/tpm/tpm-interface.c
-> > > > @@ -480,31 +480,34 @@ static const struct tpm_input_header tpm_getcap_header = {
-> > > 
-> > > Is tpm_getcap_header still needed ?
-> > 
-> > Definitely not, thanks. Are you able to try this out so I could
-> > move forward with pull request?
-> 
-> Yes, I tried it out and see a problem, I already replied that in one other
-> mail.
-> The tag and ordinal are converted to BE twice, once in #define  and again in
-> tpm_buf_init.
-> 
-> Thanks & Regards,
->    - Nayna
+Hi
 
-Hmm... I wonder why it seemed to work when I tried it. I must have done
-BuildRoot image build without this patch [1]. Hmm... I just take Stefans
-patch that only changes 'owned' to u8 and refine this after the pull
-request. Fixing the other sparse errors is not as high priority for the
-release.
+This is the second flush of updates for 4.11. 
 
-[1] http://git.infradead.org/users/jjs/buildroot-tpmdd.git
+The pull request include two new features:
+
+1. Extension to tpm_pcr_extend() (used by IMA) to extend all PCR banks
+instead of just SHA-1 banks. It is recommended by TCG to do so in order
+to prevent malicious use of PCRs.
+2. TPM 2.0 event log with backend support for OF device tree.
 
 /Jarkko
+
+The following changes since commit 20f482ab9e0f800d1e01ce748ebd382d085abe56:
+
+  ima: allow to check MAY_APPEND (2017-01-27 14:17:21 -0500)
+
+are available in the git repository at:
+
+  git://git.infradead.org/users/jjs/linux-tpmdd.git tags/tpmdd-next-20170204
+
+for you to fetch changes up to 70ea163699b68963e222a905e184f6436e8a290d:
+
+  tpm: silence an array overflow warning (2017-02-03 22:33:55 +0200)
+
+----------------------------------------------------------------
+tpmdd updates for Linux 4.11
+
+----------------------------------------------------------------
+Dan Carpenter (1):
+      tpm: silence an array overflow warning
+
+Jarkko Sakkinen (2):
+      tpm: remove tpm_read_index and tpm_write_index from tpm.h
+      tpm: fix RC value check in tpm2_seal_trusted
+
+Jason Gunthorpe (1):
+      tpm: Begin the process to deprecate user_read_timer
+
+Maciej S. Szmigiero (1):
+      tpm_tis: fix iTPM probe via probe_itpm() function
+
+Nayna Jain (4):
+      tpm: implement TPM 2.0 capability to get active PCR banks
+      tpm: enhance TPM 2.0 PCR extend to support multiple banks
+      tpm: enhance read_log_of() to support Physical TPM event log
+      tpm: add securityfs support for TPM 2.0 firmware event log
+
+Stefan Berger (1):
+      tpm: fix the type of owned field in cap_t
+
+ drivers/char/tpm/Kconfig                           |   1 +
+ drivers/char/tpm/Makefile                          |   2 +-
+ drivers/char/tpm/tpm-dev.c                         |   5 +-
+ drivers/char/tpm/tpm-interface.c                   |  14 +-
+ drivers/char/tpm/tpm.h                             |  39 ++--
+ .../char/tpm/{tpm_eventlog.c => tpm1_eventlog.c}   |  35 ++--
+ drivers/char/tpm/tpm2-cmd.c                        | 170 ++++++++++++-----
+ drivers/char/tpm/tpm2_eventlog.c                   | 203 +++++++++++++++++++++
+ drivers/char/tpm/tpm_acpi.c                        |   3 +
+ drivers/char/tpm/tpm_atmel.h                       |   6 +
+ drivers/char/tpm/tpm_eventlog.h                    |  51 +++++-
+ drivers/char/tpm/tpm_nsc.c                         |  12 ++
+ drivers/char/tpm/tpm_of.c                          |  27 ++-
+ drivers/char/tpm/tpm_tis_core.c                    |  25 +--
+ 14 files changed, 497 insertions(+), 96 deletions(-)
+ rename drivers/char/tpm/{tpm_eventlog.c => tpm1_eventlog.c} (95%)
+ create mode 100644 drivers/char/tpm/tpm2_eventlog.c
