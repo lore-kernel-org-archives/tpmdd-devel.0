@@ -1,14 +1,14 @@
 From: Nayna <nayna@linux.vnet.ibm.com>
 Subject: Re: [tpmdd-devel] [PATCH] tpm: fix type issues in tpm_getcap()
-Date: Fri, 3 Feb 2017 18:24:38 +0530
-Message-ID: <58947D8E.20000@linux.vnet.ibm.com>
+Date: Fri, 3 Feb 2017 19:18:53 +0530
+Message-ID: <58948A45.5020105@linux.vnet.ibm.com>
 References: <20170201175347.2035-1-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=windows-1252; format=flowed
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
 In-Reply-To: <20170201175347.2035-1-jarkko.sakkinen@linux.intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
+Sender: linux-kernel-owner@vger.kernel.org
 To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net
 Cc: open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
@@ -41,12 +41,6 @@ On 02/01/2017 11:23 PM, Jarkko Sakkinen wrote:
 > --- a/drivers/char/tpm/tpm-interface.c
 > +++ b/drivers/char/tpm/tpm-interface.c
 > @@ -480,31 +480,34 @@ static const struct tpm_input_header tpm_getcap_header = {
-
-Is tpm_getcap_header still needed ?
-
-Thanks & Regards,
-    - Nayna
-
 >   ssize_t tpm_getcap(struct tpm_chip *chip, u32 subcap_id, cap_t *cap,
 >   		   const char *desc, size_t min_cap_length)
 >   {
@@ -56,6 +50,19 @@ Thanks & Regards,
 >
 > -	tpm_cmd.header.in = tpm_getcap_header;
 > +	rc = tpm_buf_init(&buf, TPM_TAG_RQU_COMMAND, TPM_ORD_GET_CAP);
+
+I think there is a problem here of twice converting to be32 for both tag 
+and ordinal.
+
+Both TPM_ORD_GET_CAP and TPM_TAG_RQU_COMMAND are already defined as:
+#define TPM_ORD_GET_CAP cpu_to_be32(101)
+#define TPM_TAG_RQU_COMMAND  cpu_to_be16(193)
+
+and again converted to BE in tpm_buf_init().
+
+Thanks & Regards,
+    - Nayna
+
 > +	if (rc)
 > +		return rc;
 > +
@@ -139,4 +146,3 @@ Thanks & Regards,
 >   	struct	tpm_pcrread_out	pcrread_out;
 >   	struct	tpm_pcrextend_in pcrextend_in;
 >
-
