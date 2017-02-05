@@ -1,44 +1,39 @@
-From: James Morris <jmorris@namei.org>
-Subject: Re: [GIT PULL] tpmdd updates for Linux 4.11
-Date: Sat, 4 Feb 2017 10:34:48 +1100 (AEDT)
-Message-ID: <alpine.LRH.2.20.1702041034330.16611@namei.org>
-References: <20170203204155.wjycqoojowivn24u@intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170203204155.wjycqoojowivn24u@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+From: Julia Lawall <Julia.Lawall@lip6.fr>
+Subject: [PATCH] tpm xen: drop unneeded chip variable
+Date: Sun,  5 Feb 2017 22:39:37 +0100
+Message-ID: <1486330777-11341-1-git-send-email-Julia.Lawall@lip6.fr>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Peter Huewe <peterhuewe@gmx.de>
+Cc: kernel-janitors@vger.kernel.org, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, 3 Feb 2017, Jarkko Sakkinen wrote:
+The call that used chip was dropped in 1f0f30e404b3.  Drop the
+leftover declaration and initialization.
 
-> Hi
-> 
-> This is the second flush of updates for 4.11. 
-> 
-> The pull request include two new features:
-> 
-> 1. Extension to tpm_pcr_extend() (used by IMA) to extend all PCR banks
-> instead of just SHA-1 banks. It is recommended by TCG to do so in order
-> to prevent malicious use of PCRs.
-> 2. TPM 2.0 event log with backend support for OF device tree.
-> 
-> /Jarkko
-> 
-> The following changes since commit 20f482ab9e0f800d1e01ce748ebd382d085abe56:
-> 
->   ima: allow to check MAY_APPEND (2017-01-27 14:17:21 -0500)
-> 
-> are available in the git repository at:
-> 
->   git://git.infradead.org/users/jjs/linux-tpmdd.git tags/tpmdd-next-20170204
-> 
+Signed-off-by: Julia Lawall <Julia.Lawall@lip6.fr>
 
-Pulled, thanks!
+---
+ drivers/char/tpm/xen-tpmfront.c |    2 --
+ 1 file changed, 2 deletions(-)
 
--- 
-James Morris
-<jmorris@namei.org>
-
+diff --git a/drivers/char/tpm/xen-tpmfront.c b/drivers/char/tpm/xen-tpmfront.c
+index 5aaa268..656e8af 100644
+--- a/drivers/char/tpm/xen-tpmfront.c
++++ b/drivers/char/tpm/xen-tpmfront.c
+@@ -289,7 +289,6 @@ static int tpmfront_probe(struct xenbus_device *dev,
+ 		const struct xenbus_device_id *id)
+ {
+ 	struct tpm_private *priv;
+-	struct tpm_chip *chip;
+ 	int rv;
+ 
+ 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+@@ -306,7 +305,6 @@ static int tpmfront_probe(struct xenbus_device *dev,
+ 
+ 	rv = setup_ring(dev, priv);
+ 	if (rv) {
+-		chip = dev_get_drvdata(&dev->dev);
+ 		ring_free(priv);
+ 		return rv;
+ 	}
