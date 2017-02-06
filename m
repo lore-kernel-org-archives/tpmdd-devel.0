@@ -1,52 +1,32 @@
-From: Dmitry Torokhov <dmitry.torokhov-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: [PATCH] tpm: fix misspelled "facilitate" in module
- parameter description
-Date: Sun, 5 Feb 2017 20:47:18 -0800
-Message-ID: <20170206044718.GA20293@dtor-ws>
+From: Dan Carpenter <dan.carpenter@oracle.com>
+Subject: Re: [patch] tpm: silence an array overflow warning
+Date: Mon, 6 Feb 2017 12:20:07 +0300
+Message-ID: <20170206092007.GA11103@mwanda>
+References: <20170203103040.GA5467@mwanda>
+ <20170203181120.d3r7ab4twbvelwmi@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <kernel-janitors-owner@vger.kernel.org>
 Content-Disposition: inline
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+In-Reply-To: <20170203181120.d3r7ab4twbvelwmi@intel.com>
+Sender: kernel-janitors-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, Nayna Jain <nayna@linux.vnet.ibm.com>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, kernel-janitors@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-I typoed "facilitate" as "faciltate" a few years back...
+On Fri, Feb 03, 2017 at 08:11:20PM +0200, Jarkko Sakkinen wrote:
+> On Fri, Feb 03, 2017 at 01:30:40PM +0300, Dan Carpenter wrote:
+> > We should check that we're within bounds first before checking that
+> > "chip->active_banks[i] != TPM2_ALG_ERROR" so I've re-ordered the two
+> > checks.
+> > 
+> > Signed-off-by: Dan Carpenter <dan.carpenter@oracle.com>
+> 
+> Thank you, good catch! Do you mind if I squash this.
+> 
 
-Signed-off-by: Dmitry Torokhov <dmitry.torokhov-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
----
- drivers/char/tpm/tpm-interface.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+Not at all.
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index a2688ac2b48f..d94edae56eb3 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -47,7 +47,7 @@
- static int tpm_suspend_pcr;
- module_param_named(suspend_pcr, tpm_suspend_pcr, uint, 0644);
- MODULE_PARM_DESC(suspend_pcr,
--		 "PCR to use for dummy writes to faciltate flush on suspend.");
-+		 "PCR to use for dummy writes to facilitate flush on suspend.");
- 
- /*
-  * Array with one entry per ordinal defining the maximum amount
--- 
-2.11.0.483.g087da7b7c-goog
+regards,
+dan carpenter
 
-
--- 
-Dmitry
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
