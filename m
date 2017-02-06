@@ -1,39 +1,52 @@
-From: Julia Lawall <Julia.Lawall@lip6.fr>
-Subject: [PATCH] tpm xen: drop unneeded chip variable
-Date: Sun,  5 Feb 2017 22:39:37 +0100
-Message-ID: <1486330777-11341-1-git-send-email-Julia.Lawall@lip6.fr>
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Peter Huewe <peterhuewe@gmx.de>
-Cc: kernel-janitors@vger.kernel.org, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+From: Dmitry Torokhov <dmitry.torokhov-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Subject: [PATCH] tpm: fix misspelled "facilitate" in module
+ parameter description
+Date: Sun, 5 Feb 2017 20:47:18 -0800
+Message-ID: <20170206044718.GA20293@dtor-ws>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The call that used chip was dropped in 1f0f30e404b3.  Drop the
-leftover declaration and initialization.
+I typoed "facilitate" as "faciltate" a few years back...
 
-Signed-off-by: Julia Lawall <Julia.Lawall@lip6.fr>
-
+Signed-off-by: Dmitry Torokhov <dmitry.torokhov-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
 ---
- drivers/char/tpm/xen-tpmfront.c |    2 --
- 1 file changed, 2 deletions(-)
+ drivers/char/tpm/tpm-interface.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/drivers/char/tpm/xen-tpmfront.c b/drivers/char/tpm/xen-tpmfront.c
-index 5aaa268..656e8af 100644
---- a/drivers/char/tpm/xen-tpmfront.c
-+++ b/drivers/char/tpm/xen-tpmfront.c
-@@ -289,7 +289,6 @@ static int tpmfront_probe(struct xenbus_device *dev,
- 		const struct xenbus_device_id *id)
- {
- 	struct tpm_private *priv;
--	struct tpm_chip *chip;
- 	int rv;
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index a2688ac2b48f..d94edae56eb3 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -47,7 +47,7 @@
+ static int tpm_suspend_pcr;
+ module_param_named(suspend_pcr, tpm_suspend_pcr, uint, 0644);
+ MODULE_PARM_DESC(suspend_pcr,
+-		 "PCR to use for dummy writes to faciltate flush on suspend.");
++		 "PCR to use for dummy writes to facilitate flush on suspend.");
  
- 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-@@ -306,7 +305,6 @@ static int tpmfront_probe(struct xenbus_device *dev,
- 
- 	rv = setup_ring(dev, priv);
- 	if (rv) {
--		chip = dev_get_drvdata(&dev->dev);
- 		ring_free(priv);
- 		return rv;
- 	}
+ /*
+  * Array with one entry per ordinal defining the maximum amount
+-- 
+2.11.0.483.g087da7b7c-goog
+
+
+-- 
+Dmitry
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
