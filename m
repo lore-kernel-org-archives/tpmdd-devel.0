@@ -1,15 +1,14 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix misspelled "facilitate" in
- module parameter description
-Date: Wed, 8 Feb 2017 14:53:11 +0200
-Message-ID: <20170208125311.qsxwiclnubymbt5q@intel.com>
-References: <20170206044718.GA20293@dtor-ws>
+Subject: Re: [PATCH] tpm xen: drop unneeded chip variable
+Date: Wed, 8 Feb 2017 15:02:41 +0200
+Message-ID: <20170208130241.lj7gixi7vhbkfqih@intel.com>
+References: <1486330777-11341-1-git-send-email-Julia.Lawall@lip6.fr>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170206044718.GA20293@dtor-ws>
+In-Reply-To: <1486330777-11341-1-git-send-email-Julia.Lawall-L2FTfq7BK8M@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,42 +17,46 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Dmitry Torokhov <dmitry.torokhov-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Julia Lawall <Julia.Lawall-L2FTfq7BK8M@public.gmane.org>
+Cc: kernel-janitors-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Feb 05, 2017 at 08:47:18PM -0800, Dmitry Torokhov wrote:
-> I typoed "facilitate" as "faciltate" a few years back...
+On Sun, Feb 05, 2017 at 10:39:37PM +0100, Julia Lawall wrote:
+> The call that used chip was dropped in 1f0f30e404b3.  Drop the
+> leftover declaration and initialization.
 > 
-> Signed-off-by: Dmitry Torokhov <dmitry.torokhov-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+> Signed-off-by: Julia Lawall <Julia.Lawall-L2FTfq7BK8M@public.gmane.org>
 
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
 /Jarkko
 
+> 
 > ---
->  drivers/char/tpm/tpm-interface.c | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
+>  drivers/char/tpm/xen-tpmfront.c |    2 --
+>  1 file changed, 2 deletions(-)
 > 
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index a2688ac2b48f..d94edae56eb3 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -47,7 +47,7 @@
->  static int tpm_suspend_pcr;
->  module_param_named(suspend_pcr, tpm_suspend_pcr, uint, 0644);
->  MODULE_PARM_DESC(suspend_pcr,
-> -		 "PCR to use for dummy writes to faciltate flush on suspend.");
-> +		 "PCR to use for dummy writes to facilitate flush on suspend.");
+> diff --git a/drivers/char/tpm/xen-tpmfront.c b/drivers/char/tpm/xen-tpmfront.c
+> index 5aaa268..656e8af 100644
+> --- a/drivers/char/tpm/xen-tpmfront.c
+> +++ b/drivers/char/tpm/xen-tpmfront.c
+> @@ -289,7 +289,6 @@ static int tpmfront_probe(struct xenbus_device *dev,
+>  		const struct xenbus_device_id *id)
+>  {
+>  	struct tpm_private *priv;
+> -	struct tpm_chip *chip;
+>  	int rv;
 >  
->  /*
->   * Array with one entry per ordinal defining the maximum amount
-> -- 
-> 2.11.0.483.g087da7b7c-goog
+>  	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+> @@ -306,7 +305,6 @@ static int tpmfront_probe(struct xenbus_device *dev,
+>  
+>  	rv = setup_ring(dev, priv);
+>  	if (rv) {
+> -		chip = dev_get_drvdata(&dev->dev);
+>  		ring_free(priv);
+>  		return rv;
+>  	}
 > 
-> 
-> -- 
-> Dmitry
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
