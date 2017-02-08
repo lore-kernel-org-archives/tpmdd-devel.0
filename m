@@ -1,13 +1,11 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH 2/6] tpm: export tpm2_flush_context_cmd
-Date: Wed,  8 Feb 2017 13:07:04 +0200
-Message-ID: <20170208110713.14070-3-jarkko.sakkinen@linux.intel.com>
-References: <20170208110713.14070-1-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH 0/6] in-kernel resource manager
+Date: Wed,  8 Feb 2017 13:07:02 +0200
+Message-ID: <20170208110713.14070-1-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170208110713.14070-1-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,108 +15,50 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
----
- drivers/char/tpm/tpm.h      |  2 ++
- drivers/char/tpm/tpm2-cmd.c | 62 +++++++++++++++++++++------------------------
- 2 files changed, 31 insertions(+), 33 deletions(-)
+This patch set adds support for TPM spaces that provide an isolated
+for transient objects and HMAC and policy sessions. A space is swapped
+into TPM volatile memory only when it is used and swapped out after
+the use.
 
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 4f21e42..ba483f1 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -554,6 +554,8 @@ int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf);
- int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
- 		    struct tpm2_digest *digests);
- int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max);
-+void tpm2_flush_context_cmd(struct tpm_chip *chip, u32 handle,
-+			    unsigned int flags);
- int tpm2_seal_trusted(struct tpm_chip *chip,
- 		      struct trusted_key_payload *payload,
- 		      struct trusted_key_options *options);
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index fe57fce..86565a9 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -419,6 +419,35 @@ static const struct tpm_input_header tpm2_get_tpm_pt_header = {
- };
- 
- /**
-+ * tpm2_flush_context_cmd() - execute a TPM2_FlushContext command
-+ * @chip: TPM chip to use
-+ * @payload: the key data in clear and encrypted form
-+ * @options: authentication values and other options
-+ *
-+ * Return: same as with tpm_transmit_cmd
-+ */
-+void tpm2_flush_context_cmd(struct tpm_chip *chip, u32 handle,
-+			    unsigned int flags)
-+{
-+	struct tpm_buf buf;
-+	int rc;
-+
-+	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_FLUSH_CONTEXT);
-+	if (rc) {
-+		dev_warn(&chip->dev, "0x%08x was not flushed, out of memory\n",
-+			 handle);
-+		return;
-+	}
-+
-+	tpm_buf_append_u32(&buf, handle);
-+
-+	(void) tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 0, flags,
-+				"flushing context");
-+
-+	tpm_buf_destroy(&buf);
-+}
-+
-+/**
-  * tpm_buf_append_auth() - append TPMS_AUTH_COMMAND to the buffer.
-  *
-  * @buf: an allocated tpm_buf instance
-@@ -628,39 +657,6 @@ static int tpm2_load_cmd(struct tpm_chip *chip,
- }
- 
- /**
-- * tpm2_flush_context_cmd() - execute a TPM2_FlushContext command
-- *
-- * @chip: TPM chip to use
-- * @handle: the key data in clear and encrypted form
-- * @flags: tpm transmit flags
-- *
-- * Return: Same as with tpm_transmit_cmd.
-- */
--static void tpm2_flush_context_cmd(struct tpm_chip *chip, u32 handle,
--				   unsigned int flags)
--{
--	struct tpm_buf buf;
--	int rc;
--
--	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_FLUSH_CONTEXT);
--	if (rc) {
--		dev_warn(&chip->dev, "0x%08x was not flushed, out of memory\n",
--			 handle);
--		return;
--	}
--
--	tpm_buf_append_u32(&buf, handle);
--
--	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 0, flags,
--			      "flushing context");
--	if (rc)
--		dev_warn(&chip->dev, "0x%08x was not flushed, rc=%d\n", handle,
--			 rc);
--
--	tpm_buf_destroy(&buf);
--}
--
--/**
-  * tpm2_unseal_cmd() - execute a TPM2_Unload command
-  *
-  * @chip: TPM chip to use
+There's a test script for trying out TPM spaces in
+
+  git://git.infradead.org/users/jjs/tpm2-scripts.git
+
+A simple smoke test can be run by
+
+  sudo python -m unittest -v tpm2_smoke.SpaceTest   
+
+James Bottomley (3):
+  tpm: split out tpm-dev.c into tpm-dev.c and tpm-common-dev.c
+  tpm: expose spaces via a device link /dev/tpms<n>
+  tpm2: add session handle context saving and restoring to the space
+    code
+
+Jarkko Sakkinen (3):
+  tpm: validate TPM 2.0 commands
+  tpm: export tpm2_flush_context_cmd
+  tpm: infrastructure for TPM spaces
+
+ drivers/char/tpm/Makefile         |   3 +-
+ drivers/char/tpm/tpm-chip.c       |  86 +++++++-
+ drivers/char/tpm/tpm-dev-common.c | 148 +++++++++++++
+ drivers/char/tpm/tpm-dev.c        | 143 ++----------
+ drivers/char/tpm/tpm-dev.h        |  27 +++
+ drivers/char/tpm/tpm-interface.c  | 114 +++++++---
+ drivers/char/tpm/tpm-sysfs.c      |   2 +-
+ drivers/char/tpm/tpm.h            |  48 +++-
+ drivers/char/tpm/tpm2-cmd.c       | 166 ++++++++++----
+ drivers/char/tpm/tpm2-space.c     | 450 ++++++++++++++++++++++++++++++++++++++
+ drivers/char/tpm/tpms-dev.c       |  65 ++++++
+ 11 files changed, 1040 insertions(+), 212 deletions(-)
+ create mode 100644 drivers/char/tpm/tpm-dev-common.c
+ create mode 100644 drivers/char/tpm/tpm-dev.h
+ create mode 100644 drivers/char/tpm/tpm2-space.c
+ create mode 100644 drivers/char/tpm/tpms-dev.c
+
 -- 
 2.9.3
 
