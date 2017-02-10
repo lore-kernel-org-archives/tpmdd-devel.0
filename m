@@ -1,17 +1,16 @@
-From: "Dr. Greg Wettstein" <greg-DHO+NtfOqB5PEDpkEIzg7wC/G2K4zDHf@public.gmane.org>
-Subject: Re: [RFC] tpm2-space: add handling for global session
-	exhaustion
-Date: Fri, 10 Feb 2017 04:03:51 -0600
-Message-ID: <201702101003.v1AA3plF029882@wind.enjellic.com>
-References: <James.Bottomley@HansenPartnership.com>
-Reply-To: greg-R92VP3DqSWVWk0Htik3J/w@public.gmane.org
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH 6/6] tpm2: add session handle context
+ saving and restoring to the space code
+Date: Fri, 10 Feb 2017 14:32:49 +0200
+Message-ID: <20170210123249.nrppoez2kdr2q4nw@intel.com>
+References: <20170208110713.14070-1-jarkko.sakkinen@linux.intel.com>
+	<20170208110713.14070-7-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-	"Re: [tpmdd-devel] [RFC] tpm2-space: add handling for global session
-	exhaustion" (Feb 9, 11:24am)
+Content-Disposition: inline
+In-Reply-To: <20170208110713.14070-7-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,114 +19,182 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>, greg-R92VP3DqSWVWk0Htik3J/w@public.gmane.org, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Feb 9, 11:24am, James Bottomley wrote:
-} Subject: Re: [tpmdd-devel] [RFC] tpm2-space: add handling for global sessi
-
-Good morning to everyone.
-
-> On Thu, 2017-02-09 at 03:06 -0600, Dr. Greg Wettstein wrote:
-> > Referring back to Ken's comments about having 20+ clients waiting to
-> > get access to the hardware.  Even with the focus in TPM2 on having it
-> > be more of a cryptographic accelerator are we convinced that the
-> > hardware is ever going to be fast enough for a model of having it
-> > directly service large numbers of transactions in something like a
-> > 'cloud' model?
-
-> It's already in use as such today:
+On Wed, Feb 08, 2017 at 01:07:08PM +0200, Jarkko Sakkinen wrote:
+> From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 > 
-> https://tectonic.com/assets/pdf/TectonicTrustedComputing.pdf
+> Sessions are different from transient objects in that their handles
+> may not be virtualized (because they're used for some hmac
+> calculations).  Additionally when a session is context saved, a
+> vestigial memory remains in the TPM and if it is also flushed, that
+> will be lost and the session context will refuse to load next time, so
+> the code is updated to flush only transient objects after a context
+> save.  Add a separate array (chip->session_tbl) to save and restore
+> sessions by handle.  Use the failure of a context save or load to
+> signal that the session has been flushed from the TPM and we can
+> remove its memory from chip->session_tbl.
+> 
+> Sessions are also isolated during each instance of a tpm space.  This
+> means that spaces shouldn't be able to see each other's sessions and
+> is enforced by ensuring that a space user may only refer to sessions
+> handles that are present in their own chip->session_tbl.  Finally when
+> a space is closed, all the sessions belonging to it should be flushed
+> so the handles may be re-used by other spaces.
+> 
+> Note that if we get a session save or load error, all sessions are
+> effectively flushed.  Even though we restore the session buffer, all
+> the old sessions will refuse to load after the flush and they'll be
+> purged from our session memory.  This means that while transient
+> context handling is still soft in the face of errors, session handling
+> is hard (any failure of the model means all sessions are lost).
+> 
+> Signed-off-by: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+> ---
+>  drivers/char/tpm/tpm-chip.c   |   6 +++
+>  drivers/char/tpm/tpm.h        |   4 +-
+>  drivers/char/tpm/tpm2-space.c | 115 ++++++++++++++++++++++++++++++++++++++++--
+>  drivers/char/tpm/tpms-dev.c   |   2 +-
+>  4 files changed, 122 insertions(+), 5 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index c71c353..e8536ab 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -130,6 +130,7 @@ static void tpm_dev_release(struct device *dev)
+>  
+>  	kfree(chip->log.bios_event_log);
+>  	kfree(chip->work_space.context_buf);
+> +	kfree(chip->work_space.session_buf);
+>  	kfree(chip);
+>  }
+>  
+> @@ -224,6 +225,11 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+>  		rc = -ENOMEM;
+>  		goto out;
+>  	}
+> +	chip->work_space.session_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
+> +	if (!chip->work_space.session_buf) {
+> +		rc = -ENOMEM;
+> +		goto out;
+> +	}
+>  
+>  	return chip;
+>  
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 8670cc5..9261223 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -160,6 +160,8 @@ enum tpm2_cc_attrs {
+>  struct tpm_space {
+>  	u32 context_tbl[3];
+>  	u8 *context_buf;
+> +	u32 session_tbl[3];
+> +	u8 *session_buf;
+>  };
+>  
+>  enum tpm_chip_flags {
+> @@ -588,7 +590,7 @@ int tpm2_probe(struct tpm_chip *chip);
+>  ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip);
+>  int tpm2_find_cc(struct tpm_chip *chip, u32 cc);
+>  int tpm2_init_space(struct tpm_space *space);
+> -void tpm2_del_space(struct tpm_space *space);
+> +void tpm2_del_space(struct tpm_chip *chip, struct tpm_space *space);
+>  int tpm2_prepare_space(struct tpm_chip *chip, struct tpm_space *space, u32 cc,
+>  		       u8 *cmd);
+>  int tpm2_commit_space(struct tpm_chip *chip, struct tpm_space *space,
+> diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2-space.c
+> index d241c2a..fb817ca 100644
+> --- a/drivers/char/tpm/tpm2-space.c
+> +++ b/drivers/char/tpm/tpm2-space.c
+> @@ -32,18 +32,39 @@ struct tpm2_context {
+>  	__be16 blob_size;
+>  } __packed;
+>  
+> +static void tpm2_flush_sessions(struct tpm_chip *chip, struct tpm_space *space)
+> +{
+> +	int i;
+> +
+> +	for (i = 0; i < ARRAY_SIZE(space->session_tbl); i++) {
+> +		if (space->session_tbl[i])
+> +			tpm2_flush_context_cmd(chip, space->session_tbl[i],
+> +					       TPM_TRANSMIT_UNLOCKED);
+> +	}
+> +}
+> +
+>  int tpm2_init_space(struct tpm_space *space)
+>  {
+>  	space->context_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
+>  	if (!space->context_buf)
+>  		return -ENOMEM;
+>  
+> +	space->session_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
+> +	if (space->session_buf == NULL) {
+> +		kfree(space->context_buf);
+> +		return -ENOMEM;
+> +	}
+> +
+>  	return 0;
+>  }
+>  
+> -void tpm2_del_space(struct tpm_space *space)
+> +void tpm2_del_space(struct tpm_chip *chip, struct tpm_space *space)
+>  {
+> +	mutex_lock(&chip->tpm_mutex);
+> +	tpm2_flush_sessions(chip, space);
+> +	mutex_unlock(&chip->tpm_mutex);
+>  	kfree(space->context_buf);
+> +	kfree(space->session_buf);
+>  }
+>  
+>  static int tpm2_load_context(struct tpm_chip *chip, u8 *buf,
+> @@ -69,6 +90,20 @@ static int tpm2_load_context(struct tpm_chip *chip, u8 *buf,
+>  			 __func__, rc);
+>  		tpm_buf_destroy(&tbuf);
+>  		return -EFAULT;
+> +	} else if (tpm2_rc_value(rc) == TPM2_RC_HANDLE ||
+> +		   rc == TPM2_RC_REFERENCE_H0) {
+> +		/*
+> +		 * TPM_RC_HANDLE means that the session context can't
+> +		 * be loaded because of an internal counter mismatch
+> +		 * that makes the TPM think there might have been a
+> +		 * replay.  This might happen if the context was saved
+> +		 * and loaded outside the space.
+> +		 *
+> +		 * TPM_RC_REFERENCE_H0 means the session has been
+> +		 * flushed outside the space
+> +		 */
+> +		rc = -ENOENT;
+> +		tpm_buf_destroy(&tbuf);
+>  	} else if (rc > 0) {
+>  		dev_warn(&chip->dev, "%s: failed with a TPM error 0x%04X\n",
+>  			 __func__, rc);
+> @@ -121,12 +156,30 @@ static int tpm2_save_context(struct tpm_chip *chip, u32 handle, u8 *buf,
+>  	}
+>  
+>  	memcpy(&buf[*offset], &tbuf.data[TPM_HEADER_SIZE], body_size);
+> -	tpm2_flush_context_cmd(chip, handle, TPM_TRANSMIT_UNLOCKED);
+>  	*offset += body_size;
+>  	tpm_buf_destroy(&tbuf);
+>  	return 0;
+>  }
+>  
+> +static int tpm2_session_add(struct tpm_chip *chip, u32 handle)
+> +{
+> +	struct tpm_space *space = &chip->work_space;
+> +	int i;
+> +
+> +	for (i = 0; i < ARRAY_SIZE(space->session_tbl); i++)
+> +		if (space->session_tbl[i] == 0)
+> +			break;
+> +	if (i == ARRAY_SIZE(space->session_tbl)) {
+> +		dev_err(&chip->dev, "out of session slots\n");
 
-We are familiar with this work.  I'm not sure, however, that this work
-is representative of the notion of using TPM hardware to support a
-transactional environment, particularly at the cloud/container level.
+This really should be dev_dbg.
 
-There is not a great deal of technical detail on the CoreOS integrity
-architecture but it appears they are using TPM hardware to validate
-container integrity.  I'm not sure this type of environment reflects
-the ability of TPM hardware to support transactional throughputs in an
-environment such as financial transaction processing.
-
-Intel's Clear Container work cites the need to achieve container
-startup times of 150 milliseconds and they are currently claiming 45
-milliseconds as their optimal time.  This work was designed to
-demonstrate the feasibility of providing virtual machine isolation
-guarantees to containers and as such one of the mandates was to
-achieve container start times comparable to standard namespaces.
-
-I ran some very rough timing metrics on one of our Skylake development
-systems with hardware TPM2 support.  Here are the elapsed times for
-two common verification operations which I assume would be at the
-heart of generating any type of reasonable integrity guarantee:
-
-quote: 810 milliseconds
-verify signature: 635 milliseconds
-
-This is with the verifying key loaded into the chip.  The elapsed time
-to load and validate a key into the chip averages 1200 milliseconds.
-Since we are discussing a resource manager which would be shuttling
-context into and out of the limited resource slots on the chip I
-believe it is valid to consider this overhead as well.
-
-This suggests that just a signature verification on the integrity of a
-container is a factor of 4.2 times greater then a well accepted start
-time metric for container technology.
-
-Based on that I'm assuming that if TPM based integrity guarantees are
-being implemented they are only on ingress of the container into the
-cloud environment.  I'm assuming an alternate methodology must be in
-place to protect against time of measurement/time of use issues.
-
-Maybe people have better TPM2 hardware then what we have.  I was going
-to run this on a Kaby Lake reference system but it appears that TXT is
-causing some type of context depletion problems which we we need to
-run down.
-
-> We're also planning something like this in the IBM Cloud.
-
-I assume if there is an expection of true transactional times you
-either will have better hardware then current generation TPM2
-technology.  Either that or I assume you will be using userspace
-simulators anchored with a hardware TPM trust root.
-
-Ken's reflection of having 21-22 competing transactions would appear
-to have problematic latency issues given our measurements.
-
-I influence engineering for a company which builds deterministically
-modeled Linux platforms.  We've spent a lot of time considering TPM2
-hardware bottlenecks since they constrain the rate at which we can
-validate platform behavioral measurements.
-
-We have a variation of this work which allows SGX OCALL's to validate
-platform behavior in order to provide a broader TCB resource spectrum
-to the enclave and hardware TPM performance is problematic there as
-well.
-
-> James
-
-Have a good weekend.
-
-Greg
-
-}-- End of excerpt from James Bottomley
-
-As always,
-Dr. G.W. Wettstein, Ph.D.   Enjellic Systems Development, LLC.
-4206 N. 19th Ave.           Specializing in information infra-structure
-Fargo, ND  58102            development.
-PH: 701-281-1686
-FAX: 701-281-3949           EMAIL: greg-R92VP3DqSWVWk0Htik3J/w@public.gmane.org
-------------------------------------------------------------------------------
-"After being a technician for 2 years, I've discovered if people took
- care of their health with the same reckless abandon as their computers,
- half would be at the kitchen table on the phone with the hospital, trying
- to remove their appendix with a butter knife."
-                                -- Brian Jones
-
--- 
+/Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
