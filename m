@@ -1,190 +1,43 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [RFC] tpm2-space: add handling for global session
- exhaustion
-Date: Fri, 10 Feb 2017 08:46:03 -0800
-Message-ID: <1486745163.2502.26.camel@HansenPartnership.com>
-References: <201702101003.v1AA3plF029882@wind.enjellic.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH 6/6] tpm2: add session handle context saving and
+ restoring to the space code'
+Date: Fri, 10 Feb 2017 21:07:27 +0200
+Message-ID: <20170210190727.abaxbbpqq45kb2mm@intel.com>
+References: <20170208110713.14070-1-jarkko.sakkinen@linux.intel.com>
+ <20170208110713.14070-7-jarkko.sakkinen@linux.intel.com>
+ <20170210085256.eqhnrmdug2fcz4ql@intel.com>
+ <1486743078.2502.4.camel@HansenPartnership.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <201702101003.v1AA3plF029882-DHO+NtfOqB5PEDpkEIzg7wC/G2K4zDHf@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: greg-R92VP3DqSWVWk0Htik3J/w@public.gmane.org, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <1486743078.2502.4.camel@HansenPartnership.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: James Bottomley <James.Bottomley@HansenPartnership.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, 2017-02-10 at 04:03 -0600, Dr. Greg Wettstein wrote:
-> On Feb 9, 11:24am, James Bottomley wrote:
-> } Subject: Re: [tpmdd-devel] [RFC] tpm2-space: add handling for
-> global sessi
-> 
-> Good morning to everyone.
-
-Is there any way you could fix your email client?  It's setting In
--Reply-To: headers like this
-
-In-reply-to: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org> "Re: [tpmdd-devel] [RFC] tpm2-space: add handling for global session exhaustion" (Feb  9, 11:24am)
-
-Not using the message id breaks threading for everyone.
-
-> > On Thu, 2017-02-09 at 03:06 -0600, Dr. Greg Wettstein wrote:
-> > > Referring back to Ken's comments about having 20+ clients waiting
-> > > to
-> > > get access to the hardware.  Even with the focus in TPM2 on
-> > > having it
-> > > be more of a cryptographic accelerator are we convinced that the
-> > > hardware is ever going to be fast enough for a model of having it
-> > > directly service large numbers of transactions in something like
-> > > a
-> > > 'cloud' model?
-> 
-> > It's already in use as such today:
+On Fri, Feb 10, 2017 at 08:11:18AM -0800, James Bottomley wrote:
+> On Fri, 2017-02-10 at 10:52 +0200, Jarkko Sakkinen wrote:
+> > On Wed, Feb 08, 2017 at 01:07:08PM +0200, Jarkko Sakkinen wrote:
+> > > +		rc = tpm2_load_context(chip, space->session_buf,
+> > > +				       &offset, &handle);
+> > > +		if (rc == -ENOENT) {
+> > > +			/* load failed, just forget session */
+> > > +			space->session_tbl[i] = 0;
 > > 
-> > https://tectonic.com/assets/pdf/TectonicTrustedComputing.pdf
+> > This is my only concern in this commit. Should we also in this case 
+> > just flush the space or not?
 > 
-> We are familiar with this work.  I'm not sure, however, that this 
-> work is representative of the notion of using TPM hardware to support 
-> a transactional environment, particularly at the cloud/container
-> level.
-
-It allows for cloud clients to request attestations.  The next step is
-to allow containers to provision key material and PCR locked blobs
-securely to the TPM for use by correctly attested containers all of
-those are cloud scale use cases.
-
-> There is not a great deal of technical detail on the CoreOS integrity
-> architecture but it appears they are using TPM hardware to validate
-> container integrity.  I'm not sure this type of environment reflects
-> the ability of TPM hardware to support transactional throughputs in 
-> an environment such as financial transaction processing.
-
-OK, so in the cloud neither key provisioning nor attestation has a huge
-latency requirement.  This appears to be your concern?  All I'd say is
-that the fact that there are use cases that can work at cloud scale
-doesn't mean that every use case can.
-
-> Intel's Clear Container work cites the need to achieve container
-> startup times of 150 milliseconds and they are currently claiming 45
-> milliseconds as their optimal time.  This work was designed to
-> demonstrate the feasibility of providing virtual machine isolation
-> guarantees to containers and as such one of the mandates was to
-> achieve container start times comparable to standard namespaces.
-
-There are ephemeral container use cases where the lifetimes are of this
-order, but they're not every use case (In fact, even in the devops
-environment, they're still a minority).
-
-> I ran some very rough timing metrics on one of our Skylake
-> development systems with hardware TPM2 support.  Here are the elapsed
-> times for two common verification operations which I assume would be
-> at the heart of generating any type of reasonable integrity
-> guarantee:
+> I elected not to.  If the handle is flushed by an external resource
+> manager, we get this event.  If the RM and the app agreed to release
+> the session handle, then flushing the space would be overkill because
+> it would destroy the client session, so simply removing the handle
+> works.  If the client tries to use the session again, it gets an error
+> and if it doesn't everything just works, which seems to be optimal.
 > 
-> quote: 810 milliseconds
-> verify signature: 635 milliseconds
+> James
 
-That's interesting, my Skylake system has these figures down around
-100ms or so ... however, I agree that 100ms is the order of this. 
- Which is still significant compared to container start times.
+Makes sense. Just wanted the check the logic you had in this decision.
 
-> This is with the verifying key loaded into the chip.  The elapsed
-> time to load and validate a key into the chip averages 1200
-> milliseconds. Since we are discussing a resource manager which would
-> be shuttling context into and out of the limited resource slots on
-> the chip I believe it is valid to consider this overhead as well.
-> 
-> This suggests that just a signature verification on the integrity of 
-> a container is a factor of 4.2 times greater then a well accepted 
-> start time metric for container technology.
-
-Part of the way of reducing the latency is not to use the TPM for
-things that don't require secrecy: container signature verification is
-one such because the container is signed with a private key to which
-you know the public component ... you can verify it on the host without
-needing to trouble the TPM.  We only use the TPM for state quotes,
-unsealing and signature generation.
-
-> Based on that I'm assuming that if TPM based integrity guarantees are
-> being implemented they are only on ingress of the container into the
-> cloud environment.  I'm assuming an alternate methodology must be in
-> place to protect against time of measurement/time of use issues.
-> 
-> Maybe people have better TPM2 hardware then what we have.  I was 
-> going to run this on a Kaby Lake reference system but it appears that 
-> TXT is causing some type of context depletion problems which we we 
-> need to run down.
-> 
-> > We're also planning something like this in the IBM Cloud.
-> 
-> I assume if there is an expection of true transactional times you
-> either will have better hardware then current generation TPM2
-> technology.  Either that or I assume you will be using userspace
-> simulators anchored with a hardware TPM trust root.
-
-vTPM is a possibility, yes, so is making the TPM faster.
-
-> Ken's reflection of having 21-22 competing transactions would appear
-> to have problematic latency issues given our measurements.
-
-Consider the canonical use case to be VPNaaS with a secure connection
-back to the enterprise and the client key being the privacy guarded
-material.  The signature generation is once per channel re-key and you
-have up to half the re-key interval to generate the re-key over the
-control channel.  In this use case, latency isn't a problem (most re
--key intervals are around 3000s) but volume is.  VPNs are long running
-not short running, so start up time isn't hugely relevant either.
-
-Anyway, precisely what we're doing and how is getting off point.  The
-point is that there are existing cloud use cases for the TPM which can
-cause high concurrency.
-
-James
-
-> I influence engineering for a company which builds deterministically
-> modeled Linux platforms.  We've spent a lot of time considering TPM2
-> hardware bottlenecks since they constrain the rate at which we can
-> validate platform behavioral measurements.
-> 
-> We have a variation of this work which allows SGX OCALL's to validate
-> platform behavior in order to provide a broader TCB resource spectrum
-> to the enclave and hardware TPM performance is problematic there as
-> well.
-> 
-> > James
-> 
-> Have a good weekend.
-> 
-> Greg
-> 
-> }-- End of excerpt from James Bottomley
-> 
-> As always,
-> Dr. G.W. Wettstein, Ph.D.   Enjellic Systems Development, LLC.
-> 4206 N. 19th Ave.           Specializing in information infra
-> -structure
-> Fargo, ND  58102            development.
-> PH: 701-281-1686
-> FAX: 701-281-3949           EMAIL: greg-R92VP3DqSWVWk0Htik3J/w@public.gmane.org
-> ---------------------------------------------------------------------
-> ---------
-> "After being a technician for 2 years, I've discovered if people took
->  care of their health with the same reckless abandon as their
-> computers,
->  half would be at the kitchen table on the phone with the hospital,
-> trying
->  to remove their appendix with a butter knife."
->                                 -- Brian Jones
-> 
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+/Jarkko
