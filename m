@@ -1,19 +1,16 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [RFC] tpm2-space: add handling for global session
- exhaustion
-Date: Thu, 9 Feb 2017 14:54:41 -0700
-Message-ID: <20170209215441.GA3131@obsidianresearch.com>
-References: <jarkko.sakkinen@linux.intel.com>
-	<201702090906.v1996c6a015552@wind.enjellic.com>
-	<20170209151922.cqo32h4io5dqyvvw@intel.com>
-	<20170209190426.GA1104@obsidianresearch.com>
-	<1486668591.2616.45.camel@HansenPartnership.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH 2/6] tpm: export tpm2_flush_context_cmd
+Date: Fri, 10 Feb 2017 09:42:12 +0200
+Message-ID: <20170210074212.pi7xb4rvjuwfkdj7@intel.com>
+References: <20170208110713.14070-1-jarkko.sakkinen@linux.intel.com>
+	<20170208110713.14070-3-jarkko.sakkinen@linux.intel.com>
+	<20170208175830.GA31571@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1486668591.2616.45.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+In-Reply-To: <20170208175830.GA31571-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,27 +19,32 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Cc: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, greg-R92VP3DqSWVWk0Htik3J/w@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Feb 09, 2017 at 11:29:51AM -0800, James Bottomley wrote:
-> On Thu, 2017-02-09 at 12:04 -0700, Jason Gunthorpe wrote:
-> > On Thu, Feb 09, 2017 at 05:19:22PM +0200, Jarkko Sakkinen wrote:
-> > > The current patch set does not define policy. The simple policy
-> > > addition that could be added soon is the limit of connections
-> > > because it is easy to implement in non-intrusive way.
-> > 
-> > It is also trivial for a userspace RM to limit the number of sessions
-> > or connections or otherwise to manage this limitation. It is hard to
-> > see why we'd need kernel support for this.
+On Wed, Feb 08, 2017 at 10:58:30AM -0700, Jason Gunthorpe wrote:
+> >  /**
+> > + * tpm2_flush_context_cmd() - execute a TPM2_FlushContext command
+> > + * @chip: TPM chip to use
+> > + * @payload: the key data in clear and encrypted form
+> > + * @options: authentication values and other options
+> > + *
+> > + * Return: same as with tpm_transmit_cmd
+> > + */
+> > +void tpm2_flush_context_cmd(struct tpm_chip *chip, u32 handle,
+> > +			    unsigned int flags)
 > 
-> Because the kernel is a primary TPM user.
+> Why did you move the function in the same file? Adding a prototype
+> shouldn't require that..
+> 
+> Jason
 
-When I said 'this' I meant a kernel policy to limit the number of
-user connections.
+To be logically positioned in the same way as it is in the header.
 
-Jason
+It cannot in-between the helper functions for tpm2_seal_trusted().
+
+/Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
