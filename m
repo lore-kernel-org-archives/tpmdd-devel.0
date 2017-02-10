@@ -1,51 +1,64 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 2/6] tpm: export tpm2_flush_context_cmd
-Date: Fri, 10 Feb 2017 09:42:12 +0200
-Message-ID: <20170210074212.pi7xb4rvjuwfkdj7@intel.com>
-References: <20170208110713.14070-1-jarkko.sakkinen@linux.intel.com>
-	<20170208110713.14070-3-jarkko.sakkinen@linux.intel.com>
-	<20170208175830.GA31571@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [RFC] tpm2-space: add handling for global session
+ exhaustion
+Date: Fri, 10 Feb 2017 10:48:37 +0200
+Message-ID: <20170210084837.lq3mofgfwvjx623m@intel.com>
+References: <jarkko.sakkinen@linux.intel.com>
+ <201702090906.v1996c6a015552@wind.enjellic.com>
+ <20170209151922.cqo32h4io5dqyvvw@intel.com>
+ <20170209190426.GA1104@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170208175830.GA31571-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+In-Reply-To: <20170209190426.GA1104@obsidianresearch.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: greg@enjellic.com, James Bottomley <James.Bottomley@HansenPartnership.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Ken Goldman <kgoldman@us.ibm.com>, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Feb 08, 2017 at 10:58:30AM -0700, Jason Gunthorpe wrote:
-> >  /**
-> > + * tpm2_flush_context_cmd() - execute a TPM2_FlushContext command
-> > + * @chip: TPM chip to use
-> > + * @payload: the key data in clear and encrypted form
-> > + * @options: authentication values and other options
-> > + *
-> > + * Return: same as with tpm_transmit_cmd
-> > + */
-> > +void tpm2_flush_context_cmd(struct tpm_chip *chip, u32 handle,
-> > +			    unsigned int flags)
+On Thu, Feb 09, 2017 at 12:04:26PM -0700, Jason Gunthorpe wrote:
+> On Thu, Feb 09, 2017 at 05:19:22PM +0200, Jarkko Sakkinen wrote:
+> > > userspace instance with subsequent relinquishment of privilege.  At
+> > > that point one has the freedom to implement all sorts of policy.
+> > 
+> > If you look at the patch set that I sent yesterday it exactly has a
+> > feature that makes it more lean for a privileged process to implement
+> > a resource manager.
 > 
-> Why did you move the function in the same file? Adding a prototype
-> shouldn't require that..
+> I continue to think, based on comments like this, that you should not
+> implement tmps0 in the first revision either. That is also something
+> we have to live with forever, and it can never become the 'policy
+> limited' or 'unpriv safe' access point to the kernel.  ie go back to
+> something based on tmp0 with ioctl.
+
+With /dev/tpms0 I'm fairly certain that it is right way to go as it does
+make sense to have it as close as being drop in replacement for
+/dev/tpm0 as possible. There's factors more certainty that the API is
+something that most people will like to have.
+
+> This series should focus on allowing a user space RM to co-exist with
+> the in-kernel services - lets try and tackle the idea of a
+> policy-restricted or unpriv-safe cdev when someone comes up with a
+> comprehensive proposal..
+
+Sure. I do agree with this.
+
+> > The current patch set does not define policy. The simple policy
+> > addition that could be added soon is the limit of connections
+> > because it is easy to implement in non-intrusive way.
+> 
+> It is also trivial for a userspace RM to limit the number of sessions
+> or connections or otherwise to manage this limitation. It is hard to
+> see why we'd need kernel support for this.
+> 
+> The main issue from the kernel perspecitive is how to allow sessions
+> to be used in-kernel and continue to make progress when they start to
+> run out.
 > 
 > Jason
 
-To be logically positioned in the same way as it is in the header.
-
-It cannot in-between the helper functions for tpm2_seal_trusted().
+This is an issue but in the current patch set there's nothing that would
+make it harder to sort out.
 
 /Jarkko
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
