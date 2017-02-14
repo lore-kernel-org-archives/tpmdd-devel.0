@@ -1,72 +1,80 @@
-From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Subject: Re: Atmel I2C TPM transfer length issues
-Date: Tue, 14 Feb 2017 15:06:01 +0100
-Message-ID: <93432E43-BADC-4260-B73D-ADB2DBCD2627@gmx.de>
-References: <20170214023336.GC21340@lunn.ch>
-	<A6C9A409-4FF4-41A7-AE4F-0727B1464447@gmx.de>
-	<20170214130511.GA32480@lunn.ch>
+From: "Dr. Greg Wettstein" <gw@idfusion.org>
+Subject: Re: [tpmdd-devel] [RFC] tpm2-space: add handling for global session exhaustion
+Date: Tue, 14 Feb 2017 08:38:29 -0600
+Message-ID: <20170214143829.GA28175@wind.enjellic.com>
+References: <201702101003.v1AA3plF029882@wind.enjellic.com> <1486745163.2502.26.camel@HansenPartnership.com> <OFA049276F.2B32440E-ON852580C3.00742287-852580C3.00748E6B@notes.na.collabserv.com>
+Reply-To: "Dr. Greg Wettstein" <gw@idfusion.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170214130511.GA32480-g2DYL2Zd6BY@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Andrew Lunn <andrew-g2DYL2Zd6BY@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <OFA049276F.2B32440E-ON852580C3.00742287-852580C3.00748E6B@notes.na.collabserv.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Kenneth Goldman <kgoldman@us.ibm.com>
+Cc: James Bottomley <James.Bottomley@HansenPartnership.com>, greg@enjellic.com, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Fri, Feb 10, 2017 at 04:13:05PM -0500, Kenneth Goldman wrote:
 
+Good morning to everyone.
 
-Am 14. Februar 2017 14:05:11 MEZ schrieb Andrew Lunn <andrew-g2DYL2Zd6BY@public.gmane.org>:
->> Just limit the value which get_burstcount() returns to 256.
->>
->> This should do the trick - because that would be the mechanism the
->> tpm itself would use to fragment its response.  Atleast for other
->> tpms like our infineon slb9645 i2c tpm that would work.
->
->Yes, that was one idea i had. But then i found the comment on the top
->of tpm_i2c_atmel:
->
->* Teddy Reed determined the basic I2C command flow, unlike other I2C
->TPM
->* devices the raw TCG formatted TPM command data is written via I2C and
->then
-> * raw TCG formatted TPM command data is returned via I2C.
->
->The driver does not do anything like read the burst size and then
->transfer in blocks. It reads/writes all in one go.
+> James Bottomley <James.Bottomley@HansenPartnership.com> wrote on 
+> 02/10/2017 11:46:03 AM:
+> 
+> > > quote: 810 milliseconds
+> > > verify signature: 635 milliseconds
 
-Sorry I should have read the code before replying. I just remembered that one case we solved a similar issue on a qualcomm master with the same limitation - and limiting the burstcount worked fine for us.
+For those who may be interested in this sort of thing I grabbed a few
+minutes and ran these basic verification primitives against a Kaby
+Lake system.
 
->From the code and comments it seems that the tpm does not offer any continuation or offset mechanism.
+Average time for a quote is 600 milliseconds with a signature
+verification clocking in at 100 milliseconds.  The latter is
+consistent with what James found on his Skylake machine.
 
->
->However, you have answered what was going to be a follow question. The
->hardware is not yet set in stone. We could change the TPM. Use the
->Infinion TPM with a modified get_burstcount(). And you think this will
->work. Great.
+Latencies are still significant with things like container start
+times.
 
-As a heads up in my dayjob I do work for Infineon.
-I did not intend to advertise our tpm, but we have resolved a similar situation.
+> > Part of the way of reducing the latency is not to use the TPM for
+> > things that don't require secrecy: 
 
-Thanks,
-Peter
+> Agreed.  There are a few times one would verify a signature inside the 
+> TPM,
+> but they're far from mainstream:
+> 
+> 1 - Early in the boot cycle, when there's no crypto library.
+> 
+> 2 - When the crypto library doesn't support the required algorithm.
+> 
+> 3 - When a ticket is needed to prove to the TPM later that it verified
+> the signature.
 
+I don't think there is any doubt that running cryptographic primitives
+in userspace is going to be faster then going to hardware.  Obviously
+that also means there is no need for a TPM resource manager which has
+been the subject of much discussion here.
 
->
->Thanks
->	Andrew
+The CoreOS paper makes significant reference to increased security
+guarantees inherent in the use of a TPM.  Obviously whatever uses
+those are will have the noted latency constraints.
 
--- 
-Sent from my mobile
+We have extended our behavior measurement verifications to the
+container level so we offer an explicit guarantee that a container has
+not operated in a manner which is inconsistent with the intent of its
+designer.  Getting the security guarantee we need requires that an
+linkage to a hardware root of trust hence our concerns about hardware
+latency.
 
+Have a good day.
+
+As always,
+Dr. G.W. Wettstein, Ph.D.   Enjellic Systems Development, LLC.
+4206 N. 19th Ave.           Specializing in information infra-structure
+Fargo, ND  58102            development.
+PH: 701-281-1686
+FAX: 701-281-3949           EMAIL: greg@enjellic.com
 ------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+"UNIX is simple and coherent, but it takes a genious (or at any rate,
+ a programmer) to understand and appreciate its simplicity."
+                                -- Dennis Ritchie
+                                   USENIX '87
