@@ -1,61 +1,91 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [PATCH v2 0/7] in-kernel resource manager
-Date: Thu, 16 Feb 2017 21:25:13 +0200
-Message-ID: <20170216192529.25467-1-jarkko.sakkinen@linux.intel.com>
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Sender: owner-linux-security-module@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: linux-security-module@vger.kernel.org, James.Bottomley@HansenPartnership.com, dhowells@redhat.com, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: [PATCH v2 1/7] tpm: move length validation to
+	tpm_transmit()
+Date: Thu, 16 Feb 2017 21:25:14 +0200
+Message-ID: <20170216192529.25467-2-jarkko.sakkinen@linux.intel.com>
+References: <20170216192529.25467-1-jarkko.sakkinen@linux.intel.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170216192529.25467-1-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This patch set adds support for TPM spaces that provide an isolated
-execution context for transient objects and HMAC and policy sessions. A
-space is swapped into TPM volatile memory only when it is used and
-swapped out after the use.
+Check that the length matches the length reported by the response
+header already in tpm_transmit() to improve validation.
 
-There's a test script for trying out TPM spaces in
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+---
+ drivers/char/tpm/tpm-interface.c | 20 ++++++++++++--------
+ 1 file changed, 12 insertions(+), 8 deletions(-)
 
-  git://git.infradead.org/users/jjs/tpm2-scripts.git
-
-A simple smoke test suite can be run by
-
-  sudo python -m unittest -v tpm2_smoke.SpaceTest   
-
-v2:
-* Substitute virtual handle in ContextSave.
-* Substitute virtual handles in GetCapability.
-* Validate that the real response length and the one reported in the
-  header match in tpm_transmit().
-
-James Bottomley (3):
-  tpm: split out tpm-dev.c into tpm-dev.c and tpm-common-dev.c
-  tpm: expose spaces via a device link /dev/tpms<n>
-  tpm2: add session handle context saving and restoring to the space
-    code
-
-Jarkko Sakkinen (4):
-  tpm: move length validation to tpm_transmit()
-  tpm: validate TPM 2.0 commands
-  tpm: export tpm2_flush_context_cmd
-  tpm: infrastructure for TPM spaces
-
- drivers/char/tpm/Makefile         |   3 +-
- drivers/char/tpm/tpm-chip.c       |  86 +++++-
- drivers/char/tpm/tpm-dev-common.c | 148 +++++++++++
- drivers/char/tpm/tpm-dev.c        | 143 +---------
- drivers/char/tpm/tpm-dev.h        |  27 ++
- drivers/char/tpm/tpm-interface.c  | 131 +++++++---
- drivers/char/tpm/tpm-sysfs.c      |   2 +-
- drivers/char/tpm/tpm.h            |  49 +++-
- drivers/char/tpm/tpm2-cmd.c       | 168 ++++++++----
- drivers/char/tpm/tpm2-space.c     | 532 ++++++++++++++++++++++++++++++++++++++
- drivers/char/tpm/tpms-dev.c       |  65 +++++
- 11 files changed, 1135 insertions(+), 219 deletions(-)
- create mode 100644 drivers/char/tpm/tpm-dev-common.c
- create mode 100644 drivers/char/tpm/tpm-dev.h
- create mode 100644 drivers/char/tpm/tpm2-space.c
- create mode 100644 drivers/char/tpm/tpms-dev.c
-
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index bd2128e..708d356 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -343,6 +343,7 @@ EXPORT_SYMBOL_GPL(tpm_calc_ordinal_duration);
+ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
+ 		     unsigned int flags)
+ {
++	const struct tpm_output_header *header = (void *)buf;
+ 	ssize_t rc;
+ 	u32 count, ordinal;
+ 	unsigned long stop;
+@@ -406,9 +407,18 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
+ 
+ out_recv:
+ 	rc = chip->ops->recv(chip, (u8 *) buf, bufsiz);
+-	if (rc < 0)
++	if (rc < 0) {
+ 		dev_err(&chip->dev,
+ 			"tpm_transmit: tpm_recv: error %zd\n", rc);
++		goto out;
++	} else if (rc < TPM_HEADER_SIZE) {
++		rc = -EFAULT;
++		goto out;
++	}
++
++	if (rc != be32_to_cpu(header->length))
++		goto out;
++
+ out:
+ 	if (chip->dev.parent)
+ 		pm_runtime_put_sync(chip->dev.parent);
+@@ -438,19 +448,13 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *buf,
+ 			 size_t bufsiz, size_t min_rsp_body_length,
+ 			 unsigned int flags, const char *desc)
+ {
+-	const struct tpm_output_header *header;
++	const struct tpm_output_header *header = buf;
+ 	int err;
+ 	ssize_t len;
+ 
+ 	len = tpm_transmit(chip, (const u8 *)buf, bufsiz, flags);
+ 	if (len <  0)
+ 		return len;
+-	else if (len < TPM_HEADER_SIZE)
+-		return -EFAULT;
+-
+-	header = buf;
+-	if (len != be32_to_cpu(header->length))
+-		return -EFAULT;
+ 
+ 	err = be32_to_cpu(header->return_code);
+ 	if (err != 0 && desc)
 -- 
 2.9.3
 
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
