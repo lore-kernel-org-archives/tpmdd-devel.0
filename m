@@ -1,34 +1,59 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [RFC] tpm2-space: add handling for global session
- exhaustion
-Date: Thu, 16 Feb 2017 22:33:04 +0200
-Message-ID: <20170216203304.wrbpfd4mrmyh6vct@intel.com>
-References: <201702101003.v1AA3plF029882@wind.enjellic.com>
- <1486745163.2502.26.camel@HansenPartnership.com>
- <OFA049276F.2B32440E-ON852580C3.00742287-852580C3.00748E6B@notes.na.collabserv.com>
- <20170214143829.GA28175@wind.enjellic.com>
- <71dc0e80-6678-a124-9184-1f93c8532d09@linux.vnet.ibm.com>
- <20170216200642.GA20942@wind.enjellic.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20170216200642.GA20942@wind.enjellic.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: "Dr. Greg Wettstein" <greg@enjellic.com>
-Cc: Ken Goldman <kgold@linux.vnet.ibm.com>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+From: Davide Guerri <davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Subject: Re: Intel NUC and fTPM issue on 4.9.2
+Date: Thu, 16 Feb 2017 21:01:17 +0000
+Message-ID: <CB2C93A3-6F29-4511-8FDD-B29D98FA235C@gmail.com>
+References: <CAH=yMtLydrTfn3_RkzZFpRL-sASUsHPdxX9m-HJUTyjv=D3ksg@mail.gmail.com>
+	<20170216180116.GA7145@obsidianresearch.com>
+	<CAH=yMtJkmxxm6sn=1DmakXW+P=E7rsBd3iwqsSwaVBvxazE29w@mail.gmail.com>
+	<20170216181905.GA7257@obsidianresearch.com>
+	<CAH=yMt+tWWDMban86H53Or+KngYLUw5hN0aB=+DaJ+MQOK4=4g@mail.gmail.com>
+	<20170216202754.zokzcn6l4pd7hvbm@intel.com>
+Mime-Version: 1.0 (Mac OS X Mail 10.2 \(3259\))
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170216202754.zokzcn6l4pd7hvbm-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Feb 16, 2017 at 02:06:42PM -0600, Dr. Greg Wettstein wrote:
-> Just as an aside, has anyone given any thought about TPM2 resource
-> management in things like TXT/tboot environments?  The current tboot
-> code makes a rather naive assumption that it can take a handle slot to
-> protect its platform verification secret.  Doing resource management
-> correctly will require addressing extra-OS environments such as this
-> which may have TPM2 state requirement issues.
 
-The current implementation handles stuff created from regular /dev/tpm0
-so I do not think this would be an issue. You can only access objects
-from a TPM space that are created within that space.
+> On 16 Feb 2017, at 8:27 pm, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
+> 
+> On Thu, Feb 16, 2017 at 06:26:29PM +0000, Davide Guerri wrote:
+>>   No lines including the requested range:
+>> 
+>>   fed10000-fed17fff : pnp 00:06
+>> 
+>>   fed18000-fed18fff : pnp 00:06
+>> 
+>>   fed19000-fed19fff : pnp 00:06
+>> 
+>>   fed20000-fed3ffff : pnp 00:06
+>> 
+>>   fed40000-fed4087f : MSFT0101:00
+> 
+> It really looks like that the BIOS is reporting wrong value.
+> Have you tried to update it?
+> 
+> /Jarkko
 
-/Jarkko
+Hi Jarkko,
+I apologise for having used an HTML user agent, I hadn't one configured for this account and I just used the google UI.
+
+So, I can try upgrading it. But I wonder whether acpi_enforce_resources=lax would work around the issue.
+I am trying that later and I will let you know.
+
+Thanks,
+ Davide.
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
