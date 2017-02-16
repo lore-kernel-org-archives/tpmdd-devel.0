@@ -1,8 +1,7 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH v2 1/7] tpm: move length validation to
-	tpm_transmit()
-Date: Thu, 16 Feb 2017 21:25:14 +0200
-Message-ID: <20170216192529.25467-2-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH v2 2/7] tpm: validate TPM 2.0 commands
+Date: Thu, 16 Feb 2017 21:25:15 +0200
+Message-ID: <20170216192529.25467-3-jarkko.sakkinen@linux.intel.com>
 References: <20170216192529.25467-1-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,67 +20,236 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Check that the length matches the length reported by the response
-header already in tpm_transmit() to improve validation.
+Check for every TPM 2.0 command that the command code is supported and
+the command buffer has at least the length that can contain the header
+and the handle area.
+
+For ContextSave and FlushContext we mark the body to be part of the
+handle area. This gives validation for these commands at zero
+cost, including the body of the command.
+
+The more important reason for this is that we can virtualize these
+commands in the same way as you would virtualize the handle area of a
+command.
 
 Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 ---
- drivers/char/tpm/tpm-interface.c | 20 ++++++++++++--------
- 1 file changed, 12 insertions(+), 8 deletions(-)
+ drivers/char/tpm/tpm-interface.c | 38 ++++++++++++++++++-
+ drivers/char/tpm/tpm.h           | 15 ++++++++
+ drivers/char/tpm/tpm2-cmd.c      | 79 ++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 131 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index bd2128e..708d356 100644
+index 708d356..20b1fe3 100644
 --- a/drivers/char/tpm/tpm-interface.c
 +++ b/drivers/char/tpm/tpm-interface.c
-@@ -343,6 +343,7 @@ EXPORT_SYMBOL_GPL(tpm_calc_ordinal_duration);
- ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
- 		     unsigned int flags)
- {
-+	const struct tpm_output_header *header = (void *)buf;
- 	ssize_t rc;
+@@ -328,6 +328,42 @@ unsigned long tpm_calc_ordinal_duration(struct tpm_chip *chip,
+ }
+ EXPORT_SYMBOL_GPL(tpm_calc_ordinal_duration);
+ 
++static bool tpm_validate_command(struct tpm_chip *chip, const u8 *cmd,
++				 size_t len)
++{
++	const struct tpm_input_header *header = (const void *)cmd;
++	int i;
++	u32 cc;
++	u32 attrs;
++	unsigned int nr_handles;
++
++	if (len < TPM_HEADER_SIZE)
++		return false;
++
++	if (chip->flags & TPM_CHIP_FLAG_TPM2 && chip->nr_commands) {
++		cc = be32_to_cpu(header->ordinal);
++
++		i = tpm2_find_cc(chip, cc);
++		if (i < 0) {
++			dev_dbg(&chip->dev, "0x%04X is an invalid command\n",
++				cc);
++			return false;
++		}
++
++		attrs = chip->cc_attrs_tbl[i];
++		nr_handles =
++			4 * ((attrs >> TPM2_CC_ATTR_CHANDLES) & GENMASK(2, 0));
++		if (len < TPM_HEADER_SIZE + 4 * nr_handles)
++			goto err_len;
++	}
++
++	return true;
++err_len:
++	dev_dbg(&chip->dev,
++		"%s: insufficient command length %zu", __func__, len);
++	return false;
++}
++
+ /**
+  * tmp_transmit - Internal kernel interface to transmit TPM commands.
+  *
+@@ -348,7 +384,7 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
  	u32 count, ordinal;
  	unsigned long stop;
-@@ -406,9 +407,18 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
  
- out_recv:
- 	rc = chip->ops->recv(chip, (u8 *) buf, bufsiz);
--	if (rc < 0)
-+	if (rc < 0) {
- 		dev_err(&chip->dev,
- 			"tpm_transmit: tpm_recv: error %zd\n", rc);
+-	if (bufsiz < TPM_HEADER_SIZE)
++	if (!tpm_validate_command(chip, buf, bufsiz))
+ 		return -EINVAL;
+ 
+ 	if (bufsiz > TPM_BUFSIZE)
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 6b4e7aa..50aebe9 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -114,6 +114,7 @@ enum tpm2_command_codes {
+ 	TPM2_CC_CREATE		= 0x0153,
+ 	TPM2_CC_LOAD		= 0x0157,
+ 	TPM2_CC_UNSEAL		= 0x015E,
++	TPM2_CC_CONTEXT_SAVE	= 0x0162,
+ 	TPM2_CC_FLUSH_CONTEXT	= 0x0165,
+ 	TPM2_CC_GET_CAPABILITY	= 0x017A,
+ 	TPM2_CC_GET_RANDOM	= 0x017B,
+@@ -127,15 +128,25 @@ enum tpm2_permanent_handles {
+ };
+ 
+ enum tpm2_capabilities {
++	TPM2_CAP_COMMANDS	= 2,
+ 	TPM2_CAP_PCRS		= 5,
+ 	TPM2_CAP_TPM_PROPERTIES = 6,
+ };
+ 
++enum tpm2_properties {
++	TPM_PT_TOTAL_COMMANDS	= 0x0129,
++};
++
+ enum tpm2_startup_types {
+ 	TPM2_SU_CLEAR	= 0x0000,
+ 	TPM2_SU_STATE	= 0x0001,
+ };
+ 
++enum tpm2_cc_attrs {
++	TPM2_CC_ATTR_CHANDLES	= 25,
++	TPM2_CC_ATTR_RHANDLE	= 28,
++};
++
+ #define TPM_VID_INTEL    0x8086
+ #define TPM_VID_WINBOND  0x1050
+ #define TPM_VID_STM      0x104A
+@@ -199,6 +210,9 @@ struct tpm_chip {
+ 	acpi_handle acpi_dev_handle;
+ 	char ppi_version[TPM_PPI_VERSION_LEN + 1];
+ #endif /* CONFIG_ACPI */
++
++	u32 nr_commands;
++	u32 *cc_attrs_tbl;
+ };
+ 
+ #define to_tpm_chip(d) container_of(d, struct tpm_chip, dev)
+@@ -555,4 +569,5 @@ void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type);
+ unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
+ int tpm2_probe(struct tpm_chip *chip);
+ ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip);
++int tpm2_find_cc(struct tpm_chip *chip, u32 cc);
+ #endif
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index 10f97e6..7a56f44 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -997,6 +997,70 @@ int tpm2_probe(struct tpm_chip *chip)
+ }
+ EXPORT_SYMBOL_GPL(tpm2_probe);
+ 
++static int tpm2_get_cc_attrs_tbl(struct tpm_chip *chip)
++{
++	struct tpm_buf buf;
++	u32 nr_commands;
++	u32 *attrs;
++	u32 cc;
++	int i;
++	int rc;
++
++	rc = tpm2_get_tpm_pt(chip, TPM_PT_TOTAL_COMMANDS, &nr_commands, NULL);
++	if (rc)
 +		goto out;
-+	} else if (rc < TPM_HEADER_SIZE) {
++
++	if (nr_commands > 0xFFFFF) {
 +		rc = -EFAULT;
 +		goto out;
 +	}
 +
-+	if (rc != be32_to_cpu(header->length))
++	chip->cc_attrs_tbl = devm_kzalloc(&chip->dev, 4 * nr_commands,
++					  GFP_KERNEL);
++
++	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_GET_CAPABILITY);
++	if (rc)
 +		goto out;
 +
++	tpm_buf_append_u32(&buf, TPM2_CAP_COMMANDS);
++	tpm_buf_append_u32(&buf, TPM2_CC_FIRST);
++	tpm_buf_append_u32(&buf, nr_commands);
++
++	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 9 + 4 * nr_commands,
++			      0, NULL);
++	if (rc) {
++		tpm_buf_destroy(&buf);
++		goto out;
++	}
++
++	if (nr_commands !=
++	    be32_to_cpup((__be32 *)&buf.data[TPM_HEADER_SIZE + 5])) {
++		tpm_buf_destroy(&buf);
++		goto out;
++	}
++
++	chip->nr_commands = nr_commands;
++
++	attrs = (u32 *)&buf.data[TPM_HEADER_SIZE + 9];
++	for (i = 0; i < nr_commands; i++, attrs++) {
++		chip->cc_attrs_tbl[i] = be32_to_cpup(attrs);
++		cc = chip->cc_attrs_tbl[i] & 0xFFFF;
++
++		if (cc == TPM2_CC_CONTEXT_SAVE || cc == TPM2_CC_FLUSH_CONTEXT) {
++			chip->cc_attrs_tbl[i] &=
++				~(GENMASK(2, 0) << TPM2_CC_ATTR_CHANDLES);
++			chip->cc_attrs_tbl[i] |= 1 << TPM2_CC_ATTR_CHANDLES;
++		}
++	}
++
++	tpm_buf_destroy(&buf);
++
++out:
++	if (rc > 0)
++		rc = -ENODEV;
++	return rc;
++}
++
+ /**
+  * tpm2_auto_startup - Perform the standard automatic TPM initialization
+  *                     sequence
+@@ -1031,6 +1095,10 @@ int tpm2_auto_startup(struct tpm_chip *chip)
+ 	}
+ 
+ 	rc = tpm2_get_pcr_allocation(chip);
++	if (rc)
++		goto out;
++
++	rc = tpm2_get_cc_attrs_tbl(chip);
+ 
  out:
- 	if (chip->dev.parent)
- 		pm_runtime_put_sync(chip->dev.parent);
-@@ -438,19 +448,13 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *buf,
- 			 size_t bufsiz, size_t min_rsp_body_length,
- 			 unsigned int flags, const char *desc)
- {
--	const struct tpm_output_header *header;
-+	const struct tpm_output_header *header = buf;
- 	int err;
- 	ssize_t len;
+ 	if (rc > 0)
+@@ -1114,3 +1182,14 @@ ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
  
- 	len = tpm_transmit(chip, (const u8 *)buf, bufsiz, flags);
- 	if (len <  0)
- 		return len;
--	else if (len < TPM_HEADER_SIZE)
--		return -EFAULT;
--
--	header = buf;
--	if (len != be32_to_cpu(header->length))
--		return -EFAULT;
- 
- 	err = be32_to_cpu(header->return_code);
- 	if (err != 0 && desc)
+ 	return rc;
+ }
++
++int tpm2_find_cc(struct tpm_chip *chip, u32 cc)
++{
++	int i;
++
++	for (i = 0; i < chip->nr_commands; i++)
++		if (cc == (chip->cc_attrs_tbl[i] & GENMASK(15, 0)))
++			return i;
++
++	return -1;
++}
 -- 
 2.9.3
 
