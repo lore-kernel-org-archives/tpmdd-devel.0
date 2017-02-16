@@ -1,14 +1,11 @@
 From: Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: [PATCH 2/5] tpm_tis_spi: Abort transfer when too many
-	wait states are signaled
-Date: Thu, 16 Feb 2017 16:08:23 +0000
-Message-ID: <1487261306-2494-3-git-send-email-peter.huewe@infineon.com>
-References: <1487261306-2494-1-git-send-email-peter.huewe@infineon.com>
+Subject: [PATCH 0/5] Fix whole native SPI TPM driver
+Date: Thu, 16 Feb 2017 16:08:21 +0000
+Message-ID: <1487261306-2494-1-git-send-email-peter.huewe@infineon.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1487261306-2494-1-git-send-email-peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,37 +15,36 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>, Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>, Alexander
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>, Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Abort the transfer with ETIMEDOUT when the TPM signals more than
-TPM_RETRY wait states. Continuing with the transfer in this state
-will only lead to arbitrary failures in other parts of the code.
+During our testing it showed that unfortunately the whole native spi tpm driver
+was more or less non-functional since it was merged, e.g. the wrong byte for
+waitstate handling was used and transfers larger than 64 bytes did not work at all.
 
-Cc: <stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
-Fixes: 0edbfea537d1 ("tpm/tpm_tis_spi: Add support for spi phy")
-Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Signed-off-by: Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
----
- drivers/char/tpm/tpm_tis_spi.c | 5 +++++
- 1 file changed, 5 insertions(+)
+This was probably caused by the merging of the different approaches back then,
+as the initial RFC patch did not have these problems, and also my sudden lack
+of time/commitment back then.
+I'm sorry that the final driver code went untested for that long time.
 
-diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
-index 6e1a3c43f621..d782b9974c14 100644
---- a/drivers/char/tpm/tpm_tis_spi.c
-+++ b/drivers/char/tpm/tpm_tis_spi.c
-@@ -101,6 +101,11 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u8 len,
- 			goto exit;
- 	}
+This patch set fixes these issues one by one.
+In order to avoid duplication the read/write function was consolidated to one
+transfer function, so we do not have to apply the same fix at two locations.
+Maybe consider squashing it - we splitted it for easier review.
  
-+	if (i == TPM_RETRY) {
-+		ret = -ETIMEDOUT;
-+		goto exit;
-+	}
-+
- 	spi_xfer.cs_change = 0;
- 	spi_xfer.len = len;
- 
+Affected Kernels: 4.8, 4.9, 4.10
+Patchset was tested on Raspberry Pi2 with SLB9670 (TPM1.2 and TPM2.0)
+
+Peter Huewe (5):
+  tpm_tis_spi: Use single function to transfer data
+  tpm_tis_spi: Abort transfer when too many wait states are signaled
+  tpm_tis_spi: Check correct byte for wait state indicator
+  tpm_tis_spi: Remove limitation of transfers to MAX_SPI_FRAMESIZE bytes
+  tpm_tis_spi: Add small delay after last transfer
+
+ drivers/char/tpm/tpm_tis_spi.c | 163 +++++++++++++++++------------------------
+ 1 file changed, 69 insertions(+), 94 deletions(-)
+
 -- 
 2.7.4
 
