@@ -1,101 +1,45 @@
-From: Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: [PATCH 3/5] tpm_tis_spi: Check correct byte for wait
-	state indicator
-Date: Thu, 16 Feb 2017 16:08:24 +0000
-Message-ID: <1487261306-2494-4-git-send-email-peter.huewe@infineon.com>
-References: <1487261306-2494-1-git-send-email-peter.huewe@infineon.com>
+From: Peter Huewe <peter.huewe@infineon.com>
+Subject: [PATCH 5/5] tpm_tis_spi: Add small delay after last transfer
+Date: Thu, 16 Feb 2017 16:09:46 +0000
+Message-ID: <1487261386-2641-5-git-send-email-peter.huewe@infineon.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1487261306-2494-1-git-send-email-peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>, Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>, Alexander
+Content-Type: text/plain
+Return-path: <stable-owner@vger.kernel.org>
+Sender: stable-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, peterhuewe@gmx.de, Christophe Ricard <christophe-h.ricard@st.com>, Peter Huewe <peter.huewe@infineon.com>, stable@vger.kernel.org, Alexander Steffen <Alexander.Steffen@infineon.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Wait states are signaled in the last byte received from the TPM in
-response to the header, not the first byte. Check rx_buf[3] instead of
-rx_buf[0].
+Testing the implementation with a Raspberry Pi 2 showed that under some
+circumstances its SPI master erroneously releases the CS line before the
+transfer is complete, i.e. before the end of the last clock. In this case
+the TPM ignores the transfer and misses for example the GO command. The
+driver is unable to detect this communication problem and will wait for a
+command response that is never going to arrive, timing out eventually.
 
-Cc: <stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+As a workaround, the small delay ensures that the CS line is held long
+enough, even with a faulty SPI master. Other SPI masters are not affected,
+except for a negligible performance penalty.
+
+Cc: <stable@vger.kernel.org>
 Fixes: 0edbfea537d1 ("tpm/tpm_tis_spi: Add support for spi phy")
-Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Signed-off-by: Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+Signed-off-by: Alexander Steffen <Alexander.Steffen@infineon.com>
+Signed-off-by: Peter Huewe <peter.huewe@infineon.com>
 ---
- drivers/char/tpm/tpm_tis_spi.c | 40 +++++++++++++++++++++-------------------
- 1 file changed, 21 insertions(+), 19 deletions(-)
+ drivers/char/tpm/tpm_tis_spi.c | 1 +
+ 1 file changed, 1 insertion(+)
 
 diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
-index d782b9974c14..16938e2253d2 100644
+index b50c5b072df3..685c51bf5d7e 100644
 --- a/drivers/char/tpm/tpm_tis_spi.c
 +++ b/drivers/char/tpm/tpm_tis_spi.c
-@@ -60,7 +60,7 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u8 len,
- 				u8 *buffer, u8 direction)
- {
- 	struct tpm_tis_spi_phy *phy = to_tpm_tis_spi_phy(data);
--	int ret, i;
-+	int ret;
- 	struct spi_message m;
- 	struct spi_transfer spi_xfer = {
- 		.tx_buf = phy->tx_buf,
-@@ -85,25 +85,27 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u8 len,
- 	if (ret < 0)
- 		goto exit;
+@@ -110,6 +110,7 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u8 len,
  
--	phy->tx_buf[0] = 0;
--
--	/* According to TCG PTP specification, if there is no TPM present at
--	 * all, then the design has a weak pull-up on MISO. If a TPM is not
--	 * present, a pull-up on MISO means that the SB controller sees a 1,
--	 * and will latch in 0xFF on the read.
--	 */
--	for (i = 0; (phy->rx_buf[0] & 0x01) == 0 && i < TPM_RETRY; i++) {
--		spi_xfer.len = 1;
--		spi_message_init(&m);
--		spi_message_add_tail(&spi_xfer, &m);
--		ret = spi_sync_locked(phy->spi_device, &m);
--		if (ret < 0)
-+	if ((phy->rx_buf[3] & 0x01) == 0) {
-+		// handle SPI wait states
-+		int i;
-+
-+		phy->tx_buf[0] = 0;
-+
-+		for (i = 0; i < TPM_RETRY; i++) {
-+			spi_xfer.len = 1;
-+			spi_message_init(&m);
-+			spi_message_add_tail(&spi_xfer, &m);
-+			ret = spi_sync_locked(phy->spi_device, &m);
-+			if (ret < 0)
-+				goto exit;
-+			if (phy->rx_buf[0] & 0x01)
-+				break;
-+		}
-+
-+		if (i == TPM_RETRY) {
-+			ret = -ETIMEDOUT;
- 			goto exit;
--	}
--
--	if (i == TPM_RETRY) {
--		ret = -ETIMEDOUT;
--		goto exit;
-+		}
- 	}
+ 		spi_xfer.cs_change = 0;
+ 		spi_xfer.len = transfer_len;
++		spi_xfer.delay_usecs = 5;
  
- 	spi_xfer.cs_change = 0;
+ 		if (direction) {
+ 			spi_xfer.tx_buf = NULL;
 -- 
 2.7.4
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
