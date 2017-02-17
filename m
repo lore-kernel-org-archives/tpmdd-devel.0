@@ -1,81 +1,82 @@
-From: Peter Huewe <peterhuewe@gmx.de>
-Subject: Re: [PATCH 5/5] tpm_tis_spi: Add small delay after last transfer
-Date: Fri, 17 Feb 2017 08:26:55 +0100
-Message-ID: <05E35C79-5FCC-4D68-9A26-E21818F9832F@gmx.de>
-References: <1487261386-2641-5-git-send-email-peter.huewe@infineon.com> <d0723a12-9917-7357-e914-14fe8446afbe@gmail.com>
+From: "Dr. Greg Wettstein" <greg@enjellic.com>
+Subject: Re: [tpmdd-devel] [RFC] tpm2-space: add handling for global session exhaustion
+Date: Fri, 17 Feb 2017 03:56:26 -0600
+Message-ID: <20170217095626.GA26064@wind.enjellic.com>
+References: <201702101003.v1AA3plF029882@wind.enjellic.com> <1486745163.2502.26.camel@HansenPartnership.com> <OFA049276F.2B32440E-ON852580C3.00742287-852580C3.00748E6B@notes.na.collabserv.com> <20170214143829.GA28175@wind.enjellic.com> <71dc0e80-6678-a124-9184-1f93c8532d09@linux.vnet.ibm.com> <20170216200642.GA20942@wind.enjellic.com> <20170216203304.wrbpfd4mrmyh6vct@intel.com>
+Reply-To: "Dr. Greg Wettstein" <greg@enjellic.com>
 Mime-Version: 1.0
-Content-Type: text/plain;
- charset=utf-8
-Content-Transfer-Encoding: 8BIT
-Return-path: <stable-owner@vger.kernel.org>
-In-Reply-To: <d0723a12-9917-7357-e914-14fe8446afbe@gmail.com>
-Sender: stable-owner@vger.kernel.org
-To: Christophe Ricard <christophe.ricard@gmail.com>, Peter Huewe <peter.huewe@infineon.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, Christophe Ricard <christophe-h.ricard@st.com>, stable@vger.kernel.org, Alexander Steffen <Alexander.Steffen@infineon.com>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20170216203304.wrbpfd4mrmyh6vct@intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: "Dr. Greg Wettstein" <greg@enjellic.com>, Ken Goldman <kgold@linux.vnet.ibm.com>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Thu, Feb 16, 2017 at 10:33:04PM +0200, Jarkko Sakkinen wrote:
 
+Good morning to everyone.
 
-Am 17. Februar 2017 06:09:42 MEZ schrieb Christophe Ricard <christophe.ricard@gmail.com>:
->Are you sure it is not better to introduce this delay directly in the 
->rpi spi driver ?
->
->Other than that i don't see any issue with it.
+> On Thu, Feb 16, 2017 at 02:06:42PM -0600, Dr. Greg Wettstein wrote:
+> > Just as an aside, has anyone given any thought about TPM2 resource
+> > management in things like TXT/tboot environments?  The current tboot
+> > code makes a rather naive assumption that it can take a handle slot to
+> > protect its platform verification secret.  Doing resource management
+> > correctly will require addressing extra-OS environments such as this
+> > which may have TPM2 state requirement issues.
 
-Yes - it would be perfect to fix the issue in the upstream rpi spi master driver.
-However this only happens sporadically in some strange cases (i.e. 300-500khz, single byte transfer after having more bytes in the same #cs frame) (unrelated to the tpm)
+> The current implementation handles stuff created from regular
+> /dev/tpm0 so I do not think this would be an issue. You can only
+> access objects from a TPM space that are created within that space.
 
-We are still looking into it, why /where it happens and how to reproduce it reliably and then file a bug/fix it.
+Unless I misunderstand the number of transient objects which can be
+managed is a characteristic of the hardware and is a limited resource,
+hence our discussion on the notion of a resource manager to shuttle
+context in and out of these limited slots.
 
-For now however the priority is to make the tpm_tis_spi driver work reliably also on the rpi, and this is what this workaround does.
+On a Kabylake system, running the following command:
 
-We can simply remove it once the rpi spi master is fixed.
+getcapability -cap 6 | grep trans
 
-Peter
->
->
->On 16/02/2017 08:09, Peter Huewe wrote:
->> Testing the implementation with a Raspberry Pi 2 showed that under
->some
->> circumstances its SPI master erroneously releases the CS line before
->the
->> transfer is complete, i.e. before the end of the last clock. In this
->case
->> the TPM ignores the transfer and misses for example the GO command.
->The
->> driver is unable to detect this communication problem and will wait
->for a
->> command response that is never going to arrive, timing out
->eventually.
->>
->> As a workaround, the small delay ensures that the CS line is held
->long
->> enough, even with a faulty SPI master. Other SPI masters are not
->affected,
->> except for a negligible performance penalty.
->>
->> Cc: <stable@vger.kernel.org>
->> Fixes: 0edbfea537d1 ("tpm/tpm_tis_spi: Add support for spi phy")
->> Signed-off-by: Alexander Steffen <Alexander.Steffen@infineon.com>
->> Signed-off-by: Peter Huewe <peter.huewe@infineon.com>
->> ---
->>   drivers/char/tpm/tpm_tis_spi.c | 1 +
->>   1 file changed, 1 insertion(+)
->>
->> diff --git a/drivers/char/tpm/tpm_tis_spi.c
->b/drivers/char/tpm/tpm_tis_spi.c
->> index b50c5b072df3..685c51bf5d7e 100644
->> --- a/drivers/char/tpm/tpm_tis_spi.c
->> +++ b/drivers/char/tpm/tpm_tis_spi.c
->> @@ -110,6 +110,7 @@ static int tpm_tis_spi_transfer(struct
->tpm_tis_data *data, u32 addr, u8 len,
->>   
->>   		spi_xfer.cs_change = 0;
->>   		spi_xfer.len = transfer_len;
->> +		spi_xfer.delay_usecs = 5;
->>   
->>   		if (direction) {
->>   			spi_xfer.tx_buf = NULL;
+After booting into a TXT mediated measured launch environment (MLE) yields
+the following:
 
--- 
-Sent from my mobile
+TPM_PT 0000010e value 00000003 TPM_PT_HR_TRANSIENT_MIN - the minimum number of transient objects that can be held in TPM RAM
+
+TPM_PT 00000207 value 00000002 TPM_PT_HR_TRANSIENT_AVAIL - estimate of the number of additional transient objects that could be loaded into TPM RAM
+
+Booting without TXT results in the getcapability call indicating that
+three slots are available.  Based on that and reading the tboot code,
+we are assuming the occupied slot is the ephemeral primary key
+generated by tboot which seals the verification secret.
+
+In an MLE it is possible to create and then flush a new ephemeral
+primary key which results in the following getcapability output:
+
+TPM_PT 00000207 value 00000003 TPM_PT_HR_TRANSIENT_AVAIL - estimate of
+the number of additional transient objects that could be loaded into TPM RAM
+
+Which is probably going to be pretty surprising to tboot in the event
+that it tries to re-verify the system state after a suspend event.
+
+So based on that it would seem there would need to be some semblance
+of cooperation between the resource manager and an extra-OS
+utilization of TPM2 resources such as tboot.
+
+Thoughts?
+
+> /Jarkko
+
+Greg
+
+As always,
+Dr. G.W. Wettstein, Ph.D.   Enjellic Systems Development, LLC.
+4206 N. 19th Ave.           Specializing in information infra-structure
+Fargo, ND  58102            development.
+PH: 701-281-1686
+FAX: 701-281-3949           EMAIL: greg@enjellic.com
+------------------------------------------------------------------------------
+"For a successful technology, reality must take precedence over public
+ relations, for nature cannot be fooled."
+                                -- Richard Feynmann
