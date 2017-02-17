@@ -1,63 +1,47 @@
-From: "Sakkinen, Jarkko" <jarkko.sakkinen-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: Re: Intel NUC and fTPM issue on 4.9.2
-Date: Fri, 17 Feb 2017 18:28:27 +0000
-Message-ID: <1487356105.6424.1.camel@intel.com>
-References: <CAH=yMtLydrTfn3_RkzZFpRL-sASUsHPdxX9m-HJUTyjv=D3ksg@mail.gmail.com>
-	<20170216180116.GA7145@obsidianresearch.com>
-	<CAH=yMtJkmxxm6sn=1DmakXW+P=E7rsBd3iwqsSwaVBvxazE29w@mail.gmail.com>
-	<20170216181905.GA7257@obsidianresearch.com>
-	<CAH=yMt+tWWDMban86H53Or+KngYLUw5hN0aB=+DaJ+MQOK4=4g@mail.gmail.com>
-	<CAH=yMtJ7qWq=YpRaUPh2zzOECjFGiwV3jfBc+4HuvW3wOYt_Vg@mail.gmail.com>
-	<CAH=yMtLLrsyqLr9tOm+D2qvcCDNRO3P36hp8hCdJFVtDyJPWGQ@mail.gmail.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B54395CD5@hasmsx108.ger.corp.intel.com>
-	<20170217164332.GB30677@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH] tpm: Fix expected number of response bytes of TPM1.2 PCR
+ Extend
+Date: Fri, 17 Feb 2017 20:45:46 +0200
+Message-ID: <20170217184546.ik2vv5bleahqhkwv@intel.com>
+References: <1487177783-15687-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <20170215180903.3simazptqnlhbqi6@intel.com>
+ <1487335598.15611.9.camel@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170217164332.GB30677-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Content-Language: en-US
-Content-ID: <161F9FCFBEC6A84AA91F3C8C78D00ABB-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org" <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org" <davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <1487335598.15611.9.camel@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Mimi Zohar <zohar@linux.vnet.ibm.com>
+Cc: James Morris <jmorris@namei.org>, Stefan Berger <stefanb@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gRnJpLCAyMDE3LTAyLTE3IGF0IDA5OjQzIC0wNzAwLCBKYXNvbiBHdW50aG9ycGUgd3JvdGU6
-DQo+IE9uIFRodSwgRmViIDE2LCAyMDE3IGF0IDEwOjM2OjQwUE0gKzAwMDAsIFdpbmtsZXIsIFRv
-bWFzIHdyb3RlOg0KPiA+IMKgwqDCoFRoaXMgaXMgYSBCSU9TIGlzc3VlICsga2VybmVsIEFDUEkg
-cGxhdGZvcm0gZHJpdmVyIHJlZnVzaW5nIHRvDQo+ID4gaGFuZGxlDQo+ID4gwqDCoMKgb3Zlcmxh
-cHBpbmcgbWVtb3J5IHNwYWNlLiBUaGUgaXNzdWUgaGVyZSBpcyB0aGF0IHRoZSBBQ1BJDQo+ID4g
-cGxhdGZvcm0NCj4gPiDCoMKgwqBkcml2ZXIgaXMgbm90IGNyZWF0ZWQsIGhvd2V2ZXIgdGhpcyBz
-aG91bGQgbm90IHByZXZlbnTCoMKgdGhlDQo+ID4gdHBtX2NyYg0KPiA+IMKgwqDCoGRyaXZlciBm
-cm9tIHdvcmtpbmcgYXMgaXQgcmVnaXN0ZXJzIGRpcmVjdGx5IHRoZSBBQ1BJIGRldmljZS4NCj4g
-PiBGb3Igbm93DQo+ID4gwqDCoMKgeW91IGNhbiBzdXBwcmVzcyB0aGUgbWVzc2FnZSBieSBhZGRp
-bmcgdGhlIGRldmljZSBpbg0KPiA+IGZvcmJpZGRlbl9pZF9saXN0DQo+ID4gwqDCoMKgaW4gZHJp
-dmVycy9hY3BpL2FjcGlfcGxhdGZvcm0uYw0KPiA+IA0KPiA+IA0KPiA+IMKgwqDCoEknbSBhbHJl
-YWR5IHRlc3RpbmcgYSBmaXhlZCBCSU9TLCBub3Qgc3VyZSB3aGV0aGVyIGFuZCB3aGVuIGl0DQo+
-ID4gd2lsbCBiZQ0KPiA+IMKgwqDCoGF2YWlsYWJsZSBmb3IgeW91ciBwYXJ0aWN1bGFyIGRldmlj
-ZS4NCj4gDQo+IERvIHlvdSB0aGluayB3ZSBzaG91bGQgZ28gYWhlYWQgd2l0aCB0aGUgcGF0Y2gg
-SSBzZW50PyBPciBzaG91bGQgd2UNCj4gdGVsbCB1c2VycyB0aGV5IG5lZWQgYSBCSU9TIHVwZGF0
-ZT8NCj4gDQo+IEphc29uDQoNCkkgd291bGQgcmF0aGVyIHJldmlldyBhIHBhdGNoIHdpdGggcHJv
-cGVyIGNvbW1pdCBtZXNzYWdlIHRoYW4ganVzdCBwaWNrDQpmcm9tIGFuIGVtYWlsIHRocmVhZCBp
-biBhbGwgY2FzZXMgd2l0aCBhIHByb3BlciBleHBsYW5hdGlvbiB3aGF0IHRoZQ0KcGF0Y2ggZG9l
-cyBhbmQgd2h5IGl0IGlzIHRoZSByaWdodCB3YXkgdG8gZml4IHRoZSBpc3N1ZS4NCg0KSSBnb3Qg
-YW4gZW1haWzCoHByaXZhdGVseSBhbmQgaWRlbnRpZmllZCBpdCBhcyB0aGUgdmVyeSBzYW1lIGlz
-c3VlLiBJdA0Kd2FzIGluIGEgTlVDIGFuZCB0aGUgYXV0aG9yIHNhaWQgdGhhdCBoZSBoYWQgdXBk
-YXRlZCB0aGUgQklPUyB0byB0aGUNCmxhdGVzdCB2ZXJzaW9uLiBUaGF0IHN1cHBvcnRzIHRoZSB2
-aWV3IG9mIGRvaW5nIHNvbWUga2luZCBvZiB3b3JrYXJvdW5kDQp0byB0aGUgZHJpdmVyLCBwZXJo
-YXBzIHRoZSB3YXkgeW91IGRpZCBpdC4NCg0KL0phcmtrbwotLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0K
-Q2hlY2sgb3V0IHRoZSB2aWJyYW50IHRlY2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29ybGQn
-cyBtb3N0CmVuZ2FnaW5nIHRlY2ggc2l0ZXMsIFNsYXNoRG90Lm9yZyEgaHR0cDovL3NkbS5saW5r
-L3NsYXNoZG90Cl9fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-CnRwbWRkLWRldmVsIG1haWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5u
-ZXQKaHR0cHM6Ly9saXN0cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2
-ZWwK
+On Fri, Feb 17, 2017 at 07:46:38AM -0500, Mimi Zohar wrote:
+> Hi James,
+> 
+> On Wed, 2017-02-15 at 20:09 +0200, Jarkko Sakkinen wrote:
+> > On Wed, Feb 15, 2017 at 11:56:23AM -0500, Stefan Berger wrote:
+> > > The TPM1.2 PCR Extend operation only returns 20 bytes in the body,
+> > > which is the size of the PCR state.
+> > > 
+> > > This fixes a problem where IMA gets errors with every PCR Extend.
+> > > 
+> > > Fixes: c659af78eb7b ("tpm: Check size of response before accessing data")
+> > > Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+> > > Acked-by: Mimi Zohar <zohar@us.ibm.com>
+> > 
+> > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> 
+> This patch needs to be included with the rest of the patches being
+> upstreamed in the next open window.   Should Jarkko or I send you a pull
+> request for it?
+> 
+> thanks,
+> 
+> Mimi
+
+I'm sending a pull request after the weekend. It will contain
+only a few small scoped fixes so wouldn't it be easiest if I
+just include this to the pack?
+
+/Jarkko
