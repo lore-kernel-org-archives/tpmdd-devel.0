@@ -1,195 +1,129 @@
-From: Davide Guerri <davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: Re: Intel NUC and fTPM issue on 4.9.2
-Date: Fri, 17 Feb 2017 21:14:45 +0000
-Message-ID: <0FB78E3E-1E73-46EC-9ABD-FD05E1E8B0E2@gmail.com>
-References: <CAH=yMtLydrTfn3_RkzZFpRL-sASUsHPdxX9m-HJUTyjv=D3ksg@mail.gmail.com>
-	<20170216180116.GA7145@obsidianresearch.com>
-	<CAH=yMtJkmxxm6sn=1DmakXW+P=E7rsBd3iwqsSwaVBvxazE29w@mail.gmail.com>
-	<20170216181905.GA7257@obsidianresearch.com>
-	<CAH=yMt+tWWDMban86H53Or+KngYLUw5hN0aB=+DaJ+MQOK4=4g@mail.gmail.com>
-	<CAH=yMtJ7qWq=YpRaUPh2zzOECjFGiwV3jfBc+4HuvW3wOYt_Vg@mail.gmail.com>
-	<CAH=yMtLLrsyqLr9tOm+D2qvcCDNRO3P36hp8hCdJFVtDyJPWGQ@mail.gmail.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B54395CD5@hasmsx108.ger.corp.intel.com>
-	<20170217164332.GB30677@obsidianresearch.com>
-	<1487356105.6424.1.camel@intel.com>
-	<20170217190125.GA5984@obsidianresearch.com>
-Mime-Version: 1.0 (Mac OS X Mail 10.2 \(3259\))
-Content-Type: multipart/mixed; boundary="===============0628125283948858872=="
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170217190125.GA5984-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: "Sakkinen, Jarkko" <jarkko.sakkinen-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+From: "Dr. Greg Wettstein" <greg@enjellic.com>
+Subject: Re: [tpmdd-devel] [RFC] tpm2-space: add handling for global session exhaustion
+Date: Fri, 17 Feb 2017 16:37:01 -0600
+Message-ID: <20170217223701.GA31840@wind.enjellic.com>
+References: <201702101003.v1AA3plF029882@wind.enjellic.com> <1486745163.2502.26.camel@HansenPartnership.com> <OFA049276F.2B32440E-ON852580C3.00742287-852580C3.00748E6B@notes.na.collabserv.com> <20170214143829.GA28175@wind.enjellic.com> <71dc0e80-6678-a124-9184-1f93c8532d09@linux.vnet.ibm.com> <20170216200642.GA20942@wind.enjellic.com> <20170216203304.wrbpfd4mrmyh6vct@intel.com> <20170217095626.GA26064@wind.enjellic.com> <20170217123712.n7gcj62bob35i7ll@intel.com>
+Reply-To: "Dr. Greg Wettstein" <greg@enjellic.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20170217123712.n7gcj62bob35i7ll@intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: "Dr. Greg Wettstein" <greg@enjellic.com>, Ken Goldman <kgold@linux.vnet.ibm.com>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Fri, Feb 17, 2017 at 02:37:12PM +0200, Jarkko Sakkinen wrote:
 
---===============0628125283948858872==
-Content-Type: multipart/alternative;
-	boundary="Apple-Mail=_F4D81EEF-A59B-437C-ABE3-815F69795493"
+Hi, I hope the week is ending well for everyone.
 
+> On Fri, Feb 17, 2017 at 03:56:26AM -0600, Dr. Greg Wettstein wrote:
+> > On Thu, Feb 16, 2017 at 10:33:04PM +0200, Jarkko Sakkinen wrote:
+> > 
+> > Good morning to everyone.
+> > 
+> > > On Thu, Feb 16, 2017 at 02:06:42PM -0600, Dr. Greg Wettstein wrote:
+> > > > Just as an aside, has anyone given any thought about TPM2 resource
+> > > > management in things like TXT/tboot environments?  The current tboot
+> > > > code makes a rather naive assumption that it can take a handle slot to
+> > > > protect its platform verification secret.  Doing resource management
+> > > > correctly will require addressing extra-OS environments such as this
+> > > > which may have TPM2 state requirement issues.
+> > 
+> > > The current implementation handles stuff created from regular
+> > > /dev/tpm0 so I do not think this would be an issue. You can only
+> > > access objects from a TPM space that are created within that space.
+> > 
+> > Unless I misunderstand the number of transient objects which can be
+> > managed is a characteristic of the hardware and is a limited resource,
+> > hence our discussion on the notion of a resource manager to shuttle
+> > context in and out of these limited slots.
+> > 
+> > On a Kabylake system, running the following command:
+> > 
+> > getcapability -cap 6 | grep trans
+> > 
+> > After booting into a TXT mediated measured launch environment (MLE) yields
+> > the following:
+> > 
+> > TPM_PT 0000010e value 00000003 TPM_PT_HR_TRANSIENT_MIN - the minimum number of transient objects that can be held in TPM RAM
+> > 
+> > TPM_PT 00000207 value 00000002 TPM_PT_HR_TRANSIENT_AVAIL - estimate of the number of additional transient objects that could be loaded into TPM RAM
+> > 
+> > Booting without TXT results in the getcapability call indicating that
+> > three slots are available.  Based on that and reading the tboot code,
+> > we are assuming the occupied slot is the ephemeral primary key
+> > generated by tboot which seals the verification secret.
+> > 
+> > In an MLE it is possible to create and then flush a new ephemeral
+> > primary key which results in the following getcapability output:
+> > 
+> > TPM_PT 00000207 value 00000003 TPM_PT_HR_TRANSIENT_AVAIL - estimate of
+> > the number of additional transient objects that could be loaded into TPM RAM
+> > 
+> > Which is probably going to be pretty surprising to tboot in the event
+> > that it tries to re-verify the system state after a suspend event.
+> > 
+> > So based on that it would seem there would need to be some semblance
+> > of cooperation between the resource manager and an extra-OS
+> > utilization of TPM2 resources such as tboot.
+> > 
+> > Thoughts?
 
---Apple-Mail=_F4D81EEF-A59B-437C-ABE3-815F69795493
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/plain;
-	charset=us-ascii
+> The driver swaps in and out all the objects for one send-receive
+> cycle.  So unless the driver is sending a command to a TPM the
+> resource manager occupies zero slots. I do not see reason for
+> forseeable future to change this pattern.
+>
+> I discussed about some "lazier" schemes for swapping with James an
+> Ken in the early Fall but came into conclusion that it would make
+> the RM really complicated. There would have to be something show
+> stopper work load to even to start consider it.
+>
+> With the capacity of current TPMs and amount of traffic and
+> workloads it is really not a worth of the trouble.
+>
+> I guess the way we do swapping kind of indirectly sorts out the
+> issue you described, doesn't it?
 
-Hey,
-sorry fro the delayed reply.
+I'm not sure, we've pulled down your resource manager branch so we can
+figure out the exact mechanics of how it works.  Based on a cursory
+read of the code it appears as if it loops through all three transient
+handle slots and attempts to context save each transient object it
+finds.  So if it does that for each send/receive cycle it should
+theoretically inter-operate with TXT/tboot.
 
-Jason's patch works. I had no doubt it would, because I tried a qnd =
-patch with manually cropped sizes.=20
-I have cleaned it up a little bit, removing printks.
+As noted previously, with the current kernel driver, we can see that
+tboot has allocated a slot for the ephemeral key which is used to seal
+the memory verification secrets.  This key gets allocated to handle
+80000000 as one would anticipate.  However when we attempt to issue a
+context save against that handle we get an error.
 
-Thanks again!
+Interestingly, when we attempt to flush that handle manually we
+receive an error as well, but the number of available transient
+handles increases by one which suggests the context flush cleared the
+slot.
 
-D.=20
+It seems that we should be able to manually replicate what the
+resource manager is doing with the standard kernel driver or is this
+an incorrect assumption?
 
+We will have to spin up a kernel with your patches and see how it
+reacts to the presence of the extra-OS handle allocation.
 
+> /Jarkko
 
-> On 17 Feb 2017, at 7:01 pm, Jason Gunthorpe =
-<jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote:
->=20
->> I would rather review a patch with proper commit message than just =
-pick
->> from an email thread in all cases with a proper explanation what the
->> patch does and why it is the right way to fix the issue.
->=20
-> Of course, but I am waiting for Davide to say the approach even works
-> ..
->=20
-> Jason
+Greg
 
-
---Apple-Mail=_F4D81EEF-A59B-437C-ABE3-815F69795493
-Content-Type: multipart/mixed;
-	boundary="Apple-Mail=_F0C25964-C11E-42CF-A0AD-4337282903E2"
-
-
---Apple-Mail=_F0C25964-C11E-42CF-A0AD-4337282903E2
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/html;
-	charset=us-ascii
-
-<html><head><meta http-equiv=3D"Content-Type" content=3D"text/html =
-charset=3Dus-ascii"></head><body style=3D"word-wrap: break-word; =
--webkit-nbsp-mode: space; -webkit-line-break: after-white-space;" =
-class=3D""><div class=3D"">Hey,</div><div class=3D"">sorry fro the =
-delayed reply.</div><div class=3D""><br class=3D""></div><div =
-class=3D"">Jason's patch works. I had no doubt it would, because I tried =
-a qnd patch with manually cropped sizes.&nbsp;</div><div class=3D"">I =
-have cleaned it up a little bit, removing&nbsp;<span style=3D"color: =
-rgb(80, 0, 80); font-family: arial, sans-serif; font-size: =
-12.800000190734863px; background-color: rgb(255, 255, 255);" =
-class=3D"">printks.</span></div><div class=3D""><span style=3D"color: =
-rgb(80, 0, 80); font-family: arial, sans-serif; font-size: =
-12.800000190734863px; background-color: rgb(255, 255, 255);" =
-class=3D""><br class=3D""></span></div><div class=3D""><span =
-style=3D"color: rgb(80, 0, 80); font-family: arial, sans-serif; =
-font-size: 12.800000190734863px; background-color: rgb(255, 255, 255);" =
-class=3D"">Thanks again!</span></div><div class=3D""><span style=3D"color:=
- rgb(80, 0, 80); font-family: arial, sans-serif; font-size: =
-12.800000190734863px; background-color: rgb(255, 255, 255);" =
-class=3D""><br class=3D""></span></div><div class=3D""><span =
-style=3D"color: rgb(80, 0, 80); font-family: arial, sans-serif; =
-font-size: 12.800000190734863px; background-color: rgb(255, 255, 255);" =
-class=3D"">D.&nbsp;</span></div><div class=3D""><br =
-class=3D""></div></body></html>=
-
---Apple-Mail=_F0C25964-C11E-42CF-A0AD-4337282903E2
-Content-Disposition: attachment;
-	filename=NUC-fw-fix.patch
-Content-Type: application/octet-stream; x-unix-mode=0644;
-	name="NUC-fw-fix.patch"
-Content-Transfer-Encoding: 7bit
-
-diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index a7c870a..7f5e871 100644
---- a/drivers/char/tpm/tpm_crb.c
-+++ b/drivers/char/tpm/tpm_crb.c
-@@ -243,6 +243,26 @@ static void __iomem *crb_map_res(struct device *dev, struct crb_priv *priv,
- 	return priv->iobase + (new_res.start - io_res->start);
- }
-
-+/*
-+ * Work around broken BIOSs that return inconsistent values from the ACPI
-+ * region vs the registers. Trust the ACPI region.
-+ */
-+static u64 crb_clamp_cmd_size(struct device *dev, struct resource *io_res,
-+			      u64 start, u64 size)
-+{
-+	if (io_res->start > start || io_res->end < start)
-+		return size;
-+
-+	if (start + size - 1 <= io_res->end)
-+		return size;
-+
-+	dev_err(dev,
-+		FW_BUG "ACPI region does not cover the entire command/response buffer. %pr vs %llx %llx\n",
-+		io_res, start, size);
-+
-+	return io_res->end - start + 1;
-+}
-+
- static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
- 		      struct acpi_table_tpm2 *buf)
- {
-@@ -278,14 +298,16 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
-
- 	cmd_pa = ((u64) ioread32(&priv->cca->cmd_pa_high) << 32) |
- 		  (u64) ioread32(&priv->cca->cmd_pa_low);
--	cmd_size = ioread32(&priv->cca->cmd_size);
-+	cmd_size = crb_clamp_cmd_size(dev, &io_res, cmd_pa,
-+				      ioread32(&priv->cca->cmd_size));
- 	priv->cmd = crb_map_res(dev, priv, &io_res, cmd_pa, cmd_size);
- 	if (IS_ERR(priv->cmd))
- 		return PTR_ERR(priv->cmd);
-
- 	memcpy_fromio(&rsp_pa, &priv->cca->rsp_pa, 8);
- 	rsp_pa = le64_to_cpu(rsp_pa);
--	rsp_size = ioread32(&priv->cca->rsp_size);
-+	rsp_size = crb_clamp_cmd_size(dev, &io_res, rsp_pa,
-+				      ioread32(&priv->cca->rsp_size));
-
- 	if (cmd_pa != rsp_pa) {
- 		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa, rsp_size);
-
---Apple-Mail=_F0C25964-C11E-42CF-A0AD-4337282903E2
-Content-Transfer-Encoding: 7bit
-Content-Type: text/html;
-	charset=us-ascii
-
-<html><head><meta http-equiv="Content-Type" content="text/html charset=us-ascii"></head><body style="word-wrap: break-word; -webkit-nbsp-mode: space; -webkit-line-break: after-white-space;" class=""><div class=""><br class=""><div><blockquote type="cite" class=""><div class="">On 17 Feb 2017, at 7:01 pm, Jason Gunthorpe &lt;<a href="mailto:jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org" class="">jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org</a>&gt; wrote:</div><br class="Apple-interchange-newline"><div class=""><div class=""><blockquote type="cite" class="">I would rather review a patch with proper commit message than just pick<br class="">from an email thread in all cases with a proper explanation what the<br class="">patch does and why it is the right way to fix the issue.<br class=""></blockquote><br class="">Of co
- urse, but I am waiting for Davide to say the approach even works<br class="">..<br class=""><br class="">Jason<br class=""></div></div></blockquote></div><br class=""></div></body></html>
---Apple-Mail=_F0C25964-C11E-42CF-A0AD-4337282903E2--
-
---Apple-Mail=_F4D81EEF-A59B-437C-ABE3-815F69795493--
-
-
---===============0628125283948858872==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
+As always,
+Dr. G.W. Wettstein, Ph.D.   Enjellic Systems Development, LLC.
+4206 N. 19th Ave.           Specializing in information infra-structure
+Fargo, ND  58102            development.
+PH: 701-281-1686
+FAX: 701-281-3949           EMAIL: greg@enjellic.com
 ------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
---===============0628125283948858872==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-_______________________________________________
-tpmdd-devel mailing list
-tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-
---===============0628125283948858872==--
+"We know that communication is a problem, but the company is not going
+ to discuss it with the employees."
+                                -- Switching supervisor
+                                   AT&T Long Lines Division
