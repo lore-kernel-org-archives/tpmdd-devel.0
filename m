@@ -1,7 +1,7 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+From: "Sakkinen, Jarkko" <jarkko.sakkinen-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 Subject: Re: Intel NUC and fTPM issue on 4.9.2
-Date: Fri, 17 Feb 2017 09:43:32 -0700
-Message-ID: <20170217164332.GB30677@obsidianresearch.com>
+Date: Fri, 17 Feb 2017 18:28:27 +0000
+Message-ID: <1487356105.6424.1.camel@intel.com>
 References: <CAH=yMtLydrTfn3_RkzZFpRL-sASUsHPdxX9m-HJUTyjv=D3ksg@mail.gmail.com>
 	<20170216180116.GA7145@obsidianresearch.com>
 	<CAH=yMtJkmxxm6sn=1DmakXW+P=E7rsBd3iwqsSwaVBvxazE29w@mail.gmail.com>
@@ -10,12 +10,14 @@ References: <CAH=yMtLydrTfn3_RkzZFpRL-sASUsHPdxX9m-HJUTyjv=D3ksg@mail.gmail.com>
 	<CAH=yMtJ7qWq=YpRaUPh2zzOECjFGiwV3jfBc+4HuvW3wOYt_Vg@mail.gmail.com>
 	<CAH=yMtLLrsyqLr9tOm+D2qvcCDNRO3P36hp8hCdJFVtDyJPWGQ@mail.gmail.com>
 	<5B8DA87D05A7694D9FA63FD143655C1B54395CD5@hasmsx108.ger.corp.intel.com>
+	<20170217164332.GB30677@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B54395CD5-Jy8z56yoSI8MvF1YICWikbfspsVTdybXVpNB7YpNyf8@public.gmane.org>
+In-Reply-To: <20170217164332.GB30677-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Content-Language: en-US
+Content-ID: <161F9FCFBEC6A84AA91F3C8C78D00ABB-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -24,27 +26,38 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Cc: "Sakkinen, Jarkko" <jarkko.sakkinen-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, Davide Guerri <davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+To: "jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org" <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org" <davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Feb 16, 2017 at 10:36:40PM +0000, Winkler, Tomas wrote:
->    This is a BIOS issue + kernel ACPI platform driver refusing to handle
->    overlapping memory space. The issue here is that the ACPI platform
->    driver is not created, however this should not prevent  the tpm_crb
->    driver from working as it registers directly the ACPI device. For now
->    you can suppress the message by adding the device in forbidden_id_list
->    in drivers/acpi/acpi_platform.c
-> 
->
->    I'm already testing a fixed BIOS, not sure whether and when it will be
->    available for your particular device.
-
-Do you think we should go ahead with the patch I sent? Or should we
-tell users they need a BIOS update?
-
-Jason
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+T24gRnJpLCAyMDE3LTAyLTE3IGF0IDA5OjQzIC0wNzAwLCBKYXNvbiBHdW50aG9ycGUgd3JvdGU6
+DQo+IE9uIFRodSwgRmViIDE2LCAyMDE3IGF0IDEwOjM2OjQwUE0gKzAwMDAsIFdpbmtsZXIsIFRv
+bWFzIHdyb3RlOg0KPiA+IMKgwqDCoFRoaXMgaXMgYSBCSU9TIGlzc3VlICsga2VybmVsIEFDUEkg
+cGxhdGZvcm0gZHJpdmVyIHJlZnVzaW5nIHRvDQo+ID4gaGFuZGxlDQo+ID4gwqDCoMKgb3Zlcmxh
+cHBpbmcgbWVtb3J5IHNwYWNlLiBUaGUgaXNzdWUgaGVyZSBpcyB0aGF0IHRoZSBBQ1BJDQo+ID4g
+cGxhdGZvcm0NCj4gPiDCoMKgwqBkcml2ZXIgaXMgbm90IGNyZWF0ZWQsIGhvd2V2ZXIgdGhpcyBz
+aG91bGQgbm90IHByZXZlbnTCoMKgdGhlDQo+ID4gdHBtX2NyYg0KPiA+IMKgwqDCoGRyaXZlciBm
+cm9tIHdvcmtpbmcgYXMgaXQgcmVnaXN0ZXJzIGRpcmVjdGx5IHRoZSBBQ1BJIGRldmljZS4NCj4g
+PiBGb3Igbm93DQo+ID4gwqDCoMKgeW91IGNhbiBzdXBwcmVzcyB0aGUgbWVzc2FnZSBieSBhZGRp
+bmcgdGhlIGRldmljZSBpbg0KPiA+IGZvcmJpZGRlbl9pZF9saXN0DQo+ID4gwqDCoMKgaW4gZHJp
+dmVycy9hY3BpL2FjcGlfcGxhdGZvcm0uYw0KPiA+IA0KPiA+IA0KPiA+IMKgwqDCoEknbSBhbHJl
+YWR5IHRlc3RpbmcgYSBmaXhlZCBCSU9TLCBub3Qgc3VyZSB3aGV0aGVyIGFuZCB3aGVuIGl0DQo+
+ID4gd2lsbCBiZQ0KPiA+IMKgwqDCoGF2YWlsYWJsZSBmb3IgeW91ciBwYXJ0aWN1bGFyIGRldmlj
+ZS4NCj4gDQo+IERvIHlvdSB0aGluayB3ZSBzaG91bGQgZ28gYWhlYWQgd2l0aCB0aGUgcGF0Y2gg
+SSBzZW50PyBPciBzaG91bGQgd2UNCj4gdGVsbCB1c2VycyB0aGV5IG5lZWQgYSBCSU9TIHVwZGF0
+ZT8NCj4gDQo+IEphc29uDQoNCkkgd291bGQgcmF0aGVyIHJldmlldyBhIHBhdGNoIHdpdGggcHJv
+cGVyIGNvbW1pdCBtZXNzYWdlIHRoYW4ganVzdCBwaWNrDQpmcm9tIGFuIGVtYWlsIHRocmVhZCBp
+biBhbGwgY2FzZXMgd2l0aCBhIHByb3BlciBleHBsYW5hdGlvbiB3aGF0IHRoZQ0KcGF0Y2ggZG9l
+cyBhbmQgd2h5IGl0IGlzIHRoZSByaWdodCB3YXkgdG8gZml4IHRoZSBpc3N1ZS4NCg0KSSBnb3Qg
+YW4gZW1haWzCoHByaXZhdGVseSBhbmQgaWRlbnRpZmllZCBpdCBhcyB0aGUgdmVyeSBzYW1lIGlz
+c3VlLiBJdA0Kd2FzIGluIGEgTlVDIGFuZCB0aGUgYXV0aG9yIHNhaWQgdGhhdCBoZSBoYWQgdXBk
+YXRlZCB0aGUgQklPUyB0byB0aGUNCmxhdGVzdCB2ZXJzaW9uLiBUaGF0IHN1cHBvcnRzIHRoZSB2
+aWV3IG9mIGRvaW5nIHNvbWUga2luZCBvZiB3b3JrYXJvdW5kDQp0byB0aGUgZHJpdmVyLCBwZXJo
+YXBzIHRoZSB3YXkgeW91IGRpZCBpdC4NCg0KL0phcmtrbwotLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0K
+Q2hlY2sgb3V0IHRoZSB2aWJyYW50IHRlY2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29ybGQn
+cyBtb3N0CmVuZ2FnaW5nIHRlY2ggc2l0ZXMsIFNsYXNoRG90Lm9yZyEgaHR0cDovL3NkbS5saW5r
+L3NsYXNoZG90Cl9fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
+CnRwbWRkLWRldmVsIG1haWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5u
+ZXQKaHR0cHM6Ly9saXN0cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2
+ZWwK
