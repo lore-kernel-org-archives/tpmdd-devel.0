@@ -1,129 +1,279 @@
-From: "Dr. Greg Wettstein" <greg@enjellic.com>
-Subject: Re: [tpmdd-devel] [RFC] tpm2-space: add handling for global session exhaustion
-Date: Fri, 17 Feb 2017 16:37:01 -0600
-Message-ID: <20170217223701.GA31840@wind.enjellic.com>
-References: <201702101003.v1AA3plF029882@wind.enjellic.com> <1486745163.2502.26.camel@HansenPartnership.com> <OFA049276F.2B32440E-ON852580C3.00742287-852580C3.00748E6B@notes.na.collabserv.com> <20170214143829.GA28175@wind.enjellic.com> <71dc0e80-6678-a124-9184-1f93c8532d09@linux.vnet.ibm.com> <20170216200642.GA20942@wind.enjellic.com> <20170216203304.wrbpfd4mrmyh6vct@intel.com> <20170217095626.GA26064@wind.enjellic.com> <20170217123712.n7gcj62bob35i7ll@intel.com>
-Reply-To: "Dr. Greg Wettstein" <greg@enjellic.com>
+From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Subject: Re: Intel NUC and fTPM issue on 4.9.2
+Date: Sun, 19 Feb 2017 22:28:08 +0000
+Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B54398ADC@hasmsx108.ger.corp.intel.com>
+References: <CAH=yMtLydrTfn3_RkzZFpRL-sASUsHPdxX9m-HJUTyjv=D3ksg@mail.gmail.com>
+	<20170216180116.GA7145@obsidianresearch.com>
+	<CAH=yMtJkmxxm6sn=1DmakXW+P=E7rsBd3iwqsSwaVBvxazE29w@mail.gmail.com>
+	<20170216181905.GA7257@obsidianresearch.com>
+	<CAH=yMt+tWWDMban86H53Or+KngYLUw5hN0aB=+DaJ+MQOK4=4g@mail.gmail.com>
+	<CAH=yMtJ7qWq=YpRaUPh2zzOECjFGiwV3jfBc+4HuvW3wOYt_Vg@mail.gmail.com>
+	<CAH=yMtLLrsyqLr9tOm+D2qvcCDNRO3P36hp8hCdJFVtDyJPWGQ@mail.gmail.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B54395CD5@hasmsx108.ger.corp.intel.com>
+	<20170217164332.GB30677@obsidianresearch.com>
+	<1487356105.6424.1.camel@intel.com>
+	<20170217190125.GA5984@obsidianresearch.com>
+	<0FB78E3E-1E73-46EC-9ABD-FD05E1E8B0E2@gmail.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20170217123712.n7gcj62bob35i7ll@intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: "Dr. Greg Wettstein" <greg@enjellic.com>, Ken Goldman <kgold@linux.vnet.ibm.com>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+Content-Type: multipart/mixed; boundary="===============7018901075810679716=="
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <0FB78E3E-1E73-46EC-9ABD-FD05E1E8B0E2-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Content-Language: en-US
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Davide Guerri <davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: "Sakkinen, Jarkko" <jarkko.sakkinen-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Feb 17, 2017 at 02:37:12PM +0200, Jarkko Sakkinen wrote:
+--===============7018901075810679716==
+Content-Language: en-US
+Content-Type: multipart/alternative;
+	boundary="_000_5B8DA87D05A7694D9FA63FD143655C1B54398ADChasmsx108gercor_"
 
-Hi, I hope the week is ending well for everyone.
+--_000_5B8DA87D05A7694D9FA63FD143655C1B54398ADChasmsx108gercor_
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 
-> On Fri, Feb 17, 2017 at 03:56:26AM -0600, Dr. Greg Wettstein wrote:
-> > On Thu, Feb 16, 2017 at 10:33:04PM +0200, Jarkko Sakkinen wrote:
-> > 
-> > Good morning to everyone.
-> > 
-> > > On Thu, Feb 16, 2017 at 02:06:42PM -0600, Dr. Greg Wettstein wrote:
-> > > > Just as an aside, has anyone given any thought about TPM2 resource
-> > > > management in things like TXT/tboot environments?  The current tboot
-> > > > code makes a rather naive assumption that it can take a handle slot to
-> > > > protect its platform verification secret.  Doing resource management
-> > > > correctly will require addressing extra-OS environments such as this
-> > > > which may have TPM2 state requirement issues.
-> > 
-> > > The current implementation handles stuff created from regular
-> > > /dev/tpm0 so I do not think this would be an issue. You can only
-> > > access objects from a TPM space that are created within that space.
-> > 
-> > Unless I misunderstand the number of transient objects which can be
-> > managed is a characteristic of the hardware and is a limited resource,
-> > hence our discussion on the notion of a resource manager to shuttle
-> > context in and out of these limited slots.
-> > 
-> > On a Kabylake system, running the following command:
-> > 
-> > getcapability -cap 6 | grep trans
-> > 
-> > After booting into a TXT mediated measured launch environment (MLE) yields
-> > the following:
-> > 
-> > TPM_PT 0000010e value 00000003 TPM_PT_HR_TRANSIENT_MIN - the minimum number of transient objects that can be held in TPM RAM
-> > 
-> > TPM_PT 00000207 value 00000002 TPM_PT_HR_TRANSIENT_AVAIL - estimate of the number of additional transient objects that could be loaded into TPM RAM
-> > 
-> > Booting without TXT results in the getcapability call indicating that
-> > three slots are available.  Based on that and reading the tboot code,
-> > we are assuming the occupied slot is the ephemeral primary key
-> > generated by tboot which seals the verification secret.
-> > 
-> > In an MLE it is possible to create and then flush a new ephemeral
-> > primary key which results in the following getcapability output:
-> > 
-> > TPM_PT 00000207 value 00000003 TPM_PT_HR_TRANSIENT_AVAIL - estimate of
-> > the number of additional transient objects that could be loaded into TPM RAM
-> > 
-> > Which is probably going to be pretty surprising to tboot in the event
-> > that it tries to re-verify the system state after a suspend event.
-> > 
-> > So based on that it would seem there would need to be some semblance
-> > of cooperation between the resource manager and an extra-OS
-> > utilization of TPM2 resources such as tboot.
-> > 
-> > Thoughts?
+I need few days to get into BIOS to understand how we got to here at the fi=
+rst place,
+Can you please send me the dmidecode of the NUC (even privately) so I can u=
+nderstand what exactly issue we have. The fixed BIOS I'm testing now is for=
+ the Kaby Lake platform.
+Davide if would fill a bug for that via intel support page so we can follow=
+ up on that.
 
-> The driver swaps in and out all the objects for one send-receive
-> cycle.  So unless the driver is sending a command to a TPM the
-> resource manager occupies zero slots. I do not see reason for
-> forseeable future to change this pattern.
+Thanks
+Tomas
+
+From: Davide Guerri [mailto:davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org]
+Sent: Friday, February 17, 2017 23:15
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: Sakkinen, Jarkko <jarkko.sakkinen-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>; Winkler, Tomas <tomas.win=
+kler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>; tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Subject: Re: [tpmdd-devel] Intel NUC and fTPM issue on 4.9.2
+
+Hey,
+sorry fro the delayed reply.
+
+Jason's patch works. I had no doubt it would, because I tried a qnd patch w=
+ith manually cropped sizes.
+I have cleaned it up a little bit, removing printks.
+
+Thanks again!
+
+D.
+
+
+On 17 Feb 2017, at 7:01 pm, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMNAWLNoT+7d/@public.gmane.org=
+m<mailto:jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>> wrote:
+
+I would rather review a patch with proper commit message than just pick
+from an email thread in all cases with a proper explanation what the
+patch does and why it is the right way to fix the issue.
+
+Of course, but I am waiting for Davide to say the approach even works
+..
+
+Jason
+
+
+--_000_5B8DA87D05A7694D9FA63FD143655C1B54398ADChasmsx108gercor_
+Content-Type: text/html; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
+
+<html xmlns:v=3D"urn:schemas-microsoft-com:vml" xmlns:o=3D"urn:schemas-micr=
+osoft-com:office:office" xmlns:w=3D"urn:schemas-microsoft-com:office:word" =
+xmlns:m=3D"http://schemas.microsoft.com/office/2004/12/omml" xmlns=3D"http:=
+//www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dus-ascii"=
 >
-> I discussed about some "lazier" schemes for swapping with James an
-> Ken in the early Fall but came into conclusion that it would make
-> the RM really complicated. There would have to be something show
-> stopper work load to even to start consider it.
->
-> With the capacity of current TPMs and amount of traffic and
-> workloads it is really not a worth of the trouble.
->
-> I guess the way we do swapping kind of indirectly sorts out the
-> issue you described, doesn't it?
+<meta name=3D"Generator" content=3D"Microsoft Word 15 (filtered medium)">
+<style><!--
+/* Font Definitions */
+@font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Calibri;
+	panose-1:2 15 5 2 2 2 4 3 2 4;}
+/* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin:0cm;
+	margin-bottom:.0001pt;
+	font-size:12.0pt;
+	font-family:"Times New Roman",serif;}
+a:link, span.MsoHyperlink
+	{mso-style-priority:99;
+	color:blue;
+	text-decoration:underline;}
+a:visited, span.MsoHyperlinkFollowed
+	{mso-style-priority:99;
+	color:purple;
+	text-decoration:underline;}
+span.EmailStyle17
+	{mso-style-type:personal-reply;
+	font-family:"Calibri",sans-serif;
+	color:#1F497D;}
+.MsoChpDefault
+	{mso-style-type:export-only;
+	font-size:10.0pt;}
+@page WordSection1
+	{size:612.0pt 792.0pt;
+	margin:72.0pt 90.0pt 72.0pt 90.0pt;}
+div.WordSection1
+	{page:WordSection1;}
+--></style><!--[if gte mso 9]><xml>
+<o:shapedefaults v:ext=3D"edit" spidmax=3D"1026" />
+</xml><![endif]--><!--[if gte mso 9]><xml>
+<o:shapelayout v:ext=3D"edit">
+<o:idmap v:ext=3D"edit" data=3D"1" />
+</o:shapelayout></xml><![endif]-->
+</head>
+<body lang=3D"EN-US" link=3D"blue" vlink=3D"purple">
+<div class=3D"WordSection1">
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:#1F497D">I need few days to get into BIOS to u=
+nderstand how we got to here at the first place,<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:#1F497D">Can you please send me the dmidecode =
+of the NUC (even privately) so I can understand what exactly issue we have.=
+ The fixed BIOS I&#8217;m testing now is for the Kaby
+ Lake platform.<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:#1F497D">Davide if would fill a bug for that v=
+ia intel support page so we can follow up on that.
+<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:#1F497D"><o:p>&nbsp;</o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:#1F497D">Thanks<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:#1F497D">Tomas<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><a name=3D"_MailEndCompose"><span style=3D"font-size=
+:11.0pt;font-family:&quot;Calibri&quot;,sans-serif;color:#1F497D"><o:p>&nbs=
+p;</o:p></span></a></p>
+<div style=3D"border:none;border-left:solid blue 1.5pt;padding:0cm 0cm 0cm =
+4.0pt">
+<div>
+<div style=3D"border:none;border-top:solid #E1E1E1 1.0pt;padding:3.0pt 0cm =
+0cm 0cm">
+<p class=3D"MsoNormal"><a name=3D"_____replyseparator"></a><b><span style=
+=3D"font-size:11.0pt;font-family:&quot;Calibri&quot;,sans-serif">From:</spa=
+n></b><span style=3D"font-size:11.0pt;font-family:&quot;Calibri&quot;,sans-=
+serif"> Davide Guerri [mailto:davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org]
+<br>
+<b>Sent:</b> Friday, February 17, 2017 23:15<br>
+<b>To:</b> Jason Gunthorpe &lt;jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org&gt;<br>
+<b>Cc:</b> Sakkinen, Jarkko &lt;jarkko.sakkinen-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org&gt;; Winkler, Tom=
+as &lt;tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org&gt;; tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org<br>
+<b>Subject:</b> Re: [tpmdd-devel] Intel NUC and fTPM issue on 4.9.2<o:p></o=
+:p></span></p>
+</div>
+</div>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<div>
+<div>
+<p class=3D"MsoNormal">Hey,<o:p></o:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal">sorry fro the delayed reply.<o:p></o:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal">Jason's patch works. I had no doubt it would, becaus=
+e I tried a qnd patch with manually cropped sizes.&nbsp;<o:p></o:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal">I have cleaned it up a little bit, removing&nbsp;<sp=
+an style=3D"font-size:9.5pt;font-family:&quot;Arial&quot;,sans-serif;color:=
+#500050;background:white">printks.</span><o:p></o:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal"><span style=3D"font-size:9.5pt;font-family:&quot;Ari=
+al&quot;,sans-serif;color:#500050;background:white">Thanks again!</span><o:=
+p></o:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal"><span style=3D"font-size:9.5pt;font-family:&quot;Ari=
+al&quot;,sans-serif;color:#500050;background:white">D.&nbsp;</span><o:p></o=
+:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+</div>
+</div>
+<div>
+<div>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<div>
+<blockquote style=3D"margin-top:5.0pt;margin-bottom:5.0pt">
+<div>
+<p class=3D"MsoNormal">On 17 Feb 2017, at 7:01 pm, Jason Gunthorpe &lt;<a h=
+ref=3D"mailto:jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org">jgunthorpe@obsidianresearch.=
+com</a>&gt; wrote:<o:p></o:p></p>
+</div>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<div>
+<div>
+<blockquote style=3D"margin-top:5.0pt;margin-bottom:5.0pt">
+<p class=3D"MsoNormal">I would rather review a patch with proper commit mes=
+sage than just pick<br>
+from an email thread in all cases with a proper explanation what the<br>
+patch does and why it is the right way to fix the issue.<o:p></o:p></p>
+</blockquote>
+<p class=3D"MsoNormal"><br>
+Of course, but I am waiting for Davide to say the approach even works<br>
+..<br>
+<br>
+Jason<o:p></o:p></p>
+</div>
+</div>
+</blockquote>
+</div>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>
 
-I'm not sure, we've pulled down your resource manager branch so we can
-figure out the exact mechanics of how it works.  Based on a cursory
-read of the code it appears as if it loops through all three transient
-handle slots and attempts to context save each transient object it
-finds.  So if it does that for each send/receive cycle it should
-theoretically inter-operate with TXT/tboot.
+--_000_5B8DA87D05A7694D9FA63FD143655C1B54398ADChasmsx108gercor_--
 
-As noted previously, with the current kernel driver, we can see that
-tboot has allocated a slot for the ephemeral key which is used to seal
-the memory verification secrets.  This key gets allocated to handle
-80000000 as one would anticipate.  However when we attempt to issue a
-context save against that handle we get an error.
 
-Interestingly, when we attempt to flush that handle manually we
-receive an error as well, but the number of available transient
-handles increases by one which suggests the context flush cleared the
-slot.
+--===============7018901075810679716==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
 
-It seems that we should be able to manually replicate what the
-resource manager is doing with the standard kernel driver or is this
-an incorrect assumption?
-
-We will have to spin up a kernel with your patches and see how it
-reacts to the presence of the extra-OS handle allocation.
-
-> /Jarkko
-
-Greg
-
-As always,
-Dr. G.W. Wettstein, Ph.D.   Enjellic Systems Development, LLC.
-4206 N. 19th Ave.           Specializing in information infra-structure
-Fargo, ND  58102            development.
-PH: 701-281-1686
-FAX: 701-281-3949           EMAIL: greg@enjellic.com
 ------------------------------------------------------------------------------
-"We know that communication is a problem, but the company is not going
- to discuss it with the employees."
-                                -- Switching supervisor
-                                   AT&T Long Lines Division
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+--===============7018901075810679716==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
+
+_______________________________________________
+tpmdd-devel mailing list
+tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+
+--===============7018901075810679716==--
