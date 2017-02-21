@@ -1,56 +1,41 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: declare tpm2_get_pcr_allocation() as
-	static
-Date: Tue, 21 Feb 2017 08:17:11 +0200
-Message-ID: <20170221061659.dssonwv44q35j5y4@intel.com>
-References: <20170215180228.25650-1-jarkko.sakkinen@linux.intel.com>
-	<20170217102427.427h3qxwajocilji@intel.com>
-	<58ABD542.1040704@linux.vnet.ibm.com>
+From: Logan Gunthorpe <logang-OTvnGxWRz7hWk0Htik3J/w@public.gmane.org>
+Subject: Re: [PATCH 01/14] chardev: add helper function to register char devs
+ with a struct device
+Date: Mon, 20 Feb 2017 23:35:21 -0700
+Message-ID: <17f32963-1d0e-5d17-64c9-742b05415722@deltatee.com>
+References: <1487653253-11497-1-git-send-email-logang@deltatee.com>
+ <1487653253-11497-2-git-send-email-logang@deltatee.com>
+ <20170221053522.GA1466@dtor-ws>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <58ABD542.1040704-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Return-path: <linux-nvdimm-bounces-hn68Rpc1hR1g9hUCZPvPmw@public.gmane.org>
+In-Reply-To: <20170221053522.GA1466@dtor-ws>
+List-Unsubscribe: <https://lists.01.org/mailman/options/linux-nvdimm>,
+ <mailto:linux-nvdimm-request-hn68Rpc1hR1g9hUCZPvPmw@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://lists.01.org/pipermail/linux-nvdimm/>
+List-Post: <mailto:linux-nvdimm-hn68Rpc1hR1g9hUCZPvPmw@public.gmane.org>
+List-Help: <mailto:linux-nvdimm-request-hn68Rpc1hR1g9hUCZPvPmw@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.01.org/mailman/listinfo/linux-nvdimm>,
+ <mailto:linux-nvdimm-request-hn68Rpc1hR1g9hUCZPvPmw@public.gmane.org?subject=subscribe>
+Errors-To: linux-nvdimm-bounces-hn68Rpc1hR1g9hUCZPvPmw@public.gmane.org
+Sender: "Linux-nvdimm" <linux-nvdimm-bounces-hn68Rpc1hR1g9hUCZPvPmw@public.gmane.org>
+To: Dmitry Torokhov <dmitry.torokhov-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Cc: Alessandro Zummo <a.zummo-BfzFCNDTiLLj+vYz1yj4TQ@public.gmane.org>, Jan Kara <jack-AlSwsSmVLrQ@public.gmane.org>, linux-iio-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-pci-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Linus Walleij <linus.walleij-QSEj5FYQhm4dnm+yROfE0A@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Alexandre Bounine <alexandre.bounine-49Rm3DX9dRQ@public.gmane.org>, Alexandre Belloni <alexandre.belloni-wi1+55ScJUtKEb57/3fJTNBPR1lH4CV8@public.gmane.org>, Peter Meerwald-Stadler <pmeerw-jW+XmwGofnusTnJN9+BGXg@public.gmane.org>, linux-scsi-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Sean Hefty <sean.hefty-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, Parav Pandit <pandit.parav-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Alexandre Courbot <gnurou-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Lars-Peter Clausen <lars-Qo5EllUWu/uELgA04lAiVw@public.gmane.org>, "James E.J. Bottomley" <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, rtc-linux-/JYPxA39Uh5TLH3MbocFFw@public.gmane.org, Leon Romanovsky <leon-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, linux-nvdimm-hn68Rpc1hR1g9hUCZPvPmw@public.gmane.org, linux-rdma-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Richard Weinberger <richard-/L3Ra7n9ekc@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Marek Vasut <marek.vasut-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>Doug Ledford <dl>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Feb 21, 2017 at 11:20:58AM +0530, Nayna wrote:
-> 
-> 
-> On 02/17/2017 03:54 PM, Jarkko Sakkinen wrote:
-> > On Wed, Feb 15, 2017 at 08:02:28PM +0200, Jarkko Sakkinen wrote:
-> > > There's no need to export tpm2_get_pcr_alloation() because it is only
-> > > a helper function for tpm2_auto_startup(). For the same reason it does
-> > > not make much sense to maintain documentation for it.
-> > > 
-> > > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> > 
-> > Nayna, does this look good to you?
-> 
-> Oops !! I don't know how it is missed. Sorry for that..My internet
-> connection wasn't working since my Friday evening and just started working
-> yesterday. So, probably somewhere got this missed and saw it today
-> 
-> It is fine and I already see it in PULL request. So, Thanks !!
-> 
-> Thanks & Regards,
->    - Nayna
 
-It's fine, just a minor glitch that I wanted to fix before it goes
-to release...
 
-/Jarkko
+On 20/02/17 10:35 PM, Dmitry Torokhov wrote:
+> My only objection is to this statement. There is absolutely nothing that
+> prevents from calling device_unregister() first and cdev_del() later.
+> Refcounting will sort it all out.
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+Yeah, I was really trying to warn people against calling cdev_del within
+the release function of the device. If you do that, then the cdev
+reference will block the device from ever getting released.
+
+Certainly, you could call device_unregister followed by cdev_del. I
+could reword this if you feel it necessary.
+
+Logan
