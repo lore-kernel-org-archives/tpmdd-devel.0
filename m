@@ -1,48 +1,94 @@
-From: Dan Williams <dan.j.williams-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: Re: [PATCH 02/14] device-dax: utilize new device_add_cdev
- helper function
-Date: Tue, 21 Feb 2017 11:26:33 -0800
-Message-ID: <CAPcyv4huQGQPSwvX9=iAVtzr1ga8RbN+e_q7DNaUMWGbWt_5mA@mail.gmail.com>
-References: <1487653253-11497-1-git-send-email-logang@deltatee.com>
- <1487653253-11497-3-git-send-email-logang@deltatee.com> <20170221113704.ibwkk2vuc5imkmae@piout.net>
-Reply-To: rtc-linux-/JYPxA39Uh5TLH3MbocFFw@public.gmane.org
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: [PATCH] tpm crb: Work around BIOS's that report the
+ wrong ACPI region size
+Date: Tue, 21 Feb 2017 14:14:24 -0700
+Message-ID: <20170221211424.GA16091@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Return-path: <rtc-linux+bncBDZYPUPHYEJBB25IWLCQKGQECLBP32Y-/JYPxA39Uh5TLH3MbocFFw@public.gmane.org>
-Sender: rtc-linux-/JYPxA39Uh5TLH3MbocFFw@public.gmane.org
-In-Reply-To: <20170221113704.ibwkk2vuc5imkmae-m++hUPXGwpdeoWH0uzbU5w@public.gmane.org>
-List-Post: <https://groups.google.com/group/rtc-linux/post>, <mailto:rtc-linux-/JYPxA39Uh5TLH3MbocFFw@public.gmane.org>
-List-Help: <https://groups.google.com/support/>, <mailto:rtc-linux+help-/JYPxA39Uh5TLH3MbocFFw@public.gmane.org>
-List-Archive: <https://groups.google.com/group/rtc-linux
-List-Subscribe: <https://groups.google.com/group/rtc-linux/subscribe>, <mailto:rtc-linux+subscribe-/JYPxA39Uh5TLH3MbocFFw@public.gmane.org>
-List-Unsubscribe: <mailto:googlegroups-manage+712029733259+unsubscribe-/JYPxA39Uh5TLH3MbocFFw@public.gmane.org>,
- <https://groups.google.com/group/rtc-linux/subscribe>
-To: Alexandre Belloni <alexandre.belloni-wi1+55ScJUtKEb57/3fJTNBPR1lH4CV8@public.gmane.org>
-Cc: Logan Gunthorpe <logang-OTvnGxWRz7hWk0Htik3J/w@public.gmane.org>, Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>, Alexander Viro <viro-RmSDqhL/yNMiFSDQTTA3OLVCufUGDwFn@public.gmane.org>, Johannes Thumshirn <jthumshirn-l3A5Bk7waGM@public.gmane.org>, Jan Kara <jack-AlSwsSmVLrQ@public.gmane.org>, Arnd Bergmann <arnd-r2nGTMty4D4@public.gmane.org>, Sajjan Vikas C <vikas.cha.sajjan-ZPxbGqLxI0U@public.gmane.org>, Dmitry Torokhov <dmitry.torokhov-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Linus Walleij <linus.walleij-QSEj5FYQhm4dnm+yROfE0A@public.gmane.org>, Alexandre Courbot <gnurou-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Olof Johansson <olof-nZhT3qVonbNeoWH0uzbU5w@public.gmane.org>, Doug Ledford <dledford-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, Sean Hefty <sean.hefty-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, Hal Rosenstock <hal.rosenstock-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Dmitry Vyukov <dvyukov-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>, Haggai Eran <haggaie-VPRAkNaXOzVWk0Htik3J/w@public.gmane.org>, Parav Pandit <pandit.parav-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Leon Romanovsky <leon-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Jonathan
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: "Sakkinen, Jarkko" <jarkko.sakkinen-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org" <davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Feb 21, 2017 at 3:37 AM, Alexandre Belloni
-<alexandre.belloni-wi1+55ScJUtKEb57/3fJTNBPR1lH4CV8@public.gmane.org> wrote:
-> Hi,
->
-> A small comment, you must always have a commit message. Even if it is
-> small.
+The expectation is that the if the CRB cmd/rsp buffer falls within the
+ACPI region that the entire buffer will be within the reason. Otherwise
+resource reservation will fail when it crosses regions.
 
-Yes, something like: "Replace the open coded initialization of the
-cdev with the new device_add_cdev() helper. The helper takes the
-proper reference against the parent device while the cdev object is
-alive."
+Work around this BIOS bug by limiting the cmd/rsp buffer to the length
+of the declared ACPI region. BIOS vendors should fix this by making
+the ACPI and register length declarations consistent.
 
-With that you can also add:
+Reported-by: davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
+Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+---
+ drivers/char/tpm/tpm_crb.c | 27 +++++++++++++++++++++++++--
+ 1 file changed, 25 insertions(+), 2 deletions(-)
 
-Acked-by: Dan Williams <dan.j.williams-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-
+diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+index a7c870af916c3d..fac1934eedf0bb 100644
+--- a/drivers/char/tpm/tpm_crb.c
++++ b/drivers/char/tpm/tpm_crb.c
+@@ -243,6 +243,27 @@ static void __iomem *crb_map_res(struct device *dev, struct crb_priv *priv,
+ 	return priv->iobase + (new_res.start - io_res->start);
+ }
+ 
++/*
++ * Work around broken BIOSs that return inconsistent values from the ACPI
++ * region vs the registers. Trust the ACPI region. Such broken systems
++ * probably cannot send large TPM commands since the buffer will be truncated.
++ */
++static u64 crb_fixup_cmd_size(struct device *dev, struct resource *io_res,
++			      u64 start, u64 size)
++{
++	if (io_res->start > start || io_res->end < start)
++		return size;
++
++	if (start + size - 1 <= io_res->end)
++		return size;
++
++	dev_err(dev,
++		FW_BUG "ACPI region does not cover the entire command/response buffer. %pr vs %llx %llx\n",
++		io_res, start, size);
++
++	return io_res->end - start + 1;
++}
++
+ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+ 		      struct acpi_table_tpm2 *buf)
+ {
+@@ -278,14 +299,16 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+ 
+ 	cmd_pa = ((u64) ioread32(&priv->cca->cmd_pa_high) << 32) |
+ 		  (u64) ioread32(&priv->cca->cmd_pa_low);
+-	cmd_size = ioread32(&priv->cca->cmd_size);
++	cmd_size = crb_fixup_cmd_size(dev, &io_res, cmd_pa,
++				      ioread32(&priv->cca->cmd_size));
+ 	priv->cmd = crb_map_res(dev, priv, &io_res, cmd_pa, cmd_size);
+ 	if (IS_ERR(priv->cmd))
+ 		return PTR_ERR(priv->cmd);
+ 
+ 	memcpy_fromio(&rsp_pa, &priv->cca->rsp_pa, 8);
+ 	rsp_pa = le64_to_cpu(rsp_pa);
+-	rsp_size = ioread32(&priv->cca->rsp_size);
++	rsp_size = crb_fixup_cmd_size(dev, &io_res, rsp_pa,
++				      ioread32(&priv->cca->rsp_size));
+ 
+ 	if (cmd_pa != rsp_pa) {
+ 		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa, rsp_size);
 -- 
-You received this message because you are subscribed to "rtc-linux".
-Membership options at http://groups.google.com/group/rtc-linux .
-Please read http://groups.google.com/group/rtc-linux/web/checklist
-before submitting a driver.
---- 
-You received this message because you are subscribed to the Google Groups "rtc-linux" group.
-To unsubscribe from this group and stop receiving emails from it, send an email to rtc-linux+unsubscribe-/JYPxA39Uh5TLH3MbocFF+G/Ez6ZCGd0@public.gmane.org
-For more options, visit https://groups.google.com/d/optout.
+2.7.4
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
