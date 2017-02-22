@@ -1,51 +1,50 @@
-From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Subject: Re: [PATCH 1/2] tpm: Apply an adapterlimit for
-	retransmission.
-Date: Wed, 22 Feb 2017 13:39:33 +0100
-Message-ID: <2A0398AC-64F2-493C-9717-01E5366C2159@gmx.de>
+From: Andrew Lunn <andrew@lunn.ch>
+Subject: Re: [tpmdd-devel] [PATCH 1/2] tpm: Apply an adapterlimit for
+ retransmission.
+Date: Wed, 22 Feb 2017 15:01:34 +0100
+Message-ID: <20170222140134.GA23586@lunn.ch>
 References: <20170221144500.502-1-enric.balletbo@collabora.com>
-	<20170221162948.GD25818@lunn.ch>
+ <20170221162948.GD25818@lunn.ch>
+ <ffdfb321-6c9b-06fe-1a90-04da5457b47d@collabora.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170221162948.GD25818-g2DYL2Zd6BY@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Andrew Lunn <andrew-g2DYL2Zd6BY@public.gmane.org>, Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
-Cc: apronin-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Bryan Freed <bfreed-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <ffdfb321-6c9b-06fe-1a90-04da5457b47d@collabora.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Enric Balletbo i Serra <enric.balletbo@collabora.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, apronin@google.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, Wolfram Sang <wsa@the-dreams.de>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Wed, Feb 22, 2017 at 12:16:08PM +0100, Enric Balletbo i Serra wrote:
+> Hi Andrew,
+> 
+> Removing Bryan Freed from the loop as seems his email is not valid anymore. I already CC'ied Andrey which is doing the TPM bit in chromeos kernel.
+> 
+> On 21/02/17 17:29, Andrew Lunn wrote:
+> > On Tue, Feb 21, 2017 at 03:44:59PM +0100, Enric Balletbo i Serra wrote:
+> >> From: Bryan Freed <bfreed@chromium.org>
+> >>
+> >> When the I2C Infineon part is attached to an I2C adapter that imposes
+> >> a size limitation, large requests will fail -EINVAL.
+> >> Retry them with size backoff without re-issuing the 0x05 command
+> >> as this appears to occasionally put the TPM in a bad state.
+> > 
+> > Hi Enric
+> > 
+> > Rather than trying small and smaller transfers, would it not be better
+> > to get the i2c core to expose the quirk info about transfer limits?
+> > 
+> 
+> Sounds a good idea to me, I guess the quirk info can be accessed with
+> 
+>   tpm_dev.client->adapter->quirks->max_read_len
+> 
+> so I think we don't need to touch the i2c core. I'll propose a second version of the patch.
 
+Hi Enric
 
-Am 21. Februar 2017 17:29:48 MEZ schrieb Andrew Lunn <andrew-g2DYL2Zd6BY@public.gmane.org>:
->On Tue, Feb 21, 2017 at 03:44:59PM +0100, Enric Balletbo i Serra wrote:
->> From: Bryan Freed <bfreed-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
->> 
->> When the I2C Infineon part is attached to an I2C adapter that imposes
->> a size limitation, large requests will fail -EINVAL.
->> Retry them with size backoff without re-issuing the 0x05 command
->> as this appears to occasionally put the TPM in a bad state.
->
->Hi Enric
->
->Rather than trying small and smaller transfers, would it not be better
->to get the i2c core to expose the quirk info about transfer limits?
->
-+1
-I think that would be the better idea.
-Peter
->   Andrew
+You should probably ask Wolfram Sang <wsa@the-dreams.de>, the i2c
+subsystem maintainer. He may prefer adding an API call.
 
--- 
-Sent from my mobile
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+	  Andrew
