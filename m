@@ -1,50 +1,62 @@
-From: Andrew Lunn <andrew@lunn.ch>
-Subject: Re: [tpmdd-devel] [PATCH 1/2] tpm: Apply an adapterlimit for
- retransmission.
-Date: Wed, 22 Feb 2017 15:01:34 +0100
-Message-ID: <20170222140134.GA23586@lunn.ch>
-References: <20170221144500.502-1-enric.balletbo@collabora.com>
- <20170221162948.GD25818@lunn.ch>
- <ffdfb321-6c9b-06fe-1a90-04da5457b47d@collabora.com>
+From: Ken Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH v2 4/7] tpm: infrastructure for TPM spaces
+Date: Wed, 22 Feb 2017 12:08:28 -0500
+Message-ID: <9cd7c6b6-a532-ea67-9607-7ba6e4d04f4f@linux.vnet.ibm.com>
+References: <20170216192529.25467-1-jarkko.sakkinen@linux.intel.com>
+	<20170216192529.25467-5-jarkko.sakkinen@linux.intel.com>
+	<58AC85F2.5000406@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <ffdfb321-6c9b-06fe-1a90-04da5457b47d@collabora.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Enric Balletbo i Serra <enric.balletbo@collabora.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, apronin@google.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, Wolfram Sang <wsa@the-dreams.de>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <58AC85F2.5000406-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Feb 22, 2017 at 12:16:08PM +0100, Enric Balletbo i Serra wrote:
-> Hi Andrew,
-> 
-> Removing Bryan Freed from the loop as seems his email is not valid anymore. I already CC'ied Andrey which is doing the TPM bit in chromeos kernel.
-> 
-> On 21/02/17 17:29, Andrew Lunn wrote:
-> > On Tue, Feb 21, 2017 at 03:44:59PM +0100, Enric Balletbo i Serra wrote:
-> >> From: Bryan Freed <bfreed@chromium.org>
-> >>
-> >> When the I2C Infineon part is attached to an I2C adapter that imposes
-> >> a size limitation, large requests will fail -EINVAL.
-> >> Retry them with size backoff without re-issuing the 0x05 command
-> >> as this appears to occasionally put the TPM in a bad state.
-> > 
-> > Hi Enric
-> > 
-> > Rather than trying small and smaller transfers, would it not be better
-> > to get the i2c core to expose the quirk info about transfer limits?
-> > 
-> 
-> Sounds a good idea to me, I guess the quirk info can be accessed with
-> 
->   tpm_dev.client->adapter->quirks->max_read_len
-> 
-> so I think we don't need to touch the i2c core. I'll propose a second version of the patch.
+On 2/21/2017 1:24 PM, Nayna wrote:
+>
+> [snip]
+>>
+>> 1. Take locks.
+>> 2. Load transient objects from the backing storage by using ContextLoad
+>>     and map virtual handles to physical handles.
+>> 3. Perform the transaction.
+>> 4. Save transient objects to backing storage by using ContextSave and
+>>     map resulting physical handle to virtual handle if there is such.
+>>
+>> This commit does not implement virtualization support for hmac and
+>> policy sessions.
+>>
+>
+> If I have understood discussions correctly, I assume, that kernel TPM
+> operations will also be routed via RM. And I think that is not happening
+> now with these patches.
 
-Hi Enric
+There is one corner case that requires kernel operations to go through
+the RM, and that's the session context regapping.  If the kernel did not 
+go through the RM, it could not handle TPM_RC_CONTEXT_GAP.
 
-You should probably ask Wolfram Sang <wsa@the-dreams.de>, the i2c
-subsystem maintainer. He may prefer adding an API call.
+I believe that kernel operations such as PCR extend, that don't require
+sessions, do not have to go through the RM.
 
-	  Andrew
+Kernel operations that use objects perhaps can bypass the RM as long as 
+there is a lock and the kernel also context saves objects and returns 
+the TPM to the empty state before it releases the lock.
+
+Finally, I suspect that the RM should reserve 3 sessions for kernel
+operations, so the kernel can't block because user space applications 
+have filled all the session slots.
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
