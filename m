@@ -1,67 +1,66 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm_tis_core: Choose appropriate timeout for reading
- burstcount
-Date: Wed, 22 Feb 2017 23:13:01 +0200
-Message-ID: <20170222211301.wnm5mb52civnmcdj@intel.com>
-References: <1487259216-28955-1-git-send-email-peter.huewe@infineon.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH 0/5] Fix whole native SPI TPM driver
+Date: Wed, 22 Feb 2017 23:19:24 +0200
+Message-ID: <20170222211924.zdikc5qfzuxiggte@intel.com>
+References: <1487261306-2494-1-git-send-email-peter.huewe@infineon.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <stable-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1487259216-28955-1-git-send-email-peter.huewe@infineon.com>
-Sender: stable-owner@vger.kernel.org
-To: Peter Huewe <peter.huewe@infineon.com>
-Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, peterhuewe@gmx.de, Alexander Steffen <Alexander.Steffen@infineon.com>, stable@vger.kernel.org
+In-Reply-To: <1487261306-2494-1-git-send-email-peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Feb 16, 2017 at 03:33:36PM +0000, Peter Huewe wrote:
-> From: Alexander Steffen <Alexander.Steffen@infineon.com>
+On Thu, Feb 16, 2017 at 04:08:21PM +0000, Peter Huewe wrote:
+> During our testing it showed that unfortunately the whole native spi tpm driver
+> was more or less non-functional since it was merged, e.g. the wrong byte for
+> waitstate handling was used and transfers larger than 64 bytes did not work at all.
 > 
-> TIS v1.3 for TPM 1.2 and PTP for TPM 2.0 disagree about which timeout
-> value applies to reading a valid burstcount. It is TIMEOUT_D according to
-> TIS, but TIMEOUT_A according to PTP, so choose the appropriate value
-> depending on whether we deal with a TPM 1.2 or a TPM 2.0.
+> This was probably caused by the merging of the different approaches back then,
+> as the initial RFC patch did not have these problems, and also my sudden lack
+> of time/commitment back then.
+> I'm sorry that the final driver code went untested for that long time.
 > 
-> This is important since according to the PTP TIMEOUT_D is much smaller
-> than TIMEOUT_A. So the previous implementation could run into timeouts
-> with a TPM 2.0, even though the TPM was behaving perfectly fine.
-> 
-> During tpm2_probe TIMEOUT_D will be used even with a TPM 2.0, because
-> TPM_CHIP_FLAG_TPM2 is not yet set. This is fine, since the timeout values
-> will only be changed afterwards by tpm_get_timeouts. Until then
-> TIS_TIMEOUT_D_MAX applies, which is large enough.
-> 
-> Cc: stable@vger.kernel.org
-> Fixes: aec04cbdf723 ("tpm: TPM 2.0 FIFO Interface")
-> 
-> Signed-off-by: Alexander Steffen <Alexander.Steffen@infineon.com>
-> Signed-off-by: Peter Huewe <peter.huewe@infineon.com>
-
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-
-/Jarkko
-
-> ---
->  drivers/char/tpm/tpm_tis_core.c | 6 ++++--
->  1 file changed, 4 insertions(+), 2 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-> index c0f296b5d413..fc0e9a2734ed 100644
-> --- a/drivers/char/tpm/tpm_tis_core.c
-> +++ b/drivers/char/tpm/tpm_tis_core.c
-> @@ -160,8 +160,10 @@ static int get_burstcount(struct tpm_chip *chip)
->  	u32 value;
+> This patch set fixes these issues one by one.
+> In order to avoid duplication the read/write function was consolidated to one
+> transfer function, so we do not have to apply the same fix at two locations.
+> Maybe consider squashing it - we splitted it for easier review.
 >  
->  	/* wait for burstcount */
-> -	/* which timeout value, spec has 2 answers (c & d) */
-> -	stop = jiffies + chip->timeout_d;
-> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> +		stop = jiffies + chip->timeout_a;
-> +	else
-> +		stop = jiffies + chip->timeout_d;
->  	do {
->  		rc = tpm_tis_read32(priv, TPM_STS(priv->locality), &value);
->  		if (rc < 0)
+> Affected Kernels: 4.8, 4.9, 4.10
+> Patchset was tested on Raspberry Pi2 with SLB9670 (TPM1.2 and TPM2.0)
+> 
+> Peter Huewe (5):
+>   tpm_tis_spi: Use single function to transfer data
+>   tpm_tis_spi: Abort transfer when too many wait states are signaled
+>   tpm_tis_spi: Check correct byte for wait state indicator
+>   tpm_tis_spi: Remove limitation of transfers to MAX_SPI_FRAMESIZE bytes
+>   tpm_tis_spi: Add small delay after last transfer
+> 
+>  drivers/char/tpm/tpm_tis_spi.c | 163 +++++++++++++++++------------------------
+>  1 file changed, 69 insertions(+), 94 deletions(-)
+> 
 > -- 
 > 2.7.4
 > 
+
+I also found type errors a whilea ago:
+
+https://patchwork.kernel.org/patch/9547993/
+
+Do this take care of these issues? 
+
+/JArkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
