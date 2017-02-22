@@ -1,62 +1,73 @@
-From: Ken Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v2 4/7] tpm: infrastructure for TPM spaces
-Date: Wed, 22 Feb 2017 12:08:28 -0500
-Message-ID: <9cd7c6b6-a532-ea67-9607-7ba6e4d04f4f@linux.vnet.ibm.com>
+From: James Bottomley <James.Bottomley@HansenPartnership.com>
+Subject: Re: [tpmdd-devel] [PATCH v2 4/7] tpm: infrastructure for TPM spaces
+Date: Wed, 22 Feb 2017 12:39:19 -0500
+Message-ID: <1487785159.2376.27.camel@HansenPartnership.com>
 References: <20170216192529.25467-1-jarkko.sakkinen@linux.intel.com>
-	<20170216192529.25467-5-jarkko.sakkinen@linux.intel.com>
-	<58AC85F2.5000406@linux.vnet.ibm.com>
+         <20170216192529.25467-5-jarkko.sakkinen@linux.intel.com>
+         <58AC85F2.5000406@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <58AC85F2.5000406-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <58AC85F2.5000406@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Nayna <nayna@linux.vnet.ibm.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net
+Cc: dhowells@redhat.com, linux-security-module@vger.kernel.org, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 2/21/2017 1:24 PM, Nayna wrote:
->
-> [snip]
->>
->> 1. Take locks.
->> 2. Load transient objects from the backing storage by using ContextLoad
->>     and map virtual handles to physical handles.
->> 3. Perform the transaction.
->> 4. Save transient objects to backing storage by using ContextSave and
->>     map resulting physical handle to virtual handle if there is such.
->>
->> This commit does not implement virtualization support for hmac and
->> policy sessions.
->>
->
+On Tue, 2017-02-21 at 23:54 +0530, Nayna wrote:
+> 
+> On 02/17/2017 12:55 AM, Jarkko Sakkinen wrote:
+> > Added an ability to virtualize TPM commands into an isolated 
+> > context that we call a TPM space because the word context is 
+> > already heavily used in the TPM specification. Both the handle 
+> > areas and bodies (where necessary) are virtualized.
+> > 
+> > The mechanism works by adding a new parameter struct tpm_space to 
+> > the tpm_transmit() function. This new structure contains the list 
+> > of virtual handles and a buffer of page size (currently) for
+> > backing storage.
+> > 
+> > When tpm_transmit() is called with a struct tpm_space instance it 
+> > will execute the following sequence:
+> > 
+> > 1. Take locks.
+> > 2. Load transient objects from the backing storage by using
+> > ContextLoad
+> >     and map virtual handles to physical handles.
+> > 3. Perform the transaction.
+> > 4. Save transient objects to backing storage by using ContextSave
+> > and
+> >     map resulting physical handle to virtual handle if there is
+> > such.
+> > 
+> > This commit does not implement virtualization support for hmac and
+> > policy sessions.
+> > 
+> 
 > If I have understood discussions correctly, I assume, that kernel TPM
-> operations will also be routed via RM. And I think that is not happening
-> now with these patches.
+> operations will also be routed via RM. And I think that is not 
+> happening now with these patches.
+> 
+> Am I missing something ?
 
-There is one corner case that requires kernel operations to go through
-the RM, and that's the session context regapping.  If the kernel did not 
-go through the RM, it could not handle TPM_RC_CONTEXT_GAP.
+Right at the moment the kernel use of tpm2 looks like
 
-I believe that kernel operations such as PCR extend, that don't require
-sessions, do not have to go through the RM.
+acquire chip->tpm_mutex
+load key
+process key
+unload key
+release chip->tpm_mutex
 
-Kernel operations that use objects perhaps can bypass the RM as long as 
-there is a lock and the kernel also context saves objects and returns 
-the TPM to the empty state before it releases the lock.
+While it does this, there's no need for it to have a RM interface
+because what it does between the acquisition and drop of the mutex
+can't be seen by or have any effect on userspace (whether it uses the
+RM or not).  So currently, the question doesn't arise, which is the
+situation you see.
 
-Finally, I suspect that the RM should reserve 3 sessions for kernel
-operations, so the kernel can't block because user space applications 
-have filled all the session slots.
+When the kernel needs to use resources that persisted beyond it
+dropping the chip->tpm_mutex (say using policy or audit sessions), then
+it would need to become a customer of the RM.
 
+James
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
