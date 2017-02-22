@@ -1,69 +1,67 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 4/7] tpm: infrastructure for TPM spaces
-Date: Wed, 22 Feb 2017 23:08:53 +0200
-Message-ID: <20170222210853.lemfh54neoq4d6qw@intel.com>
-References: <20170216192529.25467-1-jarkko.sakkinen@linux.intel.com>
-	<20170216192529.25467-5-jarkko.sakkinen@linux.intel.com>
-	<58AC85F2.5000406@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH] tpm_tis_core: Choose appropriate timeout for reading
+ burstcount
+Date: Wed, 22 Feb 2017 23:13:01 +0200
+Message-ID: <20170222211301.wnm5mb52civnmcdj@intel.com>
+References: <1487259216-28955-1-git-send-email-peter.huewe@infineon.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <stable-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <58AC85F2.5000406-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+In-Reply-To: <1487259216-28955-1-git-send-email-peter.huewe@infineon.com>
+Sender: stable-owner@vger.kernel.org
+To: Peter Huewe <peter.huewe@infineon.com>
+Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, peterhuewe@gmx.de, Alexander Steffen <Alexander.Steffen@infineon.com>, stable@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Feb 21, 2017 at 11:54:50PM +0530, Nayna wrote:
+On Thu, Feb 16, 2017 at 03:33:36PM +0000, Peter Huewe wrote:
+> From: Alexander Steffen <Alexander.Steffen@infineon.com>
 > 
+> TIS v1.3 for TPM 1.2 and PTP for TPM 2.0 disagree about which timeout
+> value applies to reading a valid burstcount. It is TIMEOUT_D according to
+> TIS, but TIMEOUT_A according to PTP, so choose the appropriate value
+> depending on whether we deal with a TPM 1.2 or a TPM 2.0.
 > 
-> On 02/17/2017 12:55 AM, Jarkko Sakkinen wrote:
-> > Added an ability to virtualize TPM commands into an isolated context
-> > that we call a TPM space because the word context is already heavily
-> > used in the TPM specification. Both the handle areas and bodies (where
-> > necessary) are virtualized.
-> > 
-> > The mechanism works by adding a new parameter struct tpm_space to the
-> > tpm_transmit() function. This new structure contains the list of virtual
-> > handles and a buffer of page size (currently) for backing storage.
-> > 
-> > When tpm_transmit() is called with a struct tpm_space instance it will
-> > execute the following sequence:
-> > 
-> > 1. Take locks.
-> > 2. Load transient objects from the backing storage by using ContextLoad
-> >     and map virtual handles to physical handles.
-> > 3. Perform the transaction.
-> > 4. Save transient objects to backing storage by using ContextSave and
-> >     map resulting physical handle to virtual handle if there is such.
-> > 
-> > This commit does not implement virtualization support for hmac and
-> > policy sessions.
-> > 
+> This is important since according to the PTP TIMEOUT_D is much smaller
+> than TIMEOUT_A. So the previous implementation could run into timeouts
+> with a TPM 2.0, even though the TPM was behaving perfectly fine.
 > 
-> If I have understood discussions correctly, I assume, that kernel TPM
-> operations will also be routed via RM. And I think that is not happening now
-> with these patches.
+> During tpm2_probe TIMEOUT_D will be used even with a TPM 2.0, because
+> TPM_CHIP_FLAG_TPM2 is not yet set. This is fine, since the timeout values
+> will only be changed afterwards by tpm_get_timeouts. Until then
+> TIS_TIMEOUT_D_MAX applies, which is large enough.
 > 
-> Am I missing something ?
+> Cc: stable@vger.kernel.org
+> Fixes: aec04cbdf723 ("tpm: TPM 2.0 FIFO Interface")
 > 
-> Thanks & Regards,
->    - Nayna
+> Signed-off-by: Alexander Steffen <Alexander.Steffen@infineon.com>
+> Signed-off-by: Peter Huewe <peter.huewe@infineon.com>
 
-Nope. It's not in the scope of this patch set and there are not
-kernel use cases at the moment that would require it.
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
 /Jarkko
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+> ---
+>  drivers/char/tpm/tpm_tis_core.c | 6 ++++--
+>  1 file changed, 4 insertions(+), 2 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+> index c0f296b5d413..fc0e9a2734ed 100644
+> --- a/drivers/char/tpm/tpm_tis_core.c
+> +++ b/drivers/char/tpm/tpm_tis_core.c
+> @@ -160,8 +160,10 @@ static int get_burstcount(struct tpm_chip *chip)
+>  	u32 value;
+>  
+>  	/* wait for burstcount */
+> -	/* which timeout value, spec has 2 answers (c & d) */
+> -	stop = jiffies + chip->timeout_d;
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		stop = jiffies + chip->timeout_a;
+> +	else
+> +		stop = jiffies + chip->timeout_d;
+>  	do {
+>  		rc = tpm_tis_read32(priv, TPM_STS(priv->locality), &value);
+>  		if (rc < 0)
+> -- 
+> 2.7.4
+> 
