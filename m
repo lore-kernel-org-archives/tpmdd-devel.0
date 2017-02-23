@@ -1,14 +1,13 @@
-From: Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [Linux-ima-devel] [Question]: Question on the
- hash algorithm of evm and pcr_extend?
-Date: Thu, 23 Feb 2017 10:54:30 -0500
-Message-ID: <1487865270.3193.124.camel@linux.vnet.ibm.com>
-References: <806EF96D8ABD354A89C18BBED3F86165B8B0D2CC@NKGEML515-MBX.china.huawei.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: [PATCH] tpm: Use the right clean up after cdev_add
+	completes
+Date: Thu, 23 Feb 2017 14:19:14 -0700
+Message-ID: <20170223211914.GA12752@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <806EF96D8ABD354A89C18BBED3F86165B8B0D2CC-DDyGIOodwTO05WiQPbXitQK1hpo4iccwjNknBlVQO8k@public.gmane.org>
+Content-Disposition: inline
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,52 +16,100 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Likun (Hw)" <hw.likun-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-Cc: "linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "(tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org)" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, 2017-02-23 at 09:36 +0000, Likun (Hw) wrote:
-> Hi,
-> 
-> *         Is there any plan to support other evm_hmac algorithms (like
-> we done on  ima file data hash algorithm), the sha2 or other recent
-> algorithms are more hardened than sha1 after all.
+Once cdev_add is done the device node is visible to user space and
+could have been opened. Thus we have to go through the locking
+process in tpm_del_char_device if device_add fails.
 
-The EVM hmac values are system local, so adding support for other hash
-algorithms  shouldn't be a problem.  Similarly adding signature support
-larger hash algorithms should be fine.
+Fixes: 2c91ce8523a ("tpm: fix the rollback in tpm_chip_register()")
+Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+---
+ drivers/char/tpm/tpm-chip.c | 43 ++++++++++++++++++++++---------------------
+ 1 file changed, 22 insertions(+), 21 deletions(-)
 
-Patches are welcome to add this support.
+static function moved to avoid a prototype
 
-> *         We have supported arbitrary hash algorithms for ima file
-> data measurement  since commit
-> e7a2ad7eb6f48ad80c70a22dd8167fb34b409466, but the ima template hash
-> algorithm is still sha1 due to the tpm1.2 pcr limitation.
-> But as we all know ,the tpm2 has supported sha2/sm3 and other
-> algorithms , is there any approach to use TPM2.0 better ? For
-> example , could we use sha2 as default digest algorithm, and when we
-> meet tpm1.2, we truncate the digest from 32 to 20 bytes ?
+This was noticed while reviewing the cdev patchset from Logan
 
-The two patches that Nayna Jain just upstreamed determine the active PCR
-banks and extend those banks with zero padded SHA1 hash into the
-multiple TPM banks.
-
-a06c59d417fb tpm: enhance TPM 2.0 PCR extend to support multiple banks
-104e5f664d3a tpm: implement TPM 2.0 capability to get active PCR banks
-
-These patches were a stop gap measure until support is added for a "hash
-agile" IMA measurement format.  It would be straight forward to replace
-the TPM hash algorithm size used in the IMA measurement list with
-something that is configurable(eg. Kconfig option), but that puts the
-burden on the attestation servers to determine the hash size being used.
-
-A better solution would be to add support for including multiple hashes
-in the IMA measurement list.  Whether we will ever support multiple
-hashes in the measurement list is irrelevant, but it provides the needed
-flexibility.
-
-Mimi
-
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index a77262d31911a1..c82acf0a6e7353 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -226,6 +226,26 @@ struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
+ }
+ EXPORT_SYMBOL_GPL(tpmm_chip_alloc);
+ 
++static void tpm_del_char_device(struct tpm_chip *chip, bool with_device)
++{
++	cdev_del(&chip->cdev);
++	if (with_device) {
++		device_del(&chip->dev);
++
++		/* Make the chip unavailable. */
++		mutex_lock(&idr_lock);
++		idr_replace(&dev_nums_idr, NULL, chip->dev_num);
++		mutex_unlock(&idr_lock);
++	}
++
++	/* Make the driver uncallable. */
++	down_write(&chip->ops_sem);
++	if (chip->flags & TPM_CHIP_FLAG_TPM2)
++		tpm2_shutdown(chip, TPM2_SU_CLEAR);
++	chip->ops = NULL;
++	up_write(&chip->ops_sem);
++}
++
+ static int tpm_add_char_device(struct tpm_chip *chip)
+ {
+ 	int rc;
+@@ -246,8 +266,7 @@ static int tpm_add_char_device(struct tpm_chip *chip)
+ 			"unable to device_register() %s, major %d, minor %d, err=%d\n",
+ 			dev_name(&chip->dev), MAJOR(chip->dev.devt),
+ 			MINOR(chip->dev.devt), rc);
+-
+-		cdev_del(&chip->cdev);
++		tpm_del_char_device(chip, false);
+ 		return rc;
+ 	}
+ 
+@@ -259,24 +278,6 @@ static int tpm_add_char_device(struct tpm_chip *chip)
+ 	return rc;
+ }
+ 
+-static void tpm_del_char_device(struct tpm_chip *chip)
+-{
+-	cdev_del(&chip->cdev);
+-	device_del(&chip->dev);
+-
+-	/* Make the chip unavailable. */
+-	mutex_lock(&idr_lock);
+-	idr_replace(&dev_nums_idr, NULL, chip->dev_num);
+-	mutex_unlock(&idr_lock);
+-
+-	/* Make the driver uncallable. */
+-	down_write(&chip->ops_sem);
+-	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+-		tpm2_shutdown(chip, TPM2_SU_CLEAR);
+-	chip->ops = NULL;
+-	up_write(&chip->ops_sem);
+-}
+-
+ static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
+ {
+ 	struct attribute **i;
+@@ -384,6 +385,6 @@ void tpm_chip_unregister(struct tpm_chip *chip)
+ {
+ 	tpm_del_legacy_sysfs(chip);
+ 	tpm_bios_log_teardown(chip);
+-	tpm_del_char_device(chip);
++	tpm_del_char_device(chip, true);
+ }
+ EXPORT_SYMBOL_GPL(tpm_chip_unregister);
+-- 
+2.7.4
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
