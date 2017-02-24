@@ -1,86 +1,55 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 4/5] tpm_tis_spi: Remove limitation of
- transfers to MAX_SPI_FRAMESIZE bytes
-Date: Fri, 24 Feb 2017 13:55:52 +0200
-Message-ID: <20170224115552.rmg7ox2rneoz75yf@intel.com>
-References: <1487261306-2494-1-git-send-email-peter.huewe@infineon.com>
-	<1487261306-2494-5-git-send-email-peter.huewe@infineon.com>
+From: James Bottomley <James.Bottomley@HansenPartnership.com>
+Subject: Re: [PATCH v2 4/7] tpm: infrastructure for TPM spaces
+Date: Fri, 24 Feb 2017 07:53:22 -0500
+Message-ID: <1487940802.2249.14.camel@HansenPartnership.com>
+References: <20170216192529.25467-1-jarkko.sakkinen@linux.intel.com>
+         <20170216192529.25467-5-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1487261306-2494-5-git-send-email-peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170216192529.25467-5-jarkko.sakkinen@linux.intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net
+Cc: linux-security-module@vger.kernel.org, dhowells@redhat.com, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Feb 16, 2017 at 04:08:25PM +0000, Peter Huewe wrote:
-> Limiting transfers to MAX_SPI_FRAMESIZE was not expected by the upper
-> layers, as tpm_tis has no such limitation. Add a loop to hide that
-> limitation.
+On Thu, 2017-02-16 at 21:25 +0200, Jarkko Sakkinen wrote:
+> Added an ability to virtualize TPM commands into an isolated context
+> that we call a TPM space because the word context is already heavily
+> used in the TPM specification. Both the handle areas and bodies
+> (where
+> necessary) are virtualized.
 > 
-> Cc: <stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
-> Fixes: 0edbfea537d1 ("tpm/tpm_tis_spi: Add support for spi phy")
-> Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-> Signed-off-by: Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-> ---
->  drivers/char/tpm/tpm_tis_spi.c | 108 ++++++++++++++++++++++-------------------
->  1 file changed, 57 insertions(+), 51 deletions(-)
+> The mechanism works by adding a new parameter struct tpm_space to the
+> tpm_transmit() function. This new structure contains the list of
+> virtual
+> handles and a buffer of page size (currently) for backing storage.
 > 
-> diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
-> index 16938e2253d2..b50c5b072df3 100644
-> --- a/drivers/char/tpm/tpm_tis_spi.c
-> +++ b/drivers/char/tpm/tpm_tis_spi.c
-> @@ -61,68 +61,74 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u8 len,
->  {
->  	struct tpm_tis_spi_phy *phy = to_tpm_tis_spi_phy(data);
->  	int ret;
-> -	struct spi_message m;
-> -	struct spi_transfer spi_xfer = {
-> -		.tx_buf = phy->tx_buf,
-> -		.rx_buf = phy->rx_buf,
-> -		.len = 4,
-> -		.cs_change = 1,
-> -	};
-> -
-> -	if (len > MAX_SPI_FRAMESIZE)
-> -		return -ENOMEM;
->  
-> -	phy->tx_buf[0] = direction | (len - 1);
-> -	phy->tx_buf[1] = 0xd4;
-> -	phy->tx_buf[2] = addr >> 8;
-> -	phy->tx_buf[3] = addr;
-> +	spi_bus_lock(phy->spi_device->master);
->  
-> -	spi_message_init(&m);
-> -	spi_message_add_tail(&spi_xfer, &m);
-> +	while (len) {
-> +		struct spi_message m;
-> +		struct spi_transfer spi_xfer = {
-> +			.tx_buf = phy->tx_buf,
-> +			.rx_buf = phy->rx_buf,
-> +			.len = 4,
-> +			.cs_change = 1,
-> +		};
+> When tpm_transmit() is called with a struct tpm_space instance it
+> will
+> execute the following sequence:
+> 
+> 1. Take locks.
+> 2. Load transient objects from the backing storage by using
+> ContextLoad
+>    and map virtual handles to physical handles.
+> 3. Perform the transaction.
+> 4. Save transient objects to backing storage by using ContextSave and
+>    map resulting physical handle to virtual handle if there is such.
+> 
+> This commit does not implement virtualization support for hmac and
+> policy sessions.
+> 
+> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
-I like the habbit of keeping all the declarations in the beginning of
-the function as we mostly have in the subsystem. It gives a fast view
-what the function eats and how much stack it uses.
+For patches 1-4 you can add 
 
-If you really think that declaring spi_xfer here is a good idea please
-create a separate "helper" function for it.
+Reviewed-by: James Bottomley <James.Bottomley@HansenPartnership.com>
 
-/Jarkko
+Just re-running a build with the latest kernel for my laptop to add
+tested by.
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+James
+
+
