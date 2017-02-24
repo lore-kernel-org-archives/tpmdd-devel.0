@@ -1,21 +1,16 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v2 6/7] tpm: expose spaces via a device
-	link /dev/tpms<n>
-Date: Fri, 24 Feb 2017 13:52:01 -0700
-Message-ID: <20170224205200.GA26547@obsidianresearch.com>
-References: <20170216192529.25467-1-jarkko.sakkinen@linux.intel.com>
-	<20170216192529.25467-7-jarkko.sakkinen@linux.intel.com>
-	<20170223090917.jq7thil5ggjmagil@intel.com>
-	<1487941328.2249.23.camel@HansenPartnership.com>
-	<20170224173922.qwuhfxeitbyct52o@intel.com>
-	<20170224181126.GC22491@obsidianresearch.com>
-	<1487968155.2190.14.camel@HansenPartnership.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm: Use the right clean up after
+	cdev_add completes
+Date: Fri, 24 Feb 2017 22:59:50 +0200
+Message-ID: <20170224205949.u63xb5qhqzd7lqtp@intel.com>
+References: <20170223211914.GA12752@obsidianresearch.com>
+	<20170224174354.w5e2v3nxntod72je@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1487968155.2190.14.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+In-Reply-To: <20170224174354.w5e2v3nxntod72je-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -24,40 +19,39 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Feb 24, 2017 at 03:29:15PM -0500, James Bottomley wrote:
-> On Fri, 2017-02-24 at 11:11 -0700, Jason Gunthorpe wrote:
-> > On Fri, Feb 24, 2017 at 07:39:22PM +0200, Jarkko Sakkinen wrote:
+On Fri, Feb 24, 2017 at 07:43:54PM +0200, Jarkko Sakkinen wrote:
+> On Thu, Feb 23, 2017 at 02:19:14PM -0700, Jason Gunthorpe wrote:
+> > Once cdev_add is done the device node is visible to user space and
+> > could have been opened. Thus we have to go through the locking
+> > process in tpm_del_char_device if device_add fails.
 > > 
-> > > > I think therefore that tpmns<n> for TPM Namespace would be very
-> > > > appropriate.
-> > > 
-> > > Makes sense. We can go with tpmns.
-> > 
-> > When we have talked about TPM namespaces in the past it has been
-> > around the idea of restricting which TPMs the namespace has access 
-> > too and changing the 'kernel tpm' for that namespace.
+> > Fixes: 2c91ce8523a ("tpm: fix the rollback in tpm_chip_register()")
+> > Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 > 
-> Well, you know, nothing in the TPM Space code prevents us from exposing
-> the namespace so that it could be shared.  However, I think the
-> namespace follows connect (device open) paradigm is pretty much the
-> behaviour everyone (including the kernel) wants, mostly because TPM2
-> has such a tiny amount of resources that you're always dealing with
-> loadable keys meaning you don't really want to see anyone else's
-> volatile state.
+> Pushed.
 
-I'm not arguing with that use model, I am asking what do you want to
-call the future feature that restricts which TPMs a process can view
-if you want to use the word namespace for the resource manager?
+It would make easier to merge this with resource manager commits if
+there was instead
 
-This is something Stephen B has been exploring in conjunction with
-vtpm. (eg restrict a container to only use a single vtpm and ban it
-from the system tpm)
+void tpm_chip_shutdown(struct tpm_chip *chip)
+{
+	/* Make the driver uncallable. */
+	down_write(&chip->ops_sem);
+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+		tpm2_shutdown(chip, TPM2_SU_CLEAR);
+	chip->ops = NULL;
+	up_write(&chip->ops_sem);
+}
 
-Jason
+And you would call this instead of wiring into tpm_del_char_device.
+
+I can update the commit.
+
+/Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
