@@ -1,15 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm crb: Work around BIOS's that report
- the wrong ACPI region size
-Date: Fri, 24 Feb 2017 19:42:42 +0200
-Message-ID: <20170224174242.6wonsevj2i2gls5f@intel.com>
-References: <20170221211424.GA16091@obsidianresearch.com>
+Subject: Re: [PATCH] tpm: Use the right clean up after
+	cdev_add completes
+Date: Fri, 24 Feb 2017 19:43:54 +0200
+Message-ID: <20170224174354.w5e2v3nxntod72je@intel.com>
+References: <20170223211914.GA12752@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170221211424.GA16091-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <20170223211914.GA12752-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,83 +19,105 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: "Sakkinen, Jarkko" <jarkko.sakkinen-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org" <davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Feb 21, 2017 at 02:14:24PM -0700, Jason Gunthorpe wrote:
-> The expectation is that the if the CRB cmd/rsp buffer falls within the
-> ACPI region that the entire buffer will be within the reason. Otherwise
-> resource reservation will fail when it crosses regions.
+On Thu, Feb 23, 2017 at 02:19:14PM -0700, Jason Gunthorpe wrote:
+> Once cdev_add is done the device node is visible to user space and
+> could have been opened. Thus we have to go through the locking
+> process in tpm_del_char_device if device_add fails.
 > 
-> Work around this BIOS bug by limiting the cmd/rsp buffer to the length
-> of the declared ACPI region. BIOS vendors should fix this by making
-> the ACPI and register length declarations consistent.
-> 
-> Reported-by: davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
+> Fixes: 2c91ce8523a ("tpm: fix the rollback in tpm_chip_register()")
 > Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 
-I'll have to wait until Davide gives a tested-by.
+Pushed.
 
 /Jarkko
 
 > ---
->  drivers/char/tpm/tpm_crb.c | 27 +++++++++++++++++++++++++--
->  1 file changed, 25 insertions(+), 2 deletions(-)
+>  drivers/char/tpm/tpm-chip.c | 43 ++++++++++++++++++++++---------------------
+>  1 file changed, 22 insertions(+), 21 deletions(-)
 > 
-> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> index a7c870af916c3d..fac1934eedf0bb 100644
-> --- a/drivers/char/tpm/tpm_crb.c
-> +++ b/drivers/char/tpm/tpm_crb.c
-> @@ -243,6 +243,27 @@ static void __iomem *crb_map_res(struct device *dev, struct crb_priv *priv,
->  	return priv->iobase + (new_res.start - io_res->start);
+> static function moved to avoid a prototype
+> 
+> This was noticed while reviewing the cdev patchset from Logan
+> 
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index a77262d31911a1..c82acf0a6e7353 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -226,6 +226,26 @@ struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
 >  }
+>  EXPORT_SYMBOL_GPL(tpmm_chip_alloc);
 >  
-> +/*
-> + * Work around broken BIOSs that return inconsistent values from the ACPI
-> + * region vs the registers. Trust the ACPI region. Such broken systems
-> + * probably cannot send large TPM commands since the buffer will be truncated.
-> + */
-> +static u64 crb_fixup_cmd_size(struct device *dev, struct resource *io_res,
-> +			      u64 start, u64 size)
+> +static void tpm_del_char_device(struct tpm_chip *chip, bool with_device)
 > +{
-> +	if (io_res->start > start || io_res->end < start)
-> +		return size;
+> +	cdev_del(&chip->cdev);
+> +	if (with_device) {
+> +		device_del(&chip->dev);
 > +
-> +	if (start + size - 1 <= io_res->end)
-> +		return size;
+> +		/* Make the chip unavailable. */
+> +		mutex_lock(&idr_lock);
+> +		idr_replace(&dev_nums_idr, NULL, chip->dev_num);
+> +		mutex_unlock(&idr_lock);
+> +	}
 > +
-> +	dev_err(dev,
-> +		FW_BUG "ACPI region does not cover the entire command/response buffer. %pr vs %llx %llx\n",
-> +		io_res, start, size);
-> +
-> +	return io_res->end - start + 1;
+> +	/* Make the driver uncallable. */
+> +	down_write(&chip->ops_sem);
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		tpm2_shutdown(chip, TPM2_SU_CLEAR);
+> +	chip->ops = NULL;
+> +	up_write(&chip->ops_sem);
 > +}
 > +
->  static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
->  		      struct acpi_table_tpm2 *buf)
+>  static int tpm_add_char_device(struct tpm_chip *chip)
 >  {
-> @@ -278,14 +299,16 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+>  	int rc;
+> @@ -246,8 +266,7 @@ static int tpm_add_char_device(struct tpm_chip *chip)
+>  			"unable to device_register() %s, major %d, minor %d, err=%d\n",
+>  			dev_name(&chip->dev), MAJOR(chip->dev.devt),
+>  			MINOR(chip->dev.devt), rc);
+> -
+> -		cdev_del(&chip->cdev);
+> +		tpm_del_char_device(chip, false);
+>  		return rc;
+>  	}
 >  
->  	cmd_pa = ((u64) ioread32(&priv->cca->cmd_pa_high) << 32) |
->  		  (u64) ioread32(&priv->cca->cmd_pa_low);
-> -	cmd_size = ioread32(&priv->cca->cmd_size);
-> +	cmd_size = crb_fixup_cmd_size(dev, &io_res, cmd_pa,
-> +				      ioread32(&priv->cca->cmd_size));
->  	priv->cmd = crb_map_res(dev, priv, &io_res, cmd_pa, cmd_size);
->  	if (IS_ERR(priv->cmd))
->  		return PTR_ERR(priv->cmd);
+> @@ -259,24 +278,6 @@ static int tpm_add_char_device(struct tpm_chip *chip)
+>  	return rc;
+>  }
 >  
->  	memcpy_fromio(&rsp_pa, &priv->cca->rsp_pa, 8);
->  	rsp_pa = le64_to_cpu(rsp_pa);
-> -	rsp_size = ioread32(&priv->cca->rsp_size);
-> +	rsp_size = crb_fixup_cmd_size(dev, &io_res, rsp_pa,
-> +				      ioread32(&priv->cca->rsp_size));
->  
->  	if (cmd_pa != rsp_pa) {
->  		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa, rsp_size);
+> -static void tpm_del_char_device(struct tpm_chip *chip)
+> -{
+> -	cdev_del(&chip->cdev);
+> -	device_del(&chip->dev);
+> -
+> -	/* Make the chip unavailable. */
+> -	mutex_lock(&idr_lock);
+> -	idr_replace(&dev_nums_idr, NULL, chip->dev_num);
+> -	mutex_unlock(&idr_lock);
+> -
+> -	/* Make the driver uncallable. */
+> -	down_write(&chip->ops_sem);
+> -	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> -		tpm2_shutdown(chip, TPM2_SU_CLEAR);
+> -	chip->ops = NULL;
+> -	up_write(&chip->ops_sem);
+> -}
+> -
+>  static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
+>  {
+>  	struct attribute **i;
+> @@ -384,6 +385,6 @@ void tpm_chip_unregister(struct tpm_chip *chip)
+>  {
+>  	tpm_del_legacy_sysfs(chip);
+>  	tpm_bios_log_teardown(chip);
+> -	tpm_del_char_device(chip);
+> +	tpm_del_char_device(chip, true);
+>  }
+>  EXPORT_SYMBOL_GPL(tpm_chip_unregister);
 > -- 
 > 2.7.4
-> 
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
