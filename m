@@ -1,67 +1,67 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v2 6/7] tpm: expose spaces via a device link /dev/tpms<n>
-Date: Fri, 24 Feb 2017 19:39:22 +0200
-Message-ID: <20170224173922.qwuhfxeitbyct52o@intel.com>
-References: <20170216192529.25467-1-jarkko.sakkinen@linux.intel.com>
- <20170216192529.25467-7-jarkko.sakkinen@linux.intel.com>
- <20170223090917.jq7thil5ggjmagil@intel.com>
- <1487941328.2249.23.camel@HansenPartnership.com>
+Subject: Re: [PATCH] tpm_tis_core: Choose appropriate timeout for reading
+ burstcount
+Date: Fri, 24 Feb 2017 19:41:34 +0200
+Message-ID: <20170224174134.sxtyh553bsyca6la@intel.com>
+References: <1487259216-28955-1-git-send-email-peter.huewe@infineon.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Return-path: <stable-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1487941328.2249.23.camel@HansenPartnership.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: James Bottomley <James.Bottomley@HansenPartnership.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, dhowells@redhat.com, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
+In-Reply-To: <1487259216-28955-1-git-send-email-peter.huewe@infineon.com>
+Sender: stable-owner@vger.kernel.org
+To: Peter Huewe <peter.huewe@infineon.com>
+Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, peterhuewe@gmx.de, Alexander Steffen <Alexander.Steffen@infineon.com>, stable@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Feb 24, 2017 at 08:02:08AM -0500, James Bottomley wrote:
-> On Thu, 2017-02-23 at 11:09 +0200, Jarkko Sakkinen wrote:
-> > On Thu, Feb 16, 2017 at 09:25:19PM +0200, Jarkko Sakkinen wrote:
-> > > From: James Bottomley <James.Bottomley@HansenPartnership.com>
-> > > 
-> > > Currently the tpm spaces are not exposed to userspace.  Make this
-> > > exposure via a separate device, which can now be opened multiple 
-> > > times because each read/write transaction goes separately via the
-> > > space.
-> > > 
-> > > Concurrency is protected by the chip->tpm_mutex for each read/write
-> > > transaction separately.  The TPM is cleared of all transient 
-> > > objects by the time the mutex is dropped, so there should be no
-> > > interference between the kernel and userspace.
-> > > Signed-off-by: James Bottomley <
-> > > 
-> > > James.Bottomley@HansenPartnershp.com>
+On Thu, Feb 16, 2017 at 03:33:36PM +0000, Peter Huewe wrote:
+> From: Alexander Steffen <Alexander.Steffen@infineon.com>
 > 
-> > Reviewed-by: Jarkko Sakkinen <jarkko.sakkine@linux.intel.com>
-> > Tested-by: Jarkko Sakkinen <jarkko.sakkine@linux.intel.com>
+> TIS v1.3 for TPM 1.2 and PTP for TPM 2.0 disagree about which timeout
+> value applies to reading a valid burstcount. It is TIMEOUT_D according to
+> TIS, but TIMEOUT_A according to PTP, so choose the appropriate value
+> depending on whether we deal with a TPM 1.2 or a TPM 2.0.
 > 
-> Thanks!
+> This is important since according to the PTP TIMEOUT_D is much smaller
+> than TIMEOUT_A. So the previous implementation could run into timeouts
+> with a TPM 2.0, even though the TPM was behaving perfectly fine.
 > 
-> > Nitpicking but I've been thinking about naming. What about calling 
-> > the device as tpmrc0 as in resource context. I think that would be a
-> > better name than TPM space.
+> During tpm2_probe TIMEOUT_D will be used even with a TPM 2.0, because
+> TPM_CHIP_FLAG_TPM2 is not yet set. This is fine, since the timeout values
+> will only be changed afterwards by tpm_get_timeouts. Until then
+> TIS_TIMEOUT_D_MAX applies, which is large enough.
 > 
-> Well the original name was tpmrm<n> for TPM with Resource Manager.  You
-> wanted it to be tpms<n> for TPM with Spaces.
+> Cc: stable@vger.kernel.org
+> Fixes: aec04cbdf723 ("tpm: TPM 2.0 FIFO Interface")
 > 
-> I'm not entirely sold on the Resource Context name ... I think Resource Manager (because it's what the TCG calls it) or Spaces (because it's what all the code comments call it) are better.  Resource Context sounds like what TPM2_SaveContext() creates for you rather than the interface.
-> 
-> >  You do not mix it up with namespaces and/or virtualization. With
-> > resource in front it cannot be easily mixed up with TPM contexts
-> > either.
-> 
-> I'm a containers person.  What this set of patches does is precisely OS
-> level virtualization in my book, so I don't think you need to pretend
-> it is't; and OS level virtualization is what a namespace does.  The
-> only difference between this and the other kernel namespaces is that
-> you get a new namespace automatically when you open the device and you
-> can't enter an existing namespace.
-> 
-> I think therefore that tpmns<n> for TPM Namespace would be very
-> appropriate.
+> Signed-off-by: Alexander Steffen <Alexander.Steffen@infineon.com>
+> Signed-off-by: Peter Huewe <peter.huewe@infineon.com>
 
-Makes sense. We can go with tpmns.
+Pushed.
 
 /Jarkko
+
+> ---
+>  drivers/char/tpm/tpm_tis_core.c | 6 ++++--
+>  1 file changed, 4 insertions(+), 2 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+> index c0f296b5d413..fc0e9a2734ed 100644
+> --- a/drivers/char/tpm/tpm_tis_core.c
+> +++ b/drivers/char/tpm/tpm_tis_core.c
+> @@ -160,8 +160,10 @@ static int get_burstcount(struct tpm_chip *chip)
+>  	u32 value;
+>  
+>  	/* wait for burstcount */
+> -	/* which timeout value, spec has 2 answers (c & d) */
+> -	stop = jiffies + chip->timeout_d;
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		stop = jiffies + chip->timeout_a;
+> +	else
+> +		stop = jiffies + chip->timeout_d;
+>  	do {
+>  		rc = tpm_tis_read32(priv, TPM_STS(priv->locality), &value);
+>  		if (rc < 0)
+> -- 
+> 2.7.4
+> 
