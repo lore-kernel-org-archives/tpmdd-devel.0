@@ -1,91 +1,111 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 0/5] Fix whole native SPI TPM driver
-Date: Fri, 24 Feb 2017 17:15:48 +0200
-Message-ID: <20170224151548.bm4jbk5rthqalgwl@intel.com>
-References: <1487261306-2494-1-git-send-email-peter.huewe@infineon.com>
-	<20170222211924.zdikc5qfzuxiggte@intel.com>
-	<3FCA2DD7-28AD-4F6A-B529-98DAACEF6505@gmx.de>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH] tpm: Use the right clean up after cdev_add completes
+Date: Fri, 24 Feb 2017 18:09:37 +0200
+Message-ID: <20170224160937.3oslnxk4a4wrz3du@intel.com>
+References: <20170223211914.GA12752@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <3FCA2DD7-28AD-4F6A-B529-98DAACEF6505-Mmb7MZpHnFY@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Cc: Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+In-Reply-To: <20170223211914.GA12752@obsidianresearch.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Feb 22, 2017 at 11:32:17PM +0100, Peter Huewe wrote:
+On Thu, Feb 23, 2017 at 02:19:14PM -0700, Jason Gunthorpe wrote:
+> Once cdev_add is done the device node is visible to user space and
+> could have been opened. Thus we have to go through the locking
+> process in tpm_del_char_device if device_add fails.
 > 
-> 
-> Am 22. Februar 2017 22:19:24 MEZ schrieb Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>:
-> >On Thu, Feb 16, 2017 at 04:08:21PM +0000, Peter Huewe wrote:
-> >> During our testing it showed that unfortunately the whole native spi
-> >tpm driver
-> >> was more or less non-functional since it was merged, e.g. the wrong
-> >byte for
-> >> waitstate handling was used and transfers larger than 64 bytes did
-> >not work at all.
-> >> 
-> >> This was probably caused by the merging of the different approaches
-> >back then,
-> >> as the initial RFC patch did not have these problems, and also my
-> >sudden lack
-> >> of time/commitment back then.
-> >> I'm sorry that the final driver code went untested for that long
-> >time.
-> >> 
-> >> This patch set fixes these issues one by one.
-> >> In order to avoid duplication the read/write function was
-> >consolidated to one
-> >> transfer function, so we do not have to apply the same fix at two
-> >locations.
-> >> Maybe consider squashing it - we splitted it for easier review.
-> >>  
-> >> Affected Kernels: 4.8, 4.9, 4.10
-> >> Patchset was tested on Raspberry Pi2 with SLB9670 (TPM1.2 and TPM2.0)
-> >> 
-> >> Peter Huewe (5):
-> >>   tpm_tis_spi: Use single function to transfer data
-> >>   tpm_tis_spi: Abort transfer when too many wait states are signaled
-> >>   tpm_tis_spi: Check correct byte for wait state indicator
-> >>   tpm_tis_spi: Remove limitation of transfers to MAX_SPI_FRAMESIZE
-> >bytes
-> >>   tpm_tis_spi: Add small delay after last transfer
-> >> 
-> >>  drivers/char/tpm/tpm_tis_spi.c | 163
-> >+++++++++++++++++------------------------
-> >>  1 file changed, 69 insertions(+), 94 deletions(-)
-> >> 
-> >> -- 
-> >> 2.7.4
-> >> 
-> >
-> >I also found type errors a whilea ago:
-> >
-> >https://patchwork.kernel.org/patch/9547993/
-> >
-> >Do this take care of these issues? 
-> Not that I'm aware of.
-> We did not test it on any big endian system yet so the problem never became visible.
-> 
-> In any case it would be really nice to see this patchset to be applied so people have a working,but maybe not perfect, spi tpm on the common little endian platforms.
-> When do you think you can merge and pull-request them?
-> 
-> Peter
+> Fixes: 2c91ce8523a ("tpm: fix the rollback in tpm_chip_register()")
+> Signed-off-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 
-Please fix 4/5 and send v2. Other patches were fine.
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
 /Jarkko
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+> ---
+>  drivers/char/tpm/tpm-chip.c | 43 ++++++++++++++++++++++---------------------
+>  1 file changed, 22 insertions(+), 21 deletions(-)
+> 
+> static function moved to avoid a prototype
+> 
+> This was noticed while reviewing the cdev patchset from Logan
+> 
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index a77262d31911a1..c82acf0a6e7353 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -226,6 +226,26 @@ struct tpm_chip *tpmm_chip_alloc(struct device *pdev,
+>  }
+>  EXPORT_SYMBOL_GPL(tpmm_chip_alloc);
+>  
+> +static void tpm_del_char_device(struct tpm_chip *chip, bool with_device)
+> +{
+> +	cdev_del(&chip->cdev);
+> +	if (with_device) {
+> +		device_del(&chip->dev);
+> +
+> +		/* Make the chip unavailable. */
+> +		mutex_lock(&idr_lock);
+> +		idr_replace(&dev_nums_idr, NULL, chip->dev_num);
+> +		mutex_unlock(&idr_lock);
+> +	}
+> +
+> +	/* Make the driver uncallable. */
+> +	down_write(&chip->ops_sem);
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		tpm2_shutdown(chip, TPM2_SU_CLEAR);
+> +	chip->ops = NULL;
+> +	up_write(&chip->ops_sem);
+> +}
+> +
+>  static int tpm_add_char_device(struct tpm_chip *chip)
+>  {
+>  	int rc;
+> @@ -246,8 +266,7 @@ static int tpm_add_char_device(struct tpm_chip *chip)
+>  			"unable to device_register() %s, major %d, minor %d, err=%d\n",
+>  			dev_name(&chip->dev), MAJOR(chip->dev.devt),
+>  			MINOR(chip->dev.devt), rc);
+> -
+> -		cdev_del(&chip->cdev);
+> +		tpm_del_char_device(chip, false);
+>  		return rc;
+>  	}
+>  
+> @@ -259,24 +278,6 @@ static int tpm_add_char_device(struct tpm_chip *chip)
+>  	return rc;
+>  }
+>  
+> -static void tpm_del_char_device(struct tpm_chip *chip)
+> -{
+> -	cdev_del(&chip->cdev);
+> -	device_del(&chip->dev);
+> -
+> -	/* Make the chip unavailable. */
+> -	mutex_lock(&idr_lock);
+> -	idr_replace(&dev_nums_idr, NULL, chip->dev_num);
+> -	mutex_unlock(&idr_lock);
+> -
+> -	/* Make the driver uncallable. */
+> -	down_write(&chip->ops_sem);
+> -	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> -		tpm2_shutdown(chip, TPM2_SU_CLEAR);
+> -	chip->ops = NULL;
+> -	up_write(&chip->ops_sem);
+> -}
+> -
+>  static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
+>  {
+>  	struct attribute **i;
+> @@ -384,6 +385,6 @@ void tpm_chip_unregister(struct tpm_chip *chip)
+>  {
+>  	tpm_del_legacy_sysfs(chip);
+>  	tpm_bios_log_teardown(chip);
+> -	tpm_del_char_device(chip);
+> +	tpm_del_char_device(chip, true);
+>  }
+>  EXPORT_SYMBOL_GPL(tpm_chip_unregister);
+> -- 
+> 2.7.4
