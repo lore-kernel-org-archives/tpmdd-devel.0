@@ -1,59 +1,109 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v2 4/7] tpm: infrastructure for TPM spaces
-Date: Fri, 24 Feb 2017 19:02:38 +0200
-Message-ID: <20170224170238.pfkx7vgkgp7t34wi@intel.com>
-References: <20170216192529.25467-1-jarkko.sakkinen@linux.intel.com>
- <20170216192529.25467-5-jarkko.sakkinen@linux.intel.com>
- <1487940802.2249.14.camel@HansenPartnership.com>
+From: Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [RFC PATCH] tpm: msleep() delays - replace with
+ usleep_range() in i2c nuvoton driver
+Date: Fri, 24 Feb 2017 12:29:02 -0500
+Message-ID: <1487957342.3193.200.camel@linux.vnet.ibm.com>
+References: <1487893578.3193.155.camel@linux.vnet.ibm.com>
+	<20170224170100.prwbcsffxdqjudc2@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <1487940802.2249.14.camel@HansenPartnership.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: James Bottomley <James.Bottomley@HansenPartnership.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, dhowells@redhat.com, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170224170100.prwbcsffxdqjudc2-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: Morav <dmorav-KrzQf0k3Iz9BDgjK7y7TUQ@public.gmane.org>, Dan, Thomas-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, linux-ima-devel <linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, linux-security-module <linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, tpmdd-devel <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, linux-fsdevel <linux-fsdevel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, Gleixner <tglx-hfZtesqFncYOwBW4kG4KsQ@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Feb 24, 2017 at 07:53:22AM -0500, James Bottomley wrote:
-> On Thu, 2017-02-16 at 21:25 +0200, Jarkko Sakkinen wrote:
-> > Added an ability to virtualize TPM commands into an isolated context
-> > that we call a TPM space because the word context is already heavily
-> > used in the TPM specification. Both the handle areas and bodies
-> > (where
-> > necessary) are virtualized.
+On Fri, 2017-02-24 at 19:01 +0200, Jarkko Sakkinen wrote:
+> On Thu, Feb 23, 2017 at 06:46:18PM -0500, Mimi Zohar wrote:
+> > Commit 500462a9de65 "timers: Switch to a non-cascading wheel" replaced
+> > the 'classic' timer wheel, which aimed for near 'exact' expiry of the
+> > timers.  Their analysis was that the vast majority of timeout timers
+> > are used as safeguards, not as real timers, and are cancelled or
+> > rearmed before expiration.  The only exception noted to this were
+> > networking timers with a small expiry time.
 > > 
-> > The mechanism works by adding a new parameter struct tpm_space to the
-> > tpm_transmit() function. This new structure contains the list of
-> > virtual
-> > handles and a buffer of page size (currently) for backing storage.
+> > Not included in the analysis was the TPM polling timer, which resulted
+> > in a longer normal delay and, every so often, a very long delay.  The
+> > non-cascading wheel delay is based on CONFIG_HZ.  For a description of
+> > the different rings and their delays, refer to the comments in
+> > kernel/time/timer.c.
 > > 
-> > When tpm_transmit() is called with a struct tpm_space instance it
-> > will
-> > execute the following sequence:
+> > Below are the delays given for rings 0 - 2, which explains the longer
+> > "normal" delays and the very, long delays as seen on systems with
+> > CONFIG_HZ 250.
 > > 
-> > 1. Take locks.
-> > 2. Load transient objects from the backing storage by using
-> > ContextLoad
-> >    and map virtual handles to physical handles.
-> > 3. Perform the transaction.
-> > 4. Save transient objects to backing storage by using ContextSave and
-> >    map resulting physical handle to virtual handle if there is such.
+> > * HZ 1000 steps
+> >  * Level Offset  Granularity            Range
+> >  *  0      0         1 ms                0 ms - 63 ms
+> >  *  1     64         8 ms               64 ms - 511 ms
+> >  *  2    128        64 ms              512 ms - 4095 ms (512ms - ~4s)
 > > 
-> > This commit does not implement virtualization support for hmac and
-> > policy sessions.
+> > * HZ  250
+> >  * Level Offset  Granularity            Range
+> >  *  0      0         4 ms                0 ms - 255 ms
+> >  *  1     64        32 ms              256 ms - 2047 ms (256ms - ~2s)
+> >  *  2    128       256 ms             2048 ms - 16383 ms (~2s - ~16s)
 > > 
-> > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> > Below is a comparison of extending the TPM with 1000 measurements,
+> > using msleep() vs. usleep_delay() when configured for 1000 hz vs. 250
+> > hz, before and after commit 500462a9de65.
+> > 
+> > 		linux-4.7 | msleep()	usleep_range()
+> > 1000 hz:	0m44.628s | 1m34.497s	29.243s
+> > 250 hz:		1m28.510s | 4m49.269s	32.386s
+> > 
+> > 		linux-4.7 	| min-max (msleep)  min-max (usleep_range)
+> > 1000 hz:	0:017 - 2:760s	| 0:015 - 3:967s    0:014 - 0:418s
+> > 250 hz:		0:028 - 1:954s	| 0:040 - 4:096s    0:016 - 0:816s
+> > 
+> > This patch replaces the msleep() with usleep_range() calls in the
+> > i2c nuvoton driver with a consistent max range value.
+> > 
+> > Signed-of-by: Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+> > Reviewed-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 > 
-> For patches 1-4 you can add 
-> 
-> Reviewed-by: James Bottomley <James.Bottomley@HansenPartnership.com>
-> 
-> Just re-running a build with the latest kernel for my laptop to add
-> tested by.
-> 
-> James
+> So why doesn't it go to level 0 with msleep()?  I quickly skimmed
+> through __mod_timer() and for me it looked like that level 0 would be
+> calculated (when it is eventually called starting from msleep()).
+> What did I miss?
 
-Thank you!
+I've just added some printk's in kernel/time/timer.c.  It looks like it
+is level 0.  The delay seems to be caused by schedule() in
+schedule_timeout().
 
-/Jarkko
+        setup_timer_on_stack(&timer, process_timeout, (unsigned
+long)current);
+        __mod_timer(&timer, expire, false, false);
+        schedule();  <===
+        del_singleshot_timer_sync(&timer);
+
+        /* Remove the timer from the object tracker */
+        destroy_timer_on_stack(&timer);
+
+
+printks output:
+124.901002] calc_wheel_index: level 0 timer: c000003fab32b150 expires
+4294923520 new expires 4294923520 now 4294923518
+[  124.901003] __mod_timer: exit timer c000003fab32b1a0 now 4294923518
+
+<  call to schedule()  >
+
+[  128.607463] schedule_timeout: before destroy timer: c000003fab32b150
+expires 4294923520 now 4294924439   <=== notice that the "now" time is
+way beyond the expires time.
+   
+Mimi
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
