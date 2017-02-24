@@ -1,103 +1,362 @@
-From: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Subject: Re: [RFC PATCH] tpm: msleep() delays - replace with usleep_range()
- in i2c nuvoton driver
-Date: Thu, 23 Feb 2017 19:26:27 -0500
-Message-ID: <1487895987.3193.168.camel@linux.vnet.ibm.com>
-References: <1487893578.3193.155.camel@linux.vnet.ibm.com>
-         <20170224000051.GB19131@obsidianresearch.com>
+From: Nayna <nayna@linux.vnet.ibm.com>
+Subject: Re: [tpmdd-devel] [PATCH v2 6/7] tpm: expose spaces via a device link
+ /dev/tpms<n>
+Date: Fri, 24 Feb 2017 12:29:13 +0530
+Message-ID: <58AFD9C1.1050507@linux.vnet.ibm.com>
+References: <20170216192529.25467-1-jarkko.sakkinen@linux.intel.com>
+ <20170216192529.25467-7-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: text/plain; charset=windows-1252; format=flowed
 Content-Transfer-Encoding: 7bit
 Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170224000051.GB19131@obsidianresearch.com>
+In-Reply-To: <20170216192529.25467-7-jarkko.sakkinen@linux.intel.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: tpmdd-devel <tpmdd-devel@lists.sourceforge.net>, linux-ima-devel <linux-ima-devel@lists.sourceforge.net>, linux-security-module <linux-security-module@vger.kernel.org>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, Dan Morav <dmorav@nuvoton.com>, Thomas Gleixner <tglx@linutronix.de>
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net
+Cc: dhowells@redhat.com, open list <linux-kernel@vger.kernel.org>, James.Bottomley@HansenPartnership.com, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, 2017-02-23 at 17:00 -0700, Jason Gunthorpe wrote:
-> On Thu, Feb 23, 2017 at 06:46:18PM -0500, Mimi Zohar wrote:
-> > Commit 500462a9de65 "timers: Switch to a non-cascading wheel" replaced
-> > the 'classic' timer wheel, which aimed for near 'exact' expiry of the
-> > timers.  Their analysis was that the vast majority of timeout timers
-> > are used as safeguards, not as real timers, and are cancelled or
-> > rearmed before expiration.  The only exception noted to this were
-> > networking timers with a small expiry time.
-> > 
-> > Not included in the analysis was the TPM polling timer, which resulted
-> > in a longer normal delay and, every so often, a very long delay.  The
-> > non-cascading wheel delay is based on CONFIG_HZ.  For a description of
-> > the different rings and their delays, refer to the comments in
-> > kernel/time/timer.c.
-> > 
-> > Below are the delays given for rings 0 - 2, which explains the longer
-> > "normal" delays and the very, long delays as seen on systems with
-> > CONFIG_HZ 250.
-> > 
-> > * HZ 1000 steps
-> >  * Level Offset  Granularity            Range
-> >  *  0      0         1 ms                0 ms - 63 ms
-> >  *  1     64         8 ms               64 ms - 511 ms
-> >  *  2    128        64 ms              512 ms - 4095 ms (512ms - ~4s)
-> > 
-> > * HZ  250
-> >  * Level Offset  Granularity            Range
-> >  *  0      0         4 ms                0 ms - 255 ms
-> >  *  1     64        32 ms              256 ms - 2047 ms (256ms - ~2s)
-> >  *  2    128       256 ms             2048 ms - 16383 ms (~2s - ~16s)
-> > 
-> > Below is a comparison of extending the TPM with 1000 measurements,
-> > using msleep() vs. usleep_delay() when configured for 1000 hz vs. 250
-> > hz, before and after commit 500462a9de65.
-> > 
-> > 		linux-4.7 | msleep()	usleep_range()
-> > 1000 hz:	0m44.628s | 1m34.497s	29.243s
-> > 250 hz:		1m28.510s | 4m49.269s	32.386s
-> > 
-> > 		linux-4.7 	| min-max (msleep)  min-max (usleep_range)
-> > 1000 hz:	0:017 - 2:760s	| 0:015 - 3:967s    0:014 - 0:418s
-> > 250 hz:		0:028 - 1:954s	| 0:040 - 4:096s    0:016 - 0:816s
-> > 
-> > This patch replaces the msleep() with usleep_range() calls in the
-> > i2c nuvoton driver with a consistent max range value.
-> > 
-> > Signed-of-by: Mimi Zohar <zohar@linux.vnet.ibm.com>
-> > Reviewed-by: Nayna Jain <nayna@linux.vnet.ibm.com>
-> >  drivers/char/tpm/tpm_i2c_nuvoton.c | 18 ++++++++++--------
-> >  1 file changed, 10 insertions(+), 8 deletions(-)
-> 
-> I wasn't aware of any of these, changes it but it makes sense to me..
-> 
-> > diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
-> > index e3a9155ee671..da2508a6bc0c 100644
-> > +++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
-> > @@ -49,9 +49,9 @@
-> >   */
-> >  #define TPM_I2C_MAX_BUF_SIZE           32
-> >  #define TPM_I2C_RETRY_COUNT            32
-> > -#define TPM_I2C_BUS_DELAY              1       /* msec */
-> > -#define TPM_I2C_RETRY_DELAY_SHORT      2       /* msec */
-> > -#define TPM_I2C_RETRY_DELAY_LONG       10      /* msec */
-> > +#define TPM_I2C_BUS_DELAY              1000      /* usec */
-> > +#define TPM_I2C_RETRY_DELAY_SHORT      2 * 1000  /* usec */
-> > +#define TPM_I2C_RETRY_DELAY_LONG       10 * 1000 /* usec */
-> 
-> While you are here could you put () around those #define expressions?
 
-Sure
 
-> > -		msleep(TPM_I2C_BUS_DELAY);
-> > +		usleep_range(TPM_I2C_BUS_DELAY, TPM_I2C_BUS_DELAY + 300);
-> 
-> And we may as well have a constant for the 300 with a little
-> explanation comment that usleep_range is now required to get small
-> sleeps.
+On 02/17/2017 12:55 AM, Jarkko Sakkinen wrote:
+> From: James Bottomley <James.Bottomley@HansenPartnership.com>
+>
+> Currently the tpm spaces are not exposed to userspace.  Make this
+> exposure via a separate device, which can now be opened multiple times
+> because each read/write transaction goes separately via the space.
+>
+> Concurrency is protected by the chip->tpm_mutex for each read/write
+> transaction separately.  The TPM is cleared of all transient objects
+> by the time the mutex is dropped, so there should be no interference
+> between the kernel and userspace.
 
-For 250 hz,  level 0 delay should be between 0 - 255ms, which is less
-than the 300 defined here.  So before we start changing everything to
-use usleep_range(), I think we need to better understand what is
-happening.  Any suggestions/recommendations would be much appreciated!
+To understand, I have two questions:
 
-Mimi
+1. How would a userspace application using TPM know whether to use 
+/dev/tpm0 or /dev/tpms0 ?
 
+2. How would a userspace RM know to build on top of /dev/tpm0 or 
+/dev/tpms0. And if it is built on top of /dev/tpms0, can there be issues 
+with one RM on top of other RM.
+
+Thanks & Regards,
+    - Nayna
+
+
+>
+> Signed-off-by: James Bottomley <James.Bottomley@HansenPartnership.com>
+> ---
+>   drivers/char/tpm/Makefile        |  3 +-
+>   drivers/char/tpm/tpm-chip.c      | 73 ++++++++++++++++++++++++++++++++++++++--
+>   drivers/char/tpm/tpm-interface.c | 13 +++++--
+>   drivers/char/tpm/tpm.h           |  4 +++
+>   drivers/char/tpm/tpms-dev.c      | 65 +++++++++++++++++++++++++++++++++++
+>   5 files changed, 152 insertions(+), 6 deletions(-)
+>   create mode 100644 drivers/char/tpm/tpms-dev.c
+>
+> diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
+> index 10e5827..bbe6531 100644
+> --- a/drivers/char/tpm/Makefile
+> +++ b/drivers/char/tpm/Makefile
+> @@ -3,7 +3,8 @@
+>   #
+>   obj-$(CONFIG_TCG_TPM) += tpm.o
+>   tpm-y := tpm-interface.o tpm-dev.o tpm-sysfs.o tpm-chip.o tpm2-cmd.o \
+> -	 tpm-dev-common.o tpm1_eventlog.o tpm2_eventlog.o tpm2-space.o
+> +	 tpm-dev-common.o tpms-dev.o tpm1_eventlog.o tpm2_eventlog.o \
+> +         tpm2-space.o
+>   tpm-$(CONFIG_ACPI) += tpm_ppi.o tpm_acpi.o
+>   tpm-$(CONFIG_OF) += tpm_of.o
+>   obj-$(CONFIG_TCG_TIS_CORE) += tpm_tis_core.o
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index 993b9ae..c71c353 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -33,6 +33,7 @@ DEFINE_IDR(dev_nums_idr);
+>   static DEFINE_MUTEX(idr_lock);
+>
+>   struct class *tpm_class;
+> +struct class *tpms_class;
+>   dev_t tpm_devt;
+>
+>   /**
+> @@ -132,6 +133,14 @@ static void tpm_dev_release(struct device *dev)
+>   	kfree(chip);
+>   }
+>
+> +static void tpm_devs_release(struct device *dev)
+> +{
+> +	struct tpm_chip *chip = container_of(dev, struct tpm_chip, devs);
+> +
+> +	/* release the master device reference */
+> +	put_device(&chip->dev);
+> +}
+> +
+>   /**
+>    * tpm_chip_alloc() - allocate a new struct tpm_chip instance
+>    * @pdev: device to which the chip is associated
+> @@ -168,27 +177,47 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+>   	chip->dev_num = rc;
+>
+>   	device_initialize(&chip->dev);
+> +	device_initialize(&chip->devs);
+>
+>   	chip->dev.class = tpm_class;
+>   	chip->dev.release = tpm_dev_release;
+>   	chip->dev.parent = pdev;
+>   	chip->dev.groups = chip->groups;
+>
+> +	chip->devs.parent = pdev;
+> +	chip->devs.class = tpms_class;
+> +	chip->devs.release = tpm_devs_release;
+> +	/* get extra reference on main device to hold on
+> +	 * behalf of devs.  This holds the chip structure
+> +	 * while cdevs is in use.  The corresponding put
+> +	 * is in the tpm_devs_release
+> +	 */
+> +	get_device(&chip->dev);
+> +
+>   	if (chip->dev_num == 0)
+>   		chip->dev.devt = MKDEV(MISC_MAJOR, TPM_MINOR);
+>   	else
+>   		chip->dev.devt = MKDEV(MAJOR(tpm_devt), chip->dev_num);
+>
+> +	chip->devs.devt =
+> +		MKDEV(MAJOR(tpm_devt), chip->dev_num + TPM_NUM_DEVICES);
+> +
+>   	rc = dev_set_name(&chip->dev, "tpm%d", chip->dev_num);
+>   	if (rc)
+>   		goto out;
+> +	rc = dev_set_name(&chip->devs, "tpms%d", chip->dev_num);
+> +	if (rc)
+> +		goto out;
+>
+>   	if (!pdev)
+>   		chip->flags |= TPM_CHIP_FLAG_VIRTUAL;
+>
+>   	cdev_init(&chip->cdev, &tpm_fops);
+> +	cdev_init(&chip->cdevs, &tpms_fops);
+>   	chip->cdev.owner = THIS_MODULE;
+> +	chip->cdevs.owner = THIS_MODULE;
+>   	chip->cdev.kobj.parent = &chip->dev.kobj;
+> +	chip->cdevs.kobj.parent = &chip->devs.kobj;
+>
+>   	chip->work_space.context_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
+>   	if (!chip->work_space.context_buf) {
+> @@ -199,6 +228,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+>   	return chip;
+>
+>   out:
+> +	put_device(&chip->devs);
+>   	put_device(&chip->dev);
+>   	return ERR_PTR(rc);
+>   }
+> @@ -244,7 +274,7 @@ static int tpm_add_char_device(struct tpm_chip *chip)
+>   			dev_name(&chip->dev), MAJOR(chip->dev.devt),
+>   			MINOR(chip->dev.devt), rc);
+>
+> -		return rc;
+> +		goto err_1;
+>   	}
+>
+>   	rc = device_add(&chip->dev);
+> @@ -254,16 +284,44 @@ static int tpm_add_char_device(struct tpm_chip *chip)
+>   			dev_name(&chip->dev), MAJOR(chip->dev.devt),
+>   			MINOR(chip->dev.devt), rc);
+>
+> -		cdev_del(&chip->cdev);
+> -		return rc;
+> +		goto err_2;
+> +	}
+> +
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		rc = cdev_add(&chip->cdevs, chip->devs.devt, 1);
+> +	if (rc) {
+> +		dev_err(&chip->dev,
+> +			"unable to cdev_add() %s, major %d, minor %d, err=%d\n",
+> +			dev_name(&chip->devs), MAJOR(chip->devs.devt),
+> +			MINOR(chip->devs.devt), rc);
+> +
+> +		goto err_3;
+>   	}
+>
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		rc = device_add(&chip->devs);
+> +	if (rc) {
+> +		dev_err(&chip->dev,
+> +			"unable to device_register() %s, major %d, minor %d, err=%d\n",
+> +			dev_name(&chip->devs), MAJOR(chip->devs.devt),
+> +			MINOR(chip->devs.devt), rc);
+> +
+> +		goto err_4;
+> +	}
+>   	/* Make the chip available. */
+>   	mutex_lock(&idr_lock);
+>   	idr_replace(&dev_nums_idr, chip, chip->dev_num);
+>   	mutex_unlock(&idr_lock);
+>
+>   	return rc;
+> + err_4:
+> +	cdev_del(&chip->cdevs);
+> + err_3:
+> +	device_del(&chip->dev);
+> + err_2:
+> +	cdev_del(&chip->cdev);
+> + err_1:
+> +	return rc;
+>   }
+>
+>   static void tpm_del_char_device(struct tpm_chip *chip)
+> @@ -271,6 +329,11 @@ static void tpm_del_char_device(struct tpm_chip *chip)
+>   	cdev_del(&chip->cdev);
+>   	device_del(&chip->dev);
+>
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+> +		cdev_del(&chip->cdevs);
+> +		device_del(&chip->devs);
+> +	}
+> +
+>   	/* Make the chip unavailable. */
+>   	mutex_lock(&idr_lock);
+>   	idr_replace(&dev_nums_idr, NULL, chip->dev_num);
+> @@ -282,6 +345,10 @@ static void tpm_del_char_device(struct tpm_chip *chip)
+>   		tpm2_shutdown(chip, TPM2_SU_CLEAR);
+>   	chip->ops = NULL;
+>   	up_write(&chip->ops_sem);
+> +	/* will release the devs reference to the chip->dev unless
+> +	 * something has cdevs open
+> +	 */
+> +	put_device(&chip->devs);
+>   }
+>
+>   static void tpm_del_legacy_sysfs(struct tpm_chip *chip)
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index db5ffe9..deb2021 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -1257,9 +1257,17 @@ static int __init tpm_init(void)
+>   		return PTR_ERR(tpm_class);
+>   	}
+>
+> -	rc = alloc_chrdev_region(&tpm_devt, 0, TPM_NUM_DEVICES, "tpm");
+> +	tpms_class = class_create(THIS_MODULE, "tpms");
+> +	if (IS_ERR(tpms_class)) {
+> +		pr_err("couldn't create tpms class\n");
+> +		class_destroy(tpm_class);
+> +		return PTR_ERR(tpms_class);
+> +	}
+> +
+> +	rc = alloc_chrdev_region(&tpm_devt, 0, 2*TPM_NUM_DEVICES, "tpm");
+>   	if (rc < 0) {
+>   		pr_err("tpm: failed to allocate char dev region\n");
+> +		class_destroy(tpms_class);
+>   		class_destroy(tpm_class);
+>   		return rc;
+>   	}
+> @@ -1271,7 +1279,8 @@ static void __exit tpm_exit(void)
+>   {
+>   	idr_destroy(&dev_nums_idr);
+>   	class_destroy(tpm_class);
+> -	unregister_chrdev_region(tpm_devt, TPM_NUM_DEVICES);
+> +	class_destroy(tpms_class);
+> +	unregister_chrdev_region(tpm_devt, 2*TPM_NUM_DEVICES);
+>   }
+>
+>   subsys_initcall(tpm_init);
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 97e48a4..822ca67 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -182,7 +182,9 @@ struct tpm_chip_seqops {
+>
+>   struct tpm_chip {
+>   	struct device dev;
+> +	struct device devs;
+>   	struct cdev cdev;
+> +	struct cdev cdevs;
+>
+>   	/* A driver callback under ops cannot be run unless ops_sem is held
+>   	 * (sometimes implicitly, eg for the sysfs code). ops becomes null
+> @@ -510,8 +512,10 @@ static inline void tpm_buf_append_u32(struct tpm_buf *buf, const u32 value)
+>   }
+>
+>   extern struct class *tpm_class;
+> +extern struct class *tpms_class;
+>   extern dev_t tpm_devt;
+>   extern const struct file_operations tpm_fops;
+> +extern const struct file_operations tpms_fops;
+>   extern struct idr dev_nums_idr;
+>
+>   enum tpm_transmit_flags {
+> diff --git a/drivers/char/tpm/tpms-dev.c b/drivers/char/tpm/tpms-dev.c
+> new file mode 100644
+> index 0000000..5720885
+> --- /dev/null
+> +++ b/drivers/char/tpm/tpms-dev.c
+> @@ -0,0 +1,65 @@
+> +/*
+> + * Copyright (C) 2017 James.Bottomley@HansenPartnership.com
+> + *
+> + * GPLv2
+> + */
+> +#include <linux/slab.h>
+> +#include "tpm-dev.h"
+> +
+> +struct tpms_priv {
+> +	struct file_priv priv;
+> +	struct tpm_space space;
+> +};
+> +
+> +static int tpms_open(struct inode *inode, struct file *file)
+> +{
+> +	struct tpm_chip *chip;
+> +	struct tpms_priv *priv;
+> +	int rc;
+> +
+> +	chip = container_of(inode->i_cdev, struct tpm_chip, cdevs);
+> +	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+> +	if (priv == NULL)
+> +		return -ENOMEM;
+> +
+> +	rc = tpm2_init_space(&priv->space);
+> +	if (rc) {
+> +		kfree(priv);
+> +		return -ENOMEM;
+> +	}
+> +
+> +	tpm_common_open(file, chip, &priv->priv);
+> +
+> +	return 0;
+> +}
+> +
+> +static int tpms_release(struct inode *inode, struct file *file)
+> +{
+> +	struct file_priv *fpriv = file->private_data;
+> +	struct tpms_priv *priv = container_of(fpriv, struct tpms_priv, priv);
+> +
+> +	tpm_common_release(file, fpriv);
+> +	tpm2_del_space(&priv->space);
+> +	kfree(priv);
+> +
+> +	return 0;
+> +}
+> +
+> +ssize_t tpms_write(struct file *file, const char __user *buf,
+> +		   size_t size, loff_t *off)
+> +{
+> +	struct file_priv *fpriv = file->private_data;
+> +	struct tpms_priv *priv = container_of(fpriv, struct tpms_priv, priv);
+> +
+> +	return tpm_common_write(file, buf, size, off, &priv->space);
+> +}
+> +
+> +const struct file_operations tpms_fops = {
+> +	.owner = THIS_MODULE,
+> +	.llseek = no_llseek,
+> +	.open = tpms_open,
+> +	.read = tpm_common_read,
+> +	.write = tpms_write,
+> +	.release = tpms_release,
+> +};
+> +
+>
 
