@@ -1,95 +1,114 @@
-From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [PATCH] tpm: Use the right clean up after cdev_add completes
-Date: Fri, 24 Feb 2017 14:16:07 -0700
-Message-ID: <20170224211607.GB28016@obsidianresearch.com>
-References: <20170223211914.GA12752@obsidianresearch.com>
- <20170224174354.w5e2v3nxntod72je@intel.com>
- <20170224205949.u63xb5qhqzd7lqtp@intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20170224205949.u63xb5qhqzd7lqtp@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
+From: Davide Guerri <davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Subject: Re: [PATCH] tpm crb: Work around BIOS's that report
+ the wrong ACPI region size
+Date: Fri, 24 Feb 2017 21:25:50 +0000
+Message-ID: <B53A8DB6-0CEF-4851-8F26-E722B507D2DC@gmail.com>
+References: <20170221211424.GA16091@obsidianresearch.com>
+	<20170224130242.k53tqodhsqctfnm4@intel.com>
+Mime-Version: 1.0 (Mac OS X Mail 10.2 \(3259\))
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170224130242.k53tqodhsqctfnm4-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: "Sakkinen, Jarkko" <jarkko.sakkinen-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Feb 24, 2017 at 10:59:50PM +0200, Jarkko Sakkinen wrote:
-> On Fri, Feb 24, 2017 at 07:43:54PM +0200, Jarkko Sakkinen wrote:
-> > On Thu, Feb 23, 2017 at 02:19:14PM -0700, Jason Gunthorpe wrote:
-> > > Once cdev_add is done the device node is visible to user space and
-> > > could have been opened. Thus we have to go through the locking
-> > > process in tpm_del_char_device if device_add fails.
-> > > 
-> > > Fixes: 2c91ce8523a ("tpm: fix the rollback in tpm_chip_register()")
-> > > Signed-off-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-> > 
-> > Pushed.
-> 
-> It would make easier to merge this with resource manager commits if
-> there was instead
-> 
-> void tpm_chip_shutdown(struct tpm_chip *chip)
-> {
-> 	/* Make the driver uncallable. */
-> 	down_write(&chip->ops_sem);
-> 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> 		tpm2_shutdown(chip, TPM2_SU_CLEAR);
-> 	chip->ops = NULL;
-> 	up_write(&chip->ops_sem);
-> }
-> 
-> And you would call this instead of wiring into tpm_del_char_device.
 
-Hum.. I think this direction in the RM patch would be more
-maintainable.. Otherwise tpm_add_char_device has very complicated
-error handling.
+> On 24 Feb 2017, at 1:02 pm, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
+> 
+> On Tue, Feb 21, 2017 at 02:14:24PM -0700, Jason Gunthorpe wrote:
+>> The expectation is that the if the CRB cmd/rsp buffer falls within the
+>> ACPI region that the entire buffer will be within the reason. Otherwise
+>> resource reservation will fail when it crosses regions.
+>> 
+>> Work around this BIOS bug by limiting the cmd/rsp buffer to the length
+>> of the declared ACPI region. BIOS vendors should fix this by making
+>> the ACPI and register length declarations consistent.
+>> 
+>> Reported-by: davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
+>> Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> 
+> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index c82acf0a6e7353..444cf2495ef0e0 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -353,18 +353,26 @@ int tpm_chip_register(struct tpm_chip *chip)
- 	tpm_add_ppi(chip);
- 
- 	rc = tpm_add_char_device(chip);
--	if (rc) {
--		tpm_bios_log_teardown(chip);
--		return rc;
--	}
-+	if (rc)
-+		goto err_add_char;
-+
-+	rc = tpm_add_rm_char_device(chip);
-+	if (rc)
-+		goto err_add_rm_char;
- 
- 	rc = tpm_add_legacy_sysfs(chip);
--	if (rc) {
--		tpm_chip_unregister(chip);
--		return rc;
--	}
-+	if (rc)
-+		goto err_add_legacy_sysfs;
- 
- 	return 0;
-+
-+err_add_legacy_sysfs:
-+	tpm_del_rm_char_device(chip);
-+err_add_rm_char:
-+	tpm_del_char_device(chip, true);
-+err_add_char:
-+	tpm_bios_log_teardown(chip);
-+	return rc;
- }
- EXPORT_SYMBOL_GPL(tpm_chip_register);
- 
-@@ -384,6 +392,7 @@ EXPORT_SYMBOL_GPL(tpm_chip_register);
- void tpm_chip_unregister(struct tpm_chip *chip)
- {
- 	tpm_del_legacy_sysfs(chip);
-+	tpm_del_rm_char_device(chip);
- 	tpm_bios_log_teardown(chip);
- 	tpm_del_char_device(chip, true);
- }
+Tested-by: Davide Guerri <davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+
+Thanks again,
+ D.
+
+> 
+> Thanks for fixing this issue!
+> 
+> /Jarkko
+> 
+>> ---
+>> drivers/char/tpm/tpm_crb.c | 27 +++++++++++++++++++++++++--
+>> 1 file changed, 25 insertions(+), 2 deletions(-)
+>> 
+>> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+>> index a7c870af916c3d..fac1934eedf0bb 100644
+>> --- a/drivers/char/tpm/tpm_crb.c
+>> +++ b/drivers/char/tpm/tpm_crb.c
+>> @@ -243,6 +243,27 @@ static void __iomem *crb_map_res(struct device *dev, struct crb_priv *priv,
+>> 	return priv->iobase + (new_res.start - io_res->start);
+>> }
+>> 
+>> +/*
+>> + * Work around broken BIOSs that return inconsistent values from the ACPI
+>> + * region vs the registers. Trust the ACPI region. Such broken systems
+>> + * probably cannot send large TPM commands since the buffer will be truncated.
+>> + */
+>> +static u64 crb_fixup_cmd_size(struct device *dev, struct resource *io_res,
+>> +			      u64 start, u64 size)
+>> +{
+>> +	if (io_res->start > start || io_res->end < start)
+>> +		return size;
+>> +
+>> +	if (start + size - 1 <= io_res->end)
+>> +		return size;
+>> +
+>> +	dev_err(dev,
+>> +		FW_BUG "ACPI region does not cover the entire command/response buffer. %pr vs %llx %llx\n",
+>> +		io_res, start, size);
+>> +
+>> +	return io_res->end - start + 1;
+>> +}
+>> +
+>> static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+>> 		      struct acpi_table_tpm2 *buf)
+>> {
+>> @@ -278,14 +299,16 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+>> 
+>> 	cmd_pa = ((u64) ioread32(&priv->cca->cmd_pa_high) << 32) |
+>> 		  (u64) ioread32(&priv->cca->cmd_pa_low);
+>> -	cmd_size = ioread32(&priv->cca->cmd_size);
+>> +	cmd_size = crb_fixup_cmd_size(dev, &io_res, cmd_pa,
+>> +				      ioread32(&priv->cca->cmd_size));
+>> 	priv->cmd = crb_map_res(dev, priv, &io_res, cmd_pa, cmd_size);
+>> 	if (IS_ERR(priv->cmd))
+>> 		return PTR_ERR(priv->cmd);
+>> 
+>> 	memcpy_fromio(&rsp_pa, &priv->cca->rsp_pa, 8);
+>> 	rsp_pa = le64_to_cpu(rsp_pa);
+>> -	rsp_size = ioread32(&priv->cca->rsp_size);
+>> +	rsp_size = crb_fixup_cmd_size(dev, &io_res, rsp_pa,
+>> +				      ioread32(&priv->cca->rsp_size));
+>> 
+>> 	if (cmd_pa != rsp_pa) {
+>> 		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa, rsp_size);
+>> -- 
+>> 2.7.4
+>> 
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, SlashDot.org! http://sdm.link/slashdot
