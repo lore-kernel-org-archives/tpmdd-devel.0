@@ -1,15 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm crb: Work around BIOS's that report
- the wrong ACPI region size
-Date: Fri, 24 Feb 2017 15:02:42 +0200
-Message-ID: <20170224130242.k53tqodhsqctfnm4@intel.com>
-References: <20170221211424.GA16091@obsidianresearch.com>
+Subject: Re: [PATCH 0/5] Fix whole native SPI TPM driver
+Date: Fri, 24 Feb 2017 17:15:48 +0200
+Message-ID: <20170224151548.bm4jbk5rthqalgwl@intel.com>
+References: <1487261306-2494-1-git-send-email-peter.huewe@infineon.com>
+	<20170222211924.zdikc5qfzuxiggte@intel.com>
+	<3FCA2DD7-28AD-4F6A-B529-98DAACEF6505@gmx.de>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170221211424.GA16091-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-Reply-To: <3FCA2DD7-28AD-4F6A-B529-98DAACEF6505-Mmb7MZpHnFY@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,86 +19,72 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: "Sakkinen, Jarkko" <jarkko.sakkinen-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org" <davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+Cc: Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Christophe Ricard <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Feb 21, 2017 at 02:14:24PM -0700, Jason Gunthorpe wrote:
-> The expectation is that the if the CRB cmd/rsp buffer falls within the
-> ACPI region that the entire buffer will be within the reason. Otherwise
-> resource reservation will fail when it crosses regions.
+On Wed, Feb 22, 2017 at 11:32:17PM +0100, Peter Huewe wrote:
 > 
-> Work around this BIOS bug by limiting the cmd/rsp buffer to the length
-> of the declared ACPI region. BIOS vendors should fix this by making
-> the ACPI and register length declarations consistent.
 > 
-> Reported-by: davide.guerri-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
-> Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> Am 22. Februar 2017 22:19:24 MEZ schrieb Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>:
+> >On Thu, Feb 16, 2017 at 04:08:21PM +0000, Peter Huewe wrote:
+> >> During our testing it showed that unfortunately the whole native spi
+> >tpm driver
+> >> was more or less non-functional since it was merged, e.g. the wrong
+> >byte for
+> >> waitstate handling was used and transfers larger than 64 bytes did
+> >not work at all.
+> >> 
+> >> This was probably caused by the merging of the different approaches
+> >back then,
+> >> as the initial RFC patch did not have these problems, and also my
+> >sudden lack
+> >> of time/commitment back then.
+> >> I'm sorry that the final driver code went untested for that long
+> >time.
+> >> 
+> >> This patch set fixes these issues one by one.
+> >> In order to avoid duplication the read/write function was
+> >consolidated to one
+> >> transfer function, so we do not have to apply the same fix at two
+> >locations.
+> >> Maybe consider squashing it - we splitted it for easier review.
+> >>  
+> >> Affected Kernels: 4.8, 4.9, 4.10
+> >> Patchset was tested on Raspberry Pi2 with SLB9670 (TPM1.2 and TPM2.0)
+> >> 
+> >> Peter Huewe (5):
+> >>   tpm_tis_spi: Use single function to transfer data
+> >>   tpm_tis_spi: Abort transfer when too many wait states are signaled
+> >>   tpm_tis_spi: Check correct byte for wait state indicator
+> >>   tpm_tis_spi: Remove limitation of transfers to MAX_SPI_FRAMESIZE
+> >bytes
+> >>   tpm_tis_spi: Add small delay after last transfer
+> >> 
+> >>  drivers/char/tpm/tpm_tis_spi.c | 163
+> >+++++++++++++++++------------------------
+> >>  1 file changed, 69 insertions(+), 94 deletions(-)
+> >> 
+> >> -- 
+> >> 2.7.4
+> >> 
+> >
+> >I also found type errors a whilea ago:
+> >
+> >https://patchwork.kernel.org/patch/9547993/
+> >
+> >Do this take care of these issues? 
+> Not that I'm aware of.
+> We did not test it on any big endian system yet so the problem never became visible.
+> 
+> In any case it would be really nice to see this patchset to be applied so people have a working,but maybe not perfect, spi tpm on the common little endian platforms.
+> When do you think you can merge and pull-request them?
+> 
+> Peter
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-
-Thanks for fixing this issue!
+Please fix 4/5 and send v2. Other patches were fine.
 
 /Jarkko
-
-> ---
->  drivers/char/tpm/tpm_crb.c | 27 +++++++++++++++++++++++++--
->  1 file changed, 25 insertions(+), 2 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> index a7c870af916c3d..fac1934eedf0bb 100644
-> --- a/drivers/char/tpm/tpm_crb.c
-> +++ b/drivers/char/tpm/tpm_crb.c
-> @@ -243,6 +243,27 @@ static void __iomem *crb_map_res(struct device *dev, struct crb_priv *priv,
->  	return priv->iobase + (new_res.start - io_res->start);
->  }
->  
-> +/*
-> + * Work around broken BIOSs that return inconsistent values from the ACPI
-> + * region vs the registers. Trust the ACPI region. Such broken systems
-> + * probably cannot send large TPM commands since the buffer will be truncated.
-> + */
-> +static u64 crb_fixup_cmd_size(struct device *dev, struct resource *io_res,
-> +			      u64 start, u64 size)
-> +{
-> +	if (io_res->start > start || io_res->end < start)
-> +		return size;
-> +
-> +	if (start + size - 1 <= io_res->end)
-> +		return size;
-> +
-> +	dev_err(dev,
-> +		FW_BUG "ACPI region does not cover the entire command/response buffer. %pr vs %llx %llx\n",
-> +		io_res, start, size);
-> +
-> +	return io_res->end - start + 1;
-> +}
-> +
->  static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
->  		      struct acpi_table_tpm2 *buf)
->  {
-> @@ -278,14 +299,16 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
->  
->  	cmd_pa = ((u64) ioread32(&priv->cca->cmd_pa_high) << 32) |
->  		  (u64) ioread32(&priv->cca->cmd_pa_low);
-> -	cmd_size = ioread32(&priv->cca->cmd_size);
-> +	cmd_size = crb_fixup_cmd_size(dev, &io_res, cmd_pa,
-> +				      ioread32(&priv->cca->cmd_size));
->  	priv->cmd = crb_map_res(dev, priv, &io_res, cmd_pa, cmd_size);
->  	if (IS_ERR(priv->cmd))
->  		return PTR_ERR(priv->cmd);
->  
->  	memcpy_fromio(&rsp_pa, &priv->cca->rsp_pa, 8);
->  	rsp_pa = le64_to_cpu(rsp_pa);
-> -	rsp_size = ioread32(&priv->cca->rsp_size);
-> +	rsp_size = crb_fixup_cmd_size(dev, &io_res, rsp_pa,
-> +				      ioread32(&priv->cca->rsp_size));
->  
->  	if (cmd_pa != rsp_pa) {
->  		priv->rsp = crb_map_res(dev, priv, &io_res, rsp_pa, rsp_size);
-> -- 
-> 2.7.4
-> 
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
