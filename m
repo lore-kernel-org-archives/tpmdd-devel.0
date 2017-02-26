@@ -1,121 +1,89 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [PATCH v2 6/7] tpm: expose spaces via a device
- link /dev/tpms<n>
-Date: Sat, 25 Feb 2017 12:04:49 -0500
-Message-ID: <1488042289.2250.22.camel@HansenPartnership.com>
-References: <20170216192529.25467-7-jarkko.sakkinen@linux.intel.com>
-	<20170223090917.jq7thil5ggjmagil@intel.com>
-	<1487941328.2249.23.camel@HansenPartnership.com>
-	<20170224173922.qwuhfxeitbyct52o@intel.com>
-	<20170224181126.GC22491@obsidianresearch.com>
-	<1487968155.2190.14.camel@HansenPartnership.com>
-	<20170224205200.GA26547@obsidianresearch.com>
-	<1487977260.2190.17.camel@HansenPartnership.com>
-	<20170224232327.GA9126@obsidianresearch.com>
-	<1487979807.2190.24.camel@HansenPartnership.com>
-	<20170225002514.GA10605@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v2 6/7] tpm: expose spaces via a device link /dev/tpms<n>
+Date: Sun, 26 Feb 2017 13:44:40 +0200
+Message-ID: <20170226114440.5ksg3lx27ylekvbx@intel.com>
+References: <20170216192529.25467-1-jarkko.sakkinen@linux.intel.com>
+ <20170216192529.25467-7-jarkko.sakkinen@linux.intel.com>
+ <20170223090917.jq7thil5ggjmagil@intel.com>
+ <1487941328.2249.23.camel@HansenPartnership.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170225002514.GA10605-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <1487941328.2249.23.camel@HansenPartnership.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: James Bottomley <James.Bottomley@HansenPartnership.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, dhowells@redhat.com, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, 2017-02-24 at 17:25 -0700, Jason Gunthorpe wrote:
-> On Fri, Feb 24, 2017 at 06:43:27PM -0500, James Bottomley wrote:
+On Fri, Feb 24, 2017 at 08:02:08AM -0500, James Bottomley wrote:
+> On Thu, 2017-02-23 at 11:09 +0200, Jarkko Sakkinen wrote:
+> > On Thu, Feb 16, 2017 at 09:25:19PM +0200, Jarkko Sakkinen wrote:
+> > > From: James Bottomley <James.Bottomley@HansenPartnership.com>
+> > > 
+> > > Currently the tpm spaces are not exposed to userspace.  Make this
+> > > exposure via a separate device, which can now be opened multiple 
+> > > times because each read/write transaction goes separately via the
+> > > space.
+> > > 
+> > > Concurrency is protected by the chip->tpm_mutex for each read/write
+> > > transaction separately.  The TPM is cleared of all transient 
+> > > objects by the time the mutex is dropped, so there should be no
+> > > interference between the kernel and userspace.
+> > > Signed-off-by: James Bottomley <
+> > > 
+> > > James.Bottomley@HansenPartnershp.com>
 > 
-> > > It just seems confusing to call something a namespace that isn't 
-> > > also a CLONE_NEW* option..
-> > 
-> > Well, there's namespace behaviour and then there's how you enter 
-> > them.  We have namespace behaviour with the /dev/tpms<n> but the
-> > namespace is entered on opening the device, even if the same 
-> > process opens the device more than once.  So we have namespace 
-> > behaviour with a non clone entry mechanism.  Since we're 
-> > namespaceing a device, that seems to me to be the correct semantic.
+> > Reviewed-by: Jarkko Sakkinen <jarkko.sakkine@linux.intel.com>
+> > Tested-by: Jarkko Sakkinen <jarkko.sakkine@linux.intel.com>
 > 
-> I'm looking at it from a documentation perspective, look at
-> namespaces(7) for instance
-
-The term "namespace" is way broader than that
-
-https://en.wikipedia.org/wiki/Namespace
-
-> Lots of FD things have 'namespace behavior' but we don't call
-> them namespaces..
-
-At it's simplest, the virtual memory process model of UNIX is a
-namespace.  That doesn't make the term inapplicable in this case.
-
-> > > Stefan was concerned about information leakage via sysfs of TPM
-> > > data, eg that a container could still touch the host's TPM. I
-> > > wonder if device cgroup could be extended to block access to the
-> > > sysfs directories containing a disallowed 'dev' ?
-> > 
-> > It doesn't need to.  The sysfs entries (those that ask the TPM
-> > something) are surrounded by chip->tpm_mutex, so when it asks, we 
-> > know all the spaces are context saved (i.e. the only TPM visible 
-> > state is global not anything space local).
+> Thanks!
 > 
-> Yes, I understand that - the concern is that a container can still
-> read the global state from tpm0 (eg ek/srk/pcrs) even if it is setup 
-> to exclusively use a vtpm.
-
-The TPM2 namespace as laid out by these patches only applies to objects
-of type 80, 02 and 03.  The Storage and Endorsement seeds can't be
-virtualized because they're one per physical instance.  81 objects
-could be virtualised, but I don't really think we should. PCR
-virtualisation is another whole interesting area of study.
-
->  device cgroup blocks access to the cdevs of tpm0 but not to the
-> sysfs files.
-
-What the device cgroup currently does for us and what it could do are
-two different things.  It seems if it exported
-__devcgroup_check_permission, we could use that as a check to gate the
-sysfs file access.
-
-> Maybe we should just make those debug files readable only by root and
-> forget about that worry.
+> > Nitpicking but I've been thinking about naming. What about calling 
+> > the device as tpmrc0 as in resource context. I think that would be a
+> > better name than TPM space.
 > 
-> > > I was also wondering about kernel use from within the container -
-> > > all kernel consumers are locked to physical tpm0.. But maybe the
-> > > kernel can consult the right device cgroup to find an allowed
-> > > TPM?
-> > 
-> > I'd use the device cgroup to determine what's allowable per 
-> > container (i.e. what tpm you can see) then within the container I'd 
-> > open the tpms<n> device ...
+> Well the original name was tpmrm<n> for TPM with Resource Manager.  You
+> wanted it to be tpms<n> for TPM with Spaces.
 > 
-> I am talking about using a situation like kernel IMA or keyring in 
-> the container with a tpm that is not tpm0, eg a vtpm.
+> I'm not entirely sold on the Resource Context name ... I think
+> Resource Manager (because it's what the TCG calls it) or Spaces
+> (because it's what all the code comments call it) are better.
+> Resource Context sounds like what TPM2_SaveContext() creates for you
+> rather than the interface.
+> 
+> >  You do not mix it up with namespaces and/or virtualization. With
+> > resource in front it cannot be easily mixed up with TPM contexts
+> > either.
+> 
+> I'm a containers person.  What this set of patches does is precisely OS
+> level virtualization in my book, so I don't think you need to pretend
+> it is't; and OS level virtualization is what a namespace does.  The
+> only difference between this and the other kernel namespaces is that
+> you get a new namespace automatically when you open the device and you
+> can't enter an existing namespace.
+> 
+> I think therefore that tpmns<n> for TPM Namespace would be very
+> appropriate.
 
-a vtpm appears as a tpm device so it can be controlled by the device
-cgroup ... I think I'm not seeing the issue.
+Sorry for going back and forth with this but I turn it back to your
+original tpmrm. It's in the end of the day the least confusing option. I
+think this has been anyway useful to trip a bit around the options
+because it is hard to rollback API...
 
-I should also say that discussion of mechanisms is usually the wrong
-way to begin for OS virtualisation.  Almost anything can be virtualised
-in a variety of ways, so to find the best way (or indeed if it should
-be done at all) it's usually better to start with use cases.  So
-instead of saying we need to virtualize the PCRs we should start with X
-container has this requirement for attestation of its Y state.  Often
-the best way simply is an extension of the multi user model for the
-resource ... in this case no-one's really come up with one for PCRs, so
-that might be the place to begin.
+> > This does not equire any effort from your side. I could do the
+> > renaming.
+> >
+> > PS. Could you go through my commits and test and review them at some
+> > point so we would have the whole patch set peer tested?
+> 
+> Already reviewed, just doing a test build (I'm travelling, so it
+> actually has to be on my physical laptop).
+> 
+> James
 
-James
+There's now tabrm-v3 branch. I had to tweak error handling in your
+device adding patch because of b4e9d7561a70. I hope I didn't break
+anything.
 
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+/Jarkko
