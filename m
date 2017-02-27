@@ -1,18 +1,24 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Subject: Re: [PATCH v2 6/7] tpm: expose spaces via a device
  link /dev/tpms<n>
-Date: Mon, 27 Feb 2017 06:55:54 -0800
-Message-ID: <1488207354.3004.4.camel@HansenPartnership.com>
-References: <20170216192529.25467-1-jarkko.sakkinen@linux.intel.com>
-	<20170216192529.25467-7-jarkko.sakkinen@linux.intel.com>
-	<58AFD9C1.1050507@linux.vnet.ibm.com>
-	<1487940829.2249.15.camel@HansenPartnership.com>
-	<58B41184.7020200@linux.vnet.ibm.com>
+Date: Mon, 27 Feb 2017 10:28:34 -0700
+Message-ID: <20170227172834.GH5891@obsidianresearch.com>
+References: <1487941328.2249.23.camel@HansenPartnership.com>
+	<20170224173922.qwuhfxeitbyct52o@intel.com>
+	<20170224181126.GC22491@obsidianresearch.com>
+	<1487968155.2190.14.camel@HansenPartnership.com>
+	<20170224205200.GA26547@obsidianresearch.com>
+	<1487977260.2190.17.camel@HansenPartnership.com>
+	<20170224232327.GA9126@obsidianresearch.com>
+	<1487979807.2190.24.camel@HansenPartnership.com>
+	<20170225002514.GA10605@obsidianresearch.com>
+	<1488042289.2250.22.camel@HansenPartnership.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <58B41184.7020200-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <1488042289.2250.22.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,77 +27,58 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>, Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, 2017-02-27 at 17:16 +0530, Nayna wrote:
+On Sat, Feb 25, 2017 at 12:04:49PM -0500, James Bottomley wrote:
+
+> >  device cgroup blocks access to the cdevs of tpm0 but not to the
+> > sysfs files.
 > 
-> On 02/24/2017 06:23 PM, James Bottomley wrote:
-> > On Fri, 2017-02-24 at 12:29 +0530, Nayna wrote:
-> > > 
-> > > On 02/17/2017 12:55 AM, Jarkko Sakkinen wrote:
-> > > > From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-> > > > 
-> > > > Currently the tpm spaces are not exposed to userspace.  Make 
-> > > > this exposure via a separate device, which can now be opened
-> > > > multiple times because each read/write transaction goes 
-> > > > separately via the space.
-> > > > 
-> > > > Concurrency is protected by the chip->tpm_mutex for each 
-> > > > read/write transaction separately.  The TPM is cleared of all 
-> > > > transient objects by the time the mutex is dropped, so there 
-> > > > should be no interference between the kernel and userspace.
-> > > 
-> > > To understand, I have two questions:
-> > > 
-> > > 1. How would a userspace application using TPM know whether to 
-> > > use /dev/tpm0 or /dev/tpms0 ?
-> > 
-> > Likely they can't use /dev/tpm0 becuase it will be root only, but 
-> > the major indicator will be whether /dev/tpms0 exists or not.
+> What the device cgroup currently does for us and what it could do are
+> two different things.  It seems if it exported
+> __devcgroup_check_permission, we could use that as a check to gate the
+> sysfs file access.
+
+Make sense, maybe we should be doing that..
+
+Stefan, are you still interested in this? This seems like a fairly
+simple solution to your problem???
+
+> > I am talking about using a situation like kernel IMA or keyring in 
+> > the container with a tpm that is not tpm0, eg a vtpm.
 > 
-> Thanks James !!
-> Currently, I see even /dev/tpms0 is also only root accessible. I did 
-> see the discussion to make it 0666, and I understand adding command
-> filtering is part of enabling /dev/tpms0 as all-accessible.
+> a vtpm appears as a tpm device so it can be controlled by the device
+> cgroup ... I think I'm not seeing the issue.
 
-I don't think we'd ever do that from the kernel.  Accessibility would
-be a userspace policy.
+When an in-kernel call opens the TPM it does not go through the cdev,
+it does something like this:
 
-This is what I have on my system to make it accessible:
+extern int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf);
 
-/etc/udev/rules.d/80-tpm-2.rules:
-# tpm 2 devices need to be world readable
-SUBSYSTEM=="tpms", ACTION=="add", MODE="0666"
+And hardwires 'chip_num' to TPM_ANY_NUM. Keyring does the same (see
+trusted_instantiate)
 
-> Sorry, I didn't understand when you said, "major indicator will be 
-> whether /dev/tpms0" exists or not ? I mean in what case it might not 
-> exist..
+Practically speaking this means in-kernel callers pretty much always
+operate on tpm0.
 
-If the kernel is too old or you have a 1.2 TPM.
+I think we need to change TPM_ANY_NUM to something more container
+friendly, but I'm not sure what that should be.
 
-> > 
-> > > 2. How would a userspace RM know to build on top of /dev/tpm0 or
-> > > /dev/tpms0. And if it is built on top of /dev/tpms0, can there be
-> > > issues with one RM on top of other RM.
-> > 
-> > There's a known problem with RMs in that they're not fully 
-> > stackable, so I suspect the answer is that if tpms0 exists you 
-> > won't use an RM, but this is currently an area of active research. 
-> >  The other potential problem is that if you build a RM on tpm0 in 
-> > userspace, it will fight with the kernel when the kernel uses
-> > sessions.
-> 
-> Does it imply that there should be restriction to disallow any RM 
-> specific commands from userspace on /dev/tpm0 ?
+> be done at all) it's usually better to start with use cases.  So
+> instead of saying we need to virtualize the PCRs we should start with X
+> container has this requirement for attestation of its Y state.  Often
+> the best way simply is an extension of the multi user model for the
+> resource ... in this case no-one's really come up with one for PCRs, so
+> that might be the place to begin.
 
-The only such command would be session or policy context save.  It's
-debateable whether we should interfere.
+Broadly makes sense to me.
 
-James
+Maybe kernel keyring is a better example, it already has a multi-user
+model.
 
-
+Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
