@@ -1,19 +1,19 @@
-From: Enric Balletbo Serra <eballetbo-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: Re: [PATCH 1/2] tpm: Apply an adapterlimit for
-	retransmission.
-Date: Mon, 27 Feb 2017 22:30:32 +0100
-Message-ID: <CAFqH_52TFBWLCXY00pTNdhDKJJ=R3uhY6kpp7Sgx2-fHnq-_iw@mail.gmail.com>
-References: <20170221144500.502-1-enric.balletbo@collabora.com>
-	<20170221162948.GD25818@lunn.ch>
-	<ffdfb321-6c9b-06fe-1a90-04da5457b47d@collabora.com>
-	<20170222140134.GA23586@lunn.ch>
-	<CAFqH_536FjjkWiUS_5PyDJHHgy6S8BvBzArAxSAg6H6oa214KA@mail.gmail.com>
-	<20170227191245.ecord2i7o6jwec5k@ninjato>
+From: Ken Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH v2 6/7] tpm: expose spaces via a device
+	link /dev/tpms<n>
+Date: Tue, 28 Feb 2017 12:22:36 -0500
+Message-ID: <c8e90ebc-a0f5-4861-933b-7b4978eda684@linux.vnet.ibm.com>
+References: <20170216192529.25467-1-jarkko.sakkinen@linux.intel.com>
+	<20170216192529.25467-7-jarkko.sakkinen@linux.intel.com>
+	<20170223090917.jq7thil5ggjmagil@intel.com>
+	<1487941328.2249.23.camel@HansenPartnership.com>
+	<20170226114440.5ksg3lx27ylekvbx@intel.com>
+	<20170226183040.GA4272@wind.enjellic.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170227191245.ecord2i7o6jwec5k@ninjato>
+In-Reply-To: <20170226183040.GA4272-DHO+NtfOqB5PEDpkEIzg7wC/G2K4zDHf@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,59 +22,35 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Wolfram Sang <wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org>
-Cc: linux-kernel <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Andrey Pronin <apronin-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+To: "Dr. Greg Wettstein" <greg-R92VP3DqSWVWk0Htik3J/w@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-2017-02-27 20:12 GMT+01:00 Wolfram Sang <wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org>:
-> Hi,
+On 2/26/2017 1:30 PM, Dr. Greg Wettstein wrote:
 >
->> >> > Rather than trying small and smaller transfers, would it not be better
->> >> > to get the i2c core to expose the quirk info about transfer limits?
->> >> >
->> >>
->> >> Sounds a good idea to me, I guess the quirk info can be accessed with
->> >>
->> >>   tpm_dev.client->adapter->quirks->max_read_len
->> >>
->> >> so I think we don't need to touch the i2c core. I'll propose a second version of the patch.
->> >
->> > Hi Enric
->> >
->> > You should probably ask Wolfram Sang <wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org>, the i2c
->> > subsystem maintainer. He may prefer adding an API call.
->
-> Thanks for pointing me to this thread.
->
-> I understand it looks tempting to use the quirks struct directly, but I
-> don't think this is the proper solution. Quirks are complex and and to
-> determine which one finally applies, you need all the logic encoded in
-> i2c_check_for_quirks(). Which already gets called on every transfer.
->
-> So, my suggestion would be to simply fall back to a sane minimum when
-> the maximum failed. 32 (I2C_SMBUS_BLOCK_MAX) should be a good choice.
->
+> For example, Ken's tools which come in his TSS2 library, don't work
+> properly with the 'spaces' device due to the virtualization lifetime.
+> As an example, the getcapability call will 'lie' about the number of
+> transient handles which are available through the device.  Attempts to
+> string multiple transaction sequences together will fail as well.
 
-Sounds a good solution for me, I'll test and send a new version of the patches.
+Two comments:
 
-> BTW I noted that the original patch checks for -EINVAL. The core returns
-> -EOPNOTSUPP, though. So, a) the patch needs to be adapted
+1 = The intent of the command line tools was for rapid prototyping 
+scripts against a SW TPM, and then as sample code for writing the 
+application.
 
-Yes I already detected this, In this series I forget to fixup the
-patch that fixed this when I did the git rebase. It's is fixed in the
-second version.
+2 - If you really want to script against a hardware TPM, it can be done. 
+  Simply place a proxy between the TSS and the TPM device driver.  The 
+proxy passes commands from the TCP socket to the TPM device driver.  It 
+keeps the connection open so the resource manager doesn't flush between 
+transactions.
 
-> and b) it
-> looks the i2c host driver returning -EINVAL could be converted to use
-> the quirk infrastructure? Which driver is it?
->
-> Regards,
->
->    Wolfram
->
+The proxy can be obtained from here.  It's from TPM 1.2 days, but it 
+works for TPM 2.0 as well.
 
-Regards,
-  Enric
+https://sourceforge.net/projects/ibmswtpm/files/?source=navbar
+
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
