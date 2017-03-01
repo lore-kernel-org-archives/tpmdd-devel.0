@@ -1,11 +1,14 @@
-From: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
-Subject: [PATCH] tpm: do not suspend/resume if power stays on
-Date: Wed,  1 Mar 2017 12:51:16 +0100
-Message-ID: <20170301115116.19696-1-enric.balletbo@collabora.com>
+From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+Subject: Re: [PATCH] tpm: do not suspend/resume if power stays
+	on
+Date: Wed, 01 Mar 2017 13:00:16 +0100
+Message-ID: <EB063F8C-96C0-4584-8C96-9E8F271988FB@gmx.de>
+References: <20170301115116.19696-1-enric.balletbo@collabora.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170301115116.19696-1-enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -14,108 +17,73 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+To: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>, Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
 Cc: Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-
-The suspend/resume behavior of the TPM can be controlled
-by setting "powered-while-suspended" in the DTS.
-
-Signed-off-by: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Signed-off-by: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
----
- Documentation/devicetree/bindings/tpm/tpm.txt | 25 +++++++++++++++++++++++++
- drivers/char/tpm/tpm_i2c_infineon.c           | 25 ++++++++++++++++++++++++-
- 2 files changed, 49 insertions(+), 1 deletion(-)
- create mode 100644 Documentation/devicetree/bindings/tpm/tpm.txt
-
-diff --git a/Documentation/devicetree/bindings/tpm/tpm.txt b/Documentation/devicetree/bindings/tpm/tpm.txt
-new file mode 100644
-index 0000000..af4de0d
---- /dev/null
-+++ b/Documentation/devicetree/bindings/tpm/tpm.txt
-@@ -0,0 +1,25 @@
-+TPM (Trusted Platform Module)
-+
-+A TPM on the I2C bus is a child of the node for the bus.
-+
-+Required properties:
-+- compatible: should be "infineon,<chip>"
-+- reg: the I2C address
-+
-+Optional properties:
-+- powered-while-suspended: present when the TPM is left powered on between
-+  suspend and resume (makes the suspend/resume callbacks do nothing).
-+
-+Example:
-+	i2c@12C90000 {
-+		samsung,i2c-sda-delay = <100>;
-+		samsung,i2c-max-bus-freq = <66000>;
-+		gpios = <&gpa1 2 3 3 0>,
-+			<&gpa1 3 3 3 0>;
-+
-+		tpm {
-+			compatible = "infineon,slb9635tt";
-+			reg = <0x20>;
-+			powered-while-suspended;
-+		};
-+	};
-diff --git a/drivers/char/tpm/tpm_i2c_infineon.c b/drivers/char/tpm/tpm_i2c_infineon.c
-index 62ee44e..19d9522 100644
---- a/drivers/char/tpm/tpm_i2c_infineon.c
-+++ b/drivers/char/tpm/tpm_i2c_infineon.c
-@@ -70,6 +70,7 @@ struct tpm_inf_dev {
- 	u8 buf[TPM_BUFSIZE + sizeof(u8)]; /* max. buffer size + addr */
- 	struct tpm_chip *chip;
- 	enum i2c_chip_type chip_type;
-+	bool powered_while_suspended;
- };
- 
- static struct tpm_inf_dev tpm_dev;
-@@ -599,6 +600,11 @@ static int tpm_tis_i2c_init(struct device *dev)
- 		goto out_err;
- 	}
- 
-+	if (dev->of_node &&
-+	    of_get_property(dev->of_node, "powered-while-suspended", NULL)) {
-+		tpm_dev.powered_while_suspended = true;
-+	}
-+
- 	/* read four bytes from DID_VID register */
- 	if (iic_tpm_read(TPM_DID_VID(0), (u8 *)&vendor, 4) < 0) {
- 		dev_err(dev, "could not read vendor id\n");
-@@ -662,7 +668,24 @@ static const struct of_device_id tpm_tis_i2c_of_match[] = {
- MODULE_DEVICE_TABLE(of, tpm_tis_i2c_of_match);
- #endif
- 
--static SIMPLE_DEV_PM_OPS(tpm_tis_i2c_ops, tpm_pm_suspend, tpm_pm_resume);
-+static int __maybe_unused tpm_tis_i2c_suspend(struct device *dev)
-+{
-+	if (tpm_dev.powered_while_suspended)
-+		return 0;
-+
-+	return tpm_pm_suspend(dev);
-+}
-+
-+static int __maybe_unused tpm_tis_i2c_resume(struct device *dev)
-+{
-+	if (tpm_dev.powered_while_suspended)
-+		return 0;
-+
-+	return tpm_pm_resume(dev);
-+}
-+
-+static SIMPLE_DEV_PM_OPS(tpm_tis_i2c_ops, tpm_tis_i2c_suspend,
-+			 tpm_tis_i2c_resume);
- 
- static int tpm_tis_i2c_probe(struct i2c_client *client,
- 			     const struct i2c_device_id *id)
--- 
-2.9.3
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+CgpBbSAxLiBNw6RyeiAyMDE3IDEyOjUxOjE2IE1FWiBzY2hyaWViIEVucmljIEJhbGxldGJvIGkg
+U2VycmEgPGVucmljLmJhbGxldGJvQGNvbGxhYm9yYS5jb20+Ogo+RnJvbTogU29ubnkgUmFvIDxz
+b25ueXJhb0BjaHJvbWl1bS5vcmc+Cj4KPlRoZSBzdXNwZW5kL3Jlc3VtZSBiZWhhdmlvciBvZiB0
+aGUgVFBNIGNhbiBiZSBjb250cm9sbGVkCj5ieSBzZXR0aW5nICJwb3dlcmVkLXdoaWxlLXN1c3Bl
+bmRlZCIgaW4gdGhlIERUUy4KPgo+U2lnbmVkLW9mZi1ieTogU29ubnkgUmFvIDxzb25ueXJhb0Bj
+aHJvbWl1bS5vcmc+Cj5TaWduZWQtb2ZmLWJ5OiBFbnJpYyBCYWxsZXRibyBpIFNlcnJhIDxlbnJp
+Yy5iYWxsZXRib0Bjb2xsYWJvcmEuY29tPgo+LS0tCj5Eb2N1bWVudGF0aW9uL2RldmljZXRyZWUv
+YmluZGluZ3MvdHBtL3RwbS50eHQgfCAyNQo+KysrKysrKysrKysrKysrKysrKysrKysrKwo+ZHJp
+dmVycy9jaGFyL3RwbS90cG1faTJjX2luZmluZW9uLmMgICAgICAgICAgIHwgMjUKPisrKysrKysr
+KysrKysrKysrKysrKysrKy0KPiAyIGZpbGVzIGNoYW5nZWQsIDQ5IGluc2VydGlvbnMoKyksIDEg
+ZGVsZXRpb24oLSkKPiBjcmVhdGUgbW9kZSAxMDA2NDQgRG9jdW1lbnRhdGlvbi9kZXZpY2V0cmVl
+L2JpbmRpbmdzL3RwbS90cG0udHh0Cj4KPmRpZmYgLS1naXQgYS9Eb2N1bWVudGF0aW9uL2Rldmlj
+ZXRyZWUvYmluZGluZ3MvdHBtL3RwbS50eHQKPmIvRG9jdW1lbnRhdGlvbi9kZXZpY2V0cmVlL2Jp
+bmRpbmdzL3RwbS90cG0udHh0Cj5uZXcgZmlsZSBtb2RlIDEwMDY0NAo+aW5kZXggMDAwMDAwMC4u
+YWY0ZGUwZAo+LS0tIC9kZXYvbnVsbAo+KysrIGIvRG9jdW1lbnRhdGlvbi9kZXZpY2V0cmVlL2Jp
+bmRpbmdzL3RwbS90cG0udHh0CgpIaSwgZm9yIHRoaXMgZGV2aWNlIHRoZXJlIGV4aXN0cyBhIGJp
+bmRpbmcgaW4gdGhlIGkyYyBzdWJmb2xkZXIKCmh0dHBzOi8vZ2l0Lmtlcm5lbC5vcmcvY2dpdC9s
+aW51eC9rZXJuZWwvZ2l0L3RvcnZhbGRzL2xpbnV4LmdpdC90cmVlL0RvY3VtZW50YXRpb24vZGV2
+aWNldHJlZS9iaW5kaW5ncy9pMmMvdHJpdmlhbC1kZXZpY2VzLnR4dD9pZD1yZWZzL3RhZ3MvdjQu
+MTAKClBldGVyCj5AQCAtMCwwICsxLDI1IEBACj4rVFBNIChUcnVzdGVkIFBsYXRmb3JtIE1vZHVs
+ZSkKPisKPitBIFRQTSBvbiB0aGUgSTJDIGJ1cyBpcyBhIGNoaWxkIG9mIHRoZSBub2RlIGZvciB0
+aGUgYnVzLgo+Kwo+K1JlcXVpcmVkIHByb3BlcnRpZXM6Cj4rLSBjb21wYXRpYmxlOiBzaG91bGQg
+YmUgImluZmluZW9uLDxjaGlwPiIKPistIHJlZzogdGhlIEkyQyBhZGRyZXNzCj4rCj4rT3B0aW9u
+YWwgcHJvcGVydGllczoKPistIHBvd2VyZWQtd2hpbGUtc3VzcGVuZGVkOiBwcmVzZW50IHdoZW4g
+dGhlIFRQTSBpcyBsZWZ0IHBvd2VyZWQgb24KPmJldHdlZW4KPisgIHN1c3BlbmQgYW5kIHJlc3Vt
+ZSAobWFrZXMgdGhlIHN1c3BlbmQvcmVzdW1lIGNhbGxiYWNrcyBkbyBub3RoaW5nKS4KPisKPitF
+eGFtcGxlOgo+KwlpMmNAMTJDOTAwMDAgewo+KwkJc2Ftc3VuZyxpMmMtc2RhLWRlbGF5ID0gPDEw
+MD47Cj4rCQlzYW1zdW5nLGkyYy1tYXgtYnVzLWZyZXEgPSA8NjYwMDA+Owo+KwkJZ3Bpb3MgPSA8
+JmdwYTEgMiAzIDMgMD4sCj4rCQkJPCZncGExIDMgMyAzIDA+Owo+Kwo+KwkJdHBtIHsKPisJCQlj
+b21wYXRpYmxlID0gImluZmluZW9uLHNsYjk2MzV0dCI7Cj4rCQkJcmVnID0gPDB4MjA+Owo+KwkJ
+CXBvd2VyZWQtd2hpbGUtc3VzcGVuZGVkOwo+KwkJfTsKPisJfTsKPmRpZmYgLS1naXQgYS9kcml2
+ZXJzL2NoYXIvdHBtL3RwbV9pMmNfaW5maW5lb24uYwo+Yi9kcml2ZXJzL2NoYXIvdHBtL3RwbV9p
+MmNfaW5maW5lb24uYwo+aW5kZXggNjJlZTQ0ZS4uMTlkOTUyMiAxMDA2NDQKPi0tLSBhL2RyaXZl
+cnMvY2hhci90cG0vdHBtX2kyY19pbmZpbmVvbi5jCj4rKysgYi9kcml2ZXJzL2NoYXIvdHBtL3Rw
+bV9pMmNfaW5maW5lb24uYwo+QEAgLTcwLDYgKzcwLDcgQEAgc3RydWN0IHRwbV9pbmZfZGV2IHsK
+PiAJdTggYnVmW1RQTV9CVUZTSVpFICsgc2l6ZW9mKHU4KV07IC8qIG1heC4gYnVmZmVyIHNpemUg
+KyBhZGRyICovCj4gCXN0cnVjdCB0cG1fY2hpcCAqY2hpcDsKPiAJZW51bSBpMmNfY2hpcF90eXBl
+IGNoaXBfdHlwZTsKPisJYm9vbCBwb3dlcmVkX3doaWxlX3N1c3BlbmRlZDsKPiB9Owo+IAo+IHN0
+YXRpYyBzdHJ1Y3QgdHBtX2luZl9kZXYgdHBtX2RldjsKPkBAIC01OTksNiArNjAwLDExIEBAIHN0
+YXRpYyBpbnQgdHBtX3Rpc19pMmNfaW5pdChzdHJ1Y3QgZGV2aWNlICpkZXYpCj4gCQlnb3RvIG91
+dF9lcnI7Cj4gCX0KPiAKPisJaWYgKGRldi0+b2Zfbm9kZSAmJgo+KwkgICAgb2ZfZ2V0X3Byb3Bl
+cnR5KGRldi0+b2Zfbm9kZSwgInBvd2VyZWQtd2hpbGUtc3VzcGVuZGVkIiwgTlVMTCkpIHsKPisJ
+CXRwbV9kZXYucG93ZXJlZF93aGlsZV9zdXNwZW5kZWQgPSB0cnVlOwo+Kwl9Cj4rCj4gCS8qIHJl
+YWQgZm91ciBieXRlcyBmcm9tIERJRF9WSUQgcmVnaXN0ZXIgKi8KPiAJaWYgKGlpY190cG1fcmVh
+ZChUUE1fRElEX1ZJRCgwKSwgKHU4ICopJnZlbmRvciwgNCkgPCAwKSB7Cj4gCQlkZXZfZXJyKGRl
+diwgImNvdWxkIG5vdCByZWFkIHZlbmRvciBpZFxuIik7Cj5AQCAtNjYyLDcgKzY2OCwyNCBAQCBz
+dGF0aWMgY29uc3Qgc3RydWN0IG9mX2RldmljZV9pZAo+dHBtX3Rpc19pMmNfb2ZfbWF0Y2hbXSA9
+IHsKPiBNT0RVTEVfREVWSUNFX1RBQkxFKG9mLCB0cG1fdGlzX2kyY19vZl9tYXRjaCk7Cj4gI2Vu
+ZGlmCj4gCj4tc3RhdGljIFNJTVBMRV9ERVZfUE1fT1BTKHRwbV90aXNfaTJjX29wcywgdHBtX3Bt
+X3N1c3BlbmQsCj50cG1fcG1fcmVzdW1lKTsKPitzdGF0aWMgaW50IF9fbWF5YmVfdW51c2VkIHRw
+bV90aXNfaTJjX3N1c3BlbmQoc3RydWN0IGRldmljZSAqZGV2KQo+K3sKPisJaWYgKHRwbV9kZXYu
+cG93ZXJlZF93aGlsZV9zdXNwZW5kZWQpCj4rCQlyZXR1cm4gMDsKPisKPisJcmV0dXJuIHRwbV9w
+bV9zdXNwZW5kKGRldik7Cj4rfQo+Kwo+K3N0YXRpYyBpbnQgX19tYXliZV91bnVzZWQgdHBtX3Rp
+c19pMmNfcmVzdW1lKHN0cnVjdCBkZXZpY2UgKmRldikKPit7Cj4rCWlmICh0cG1fZGV2LnBvd2Vy
+ZWRfd2hpbGVfc3VzcGVuZGVkKQo+KwkJcmV0dXJuIDA7Cj4rCj4rCXJldHVybiB0cG1fcG1fcmVz
+dW1lKGRldik7Cj4rfQo+Kwo+K3N0YXRpYyBTSU1QTEVfREVWX1BNX09QUyh0cG1fdGlzX2kyY19v
+cHMsIHRwbV90aXNfaTJjX3N1c3BlbmQsCj4rCQkJIHRwbV90aXNfaTJjX3Jlc3VtZSk7Cj4gCj4g
+c3RhdGljIGludCB0cG1fdGlzX2kyY19wcm9iZShzdHJ1Y3QgaTJjX2NsaWVudCAqY2xpZW50LAo+
+IAkJCSAgICAgY29uc3Qgc3RydWN0IGkyY19kZXZpY2VfaWQgKmlkKQoKLS0gClNlbnQgZnJvbSBt
+eSBtb2JpbGUKCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpDaGVjayBvdXQgdGhlIHZpYnJhbnQgdGVj
+aCBjb21tdW5pdHkgb24gb25lIG9mIHRoZSB3b3JsZCdzIG1vc3QKZW5nYWdpbmcgdGVjaCBzaXRl
+cywgU2xhc2hEb3Qub3JnISBodHRwOi8vc2RtLmxpbmsvc2xhc2hkb3QKX19fX19fX19fX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0
+CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xpc3RzLnNvdXJjZWZv
+cmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
