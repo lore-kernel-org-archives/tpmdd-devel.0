@@ -1,98 +1,53 @@
-From: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
-Subject: Re: [PATCH] tpm: do not suspend/resume if power stays
-	on
-Date: Wed, 1 Mar 2017 13:08:55 +0100
-Message-ID: <c4687371-c801-6946-38e1-8915a9c3fdf0@collabora.com>
+From: Mark Rutland <mark.rutland@arm.com>
+Subject: Re: [PATCH] tpm: do not suspend/resume if power stays on
+Date: Wed, 1 Mar 2017 13:54:29 +0000
+Message-ID: <20170301135429.GF28874@leverpostej>
 References: <20170301115116.19696-1-enric.balletbo@collabora.com>
-	<EB063F8C-96C0-4584-8C96-9E8F271988FB@gmx.de>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <EB063F8C-96C0-4584-8C96-9E8F271988FB-Mmb7MZpHnFY@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
-Cc: Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20170301115116.19696-1-enric.balletbo@collabora.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Enric Balletbo i Serra <enric.balletbo@collabora.com>
+Cc: Rob Herring <robh+dt@kernel.org>, Peter Huewe <peterhuewe@gmx.de>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Sonny Rao <sonnyrao@chromium.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-SGkgUGV0ZXIsCgpPbiAwMS8wMy8xNyAxMzowMCwgUGV0ZXIgSHVld2Ugd3JvdGU6Cj4gCj4gCj4g
-QW0gMS4gTcOkcnogMjAxNyAxMjo1MToxNiBNRVogc2NocmllYiBFbnJpYyBCYWxsZXRibyBpIFNl
-cnJhIDxlbnJpYy5iYWxsZXRib0Bjb2xsYWJvcmEuY29tPjoKPj4gRnJvbTogU29ubnkgUmFvIDxz
-b25ueXJhb0BjaHJvbWl1bS5vcmc+Cj4+Cj4+IFRoZSBzdXNwZW5kL3Jlc3VtZSBiZWhhdmlvciBv
-ZiB0aGUgVFBNIGNhbiBiZSBjb250cm9sbGVkCj4+IGJ5IHNldHRpbmcgInBvd2VyZWQtd2hpbGUt
-c3VzcGVuZGVkIiBpbiB0aGUgRFRTLgo+Pgo+PiBTaWduZWQtb2ZmLWJ5OiBTb25ueSBSYW8gPHNv
-bm55cmFvQGNocm9taXVtLm9yZz4KPj4gU2lnbmVkLW9mZi1ieTogRW5yaWMgQmFsbGV0Ym8gaSBT
-ZXJyYSA8ZW5yaWMuYmFsbGV0Ym9AY29sbGFib3JhLmNvbT4KPj4gLS0tCj4+IERvY3VtZW50YXRp
-b24vZGV2aWNldHJlZS9iaW5kaW5ncy90cG0vdHBtLnR4dCB8IDI1Cj4+ICsrKysrKysrKysrKysr
-KysrKysrKysrKysKPj4gZHJpdmVycy9jaGFyL3RwbS90cG1faTJjX2luZmluZW9uLmMgICAgICAg
-ICAgIHwgMjUKPj4gKysrKysrKysrKysrKysrKysrKysrKysrLQo+PiAyIGZpbGVzIGNoYW5nZWQs
-IDQ5IGluc2VydGlvbnMoKyksIDEgZGVsZXRpb24oLSkKPj4gY3JlYXRlIG1vZGUgMTAwNjQ0IERv
-Y3VtZW50YXRpb24vZGV2aWNldHJlZS9iaW5kaW5ncy90cG0vdHBtLnR4dAo+Pgo+PiBkaWZmIC0t
-Z2l0IGEvRG9jdW1lbnRhdGlvbi9kZXZpY2V0cmVlL2JpbmRpbmdzL3RwbS90cG0udHh0Cj4+IGIv
-RG9jdW1lbnRhdGlvbi9kZXZpY2V0cmVlL2JpbmRpbmdzL3RwbS90cG0udHh0Cj4+IG5ldyBmaWxl
-IG1vZGUgMTAwNjQ0Cj4+IGluZGV4IDAwMDAwMDAuLmFmNGRlMGQKPj4gLS0tIC9kZXYvbnVsbAo+
-PiArKysgYi9Eb2N1bWVudGF0aW9uL2RldmljZXRyZWUvYmluZGluZ3MvdHBtL3RwbS50eHQKPiAK
-PiBIaSwgZm9yIHRoaXMgZGV2aWNlIHRoZXJlIGV4aXN0cyBhIGJpbmRpbmcgaW4gdGhlIGkyYyBz
-dWJmb2xkZXIKPiAKPiBodHRwczovL2dpdC5rZXJuZWwub3JnL2NnaXQvbGludXgva2VybmVsL2dp
-dC90b3J2YWxkcy9saW51eC5naXQvdHJlZS9Eb2N1bWVudGF0aW9uL2RldmljZXRyZWUvYmluZGlu
-Z3MvaTJjL3RyaXZpYWwtZGV2aWNlcy50eHQ/aWQ9cmVmcy90YWdzL3Y0LjEwCj4gCgpUaGFua3Mg
-dG8gY2F0Y2ggdGhpcywgSSBwcm9wb3NlIHJlbW92ZSBmcm9tIHRyaXZpYWwtZGV2aWNlcy50eHQg
-YW5kIGNyZWF0ZSBhIG5ldyBiaW5kaW5nIGNhbGxlZCBEb2N1bWVudGF0aW9uL2RldmljZXRyZWUv
-YmluZGluZ3MvaTJjL2kyYy10cG0taW5maW5lb24udHh0IGZvciB0cG0taW5maW5lb24gZGV2aWNl
-cz8gV2hhdCBkbyB5b3UgdGhpbms/CgpUaGFua3MsCiBFbnJpYwoKPiBQZXRlcgo+PiBAQCAtMCww
-ICsxLDI1IEBACj4+ICtUUE0gKFRydXN0ZWQgUGxhdGZvcm0gTW9kdWxlKQo+PiArCj4+ICtBIFRQ
-TSBvbiB0aGUgSTJDIGJ1cyBpcyBhIGNoaWxkIG9mIHRoZSBub2RlIGZvciB0aGUgYnVzLgo+PiAr
-Cj4+ICtSZXF1aXJlZCBwcm9wZXJ0aWVzOgo+PiArLSBjb21wYXRpYmxlOiBzaG91bGQgYmUgImlu
-ZmluZW9uLDxjaGlwPiIKPj4gKy0gcmVnOiB0aGUgSTJDIGFkZHJlc3MKPj4gKwo+PiArT3B0aW9u
-YWwgcHJvcGVydGllczoKPj4gKy0gcG93ZXJlZC13aGlsZS1zdXNwZW5kZWQ6IHByZXNlbnQgd2hl
-biB0aGUgVFBNIGlzIGxlZnQgcG93ZXJlZCBvbgo+PiBiZXR3ZWVuCj4+ICsgIHN1c3BlbmQgYW5k
-IHJlc3VtZSAobWFrZXMgdGhlIHN1c3BlbmQvcmVzdW1lIGNhbGxiYWNrcyBkbyBub3RoaW5nKS4K
-Pj4gKwo+PiArRXhhbXBsZToKPj4gKwlpMmNAMTJDOTAwMDAgewo+PiArCQlzYW1zdW5nLGkyYy1z
-ZGEtZGVsYXkgPSA8MTAwPjsKPj4gKwkJc2Ftc3VuZyxpMmMtbWF4LWJ1cy1mcmVxID0gPDY2MDAw
-PjsKPj4gKwkJZ3Bpb3MgPSA8JmdwYTEgMiAzIDMgMD4sCj4+ICsJCQk8JmdwYTEgMyAzIDMgMD47
-Cj4+ICsKPj4gKwkJdHBtIHsKPj4gKwkJCWNvbXBhdGlibGUgPSAiaW5maW5lb24sc2xiOTYzNXR0
-IjsKPj4gKwkJCXJlZyA9IDwweDIwPjsKPj4gKwkJCXBvd2VyZWQtd2hpbGUtc3VzcGVuZGVkOwo+
-PiArCQl9Owo+PiArCX07Cj4+IGRpZmYgLS1naXQgYS9kcml2ZXJzL2NoYXIvdHBtL3RwbV9pMmNf
-aW5maW5lb24uYwo+PiBiL2RyaXZlcnMvY2hhci90cG0vdHBtX2kyY19pbmZpbmVvbi5jCj4+IGlu
-ZGV4IDYyZWU0NGUuLjE5ZDk1MjIgMTAwNjQ0Cj4+IC0tLSBhL2RyaXZlcnMvY2hhci90cG0vdHBt
-X2kyY19pbmZpbmVvbi5jCj4+ICsrKyBiL2RyaXZlcnMvY2hhci90cG0vdHBtX2kyY19pbmZpbmVv
-bi5jCj4+IEBAIC03MCw2ICs3MCw3IEBAIHN0cnVjdCB0cG1faW5mX2RldiB7Cj4+IAl1OCBidWZb
-VFBNX0JVRlNJWkUgKyBzaXplb2YodTgpXTsgLyogbWF4LiBidWZmZXIgc2l6ZSArIGFkZHIgKi8K
-Pj4gCXN0cnVjdCB0cG1fY2hpcCAqY2hpcDsKPj4gCWVudW0gaTJjX2NoaXBfdHlwZSBjaGlwX3R5
-cGU7Cj4+ICsJYm9vbCBwb3dlcmVkX3doaWxlX3N1c3BlbmRlZDsKPj4gfTsKPj4KPj4gc3RhdGlj
-IHN0cnVjdCB0cG1faW5mX2RldiB0cG1fZGV2Owo+PiBAQCAtNTk5LDYgKzYwMCwxMSBAQCBzdGF0
-aWMgaW50IHRwbV90aXNfaTJjX2luaXQoc3RydWN0IGRldmljZSAqZGV2KQo+PiAJCWdvdG8gb3V0
-X2VycjsKPj4gCX0KPj4KPj4gKwlpZiAoZGV2LT5vZl9ub2RlICYmCj4+ICsJICAgIG9mX2dldF9w
-cm9wZXJ0eShkZXYtPm9mX25vZGUsICJwb3dlcmVkLXdoaWxlLXN1c3BlbmRlZCIsIE5VTEwpKSB7
-Cj4+ICsJCXRwbV9kZXYucG93ZXJlZF93aGlsZV9zdXNwZW5kZWQgPSB0cnVlOwo+PiArCX0KPj4g
-Kwo+PiAJLyogcmVhZCBmb3VyIGJ5dGVzIGZyb20gRElEX1ZJRCByZWdpc3RlciAqLwo+PiAJaWYg
-KGlpY190cG1fcmVhZChUUE1fRElEX1ZJRCgwKSwgKHU4ICopJnZlbmRvciwgNCkgPCAwKSB7Cj4+
-IAkJZGV2X2VycihkZXYsICJjb3VsZCBub3QgcmVhZCB2ZW5kb3IgaWRcbiIpOwo+PiBAQCAtNjYy
-LDcgKzY2OCwyNCBAQCBzdGF0aWMgY29uc3Qgc3RydWN0IG9mX2RldmljZV9pZAo+PiB0cG1fdGlz
-X2kyY19vZl9tYXRjaFtdID0gewo+PiBNT0RVTEVfREVWSUNFX1RBQkxFKG9mLCB0cG1fdGlzX2ky
-Y19vZl9tYXRjaCk7Cj4+ICNlbmRpZgo+Pgo+PiAtc3RhdGljIFNJTVBMRV9ERVZfUE1fT1BTKHRw
-bV90aXNfaTJjX29wcywgdHBtX3BtX3N1c3BlbmQsCj4+IHRwbV9wbV9yZXN1bWUpOwo+PiArc3Rh
-dGljIGludCBfX21heWJlX3VudXNlZCB0cG1fdGlzX2kyY19zdXNwZW5kKHN0cnVjdCBkZXZpY2Ug
-KmRldikKPj4gK3sKPj4gKwlpZiAodHBtX2Rldi5wb3dlcmVkX3doaWxlX3N1c3BlbmRlZCkKPj4g
-KwkJcmV0dXJuIDA7Cj4+ICsKPj4gKwlyZXR1cm4gdHBtX3BtX3N1c3BlbmQoZGV2KTsKPj4gK30K
-Pj4gKwo+PiArc3RhdGljIGludCBfX21heWJlX3VudXNlZCB0cG1fdGlzX2kyY19yZXN1bWUoc3Ry
-dWN0IGRldmljZSAqZGV2KQo+PiArewo+PiArCWlmICh0cG1fZGV2LnBvd2VyZWRfd2hpbGVfc3Vz
-cGVuZGVkKQo+PiArCQlyZXR1cm4gMDsKPj4gKwo+PiArCXJldHVybiB0cG1fcG1fcmVzdW1lKGRl
-dik7Cj4+ICt9Cj4+ICsKPj4gK3N0YXRpYyBTSU1QTEVfREVWX1BNX09QUyh0cG1fdGlzX2kyY19v
-cHMsIHRwbV90aXNfaTJjX3N1c3BlbmQsCj4+ICsJCQkgdHBtX3Rpc19pMmNfcmVzdW1lKTsKPj4K
-Pj4gc3RhdGljIGludCB0cG1fdGlzX2kyY19wcm9iZShzdHJ1Y3QgaTJjX2NsaWVudCAqY2xpZW50
-LAo+PiAJCQkgICAgIGNvbnN0IHN0cnVjdCBpMmNfZGV2aWNlX2lkICppZCkKPiAKCi0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLQpDaGVjayBvdXQgdGhlIHZpYnJhbnQgdGVjaCBjb21tdW5pdHkgb24gb25l
-IG9mIHRoZSB3b3JsZCdzIG1vc3QKZW5nYWdpbmcgdGVjaCBzaXRlcywgU2xhc2hEb3Qub3JnISBo
-dHRwOi8vc2RtLmxpbmsvc2xhc2hkb3QKX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3Rz
-LnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0
-aW5mby90cG1kZC1kZXZlbAo=
+On Wed, Mar 01, 2017 at 12:51:16PM +0100, Enric Balletbo i Serra wrote:
+> From: Sonny Rao <sonnyrao@chromium.org>
+> 
+> The suspend/resume behavior of the TPM can be controlled
+> by setting "powered-while-suspended" in the DTS.
+> 
+> Signed-off-by: Sonny Rao <sonnyrao@chromium.org>
+> Signed-off-by: Enric Balletbo i Serra <enric.balletbo@collabora.com>
+> ---
+>  Documentation/devicetree/bindings/tpm/tpm.txt | 25 +++++++++++++++++++++++++
+>  drivers/char/tpm/tpm_i2c_infineon.c           | 25 ++++++++++++++++++++++++-
+>  2 files changed, 49 insertions(+), 1 deletion(-)
+>  create mode 100644 Documentation/devicetree/bindings/tpm/tpm.txt
+> 
+> diff --git a/Documentation/devicetree/bindings/tpm/tpm.txt b/Documentation/devicetree/bindings/tpm/tpm.txt
+> new file mode 100644
+> index 0000000..af4de0d
+> --- /dev/null
+> +++ b/Documentation/devicetree/bindings/tpm/tpm.txt
+> @@ -0,0 +1,25 @@
+> +TPM (Trusted Platform Module)
+> +
+> +A TPM on the I2C bus is a child of the node for the bus.
+> +
+> +Required properties:
+> +- compatible: should be "infineon,<chip>"
+> +- reg: the I2C address
+> +
+> +Optional properties:
+> +- powered-while-suspended: present when the TPM is left powered on between
+> +  suspend and resume (makes the suspend/resume callbacks do nothing).
+
+This reads like configuration rather than a HW property.
+
+Why do you want this property?
+
+Thanks,
+Mark.
