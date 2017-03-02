@@ -1,8 +1,8 @@
 From: Wolfram Sang <wsa@the-dreams.de>
 Subject: Re: [tpmdd-devel] [PATCH 1/2] tpm: Apply an adapterlimit for
  retransmission.
-Date: Thu, 2 Mar 2017 15:05:59 +0100
-Message-ID: <20170302140558.GA1512@katana>
+Date: Thu, 2 Mar 2017 15:10:08 +0100
+Message-ID: <20170302141008.GB1512@katana>
 References: <20170221144500.502-1-enric.balletbo@collabora.com>
  <20170221162948.GD25818@lunn.ch>
  <ffdfb321-6c9b-06fe-1a90-04da5457b47d@collabora.com>
@@ -12,7 +12,7 @@ References: <20170221144500.502-1-enric.balletbo@collabora.com>
  <9E9945C5-50AD-465C-BE0E-F77499D79A04@gmx.de>
 Mime-Version: 1.0
 Content-Type: multipart/signed; micalg=pgp-sha1;
-        protocol="application/pgp-signature"; boundary="OXfL5xGRrasGEqWY"
+        protocol="application/pgp-signature"; boundary="E39vaYmALEf/7YXx"
 Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
 In-Reply-To: <9E9945C5-50AD-465C-BE0E-F77499D79A04@gmx.de>
@@ -22,38 +22,34 @@ Cc: Enric Balletbo Serra <eballetbo@gmail.com>, Andrew Lunn <andrew@lunn.ch>, En
 List-Id: tpmdd-devel@lists.sourceforge.net
 
 
---OXfL5xGRrasGEqWY
+--E39vaYmALEf/7YXx
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 
+> TPMs are a not the best devices when it comes to i2c :/
 
-> If the command is larger than the supported adapter limit the command the only viable option is to return an error.
-> For this the tpm layer would need the adapter limit.
-
-There is no single value for a limit. This is why the quirks struct is
-complex and we need a function to determine the limit each time for a
-given transfer from it.
+BTW I blame the quirky I2C HW of the adapters, so far.
 
 
---OXfL5xGRrasGEqWY
+--E39vaYmALEf/7YXx
 Content-Type: application/pgp-signature; name="signature.asc"
 
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQIcBAEBAgAGBQJYuCbGAAoJEBQN5MwUoCm2psAP/1WDYYgqDBW8jBM8FpTU7xW9
-ZlAsxJIrZywRyCKP1h1Bfd6uiDGpedN/FeDLLHm6coLDA3xR/JP4zGdOmXTyaLRi
-w/5mVlmBON8abX74Ny3Y+XqcQIUOECuqOqr0vHgSAcnkHKpZiOvOmwlMSyFeqDDF
-G38Hp72osIzkMf7nC8W0vcfWL3QDW65MUi0acMfDmUugtnE05jsd9hdn+YSm/ocv
-rFs2Zll00h1hWjxmEjojqmCYubB+5MqlucLtFXEtUwK/S9Bs4YLod4HONF9DQgRG
-fL927554PpQUNLZKIAeuTHH4cwVC5AwOEEXvHQ6k7zqNrRncoTkTvk2xKBDZyCgo
-dnP7XrIlxiohOPP1geX8fm/Gcea4bvQVPqiqNUGfm41YaFepHZn6hFQf1gqGfBhm
-O1H2c/6ri3quH04h3AvRAGazOqMq46CoB+4Cq59S6jz0CSBMc3r+Zg7+ibqhSCCj
-JGcbB7CuLwp6ibL9Nbdb8LrfxxTuaCmJsa7Vg9ALFdvvt4DEwI1ztach+E0hehz+
-8yCRF02ZJLg4qx95ENYfzt+O895RPtcFHNJQsE0l3Cl5fq7tN2B55I5IEBaz+yC0
-kNaLYY+JfipZ3cMBLzKiHFMBXWcLNY8FtetRhPkH8w5qFX0K97Ie+eYaID0RScA/
-Me457Y8Jz8hgcjn+s5tv
-=fxQc
+iQIcBAEBAgAGBQJYuCfAAAoJEBQN5MwUoCm2E9oQAKokwp1satPlkDl/IVs1hDbv
+karH07R3k2P+khXCCIvN8JJ/aiuP6r5hJLJNrdvBd0wreTz+XpF5b25Y262GAAqh
+0lGNvX/1dP7Hwb2Iiy5hAWgH8r6GNrXsOGOo/KGg2kXUa+c+tzfrxpbV3kjWyzwH
+RZtJF4Nk2ibtSOVV9kqmH4cqY2uChaXY/PdOux/RtHlacJjkCBblAq+EpYZDgRph
+IYukZmlgRQizI0FItedKkJo37KqXYKL1b/cKReOByDQ6Lw8UgT0FWW3UJ8VcbqlJ
+K/KHOCo+fBjCxduzQ3IZm4p861akaTg29JoQtQm981IWutO94zS4JruBGDPE3ckE
+BHDXCrryaTWmrWBtycjUO/APqrFvryk554LUziJrXVQ/Mp3SUUL8ha2JNWPUC1Qt
+o2tN+ijuO1qMn7WGfYq+G8iovdd4b3NB+avcvhd01EMw7jA95rsKHKN/N3NThVHR
+UPfT1SD5iyDgfbENQNXhV7DnhGdfPoJwiT8/Z63fID/3FESm6Xvzo1rFL+AIq7kK
+O+c5oNn7DujMhJ6PIjaYaG6xAm+aWQmRVVaWXlqDm05AApC6V1Xoe++Rz8VPjQeO
+HNTIkQr56B0GG/tViqBHUemhJKUz52ZoW7elaw1XeRhyenT6UZ5lowcYgcoXmCEl
+zMoAwMLtOKpT50kg/clE
+=+Qe8
 -----END PGP SIGNATURE-----
 
---OXfL5xGRrasGEqWY--
+--E39vaYmALEf/7YXx--
