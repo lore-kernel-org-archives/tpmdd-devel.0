@@ -1,12 +1,16 @@
 From: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
-Subject: [PATCH v2] tpm: do not suspend/resume if power stays
-	on
-Date: Thu,  2 Mar 2017 16:42:57 +0100
-Message-ID: <20170302154257.10663-1-enric.balletbo@collabora.com>
+Subject: Re: [PATCH v2] tpm: Apply a sane minimum adapterlimit
+ value for retransmission.
+Date: Thu, 2 Mar 2017 17:34:32 +0100
+Message-ID: <2c648dea-35df-cdf7-3882-40bb855d3573@collabora.com>
+References: <20170301153617.10106-1-enric.balletbo@collabora.com>
+	<20170302125543.bsn7z5zkerabzh4u@intel.com>
+	<BA3AA3EA-054E-4B65-82C2-C01EBD2849F2@gmx.de>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <BA3AA3EA-054E-4B65-82C2-C01EBD2849F2-Mmb7MZpHnFY@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -15,97 +19,119 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Cc: Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Bryan Freed <bfreed-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-
-The suspend/resume behavior of the TPM can be controlled by setting
-"powered-while-suspended" in the DTS. This is useful for the cases
-when hardware does not power-off the TPM.
-
-Signed-off-by: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Signed-off-by: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
----
-
-Changes since v1:
- Jason Gunthorpe :
-  - Move the code to handle suspend/resume in the common chip code.
-
- Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt | 6 ++++++
- drivers/char/tpm/tpm-interface.c                           | 3 +++
- drivers/char/tpm/tpm.h                                     | 3 +++
- drivers/char/tpm/tpm_of.c                                  | 3 +++
- 4 files changed, 15 insertions(+)
-
-diff --git a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
-index 8cb638b..85c8216 100644
---- a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
-+++ b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
-@@ -8,6 +8,12 @@ Required properties:
-                    the firmware event log
- - linux,sml-size : size of the memory allocated for the firmware event log
- 
-+Optional properties:
-+
-+- powered-while-suspended: present when the TPM is left powered on between
-+                           suspend and resume (makes the suspend/resume
-+                           callbacks do nothing).
-+
- Example (for OpenPower Systems with Nuvoton TPM 2.0 on I2C)
- ----------------------------------------------------------
- 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index a2688ac..7f60780 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -944,6 +944,9 @@ int tpm_pm_suspend(struct device *dev)
- 	if (chip == NULL)
- 		return -ENODEV;
- 
-+	if (chip->powered_while_suspended)
-+		return 0;
-+
- 	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
- 		tpm2_shutdown(chip, TPM2_SU_STATE);
- 		return 0;
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 1ae9768..c8f796c 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -183,10 +183,13 @@ struct tpm_chip {
- 	unsigned long duration[3]; /* jiffies */
- 	bool duration_adjusted;
- 
-+	bool powered_while_suspended;
-+
- 	struct dentry *bios_dir[TPM_NUM_EVENT_LOG_FILES];
- 
- 	const struct attribute_group *groups[3];
- 	unsigned int groups_cnt;
-+
- #ifdef CONFIG_ACPI
- 	acpi_handle acpi_dev_handle;
- 	char ppi_version[TPM_PPI_VERSION_LEN + 1];
-diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
-index 7dee42d7..33eddd4 100644
---- a/drivers/char/tpm/tpm_of.c
-+++ b/drivers/char/tpm/tpm_of.c
-@@ -34,6 +34,9 @@ int tpm_read_log_of(struct tpm_chip *chip)
- 	else
- 		return -ENODEV;
- 
-+	chip->powered_while_suspended = of_property_read_bool(np,
-+						"powered-while-suspended");
-+
- 	sizep = of_get_property(np, "linux,sml-size", NULL);
- 	basep = of_get_property(np, "linux,sml-base", NULL);
- 	if (sizep == NULL && basep == NULL)
--- 
-2.9.3
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+CgpPbiAwMi8wMy8xNyAxNDo0MywgUGV0ZXIgSHVld2Ugd3JvdGU6Cj4gCj4gCj4gQW0gMi4gTcOk
+cnogMjAxNyAxMzo1NTo0MyBNRVogc2NocmllYiBKYXJra28gU2Fra2luZW4gPGphcmtrby5zYWtr
+aW5lbkBsaW51eC5pbnRlbC5jb20+Ogo+PiBPbiBXZWQsIE1hciAwMSwgMjAxNyBhdCAwNDozNjox
+N1BNICswMTAwLCBFbnJpYyBCYWxsZXRibyBpIFNlcnJhIHdyb3RlOgo+Pj4gRnJvbTogQnJ5YW4g
+RnJlZWQgPGJmcmVlZEBjaHJvbWl1bS5vcmc+Cj4+Pgo+Pj4gV2hlbiB0aGUgSTJDIEluZmluZW9u
+IHBhcnQgaXMgYXR0YWNoZWQgdG8gYW4gSTJDIGFkYXB0ZXIgdGhhdCBpbXBvc2VzCj4+PiBhIHNp
+emUgbGltaXRhdGlvbiwgbGFyZ2UgcmVxdWVzdHMgd2lsbCBmYWlsIHdpdGggLUVPUE5PVFNVUFAu
+IFJldHJ5Cj4+PiB0aGVtIHdpdGggYSBzYW5lIG1pbmltdW0gc2l6ZSB3aXRob3V0IHJlLWlzc3Vp
+bmcgdGhlIDB4MDUgY29tbWFuZAo+Pj4gYXMgdGhpcyBhcHBlYXJzIHRvIG9jY2FzaW9uYWxseSBw
+dXQgdGhlIFRQTSBpbiBhIGJhZCBzdGF0ZS4KPj4KPj4gV2hhdCBpcyAweDA1IGNvbW1hbmQ/Cj4g
+MHgwNSBpcyB0aGUgYWRkcmVzcyBvZiB0aGUgZmlmby4KPiBJIGhvbmVzdGx5IHRoaW5rIHRoYXQg
+aXQgbmVlZHMgdG9sbOKAiyBiZSByZXBlYXRlZCBhZnRlciBhIHN0b3AgY29uZGl0aW9uLgo+IEkn
+bGwgbG9vayB0aGF0IHVwLgo+IAo+Pgo+PiAvSmFya2tvCj4+Cj4+PiBTaWduZWQtb2ZmLWJ5OiBC
+cnlhbiBGcmVlZCA8YmZyZWVkQGNocm9taXVtLm9yZz4KPj4+IFtyZXdvcmsgdGhlIHBhdGNoIHRv
+IGFkYXB0IHRvIHRoZSBmZWVkYmFjayByZWNlaXZlZF0KPj4+IFNpZ25lZC1vZmYtYnk6IEVucmlj
+IEJhbGxldGJvIGkgU2VycmEgPGVucmljLmJhbGxldGJvQGNvbGxhYm9yYS5jb20+Cj4+PiAtLS0K
+Pj4+IFRoaXMgaXMgYSByZXdvcmtlZCB2ZXJzaW9uIG9mIHRoZSBvcmlnaW5hbCBwYXRjaCBiYXNl
+ZCBvbiB0aGUKPj4+IHN1Z2dlc3Rpb24gbWFkZSBieSBXb2xmcmFtIFNhbmcgdG8gc2ltcGx5IGZh
+bGwgYmFjayB0byBhIHNhbmUgbWluaW11bQo+Pj4gd2hlbiB0aGUgbWF4aW11bSBmYWlscy4KPj4+
+Cgo+PiBIaSBFbnJpYwo+Pgo+PiBNYXliZSB5b3Ugc2hvdWxkIHJlbWVtYmVyIHRoYXQgeW91IG5l
+ZWQgdG8gdXNlIHNtYWxsZXIgdHJhbnNmZXJzPyBJZgo+PiB5b3UgZG9uJ3QgcmVtZW1iZXIsIGJ1
+dCB1c2UgdGhlIGZ1bGwgc2l6ZSBtZXNzYWdlIGV2ZXJ5IHRpbWUgYW5kIG9ubHkKPj4gZHJvcCBi
+YWNrIG9uIGVycm9yLCB0aGUgaTJjIGNvcmUgaXMgZ29pbmcgdG8gbG9nIHJhdGUgbGltaXRlZAo+
+PiBtZXNzYWdlcy4gQnkgcmVtZW1iZXJpbmcsIHRoZXJlIHdpbGwgb25seSBiZSBvbmUgc3VjaCBt
+ZXNzYWdlIGluIHRoZQo+PiBsb2cuCj4+CgpNYXliZSBJIGRpZCBub3QgZXhwbGFpbiB3ZWxsIGJ1
+dCB0aGlzIGlzIHdoYXQgdGhlIGNvZGUgZG9lcywgd2hlbiBpMmMtY29yZSBmYWlscyB3aXRoIC1F
+T1BOT1RTVVBQIGJlY2F1c2UgdGhlIG1zZyBpcyB0b28gbG9uZyBmb3IgdGhpcyBhZGFwdGVyIGl0
+IGxvb3Agd2l0aCBhIHNtYWxsZXIgY2h1bmsgb2YgZml4ZWQgc2l6ZSwgc28geW91IG9ubHkgc2Vl
+IHRoZSBpMmMtY29yZSBtZXNzYWdlIG9uY2UuCgo+PgkgIEFuZHJldwo+Pj4gQ2hhbmdlcyBzaW5j
+ZSB2MToKPj4+ICAtIENoZWNrIHRoZSBjb3JyZWN0IHJldHVybiB2YWx1ZSAoLUVPUE5PVFNVUFAg
+aW5zdGVhZCBvZiAtRUlOVkFMKQo+Pj4gIC0gRmFsbCBiYWNrIGxlbiB0byBJMkNfU01CVVNfQkxP
+Q0tfTUFYIGlmIGZhaWxzLgo+Pj4KPj4+ICBkcml2ZXJzL2NoYXIvdHBtL3RwbV9pMmNfaW5maW5l
+b24uYyB8IDQ1Cj4+ICsrKysrKysrKysrKysrKysrKysrKy0tLS0tLS0tLS0tLS0tLS0KPj4+ICAx
+IGZpbGUgY2hhbmdlZCwgMjYgaW5zZXJ0aW9ucygrKSwgMTkgZGVsZXRpb25zKC0pCj4+Pgo+Pj4g
+ZGlmZiAtLWdpdCBhL2RyaXZlcnMvY2hhci90cG0vdHBtX2kyY19pbmZpbmVvbi5jCj4+IGIvZHJp
+dmVycy9jaGFyL3RwbS90cG1faTJjX2luZmluZW9uLmMKPj4+IGluZGV4IDYyZWU0NGUuLjg4YmY5
+NDcgMTAwNjQ0Cj4+PiAtLS0gYS9kcml2ZXJzL2NoYXIvdHBtL3RwbV9pMmNfaW5maW5lb24uYwo+
+Pj4gKysrIGIvZHJpdmVycy9jaGFyL3RwbS90cG1faTJjX2luZmluZW9uLmMKPj4+IEBAIC0xMDcs
+MzkgKzEwNywyNyBAQCBzdGF0aWMgaW50IGlpY190cG1fcmVhZCh1OCBhZGRyLCB1OCAqYnVmZmVy
+LAo+PiBzaXplX3QgbGVuKQo+Pj4gIAkJLmxlbiA9IGxlbiwKPj4+ICAJCS5idWYgPSBidWZmZXIK
+Pj4+ICAJfTsKPj4+IC0Jc3RydWN0IGkyY19tc2cgbXNnc1tdID0ge21zZzEsIG1zZzJ9Owo+Pj4g
+IAo+Pj4gIAlpbnQgcmMgPSAwOwo+Pj4gIAlpbnQgY291bnQ7Cj4+PiArCXVuc2lnbmVkIGludCBh
+ZGFwdGVybGltaXQgPSBsZW47Cj4+PiAgCj4+PiAgCS8qIExvY2sgdGhlIGFkYXB0ZXIgZm9yIHRo
+ZSBkdXJhdGlvbiBvZiB0aGUgd2hvbGUgc2VxdWVuY2UuICovCj4+PiAgCWlmICghdHBtX2Rldi5j
+bGllbnQtPmFkYXB0ZXItPmFsZ28tPm1hc3Rlcl94ZmVyKQo+Pj4gIAkJcmV0dXJuIC1FT1BOT1RT
+VVBQOwo+Pj4gIAlpMmNfbG9ja19hZGFwdGVyKHRwbV9kZXYuY2xpZW50LT5hZGFwdGVyKTsKPj4+
+ICAKPj4+IC0JaWYgKHRwbV9kZXYuY2hpcF90eXBlID09IFNMQjk2NDUpIHsKPiBXaHkgYXJlIHlv
+dSAvIGJyeWFuIHJlbW92aW5nIHRoaXMgY29kZSBwYXRoIGhlcmU/Cj4gSSBwdXQgaXQgdGhlcmUg
+Zm9yIGEgZ29vZCByZWFzb24gKGkuZS4gZmFzdGVyIHRyYW5zZmVycykKPiAKCkdvb2QgcXVlc3Rp
+b24sIEkgbWlnaHQgYmUgd3JvbmcgYXMgdGhlIG9yaWdpbmFsIGNvZGUgaXMgbm90IG1pbmUgYnV0
+IEkgdGhpbmsgdGhhdCBpcyBmb3Igc2FmZXR5LgoKSSdtIHdvbmRlcmluZyB3aGF0IHdpbGwgaGFw
+cGVuIGlmIHlvdSBjb25uZWN0IGEgU0xCOTY0NSB3aXRoIGEgYnVzIHRoYXQgaGFzIHRoZSBtYXhf
+cmVhZF9sZW4gcXVpcmsgZGVmaW5lZCBhbmQgeW91IHRyeSB0byByZWFkIGEgbWVzc2FnZSBncmVh
+dGVyIHRoYW4gdGhlIG1heF9yZWFkX2xlbi4gSW4gc3VjaCBjYXNlIF9faTJjX3RyYW5zZmVyIHdp
+bGwgZmFpbCB3aXRoIC1FT1BOT1RTVVBQIGFuZCBkbyBub3Qgd29yay4KClRoaW5raW5nIGFib3V0
+IHRoaXMgbWF5YmUgd2UgY2FuIGRvIHRoaXMgaGVyZToKCmlmICh0cG1fZGV2LmNoaXBfdHlwZSA9
+PSBTTEI5NjQ1KSB7CiAgIC8qIGZhc3QgdHJhbnNmZXIgKi8KICAgcmMgPSBfX2kyYy4uLgogICAu
+Li4KfSBlbHNlIHsKICAgLyogbm9ybWFsIHRyYW5zZmVyICovCiAgIHJjID0gX19pMmMuLi4KICAg
+Li4uCn0KCi8qIElmIHRoZSB0cmFuc2ZlciBmYWlsZWQgdHJ5IHdpdGggY2h1bmtzIG9mIDMyICov
+CmlmIChyYyA9PSAtRU9QTk9UU1VQUCkKICByYyA9IF9faTJjLi4uCgoKCj4gVGhhbmtzLAo+IFBl
+dGVyCj4+PiAtCQkvKiB1c2UgYSBjb21iaW5lZCByZWFkIGZvciBuZXdlciBjaGlwcwo+Pj4gLQkJ
+ICogdW5mb3J0dW5hdGVseSB0aGUgc21idXMgZnVuY3Rpb25zIGFyZSBub3Qgc3VpdGFibGUgZHVl
+IHRvCj4+PiAtCQkgKiB0aGUgMzIgYnl0ZSBsaW1pdCBvZiB0aGUgc21idXMuCj4+PiAtCQkgKiBy
+ZXRyaWVzIHNob3VsZCB1c3VhbGx5IG5vdCBiZSBuZWVkZWQsIGJ1dCBhcmUga2VwdCBqdXN0IHRv
+Cj4+PiAtCQkgKiBiZSBvbiB0aGUgc2FmZSBzaWRlLgo+Pj4gLQkJICovCj4+PiAtCQlmb3IgKGNv
+dW50ID0gMDsgY291bnQgPCBNQVhfQ09VTlQ7IGNvdW50KyspIHsKPj4+IC0JCQlyYyA9IF9faTJj
+X3RyYW5zZmVyKHRwbV9kZXYuY2xpZW50LT5hZGFwdGVyLCBtc2dzLCAyKTsKPj4+IC0JCQlpZiAo
+cmMgPiAwKQo+Pj4gLQkJCQlicmVhazsJLyogYnJlYWsgaGVyZSB0byBza2lwIHNsZWVwICovCj4+
+PiAtCQkJdXNsZWVwX3JhbmdlKFNMRUVQX0RVUkFUSU9OX0xPVywgU0xFRVBfRFVSQVRJT05fSEkp
+Owo+Pj4gLQkJfQo+Pj4gLQl9IGVsc2Ugewo+Pj4gKwkvKiBFeHBlY3QgdG8gc2VuZCBvbmUgY29t
+bWFuZCBtZXNzYWdlIGFuZCBvbmUgZGF0YSBtZXNzYWdlLCBidXQKPj4+ICsJICogc3VwcG9ydCBs
+b29waW5nIG92ZXIgZWFjaCBvciBib3RoIGlmIG5lY2Vzc2FyeS4KPj4+ICsJICovCj4+PiArCXdo
+aWxlIChsZW4gPiAwKSB7aWYgKHJjID09IC1FT1BOT1RTVVBQKQo+Pj4gIAkJLyogc2xiOTYzNSBw
+cm90b2NvbCBzaG91bGQgd29yayBpbiBhbGwgY2FzZXMgKi8KPj4+ICAJCWZvciAoY291bnQgPSAw
+OyBjb3VudCA8IE1BWF9DT1VOVDsgY291bnQrKykgewo+Pj4gIAkJCXJjID0gX19pMmNfdHJhbnNm
+ZXIodHBtX2Rldi5jbGllbnQtPmFkYXB0ZXIsICZtc2cxLCAxKTsKPj4+ICAJCQlpZiAocmMgPiAw
+KQo+Pj4gLQkJCQlicmVhazsJLyogYnJlYWsgaGVyZSB0byBza2lwIHNsZWVwICovCj4+PiAtCj4+
+PiArCQkJCWJyZWFrOwo+Pj4gIAkJCXVzbGVlcF9yYW5nZShTTEVFUF9EVVJBVElPTl9MT1csIFNM
+RUVQX0RVUkFUSU9OX0hJKTsKPj4+ICAJCX0KPj4+IC0KPj4+ICAJCWlmIChyYyA8PSAwKQo+Pj4g
+IAkJCWdvdG8gb3V0Owo+Pj4gIAo+Pj4gQEAgLTE0OCwxMSArMTM2LDMwIEBAIHN0YXRpYyBpbnQg
+aWljX3RwbV9yZWFkKHU4IGFkZHIsIHU4ICpidWZmZXIsCj4+IHNpemVfdCBsZW4pCj4+PiAgCQkg
+KiByZXRyaWV2aW5nIHRoZSBkYXRhCj4+PiAgCQkgKi8KPj4+ICAJCWZvciAoY291bnQgPSAwOyBj
+b3VudCA8IE1BWF9DT1VOVDsgY291bnQrKykgewo+Pj4gKwkJCXVuc2lnbmVkIGludCBtc2dsZW4g
+PSBtc2cyLmxlbiA9Cj4+PiArCQkJCQltaW5fdCh1bnNpZ25lZCBpbnQsIGFkYXB0ZXJsaW1pdCwg
+bGVuKTsKPj4+ICAJCQl1c2xlZXBfcmFuZ2UoU0xFRVBfRFVSQVRJT05fTE9XLCBTTEVFUF9EVVJB
+VElPTl9ISSk7Cj4+PiAgCQkJcmMgPSBfX2kyY190cmFuc2Zlcih0cG1fZGV2LmNsaWVudC0+YWRh
+cHRlciwgJm1zZzIsIDEpOwo+Pj4gLQkJCWlmIChyYyA+IDApCj4+PiArCQkJaWYgKHJjID4gMCkg
+ewo+Pj4gKwkJCQkvKiBTaW5jZSBsZW4gaXMgdW5zaWduZWQsIG1ha2UgZG91Ymx5IHN1cmUgd2UK
+Pj4+ICsJCQkJICogZG8gbm90IHVuZGVyZmxvdyBpdC4KPj4+ICsJCQkJICovCj4+PiArCQkJCWlm
+IChtc2dsZW4gPiBsZW4pCj4+PiArCQkJCQlsZW4gPSAwOwo+Pj4gKwkJCQllbHNlCj4+PiArCQkJ
+CQlsZW4gLT0gbXNnbGVuOwo+Pj4gKwkJCQltc2cyLmJ1ZiArPSBtc2dsZW47Cj4+PiAgCQkJCWJy
+ZWFrOwo+Pj4gKwkJCX0KPj4+ICsJCQkvKiBJZiB0aGUgSTJDIGFkYXB0ZXIgcmVqZWN0ZWQgdGhl
+IHJlcXVlc3QgKGUuZyB3aGVuCj4+PiArCQkJICogdGhlIHF1aXJrIHJlYWRfbWF4X2xlbiA8IGxl
+bikgZmFsbCBiYWNrIHRvIGEgc2FuZQo+Pj4gKwkJCSAqIG1pbmltdW0gdmFsdWUgYW5kIHRyeSBh
+Z2Fpbi4KPj4+ICsJCQkgKi8KPj4+ICsJCQlpZiAocmMgPT0gLUVPUE5PVFNVUFApCj4+PiArCQkJ
+CWFkYXB0ZXJsaW1pdCA9IEkyQ19TTUJVU19CTE9DS19NQVg7Cj4+PiAgCQl9Cj4+PiArCQlpZiAo
+cmMgPD0gMCkKPj4+ICsJCQlnb3RvIG91dDsKPj4+ICAJfQo+Pj4gIAo+Pj4gIG91dDoKPj4+IC0t
+IAo+Pj4gMi45LjMKPj4+Cj4+Pgo+Pj4KPj4gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCj4+PiBDaGVj
+ayBvdXQgdGhlIHZpYnJhbnQgdGVjaCBjb21tdW5pdHkgb24gb25lIG9mIHRoZSB3b3JsZCdzIG1v
+c3QKPj4+IGVuZ2FnaW5nIHRlY2ggc2l0ZXMsIFNsYXNoRG90Lm9yZyEgaHR0cDovL3NkbS5saW5r
+L3NsYXNoZG90Cj4+PiBfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
+X19fXwo+Pj4gdHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0Cj4+PiB0cG1kZC1kZXZlbEBsaXN0cy5z
+b3VyY2Vmb3JnZS5uZXQKPj4+IGh0dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0L2xpc3RzL2xp
+c3RpbmZvL3RwbWRkLWRldmVsCj4gCkNoZWVycywKIEVucmljCgotLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0KQ2hlY2sgb3V0IHRoZSB2aWJyYW50IHRlY2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29y
+bGQncyBtb3N0CmVuZ2FnaW5nIHRlY2ggc2l0ZXMsIFNsYXNoRG90Lm9yZyEgaHR0cDovL3NkbS5s
+aW5rL3NsYXNoZG90Cl9fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
+X19fCnRwbWRkLWRldmVsIG1haWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3Jn
+ZS5uZXQKaHR0cHM6Ly9saXN0cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQt
+ZGV2ZWwK
