@@ -1,8 +1,8 @@
 From: Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: [PATCH v2 4/5] tpm_tis_spi: Remove limitation of
-	transfers to MAX_SPI_FRAMESIZE bytes
-Date: Thu, 2 Mar 2017 13:03:14 +0000
-Message-ID: <1488459879-24349-5-git-send-email-peter.huewe@infineon.com>
+Subject: [PATCH v2 5/5] tpm_tis_spi: Add small delay after
+	last transfer
+Date: Thu, 2 Mar 2017 13:03:15 +0000
+Message-ID: <1488459879-24349-6-git-send-email-peter.huewe@infineon.com>
 References: <1488459879-24349-1-git-send-email-peter.huewe@infineon.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,11 +21,17 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Limiting transfers to MAX_SPI_FRAMESIZE was not expected by the upper
-layers, as tpm_tis has no such limitation. Add a loop to hide that
-limitation.
+Testing the implementation with a Raspberry Pi 2 showed that under some
+circumstances its SPI master erroneously releases the CS line before the
+transfer is complete, i.e. before the end of the last clock. In this case
+the TPM ignores the transfer and misses for example the GO command. The
+driver is unable to detect this communication problem and will wait for a
+command response that is never going to arrive, timing out eventually.
 
-v2: Moved scope of spi_message to the top as requested by Jarkko
+As a workaround, the small delay ensures that the CS line is held long
+enough, even with a faulty SPI master. Other SPI masters are not affected,
+except for a negligible performance penalty.
+
 Cc: <stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 Fixes: 0edbfea537d1 ("tpm/tpm_tis_spi: Add support for spi phy")
 Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
@@ -33,139 +39,21 @@ Signed-off-by: Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Tested-by: Benoit Houyere <benoit.houyere-qxv4g6HH51o@public.gmane.org>
 ---
- drivers/char/tpm/tpm_tis_spi.c | 107 ++++++++++++++++++++++-------------------
- 1 file changed, 58 insertions(+), 49 deletions(-)
+ drivers/char/tpm/tpm_tis_spi.c | 1 +
+ 1 file changed, 1 insertion(+)
 
 diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
-index 62f50b6c9ef6..3015c8b65f18 100644
+index 3015c8b65f18..88fe72ae967f 100644
 --- a/drivers/char/tpm/tpm_tis_spi.c
 +++ b/drivers/char/tpm/tpm_tis_spi.c
-@@ -60,67 +60,76 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
- 				u8 *buffer, u8 direction)
- {
- 	struct tpm_tis_spi_phy *phy = to_tpm_tis_spi_phy(data);
--	int ret, i;
-+	int ret = 0;
-+	int i;
- 	struct spi_message m;
--	struct spi_transfer spi_xfer = {
--		.tx_buf = phy->tx_buf,
--		.rx_buf = phy->rx_buf,
--		.len = 4,
--		.cs_change = 1,
--	};
--
--	if (len > MAX_SPI_FRAMESIZE)
--		return -ENOMEM;
-+	struct spi_transfer spi_xfer;
-+	u8 transfer_len;
+@@ -111,6 +111,7 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
  
--	phy->tx_buf[0] = direction | (len - 1);
--	phy->tx_buf[1] = 0xd4;
--	phy->tx_buf[2] = addr >> 8;
--	phy->tx_buf[3] = addr;
-+	spi_bus_lock(phy->spi_device->master);
+ 		spi_xfer.cs_change = 0;
+ 		spi_xfer.len = transfer_len;
++		spi_xfer.delay_usecs = 5;
  
--	spi_message_init(&m);
--	spi_message_add_tail(&spi_xfer, &m);
-+	while (len) {
-+		transfer_len = min_t(u16, len, MAX_SPI_FRAMESIZE);
- 
--	spi_bus_lock(phy->spi_device->master);
--	ret = spi_sync_locked(phy->spi_device, &m);
--	if (ret < 0)
--		goto exit;
--
--	if ((phy->rx_buf[3] & 0x01) == 0) {
--		// handle SPI wait states
--		phy->tx_buf[0] = 0;
--
--		for (i = 0; i < TPM_RETRY; i++) {
--			spi_xfer.len = 1;
--			spi_message_init(&m);
--			spi_message_add_tail(&spi_xfer, &m);
--			ret = spi_sync_locked(phy->spi_device, &m);
--			if (ret < 0)
-+		phy->tx_buf[0] = direction | (transfer_len - 1);
-+		phy->tx_buf[1] = 0xd4;
-+		phy->tx_buf[2] = addr >> 8;
-+		phy->tx_buf[3] = addr;
-+
-+		memset(&spi_xfer, 0, sizeof(spi_xfer));
-+		spi_xfer.tx_buf = phy->tx_buf;
-+		spi_xfer.rx_buf = phy->rx_buf;
-+		spi_xfer.len = 4;
-+		spi_xfer.cs_change = 1;
-+
-+		spi_message_init(&m);
-+		spi_message_add_tail(&spi_xfer, &m);
-+		ret = spi_sync_locked(phy->spi_device, &m);
-+		if (ret < 0)
-+			goto exit;
-+
-+		if ((phy->rx_buf[3] & 0x01) == 0) {
-+			// handle SPI wait states
-+			phy->tx_buf[0] = 0;
-+
-+			for (i = 0; i < TPM_RETRY; i++) {
-+				spi_xfer.len = 1;
-+				spi_message_init(&m);
-+				spi_message_add_tail(&spi_xfer, &m);
-+				ret = spi_sync_locked(phy->spi_device, &m);
-+				if (ret < 0)
-+					goto exit;
-+				if (phy->rx_buf[0] & 0x01)
-+					break;
-+			}
-+
-+			if (i == TPM_RETRY) {
-+				ret = -ETIMEDOUT;
- 				goto exit;
--			if (phy->rx_buf[0] & 0x01)
--				break;
-+			}
- 		}
- 
--		if (i == TPM_RETRY) {
--			ret = -ETIMEDOUT;
--			goto exit;
-+		spi_xfer.cs_change = 0;
-+		spi_xfer.len = transfer_len;
-+
-+		if (direction) {
-+			spi_xfer.tx_buf = NULL;
-+			spi_xfer.rx_buf = buffer;
-+		} else {
-+			spi_xfer.tx_buf = buffer;
-+			spi_xfer.rx_buf = NULL;
- 		}
--	}
- 
--	spi_xfer.cs_change = 0;
--	spi_xfer.len = len;
-+		spi_message_init(&m);
-+		spi_message_add_tail(&spi_xfer, &m);
-+		ret = spi_sync_locked(phy->spi_device, &m);
-+		if (ret < 0)
-+			goto exit;
- 
--	if (direction) {
--		spi_xfer.tx_buf = NULL;
--		spi_xfer.rx_buf = buffer;
--	} else {
--		spi_xfer.tx_buf = buffer;
--		spi_xfer.rx_buf = NULL;
-+		len -= transfer_len;
-+		buffer += transfer_len;
- 	}
- 
--	spi_message_init(&m);
--	spi_message_add_tail(&spi_xfer, &m);
--	ret = spi_sync_locked(phy->spi_device, &m);
--
- exit:
- 	spi_bus_unlock(phy->spi_device->master);
- 	return ret;
+ 		if (direction) {
+ 			spi_xfer.tx_buf = NULL;
 -- 
 2.7.4
 
