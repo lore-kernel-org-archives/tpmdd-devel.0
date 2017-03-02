@@ -1,19 +1,15 @@
 From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Subject: Re: [PATCH 1/2] tpm: Apply an adapterlimit for
-	retransmission.
-Date: Thu, 02 Mar 2017 14:15:09 +0100
-Message-ID: <9E9945C5-50AD-465C-BE0E-F77499D79A04@gmx.de>
-References: <20170221144500.502-1-enric.balletbo@collabora.com>
-	<20170221162948.GD25818@lunn.ch>
-	<ffdfb321-6c9b-06fe-1a90-04da5457b47d@collabora.com>
-	<20170222140134.GA23586@lunn.ch>
-	<CAFqH_536FjjkWiUS_5PyDJHHgy6S8BvBzArAxSAg6H6oa214KA@mail.gmail.com>
-	<20170227191245.ecord2i7o6jwec5k@ninjato>
+Subject: Re: [PATCH v2] tpm: Apply a sane minimum adapterlimit
+	value for retransmission.
+Date: Thu, 02 Mar 2017 14:43:45 +0100
+Message-ID: <BA3AA3EA-054E-4B65-82C2-C01EBD2849F2@gmx.de>
+References: <20170301153617.10106-1-enric.balletbo@collabora.com>
+	<20170302125543.bsn7z5zkerabzh4u@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170227191245.ecord2i7o6jwec5k@ninjato>
+In-Reply-To: <20170302125543.bsn7z5zkerabzh4u-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,71 +18,94 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Wolfram Sang <wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org>, Enric Balletbo Serra <eballetbo-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Cc: linux-kernel <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, apronin-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
+Cc: wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Bryan Freed <bfreed-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-
-
-Am 27. Februar 2017 20:12:45 MEZ schrieb Wolfram Sang <wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org>:
->Hi,
->
->> >> > Rather than trying small and smaller transfers, would it not be
->better
->> >> > to get the i2c core to expose the quirk info about transfer
->limits?
->> >> >
->> >>
->> >> Sounds a good idea to me, I guess the quirk info can be accessed
->with
->> >>
->> >>   tpm_dev.client->adapter->quirks->max_read_len
->> >>
->> >> so I think we don't need to touch the i2c core. I'll propose a
->second version of the patch.
->> >
->> > Hi Enric
->> >
->> > You should probably ask Wolfram Sang <wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org>, the i2c
->> > subsystem maintainer. He may prefer adding an API call.
->
->Thanks for pointing me to this thread.
->
->I understand it looks tempting to use the quirks struct directly, but I
->don't think this is the proper solution. Quirks are complex and and to
->determine which one finally applies, you need all the logic encoded in
->i2c_check_for_quirks(). Which already gets called on every transfer.
->
->So, my suggestion would be to simply fall back to a sane minimum when
->the maximum failed. 32 (I2C_SMBUS_BLOCK_MAX) should be a good choice.
-
-Hi,
-One problem is however that e.g. in the case of the atmel tpms, there is no sane minimum, since you mustn't split the tpm apdu.
-
-If the command is larger than the supported adapter limit the command the only viable option is to return an error.
-For this the tpm layer would need the adapter limit.
-
-If somehow possible I would seriously vote for a adapter limit field (maybe not in the quirks).
-
-TPMs are a not the best devices when it comes to i2c :/
-
-Peter
-
-
->
->BTW I noted that the original patch checks for -EINVAL. The core
->returns
->-EOPNOTSUPP, though. So, a) the patch needs to be adapted and b) it
->looks the i2c host driver returning -EINVAL could be converted to use
->the quirk infrastructure? Which driver is it?
->
->Regards,
->
->   Wolfram
-
--- 
-Sent from my mobile
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, SlashDot.org! http://sdm.link/slashdot
+CgpBbSAyLiBNw6RyeiAyMDE3IDEzOjU1OjQzIE1FWiBzY2hyaWViIEphcmtrbyBTYWtraW5lbiA8
+amFya2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbT46Cj5PbiBXZWQsIE1hciAwMSwgMjAxNyBh
+dCAwNDozNjoxN1BNICswMTAwLCBFbnJpYyBCYWxsZXRibyBpIFNlcnJhIHdyb3RlOgo+PiBGcm9t
+OiBCcnlhbiBGcmVlZCA8YmZyZWVkQGNocm9taXVtLm9yZz4KPj4gCj4+IFdoZW4gdGhlIEkyQyBJ
+bmZpbmVvbiBwYXJ0IGlzIGF0dGFjaGVkIHRvIGFuIEkyQyBhZGFwdGVyIHRoYXQgaW1wb3Nlcwo+
+PiBhIHNpemUgbGltaXRhdGlvbiwgbGFyZ2UgcmVxdWVzdHMgd2lsbCBmYWlsIHdpdGggLUVPUE5P
+VFNVUFAuIFJldHJ5Cj4+IHRoZW0gd2l0aCBhIHNhbmUgbWluaW11bSBzaXplIHdpdGhvdXQgcmUt
+aXNzdWluZyB0aGUgMHgwNSBjb21tYW5kCj4+IGFzIHRoaXMgYXBwZWFycyB0byBvY2Nhc2lvbmFs
+bHkgcHV0IHRoZSBUUE0gaW4gYSBiYWQgc3RhdGUuCj4KPldoYXQgaXMgMHgwNSBjb21tYW5kPwow
+eDA1IGlzIHRoZSBhZGRyZXNzIG9mIHRoZSBmaWZvLgpJIGhvbmVzdGx5IHRoaW5rIHRoYXQgaXQg
+bmVlZHMgdG9sbOKAiyBiZSByZXBlYXRlZCBhZnRlciBhIHN0b3AgY29uZGl0aW9uLgpJJ2xsIGxv
+b2sgdGhhdCB1cC4KCj4KPi9KYXJra28KPgo+PiBTaWduZWQtb2ZmLWJ5OiBCcnlhbiBGcmVlZCA8
+YmZyZWVkQGNocm9taXVtLm9yZz4KPj4gW3Jld29yayB0aGUgcGF0Y2ggdG8gYWRhcHQgdG8gdGhl
+IGZlZWRiYWNrIHJlY2VpdmVkXQo+PiBTaWduZWQtb2ZmLWJ5OiBFbnJpYyBCYWxsZXRibyBpIFNl
+cnJhIDxlbnJpYy5iYWxsZXRib0Bjb2xsYWJvcmEuY29tPgo+PiAtLS0KPj4gVGhpcyBpcyBhIHJl
+d29ya2VkIHZlcnNpb24gb2YgdGhlIG9yaWdpbmFsIHBhdGNoIGJhc2VkIG9uIHRoZQo+PiBzdWdn
+ZXN0aW9uIG1hZGUgYnkgV29sZnJhbSBTYW5nIHRvIHNpbXBseSBmYWxsIGJhY2sgdG8gYSBzYW5l
+IG1pbmltdW0KPj4gd2hlbiB0aGUgbWF4aW11bSBmYWlscy4KPj4gCj4+IENoYW5nZXMgc2luY2Ug
+djE6Cj4+ICAtIENoZWNrIHRoZSBjb3JyZWN0IHJldHVybiB2YWx1ZSAoLUVPUE5PVFNVUFAgaW5z
+dGVhZCBvZiAtRUlOVkFMKQo+PiAgLSBGYWxsIGJhY2sgbGVuIHRvIEkyQ19TTUJVU19CTE9DS19N
+QVggaWYgZmFpbHMuCj4+IAo+PiAgZHJpdmVycy9jaGFyL3RwbS90cG1faTJjX2luZmluZW9uLmMg
+fCA0NQo+KysrKysrKysrKysrKysrKysrKysrLS0tLS0tLS0tLS0tLS0tLQo+PiAgMSBmaWxlIGNo
+YW5nZWQsIDI2IGluc2VydGlvbnMoKyksIDE5IGRlbGV0aW9ucygtKQo+PiAKPj4gZGlmZiAtLWdp
+dCBhL2RyaXZlcnMvY2hhci90cG0vdHBtX2kyY19pbmZpbmVvbi5jCj5iL2RyaXZlcnMvY2hhci90
+cG0vdHBtX2kyY19pbmZpbmVvbi5jCj4+IGluZGV4IDYyZWU0NGUuLjg4YmY5NDcgMTAwNjQ0Cj4+
+IC0tLSBhL2RyaXZlcnMvY2hhci90cG0vdHBtX2kyY19pbmZpbmVvbi5jCj4+ICsrKyBiL2RyaXZl
+cnMvY2hhci90cG0vdHBtX2kyY19pbmZpbmVvbi5jCj4+IEBAIC0xMDcsMzkgKzEwNywyNyBAQCBz
+dGF0aWMgaW50IGlpY190cG1fcmVhZCh1OCBhZGRyLCB1OCAqYnVmZmVyLAo+c2l6ZV90IGxlbikK
+Pj4gIAkJLmxlbiA9IGxlbiwKPj4gIAkJLmJ1ZiA9IGJ1ZmZlcgo+PiAgCX07Cj4+IC0Jc3RydWN0
+IGkyY19tc2cgbXNnc1tdID0ge21zZzEsIG1zZzJ9Owo+PiAgCj4+ICAJaW50IHJjID0gMDsKPj4g
+IAlpbnQgY291bnQ7Cj4+ICsJdW5zaWduZWQgaW50IGFkYXB0ZXJsaW1pdCA9IGxlbjsKPj4gIAo+
+PiAgCS8qIExvY2sgdGhlIGFkYXB0ZXIgZm9yIHRoZSBkdXJhdGlvbiBvZiB0aGUgd2hvbGUgc2Vx
+dWVuY2UuICovCj4+ICAJaWYgKCF0cG1fZGV2LmNsaWVudC0+YWRhcHRlci0+YWxnby0+bWFzdGVy
+X3hmZXIpCj4+ICAJCXJldHVybiAtRU9QTk9UU1VQUDsKPj4gIAlpMmNfbG9ja19hZGFwdGVyKHRw
+bV9kZXYuY2xpZW50LT5hZGFwdGVyKTsKPj4gIAo+PiAtCWlmICh0cG1fZGV2LmNoaXBfdHlwZSA9
+PSBTTEI5NjQ1KSB7CldoeSBhcmUgeW91IC8gYnJ5YW4gcmVtb3ZpbmcgdGhpcyBjb2RlIHBhdGgg
+aGVyZT8KSSBwdXQgaXQgdGhlcmUgZm9yIGEgZ29vZCByZWFzb24gKGkuZS4gZmFzdGVyIHRyYW5z
+ZmVycykKClRoYW5rcywKUGV0ZXIKPj4gLQkJLyogdXNlIGEgY29tYmluZWQgcmVhZCBmb3IgbmV3
+ZXIgY2hpcHMKPj4gLQkJICogdW5mb3J0dW5hdGVseSB0aGUgc21idXMgZnVuY3Rpb25zIGFyZSBu
+b3Qgc3VpdGFibGUgZHVlIHRvCj4+IC0JCSAqIHRoZSAzMiBieXRlIGxpbWl0IG9mIHRoZSBzbWJ1
+cy4KPj4gLQkJICogcmV0cmllcyBzaG91bGQgdXN1YWxseSBub3QgYmUgbmVlZGVkLCBidXQgYXJl
+IGtlcHQganVzdCB0bwo+PiAtCQkgKiBiZSBvbiB0aGUgc2FmZSBzaWRlLgo+PiAtCQkgKi8KPj4g
+LQkJZm9yIChjb3VudCA9IDA7IGNvdW50IDwgTUFYX0NPVU5UOyBjb3VudCsrKSB7Cj4+IC0JCQly
+YyA9IF9faTJjX3RyYW5zZmVyKHRwbV9kZXYuY2xpZW50LT5hZGFwdGVyLCBtc2dzLCAyKTsKPj4g
+LQkJCWlmIChyYyA+IDApCj4+IC0JCQkJYnJlYWs7CS8qIGJyZWFrIGhlcmUgdG8gc2tpcCBzbGVl
+cCAqLwo+PiAtCQkJdXNsZWVwX3JhbmdlKFNMRUVQX0RVUkFUSU9OX0xPVywgU0xFRVBfRFVSQVRJ
+T05fSEkpOwo+PiAtCQl9Cj4+IC0JfSBlbHNlIHsKPj4gKwkvKiBFeHBlY3QgdG8gc2VuZCBvbmUg
+Y29tbWFuZCBtZXNzYWdlIGFuZCBvbmUgZGF0YSBtZXNzYWdlLCBidXQKPj4gKwkgKiBzdXBwb3J0
+IGxvb3Bpbmcgb3ZlciBlYWNoIG9yIGJvdGggaWYgbmVjZXNzYXJ5Lgo+PiArCSAqLwo+PiArCXdo
+aWxlIChsZW4gPiAwKSB7Cj4+ICAJCS8qIHNsYjk2MzUgcHJvdG9jb2wgc2hvdWxkIHdvcmsgaW4g
+YWxsIGNhc2VzICovCj4+ICAJCWZvciAoY291bnQgPSAwOyBjb3VudCA8IE1BWF9DT1VOVDsgY291
+bnQrKykgewo+PiAgCQkJcmMgPSBfX2kyY190cmFuc2Zlcih0cG1fZGV2LmNsaWVudC0+YWRhcHRl
+ciwgJm1zZzEsIDEpOwo+PiAgCQkJaWYgKHJjID4gMCkKPj4gLQkJCQlicmVhazsJLyogYnJlYWsg
+aGVyZSB0byBza2lwIHNsZWVwICovCj4+IC0KPj4gKwkJCQlicmVhazsKPj4gIAkJCXVzbGVlcF9y
+YW5nZShTTEVFUF9EVVJBVElPTl9MT1csIFNMRUVQX0RVUkFUSU9OX0hJKTsKPj4gIAkJfQo+PiAt
+Cj4+ICAJCWlmIChyYyA8PSAwKQo+PiAgCQkJZ290byBvdXQ7Cj4+ICAKPj4gQEAgLTE0OCwxMSAr
+MTM2LDMwIEBAIHN0YXRpYyBpbnQgaWljX3RwbV9yZWFkKHU4IGFkZHIsIHU4ICpidWZmZXIsCj5z
+aXplX3QgbGVuKQo+PiAgCQkgKiByZXRyaWV2aW5nIHRoZSBkYXRhCj4+ICAJCSAqLwo+PiAgCQlm
+b3IgKGNvdW50ID0gMDsgY291bnQgPCBNQVhfQ09VTlQ7IGNvdW50KyspIHsKPj4gKwkJCXVuc2ln
+bmVkIGludCBtc2dsZW4gPSBtc2cyLmxlbiA9Cj4+ICsJCQkJCW1pbl90KHVuc2lnbmVkIGludCwg
+YWRhcHRlcmxpbWl0LCBsZW4pOwo+PiAgCQkJdXNsZWVwX3JhbmdlKFNMRUVQX0RVUkFUSU9OX0xP
+VywgU0xFRVBfRFVSQVRJT05fSEkpOwo+PiAgCQkJcmMgPSBfX2kyY190cmFuc2Zlcih0cG1fZGV2
+LmNsaWVudC0+YWRhcHRlciwgJm1zZzIsIDEpOwo+PiAtCQkJaWYgKHJjID4gMCkKPj4gKwkJCWlm
+IChyYyA+IDApIHsKPj4gKwkJCQkvKiBTaW5jZSBsZW4gaXMgdW5zaWduZWQsIG1ha2UgZG91Ymx5
+IHN1cmUgd2UKPj4gKwkJCQkgKiBkbyBub3QgdW5kZXJmbG93IGl0Lgo+PiArCQkJCSAqLwo+PiAr
+CQkJCWlmIChtc2dsZW4gPiBsZW4pCj4+ICsJCQkJCWxlbiA9IDA7Cj4+ICsJCQkJZWxzZQo+PiAr
+CQkJCQlsZW4gLT0gbXNnbGVuOwo+PiArCQkJCW1zZzIuYnVmICs9IG1zZ2xlbjsKPj4gIAkJCQli
+cmVhazsKPj4gKwkJCX0KPj4gKwkJCS8qIElmIHRoZSBJMkMgYWRhcHRlciByZWplY3RlZCB0aGUg
+cmVxdWVzdCAoZS5nIHdoZW4KPj4gKwkJCSAqIHRoZSBxdWlyayByZWFkX21heF9sZW4gPCBsZW4p
+IGZhbGwgYmFjayB0byBhIHNhbmUKPj4gKwkJCSAqIG1pbmltdW0gdmFsdWUgYW5kIHRyeSBhZ2Fp
+bi4KPj4gKwkJCSAqLwo+PiArCQkJaWYgKHJjID09IC1FT1BOT1RTVVBQKQo+PiArCQkJCWFkYXB0
+ZXJsaW1pdCA9IEkyQ19TTUJVU19CTE9DS19NQVg7Cj4+ICAJCX0KPj4gKwkJaWYgKHJjIDw9IDAp
+Cj4+ICsJCQlnb3RvIG91dDsKPj4gIAl9Cj4+ICAKPj4gIG91dDoKPj4gLS0gCj4+IDIuOS4zCj4+
+IAo+PiAKPj4KPi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQo+PiBDaGVjayBvdXQgdGhlIHZpYnJhbnQg
+dGVjaCBjb21tdW5pdHkgb24gb25lIG9mIHRoZSB3b3JsZCdzIG1vc3QKPj4gZW5nYWdpbmcgdGVj
+aCBzaXRlcywgU2xhc2hEb3Qub3JnISBodHRwOi8vc2RtLmxpbmsvc2xhc2hkb3QKPj4gX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KPj4gdHBtZGQtZGV2ZWwg
+bWFpbGluZyBsaXN0Cj4+IHRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldAo+PiBodHRw
+czovL2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAoKLS0g
+ClNlbnQgZnJvbSBteSBtb2JpbGUKCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpDaGVjayBvdXQgdGhl
+IHZpYnJhbnQgdGVjaCBjb21tdW5pdHkgb24gb25lIG9mIHRoZSB3b3JsZCdzIG1vc3QKZW5nYWdp
+bmcgdGVjaCBzaXRlcywgU2xhc2hEb3Qub3JnISBodHRwOi8vc2RtLmxpbmsvc2xhc2hkb3QKX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwg
+bWFpbGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xp
+c3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
