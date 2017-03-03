@@ -1,8 +1,7 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: [PATCH v3 1/7] tpm: move length validation to
-	tpm_transmit()
-Date: Fri,  3 Mar 2017 17:19:02 +0200
-Message-ID: <20170303151912.14752-2-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH v3 3/7] tpm: export tpm2_flush_context_cmd
+Date: Fri,  3 Mar 2017 17:19:04 +0200
+Message-ID: <20170303151912.14752-4-jarkko.sakkinen@linux.intel.com>
 References: <20170303151912.14752-1-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,69 +20,107 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Check that the length matches the length reported by the response
-header already in tpm_transmit() to improve validation.
-
 Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Tested-by: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 Reviewed-by: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
 ---
- drivers/char/tpm/tpm-interface.c | 20 ++++++++++++--------
- 1 file changed, 12 insertions(+), 8 deletions(-)
+ drivers/char/tpm/tpm.h      |  2 ++
+ drivers/char/tpm/tpm2-cmd.c | 62 +++++++++++++++++++++------------------------
+ 2 files changed, 31 insertions(+), 33 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index bd2128e..708d356 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -343,6 +343,7 @@ EXPORT_SYMBOL_GPL(tpm_calc_ordinal_duration);
- ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
- 		     unsigned int flags)
- {
-+	const struct tpm_output_header *header = (void *)buf;
- 	ssize_t rc;
- 	u32 count, ordinal;
- 	unsigned long stop;
-@@ -406,9 +407,18 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 8568dda..dd5f526 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -555,6 +555,8 @@ int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf);
+ int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
+ 		    struct tpm2_digest *digests);
+ int tpm2_get_random(struct tpm_chip *chip, u8 *out, size_t max);
++void tpm2_flush_context_cmd(struct tpm_chip *chip, u32 handle,
++			    unsigned int flags);
+ int tpm2_seal_trusted(struct tpm_chip *chip,
+ 		      struct trusted_key_payload *payload,
+ 		      struct trusted_key_options *options);
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index 5efe9c4..ec05ab3 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -419,6 +419,35 @@ static const struct tpm_input_header tpm2_get_tpm_pt_header = {
+ };
  
- out_recv:
- 	rc = chip->ops->recv(chip, (u8 *) buf, bufsiz);
--	if (rc < 0)
-+	if (rc < 0) {
- 		dev_err(&chip->dev,
- 			"tpm_transmit: tpm_recv: error %zd\n", rc);
-+		goto out;
-+	} else if (rc < TPM_HEADER_SIZE) {
-+		rc = -EFAULT;
-+		goto out;
+ /**
++ * tpm2_flush_context_cmd() - execute a TPM2_FlushContext command
++ * @chip: TPM chip to use
++ * @payload: the key data in clear and encrypted form
++ * @options: authentication values and other options
++ *
++ * Return: same as with tpm_transmit_cmd
++ */
++void tpm2_flush_context_cmd(struct tpm_chip *chip, u32 handle,
++			    unsigned int flags)
++{
++	struct tpm_buf buf;
++	int rc;
++
++	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_FLUSH_CONTEXT);
++	if (rc) {
++		dev_warn(&chip->dev, "0x%08x was not flushed, out of memory\n",
++			 handle);
++		return;
 +	}
 +
-+	if (rc != be32_to_cpu(header->length))
-+		goto out;
++	tpm_buf_append_u32(&buf, handle);
 +
- out:
- 	if (chip->dev.parent)
- 		pm_runtime_put_sync(chip->dev.parent);
-@@ -438,19 +448,13 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *buf,
- 			 size_t bufsiz, size_t min_rsp_body_length,
- 			 unsigned int flags, const char *desc)
- {
--	const struct tpm_output_header *header;
-+	const struct tpm_output_header *header = buf;
- 	int err;
- 	ssize_t len;
++	(void) tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 0, flags,
++				"flushing context");
++
++	tpm_buf_destroy(&buf);
++}
++
++/**
+  * tpm_buf_append_auth() - append TPMS_AUTH_COMMAND to the buffer.
+  *
+  * @buf: an allocated tpm_buf instance
+@@ -628,39 +657,6 @@ static int tpm2_load_cmd(struct tpm_chip *chip,
+ }
  
- 	len = tpm_transmit(chip, (const u8 *)buf, bufsiz, flags);
- 	if (len <  0)
- 		return len;
--	else if (len < TPM_HEADER_SIZE)
--		return -EFAULT;
+ /**
+- * tpm2_flush_context_cmd() - execute a TPM2_FlushContext command
+- *
+- * @chip: TPM chip to use
+- * @handle: the key data in clear and encrypted form
+- * @flags: tpm transmit flags
+- *
+- * Return: Same as with tpm_transmit_cmd.
+- */
+-static void tpm2_flush_context_cmd(struct tpm_chip *chip, u32 handle,
+-				   unsigned int flags)
+-{
+-	struct tpm_buf buf;
+-	int rc;
 -
--	header = buf;
--	if (len != be32_to_cpu(header->length))
--		return -EFAULT;
- 
- 	err = be32_to_cpu(header->return_code);
- 	if (err != 0 && desc)
+-	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_FLUSH_CONTEXT);
+-	if (rc) {
+-		dev_warn(&chip->dev, "0x%08x was not flushed, out of memory\n",
+-			 handle);
+-		return;
+-	}
+-
+-	tpm_buf_append_u32(&buf, handle);
+-
+-	rc = tpm_transmit_cmd(chip, buf.data, PAGE_SIZE, 0, flags,
+-			      "flushing context");
+-	if (rc)
+-		dev_warn(&chip->dev, "0x%08x was not flushed, rc=%d\n", handle,
+-			 rc);
+-
+-	tpm_buf_destroy(&buf);
+-}
+-
+-/**
+  * tpm2_unseal_cmd() - execute a TPM2_Unload command
+  *
+  * @chip: TPM chip to use
 -- 
 2.9.3
 
