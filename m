@@ -1,33 +1,66 @@
-From: Jerry Snitselaar <dev@snitselaar.org>
-Subject: Re: [PATCH v3 0/3] Locality support for tpm_crb
-Date: Fri, 03 Mar 2017 18:27:19 -0700
-Message-ID: <87efydvnk8.fsf@snitselaar.org>
-References: <20170208111137.15153-1-jarkko.sakkinen@linux.intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-reply-to: <20170208111137.15153-1-jarkko.sakkinen@linux.intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
+From: Tomas Winkler <tomas.winkler@intel.com>
+Subject: [PATCH] tpm/tpm_crb: enter the low power state upon device suspend
+Date: Mon,  6 Mar 2017 01:53:35 +0200
+Message-ID: <1488758015-12681-1-git-send-email-tomas.winkler@intel.com>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Sender: owner-linux-security-module@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Tomas Winkler <tomas.winkler@intel.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+This fix enables a platform to enter the idle state (suspend-to-idle)
 
-Jarkko Sakkinen @ 2017-02-08 11:11 GMT:
+The driver needs to request explicitly go_idle upon completion
+from the pm suspend handler.
+The runtime pm is disabled on suspend during prepare state by calling
+pm_runtime_get_noresume, hence we cannot relay on runtime pm to leave
+the device in low power state. Symmetrically cmdReady is called
+upon resume.
 
-> The tpm_crb driver should follow the policy of reserving and
-> relinquishing the locality it uses when multiple localities are used,
-> like when TXT is another locality.
->
-> [This is a resend of v3 as this has been asked from me for a few times
->  now and there wasn't anything obvious to fix.]
->
-> Jarkko Sakkinen (3):
->   tpm_crb: map locality registers
->   tpm_crb: encapsulate crb_wait_for_reg_32
->   tpm_crb: request and relinquish locality 0
->
->  drivers/char/tpm/tpm_crb.c | 185 +++++++++++++++++++++++++++++++++------------
->  1 file changed, 137 insertions(+), 48 deletions(-)
+Signed-off-by: Tomas Winkler <tomas.winkler@intel.com>
+---
+ drivers/char/tpm/tpm_crb.c | 25 ++++++++++++++++++++++++-
+ 1 file changed, 24 insertions(+), 1 deletion(-)
 
-Reviewed-by: Jerry Snitselaar <jsnitsel@redhat.com>
+diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+index 86f355b6df1d..d8dfff0fdfce 100644
+--- a/drivers/char/tpm/tpm_crb.c
++++ b/drivers/char/tpm/tpm_crb.c
+@@ -479,10 +479,33 @@ static int crb_pm_runtime_resume(struct device *dev)
+ 
+ 	return crb_cmd_ready(dev, priv);
+ }
++
++static int crb_pm_suspend(struct device *dev)
++{
++	int ret;
++
++	ret = tpm_pm_suspend(dev);
++	if (ret)
++		return ret;
++
++	return crb_pm_runtime_suspend(dev);
++}
++
++static int crb_pm_resume(struct device *dev)
++{
++	int ret;
++
++	ret = crb_pm_runtime_resume(dev);
++	if (ret)
++		return ret;
++
++	return tpm_pm_resume(dev);
++}
++
+ #endif /* CONFIG_PM */
+ 
+ static const struct dev_pm_ops crb_pm = {
+-	SET_SYSTEM_SLEEP_PM_OPS(tpm_pm_suspend, tpm_pm_resume)
++	SET_SYSTEM_SLEEP_PM_OPS(crb_pm_suspend, crb_pm_resume)
+ 	SET_RUNTIME_PM_OPS(crb_pm_runtime_suspend, crb_pm_runtime_resume, NULL)
+ };
+ 
+-- 
+2.7.4
+
