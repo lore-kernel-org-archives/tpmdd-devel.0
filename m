@@ -1,15 +1,14 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3] tpm: do not suspend/resume if power
-	stays on
-Date: Mon, 6 Mar 2017 22:59:25 +0200
-Message-ID: <20170306205925.ynkwmy7acsunpewd@intel.com>
-References: <20170303160959.27422-1-enric.balletbo@collabora.com>
+Subject: Re: [PATCH v3 0/7] in-kernel resource manager
+Date: Mon, 6 Mar 2017 23:07:44 +0200
+Message-ID: <20170306210744.sqc6xcursbcerfsl@intel.com>
+References: <20170303151912.14752-1-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170303160959.27422-1-enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
+In-Reply-To: <20170303151912.14752-1-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,57 +17,72 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
-Cc: Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org, dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Mar 03, 2017 at 05:09:59PM +0100, Enric Balletbo i Serra wrote:
-> From: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+On Fri, Mar 03, 2017 at 05:19:01PM +0200, Jarkko Sakkinen wrote:
+> This patch set adds support for TPM spaces that provide an isolated
+> execution context for transient objects and HMAC and policy sessions. A
+> space is swapped into TPM volatile memory only when it is used and
+> swapped out after the use.
 > 
-> The suspend/resume behavior of the TPM can be controlled by setting
-> "powered-while-suspended" in the DTS. This is useful for the cases
-> when hardware does not power-off the TPM.
+> There's a test script for trying out TPM spaces in
 > 
-> Signed-off-by: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-> Signed-off-by: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
-> ---
-> Changes since v2:
->  Jarkko Sakkinen
->   - Add a new TPM_CHIP_FLAG_ALWAYS_POWERED flag instead of using a boolean variable.
->   - Remove a trailing newline.
-> Changes since v1:
->  Jason Gunthorpe :
->   - Move the code to handle suspend/resume in the common chip code.
+>   git://git.infradead.org/users/jjs/tpm2-scripts.git
 > 
->  Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt | 6 ++++++
->  drivers/char/tpm/tpm-interface.c                           | 3 +++
->  drivers/char/tpm/tpm.h                                     | 1 +
->  drivers/char/tpm/tpm_of.c                                  | 3 +++
->  4 files changed, 13 insertions(+)
+> A simple smoke test suite can be run by
 > 
-> diff --git a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
-> index 8cb638b..85c8216 100644
-> --- a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
-> +++ b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
-> @@ -8,6 +8,12 @@ Required properties:
->                     the firmware event log
->  - linux,sml-size : size of the memory allocated for the firmware event log
->  
-> +Optional properties:
-> +
-> +- powered-while-suspended: present when the TPM is left powered on between
-> +                           suspend and resume (makes the suspend/resume
-> +                           callbacks do nothing).
-> +
->  Example (for OpenPower Systems with Nuvoton TPM 2.0 on I2C)
->  ----------------------------------------------------------
+>   sudo python -m unittest -v tpm2_smoke.SpaceTest   
+> 
+> v3:
+> * Reverted back to /dev/tpmrm0 that was actually James' original
+>   proposal. It's the most pragmatic choice as it cannot be mixed
+>   with other TPM 2.0 and kernel idioms easily.
+> 
+> v2:
+> * Substitute virtual handle in ContextSave.
+> * Substitute virtual handles in GetCapability.
+> * Validate that the real response length and the one reported in the
+>   header match in tpm_transmit().
+> 
+> 
+> James Bottomley (3):
+>   tpm: split out tpm-dev.c into tpm-dev.c and tpm-common-dev.c
+>   tpm: expose spaces via a device link /dev/tpmrm<n>
+>   tpm2: add session handle context saving and restoring to the space
+>     code
+> 
+> Jarkko Sakkinen (4):
+>   tpm: move length validation to tpm_transmit()
+>   tpm: validate TPM 2.0 commands
+>   tpm: export tpm2_flush_context_cmd
+>   tpm: infrastructure for TPM spaces
+> 
+>  drivers/char/tpm/Makefile         |   3 +-
+>  drivers/char/tpm/tpm-chip.c       |  71 ++++-
+>  drivers/char/tpm/tpm-dev-common.c | 148 +++++++++++
+>  drivers/char/tpm/tpm-dev.c        | 143 +---------
+>  drivers/char/tpm/tpm-dev.h        |  27 ++
+>  drivers/char/tpm/tpm-interface.c  | 131 +++++++---
+>  drivers/char/tpm/tpm-sysfs.c      |   2 +-
+>  drivers/char/tpm/tpm.h            |  49 +++-
+>  drivers/char/tpm/tpm2-cmd.c       | 173 +++++++++----
+>  drivers/char/tpm/tpm2-space.c     | 532 ++++++++++++++++++++++++++++++++++++++
+>  drivers/char/tpm/tpmrm-dev.c      |  65 +++++
+>  11 files changed, 1123 insertions(+), 221 deletions(-)
+>  create mode 100644 drivers/char/tpm/tpm-dev-common.c
+>  create mode 100644 drivers/char/tpm/tpm-dev.h
+>  create mode 100644 drivers/char/tpm/tpm2-space.c
+>  create mode 100644 drivers/char/tpm/tpmrm-dev.c
+> 
+> -- 
+> 2.9.3
+> 
 
-Hey, just noticed something. Shouldn't this be a separate commit?
-I'm also wondering whether this can be submitted through my tree
-upper maintainers.
-
-Does not change my reviewed-by for the actual code change but you
-would have to split this into a patch set if this is the case.
+Should I put this available to linux-next? I would think it would
+make sense. I'm still looking forward to get more reviewed-by's
+and tested-by's but that way it might be easier to get those...
 
 /Jarkko
 
