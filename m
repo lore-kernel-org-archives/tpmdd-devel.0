@@ -1,14 +1,14 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3 0/7] in-kernel resource manager
-Date: Mon, 6 Mar 2017 23:07:44 +0200
-Message-ID: <20170306210744.sqc6xcursbcerfsl@intel.com>
-References: <20170303151912.14752-1-jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v2 0/5] Fix whole native SPI TPM driver
+Date: Mon, 6 Mar 2017 23:10:27 +0200
+Message-ID: <20170306211027.6nyia2cyqkuhy7pv@intel.com>
+References: <1488459879-24349-1-git-send-email-peter.huewe@infineon.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170303151912.14752-1-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+In-Reply-To: <1488459879-24349-1-git-send-email-peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,72 +17,39 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org, dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Peter Huewe <peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Mar 03, 2017 at 05:19:01PM +0200, Jarkko Sakkinen wrote:
-> This patch set adds support for TPM spaces that provide an isolated
-> execution context for transient objects and HMAC and policy sessions. A
-> space is swapped into TPM volatile memory only when it is used and
-> swapped out after the use.
+On Thu, Mar 02, 2017 at 01:03:10PM +0000, Peter Huewe wrote:
+> During our testing it showed that unfortunately the whole native spi tpm driver
+> was more or less non-functional since it was merged, e.g. the wrong byte for
+> waitstate handling was used and transfers larger than 64 bytes did not work at all.  > > This was probably caused by the merging of the different approaches back then,
+> as the initial RFC patch did not have these problems, and also my sudden lack
+> of time/commitment back then.
+> I'm sorry that the final driver code went untested for that long time.
 > 
-> There's a test script for trying out TPM spaces in
+> This patch set fixes these issues one by one.
+> In order to avoid duplication the read/write function was consolidated to one
+> transfer function, so we do not have to apply the same fix at two locations.
+> Maybe consider squashing it - we splitted it for easier review.
+>  
+> Affected Kernels: 4.8, 4.9, 4.10
+> Patchset was tested on Raspberry Pi2 with SLB9670 (TPM1.2 and TPM2.0)
 > 
->   git://git.infradead.org/users/jjs/tpm2-scripts.git
+> v2: Applied Jarkko's Comments
 > 
-> A simple smoke test suite can be run by
+> Peter Huewe (5):
+>   tpm_tis_spi: Use single function to transfer data
+>   tpm_tis_spi: Abort transfer when too many wait states are signaled
+>   tpm_tis_spi: Check correct byte for wait state indicator
+>   tpm_tis_spi: Remove limitation of transfers to MAX_SPI_FRAMESIZE bytes
+>   tpm_tis_spi: Add small delay after last transfer
 > 
->   sudo python -m unittest -v tpm2_smoke.SpaceTest   
-> 
-> v3:
-> * Reverted back to /dev/tpmrm0 that was actually James' original
->   proposal. It's the most pragmatic choice as it cannot be mixed
->   with other TPM 2.0 and kernel idioms easily.
-> 
-> v2:
-> * Substitute virtual handle in ContextSave.
-> * Substitute virtual handles in GetCapability.
-> * Validate that the real response length and the one reported in the
->   header match in tpm_transmit().
-> 
-> 
-> James Bottomley (3):
->   tpm: split out tpm-dev.c into tpm-dev.c and tpm-common-dev.c
->   tpm: expose spaces via a device link /dev/tpmrm<n>
->   tpm2: add session handle context saving and restoring to the space
->     code
-> 
-> Jarkko Sakkinen (4):
->   tpm: move length validation to tpm_transmit()
->   tpm: validate TPM 2.0 commands
->   tpm: export tpm2_flush_context_cmd
->   tpm: infrastructure for TPM spaces
-> 
->  drivers/char/tpm/Makefile         |   3 +-
->  drivers/char/tpm/tpm-chip.c       |  71 ++++-
->  drivers/char/tpm/tpm-dev-common.c | 148 +++++++++++
->  drivers/char/tpm/tpm-dev.c        | 143 +---------
->  drivers/char/tpm/tpm-dev.h        |  27 ++
->  drivers/char/tpm/tpm-interface.c  | 131 +++++++---
->  drivers/char/tpm/tpm-sysfs.c      |   2 +-
->  drivers/char/tpm/tpm.h            |  49 +++-
->  drivers/char/tpm/tpm2-cmd.c       | 173 +++++++++----
->  drivers/char/tpm/tpm2-space.c     | 532 ++++++++++++++++++++++++++++++++++++++
->  drivers/char/tpm/tpmrm-dev.c      |  65 +++++
->  11 files changed, 1123 insertions(+), 221 deletions(-)
->  create mode 100644 drivers/char/tpm/tpm-dev-common.c
->  create mode 100644 drivers/char/tpm/tpm-dev.h
->  create mode 100644 drivers/char/tpm/tpm2-space.c
->  create mode 100644 drivers/char/tpm/tpmrm-dev.c
-> 
-> -- 
-> 2.9.3
-> 
+>  drivers/char/tpm/tpm_tis_spi.c | 160 ++++++++++++++++++-----------------------
+>  1 file changed, 68 insertions(+), 92 deletions(-)
 
-Should I put this available to linux-next? I would think it would
-make sense. I'm still looking forward to get more reviewed-by's
-and tested-by's but that way it might be easier to get those...
+I'll apply these.
 
 /Jarkko
 
