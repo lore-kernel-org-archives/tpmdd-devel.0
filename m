@@ -1,86 +1,122 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3] tpm: do not suspend/resume if power stays on
-Date: Tue, 7 Mar 2017 20:52:20 +0200
-Message-ID: <20170307185220.ag3hkthzeskg7le6@intel.com>
-References: <20170303160959.27422-1-enric.balletbo@collabora.com>
- <20170306205925.ynkwmy7acsunpewd@intel.com>
- <15829d71-ceff-d1f6-3112-5df8897a97dc@collabora.com>
+From: "Hon Ching(Vicky) Lo" <honclo-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH] vTPM: Fix missing NULL check
+Date: Tue, 07 Mar 2017 23:12:43 -0500
+Message-ID: <1488946363.15595.17.camel@vtpm2014.ibm.com>
+References: <1488839535-11822-1-git-send-email-honclo@linux.vnet.ibm.com>
+	<20170306231946.GA23953@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <15829d71-ceff-d1f6-3112-5df8897a97dc-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
-Sender: devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-To: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
-Cc: Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170306231946.GA23953-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Peter Huewe <PeterHuewe-Mmb7MZpHnFY@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Ashley Lai <ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Mar 07, 2017 at 09:44:55AM +0100, Enric Balletbo i Serra wrote:
-> Hi Jarkko,
-> 
-> On 06/03/17 21:59, Jarkko Sakkinen wrote:
-> > On Fri, Mar 03, 2017 at 05:09:59PM +0100, Enric Balletbo i Serra wrote:
-> >> From: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-> >>
-> >> The suspend/resume behavior of the TPM can be controlled by setting
-> >> "powered-while-suspended" in the DTS. This is useful for the cases
-> >> when hardware does not power-off the TPM.
-> >>
-> >> Signed-off-by: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-> >> Signed-off-by: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
-> >> ---
-> >> Changes since v2:
-> >>  Jarkko Sakkinen
-> >>   - Add a new TPM_CHIP_FLAG_ALWAYS_POWERED flag instead of using a boolean variable.
-> >>   - Remove a trailing newline.
-> >> Changes since v1:
-> >>  Jason Gunthorpe :
-> >>   - Move the code to handle suspend/resume in the common chip code.
-> >>
-> >>  Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt | 6 ++++++
-> >>  drivers/char/tpm/tpm-interface.c                           | 3 +++
-> >>  drivers/char/tpm/tpm.h                                     | 1 +
-> >>  drivers/char/tpm/tpm_of.c                                  | 3 +++
-> >>  4 files changed, 13 insertions(+)
-> >>
-> >> diff --git a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
-> >> index 8cb638b..85c8216 100644
-> >> --- a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
-> >> +++ b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
-> >> @@ -8,6 +8,12 @@ Required properties:
-> >>                     the firmware event log
-> >>  - linux,sml-size : size of the memory allocated for the firmware event log
-> >>  
-> >> +Optional properties:
-> >> +
-> >> +- powered-while-suspended: present when the TPM is left powered on between
-> >> +                           suspend and resume (makes the suspend/resume
-> >> +                           callbacks do nothing).
-> >> +
-> >>  Example (for OpenPower Systems with Nuvoton TPM 2.0 on I2C)
-> >>  ----------------------------------------------------------
+On Mon, 2017-03-06 at 16:19 -0700, Jason Gunthorpe wrote:
+> On Mon, Mar 06, 2017 at 05:32:15PM -0500, Hon Ching(Vicky) Lo wrote:
+> > The current code passes the address of tpm_chip as the argument to
+> > dev_get_drvdata() without prior NULL check in
+> > tpm_ibmvtpm_get_desired_dma.  This resulted an oops during kernel
+> > boot when vTPM is enabled in Power partition configured in active
+> > memory sharing mode.
 > > 
-> > Hey, just noticed something. Shouldn't this be a separate commit?
+> > The vio_driver's get_desired_dma() is called before the probe(), which
+> > for vtpm is tpm_ibmvtpm_probe, and it's this latter function that
+> > initializes the driver and set data.  Attempting to get data before
+> > the probe() caused the problem.
+> > 
+> > This patch adds a NULL check to the tpm_ibmvtpm_get_desired_dma.
 > 
-> During my life submitting patches I saw the both options, sometimes
-> the maintainer asked me to join the DT patch and the driver and
-> sometimes he asked me to do in different patches, so I think this is
-> more a maintainer option. Maybe Rob Herring or Mark Rutland can share
-> their preferences?
+> Does this also need a hunk in tpm_ibmvtpm_remove to null the drvdata
+> after removal, or does something in the driver code guarentee it is
+> null'd after remove?
+
+The driver does not ganrantee it is null'd after remove.
+
 > 
-> I'll do what you want I do, TBH I don't have a strong opinion about this.
+> We don't want to use-after-free chip on the next probe cycle.
+> 
+> >  static unsigned long tpm_ibmvtpm_get_desired_dma(struct vio_dev *vdev)
+> >  {
+> >  	struct tpm_chip *chip = dev_get_drvdata(&vdev->dev);
+> > -	struct ibmvtpm_dev *ibmvtpm = dev_get_drvdata(&chip->dev);
+> > +	struct ibmvtpm_dev *ibmvtpm = NULL;
+> > +
+> > +	if (chip)
+> > +		ibmvtpm = dev_get_drvdata(&chip->dev);
+> 
+> Maybe just do this, clearer that it is chip that can be null. We do
+> not want to see drivers testing their chip drvdata against null.
+> 
+That should do it.
 
-I'll add this to my tree and put it to my next branch so that
-it will flow to linux-next since it only touch TPM specific
-file in bindings.
 
-I do not have perfect answer for this so I'll use common sense
-(or try to).
+> Also, how does locking work here? Does the vio core prevent
+> tpm_ibmvtpm_get_desired_dma and tpm_ibmvtpm_remove from running
+> concurrently?
 
-Rob, is this OK?
+No, vio core doesn't prevent tpm_ibmvtpm_get_desired_dma and tpm_ibmvtpm_remove
+from running concurrently.
 
-/Jarkko
---
-To unsubscribe from this list: send the line "unsubscribe devicetree" in
-the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-More majordomo info at  http://vger.kernel.org/majordomo-info.html
+vio_bus_probe calls vio_cmo_bus_probe which calls tpm_ibmvtpm_get_desired_dma.
+tpm_ibmvtpm_get_desired_dma is called before the code enters critical section.
+
+There is no locking mechanism around tpm_ibmvtpm_remove in vio_bus_remove.
+
+What's the concern here?
+
+
+> 
+> diff --git a/drivers/char/tpm/tpm_ibmvtpm.c b/drivers/char/tpm/tpm_ibmvtpm.c
+> index 946025a7413b6b..ced6b9f0008dc2 100644
+> --- a/drivers/char/tpm/tpm_ibmvtpm.c
+> +++ b/drivers/char/tpm/tpm_ibmvtpm.c
+> @@ -294,6 +294,8 @@ static int tpm_ibmvtpm_remove(struct vio_dev *vdev)
+>  		kfree(ibmvtpm->rtce_buf);
+>  	}
+> 
+> +	/* For tpm_ibmvtpm_get_desired_dma */
+> +	dev_set_drvdata(&vdev->dev, NULL);
+>  	kfree(ibmvtpm);
+> 
+>  	return 0;
+> @@ -309,15 +311,16 @@ static int tpm_ibmvtpm_remove(struct vio_dev *vdev)
+>  static unsigned long tpm_ibmvtpm_get_desired_dma(struct vio_dev *vdev)
+>  {
+>  	struct tpm_chip *chip = dev_get_drvdata(&vdev->dev);
+> -	struct ibmvtpm_dev *ibmvtpm = dev_get_drvdata(&chip->dev);
+> +	struct ibmvtpm_dev *ibmvtpm;
+> 
+>  	/* ibmvtpm initializes at probe time, so the data we are
+>  	* asking for may not be set yet. Estimate that 4K required
+>  	* for TCE-mapped buffer in addition to CRQ.
+>  	*/
+> -	if (!ibmvtpm)
+> +	if (!chip)
+>  		return CRQ_RES_BUF_SIZE + PAGE_SIZE;
+> 
+> +	ibmvtpm = dev_get_drvdata(&chip->dev);
+>  	return CRQ_RES_BUF_SIZE + ibmvtpm->rtce_size;
+>  }
+> 
+> 
+Thanks,
+Vicky
+
+
+
+------------------------------------------------------------------------------
+Announcing the Oxford Dictionaries API! The API offers world-renowned
+dictionary content that is easy and intuitive to access. Sign up for an
+account today to start using our lexical data to power your apps and
+projects. Get started today and enter our developer competition.
+http://sdm.link/oxford
