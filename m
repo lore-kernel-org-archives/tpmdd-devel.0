@@ -1,8 +1,8 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Subject: Re: [PATCH 3/3] tpm/tpm_crb: Enable TPM CRB interface
 	for ARM64
-Date: Fri, 10 Mar 2017 10:01:13 -0700
-Message-ID: <20170310170113.GC22960@obsidianresearch.com>
+Date: Fri, 10 Mar 2017 10:02:16 -0700
+Message-ID: <20170310170216.GD22960@obsidianresearch.com>
 References: <1489139889-14376-1-git-send-email-anjiandi@codeaurora.org>
 	<1489139889-14376-4-git-send-email-anjiandi@codeaurora.org>
 Mime-Version: 1.0
@@ -25,15 +25,14 @@ List-Id: tpmdd-devel@lists.sourceforge.net
 
 On Fri, Mar 10, 2017 at 03:58:09AM -0600, Jiandi An wrote:
 
-> +	if (sm == ACPI_TPM2_COMMAND_BUFFER_WITH_SMC) {
-> +		if ((buf->header.length - default_len) !=
-> +		    sizeof(struct tpm2_crb_smc)) {
-> +			dev_err(dev, "TPM2 ACPI table has wrong size %u for start method type %d\n",
-> +				buf->header.length,
+>  	tristate "TPM 2.0 CRB Interface"
+> -	depends on X86 && ACPI
+> +	depends on (X86 || ARM64) && ACPI
 
-This should be:
+Oh, and why is the X86 even here?
 
-	dev_err(dev, FW_BUG "TPM2 ACPI table has wrong size %u for start method type %d\n",
+Surely it should just be 'depends on ACPI'? I don't remember anything
+x86 specific in CRB?
 
 Jason
 
