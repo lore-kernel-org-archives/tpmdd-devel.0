@@ -1,99 +1,161 @@
-From: "Li, Meng" <Meng.Li@windriver.com>
-Subject: RE: [PATCH] tpm: Add sysfs interface to show TPM hardware version
-Date: Mon, 13 Mar 2017 07:47:19 +0000
-Message-ID: <529F9A9100AE8045A7A5B5A00A39FBB83DE931AB@ALA-MBC.corp.ad.wrs.com>
-References: <1489382517-9078-1-git-send-email-Meng.Li@windriver.com>
- <29B2C361-A0C0-410E-ACCA-07AFA382A251@gmx.de>
+From: "Moore, Robert" <robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Subject: Re: [PATCH 1/3] ACPICA: Update TPM2 ACPI table
+Date: Fri, 10 Mar 2017 15:35:57 +0000
+Message-ID: <94F2FBAB4432B54E8AACC7DFDE6C92E37E56A917@ORSMSX110.amr.corp.intel.com>
+References: <1489139889-14376-1-git-send-email-anjiandi@codeaurora.org>
+	<1489139889-14376-2-git-send-email-anjiandi@codeaurora.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <29B2C361-A0C0-410E-ACCA-07AFA382A251@gmx.de>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1489139889-14376-2-git-send-email-anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
 Content-Language: en-US
-Sender: linux-kernel-owner@vger.kernel.org
-To: Peter Huewe <peterhuewe@gmx.de>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
-Cc: "tpmdd@selhorst.net" <tpmdd@selhorst.net>, "jarkko.sakkinen@linux.intel.com" <jarkko.sakkinen@linux.intel.com>, "jgunthorpe@obsidianresearch.com" <jgunthorpe@obsidianresearch.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Cc: "Wysocki, Rafael J" <rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, "Zheng,
+	Lv" <lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, "lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org" <lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbTogUGV0ZXIgSHVld2UgW21h
-aWx0bzpwZXRlcmh1ZXdlQGdteC5kZV0NCj4gU2VudDogTW9uZGF5LCBNYXJjaCAxMywgMjAxNyAz
-OjExIFBNDQo+IFRvOiBMaSwgTWVuZzsgbGludXgta2VybmVsQHZnZXIua2VybmVsLm9yZw0KPiBD
-YzogdHBtZGRAc2VsaG9yc3QubmV0OyBqYXJra28uc2Fra2luZW5AbGludXguaW50ZWwuY29tOw0K
-PiBqZ3VudGhvcnBlQG9ic2lkaWFucmVzZWFyY2guY29tOyB0cG1kZC1kZXZlbEBsaXN0cy5zb3Vy
-Y2Vmb3JnZS5uZXQNCj4gU3ViamVjdDogUmU6IFtQQVRDSF0gdHBtOiBBZGQgc3lzZnMgaW50ZXJm
-YWNlIHRvIHNob3cgVFBNIGhhcmR3YXJlDQo+IHZlcnNpb24NCj4gDQo+IEhpLA0KPiBUaGFua3Mg
-Zm9yIHlvdXIgcGF0Y2guDQoNCkhpIFBldGVyLA0KDQpUaGFua3MgZm9yIHJldmlld2luZyB0aGlz
-IHBhdGNoIGluIHlvdXIgYnVzeSB0aW1lLg0KSSB3aWxsIGRvIG1vZGlmaWNhdGlvbiBhY2NvcmRp
-bmcgdG8geW91ciBjb21tZW50IGFuZCB0aGVuIHNlbmQgdGhlIG5leHQgcGF0Y2ggcmV2aWV3aW5n
-Lg0KDQpUaGFua3MsDQpMaW1lbmcNCg0KPiANCj4gQW0gMTMuIE3DpHJ6IDIwMTcgMDY6MjE6NTcg
-TUVaIHNjaHJpZWIgTWVuZy5MaUB3aW5kcml2ZXIuY29tOg0KPiA+RnJvbTogTGltZW5nIDxNZW5n
-LkxpQHdpbmRyaXZlci5jb20+DQo+ID4NCj4gPlNvIGZhciwgdGhlcmUgaXMgbm90IGEgc3lzZnMg
-aW50ZXJmYWNlIGZvciB1c2VyIHNwYWNlIGNvZGUgdG8gY2hlY2sgdGhlDQo+ID5UUE0gaGFyZHdh
-cmUgdmVyc2lvbihUUE0xLnggb3IgVFBNMikuIFNvLCBhZGQgYSBmaWxlIG5hbWVkIGRlc2NyaXB0
-aW9uDQo+ID5pbiAvc3lzL2NsYXNzL3RwbS90cG1YLyB0byBzaG93IGl0Lg0KPiBJdCdzIG5vdCBy
-ZWFsbHkgdGhlIGhhcmR3YXJlIHZlcnNpb24gYnV0IHRoZSAiVFBNIEZhbWlseSIgYWNjb3JkaW5n
-IHRvIHRjZy4NCj4gDQo+IEFuZCB5ZXMgeW91IGFyZSByaWdodCB0aGVyZSBpcyBjdXJyZW50bHkg
-bm8gd2F5LCBleGNlcHQgZm9yIHRyaWFsIGFuZCBlcnJvciwgZm9yDQo+IHRoZSB1c2Vyc3BhY2Ug
-dG8gZGV0ZXJtaW5lIHRoaXMuDQo+IFNvIGFuIGludGVyZmFjZSB0byBnZXQgdGhpcyBpbmZvcm1h
-dGlvbiBtYWtlcyBzZW5zZSB0byBtZS4NCj4gPg0KPiA+U2lnbmVkLW9mZi1ieTogTWVuZyBMaSA8
-TWVuZy5MaUB3aW5kcml2ZXIuY29tPg0KPiA+LS0tDQo+ID5kcml2ZXJzL2NoYXIvdHBtL3RwbS1j
-aGlwLmMgfCAgIDg1DQo+ID4rKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysr
-KysrDQo+ID4gMSBmaWxlIGNoYW5nZWQsIDg1IGluc2VydGlvbnMoKykNCj4gPg0KPiA+ZGlmZiAt
-LWdpdCBhL2RyaXZlcnMvY2hhci90cG0vdHBtLWNoaXAuYyBiL2RyaXZlcnMvY2hhci90cG0vdHBt
-LWNoaXAuYw0KPiA+aW5kZXggYzQwNjM0My4uZGEyY2Q2OSAxMDA2NDQNCj4gPi0tLSBhL2RyaXZl
-cnMvY2hhci90cG0vdHBtLWNoaXAuYw0KPiA+KysrIGIvZHJpdmVycy9jaGFyL3RwbS90cG0tY2hp
-cC5jDQo+ID5AQCAtMzYsNiArMzYsODMgQEANCj4gPiBkZXZfdCB0cG1fZGV2dDsNCj4gPg0KPiA+
-IC8qKg0KPiA+KyAqIHNob3dfZGVzY3JpcHRpb24gLSBzeXNmcyBpbnRlcmZhY2UgZm9yIGNoZWNr
-aW5nIGN1cnJlbnQgVFBNDQo+ID5oYXJkd2FyZSB2ZXJzaW9uLg0KPiA+KyAqIEBkZXY6CXBvaW50
-ZXIgdG8gdHBtIGNoaXAgZGV2aWNlDQo+ID4rICogQGF0dHI6CXVudXNlZA0KPiA+KyAqIEBidWY6
-CWNoYXIgYnVmZmVyIHRvIGJlIGZpbGxlZCB3aXRoIFRQTSBoYXJkd2FyZSB2ZXJzaW9uIGluZm8N
-Cj4gPisgKg0KPiA+KyAqIFByb3ZpZGVzIHN5c2ZzIGludGVyZmFjZSBmb3Igc2hvd2luZyBjdXJy
-ZW50IFRQTSBoYXJkd2FyZSB2ZXJzaW9uLg0KPiA+KyAqLw0KPiA+K3N0YXRpYyBzc2l6ZV90IHNo
-b3dfZGVzY3JpcHRpb24oc3RydWN0IGRldmljZSAqZGV2LA0KPiA+KwkJc3RydWN0IGRldmljZV9h
-dHRyaWJ1dGUgKmF0dHIsIGNoYXIgKmJ1Zikgew0KPiA+KwlzdHJ1Y3QgdHBtX2NoaXAgKmNoaXAg
-PSAoc3RydWN0IHRwbV9jaGlwICopY29udGFpbmVyX29mKGRldixzdHJ1Y3QNCj4gPnRwbV9jaGlw
-LGRldik7DQo+ID4rCWludCByZXQ7DQo+ID4rDQo+ID4rCWlmIChjaGlwLT5mbGFncyAmIFRQTV9D
-SElQX0ZMQUdfVFBNMikNCj4gPisJCXJldCA9IHNwcmludGYoYnVmLCAiVFBNIDIuMCIpOw0KPiA+
-KwllbHNlDQo+ID4rCQlyZXQgPSBzcHJpbnRmKGJ1ZiwgIlRQTSAxLngiKTsNCj4gPisNCj4gPisJ
-cmV0dXJuIHJldDsNCj4gPit9DQo+ID4rDQo+ID4rLyoqDQo+ID4rICogc3RvcmVfZGVzY3JpcHRp
-b24gLSBpbnRlcmZhY2UgZm9yIG1hbnVhbGx5IHNldHRpbmcgZGF0YS4NCj4gPisgKiBAZGV2Ogl1
-bnVzZWQNCj4gPisgKiBAYXR0cjoJdW51c2VkDQo+ID4rICogQGJ1ZjoJdW51c2VkDQo+ID4rICog
-QGNvdW50Ogl1bnVzZWQNCj4gPisgKg0KPiA+KyAqIFRoZXJlIGlzIG5vdCBhbnkgcHJvY2VzcyBp
-biB0aGlzIGZ1bmN0aW9uLCByZXNlcnZlIGZvciBmZWF0dXJlLg0KPiA+KyAqLw0KPiA+K3N0YXRp
-YyBzc2l6ZV90IHN0b3JlX2Rlc2NyaXB0aW9uKHN0cnVjdCBkZXZpY2UgKmRldiwgc3RydWN0DQo+
-ID5kZXZpY2VfYXR0cmlidXRlICphdHRyLA0KPiA+KwkJY29uc3QgY2hhciAqYnVmLCBzaXplX3Qg
-Y291bnQpDQo+ID4rew0KPiA+KwlyZXR1cm4gY291bnQ7DQo+ID4rfQ0KPiBTaW5jZSBpdCBkb2Vz
-IG5vdCBkbyBhbnl0aGluZw0KPiBJIHdvdWxkIG5vdCBjcmVhdGUgdGhpcyBmdW5jdGlvbiBhbmQg
-bGVhdmUgdGhlIHN5c2ZzIG5vZGUgYXMgU19JUlVHTy4NCj4gDQo+ID4rDQo+ID4rc3RhdGljIHN0
-cnVjdCBkZXZpY2VfYXR0cmlidXRlIHRwbV9hdHRyc1tdID0gew0KPiA+KwlfX0FUVFIoZGVzY3Jp
-cHRpb24sIFNfSVJVR08gfCBTX0lXVVNSLCBzaG93X2Rlc2NyaXB0aW9uLA0KPiA+c3RvcmVfZGVz
-Y3JpcHRpb24pLA0KPiA+K307DQo+ID4rDQo+ID4rLyoqDQo+ID4rICogdHBtX2NyZWF0ZV9zeXNm
-cyAtIENyZWF0ZSB0cG0gc3lzZnMgaW50ZXJmYWNlLg0KPiA+KyAqIEBkZXY6CXBvaW50ZXIgdG8g
-dHBtIGNoaXAgZGV2aWNlDQo+ID4rICoNCj4gPisgKiBDcmVhdGUgc3lzZnMgaW50ZXJmYWNlIGZv
-ciBjaGVja2luZyBjdXJyZW50IFRQTSBoYXJkd2FyZSB2ZXJzaW9uLg0KPiA+KyAqLw0KPiA+K3N0
-YXRpYyBpbnQgdHBtX2NyZWF0ZV9zeXNmcyhzdHJ1Y3QgZGV2aWNlICpkZXYpIHsNCj4gPisJaW50
-IHIsIHQ7DQo+ID4rDQo+ID4rCWZvciAodCA9IDA7IHQgPCBBUlJBWV9TSVpFKHRwbV9hdHRycyk7
-IHQrKykgew0KPiA+KwkJciA9IGRldmljZV9jcmVhdGVfZmlsZShkZXYsICZ0cG1fYXR0cnNbdF0p
-Ow0KPiA+KwkJaWYgKHIpIHsNCj4gPisJCQlkZXZfZXJyKGRldiwgImZhaWxlZCB0byBjcmVhdGUg
-c3lzZnMgZmlsZVxuIik7DQo+ID4rCQkJcmV0dXJuIHI7DQo+ID4rCQl9DQo+ID4rCX0NCj4gPisN
-Cj4gPisJcmV0dXJuIDA7DQo+ID4rfQ0KPiA+Kw0KPiA+Ky8qKg0KPiA+KyAqIHRwbV9yZW1vdmVf
-c3lzZnMgLSBSZW1vdmUgdHBtIHN5c2ZzIGludGVyZmFjZS4NCj4gPisgKiBAZGV2Oglwb2ludGVy
-IHRvIHRwbSBjaGlwIGRldmljZQ0KPiA+KyAqDQo+ID4rICogUmVtb3ZlIHN5c2ZzIGludGVyZmFj
-ZSBmb3IgY2hlY2tpbmcgY3VycmVudCBUUE0gaGFyZHdhcmUgdmVyc2lvbi4NCj4gPisgKi8NCj4g
-PitzdGF0aWMgdm9pZCB0cG1fcmVtb3ZlX3N5c2ZzKHN0cnVjdCBkZXZpY2UgKmRldikgew0KPiA+
-KwlpbnQgIHQ7DQo+ID4rDQo+ID4rCWZvciAodCA9IDA7IHQgPCBBUlJBWV9TSVpFKHRwbV9hdHRy
-cyk7IHQrKykgew0KPiA+KwkJZGV2aWNlX3JlbW92ZV9maWxlKGRldiwgJnRwbV9hdHRyc1t0XSk7
-DQo+ID4rCX0NCj4gPit9DQo+ID4rDQo+ID4rLyoqDQo+ID4gICogdHBtX3RyeV9nZXRfb3BzKCkg
-LSBHZXQgYSByZWYgdG8gdGhlIHRwbV9jaGlwDQo+ID4gICogQGNoaXA6IENoaXAgdG8gcmVmDQo+
-ID4gICoNCj4gPkBAIC0zNjMsNiArNDQwLDEzIEBAIGludCB0cG1fY2hpcF9yZWdpc3RlcihzdHJ1
-Y3QgdHBtX2NoaXAgKmNoaXApDQo+ID4gCQlyZXR1cm4gcmM7DQo+ID4gCX0NCj4gPg0KPiA+Kwly
-YyA9IHRwbV9jcmVhdGVfc3lzZnMoJmNoaXAtPmRldik7DQo+ID4rCWlmIChyYykgew0KPiA+KwkJ
-dHBtX2RlbF9sZWdhY3lfc3lzZnMoY2hpcCk7DQo+ID4rCQl0cG1fY2hpcF91bnJlZ2lzdGVyKGNo
-aXApOw0KPiA+KwkJcmV0dXJuIHJjOw0KPiA+Kwl9DQo+ID4rDQo+ID4gCXJldHVybiAwOw0KPiA+
-IH0NCj4gPiBFWFBPUlRfU1lNQk9MX0dQTCh0cG1fY2hpcF9yZWdpc3Rlcik7DQo+ID5AQCAtMzgy
-LDYgKzQ2Niw3IEBAIGludCB0cG1fY2hpcF9yZWdpc3RlcihzdHJ1Y3QgdHBtX2NoaXAgKmNoaXAp
-DQo+ID4gICovDQo+ID4gdm9pZCB0cG1fY2hpcF91bnJlZ2lzdGVyKHN0cnVjdCB0cG1fY2hpcCAq
-Y2hpcCkgIHsNCj4gPisJdHBtX3JlbW92ZV9zeXNmcygmY2hpcC0+ZGV2KTsNCj4gPiAJdHBtX2Rl
-bF9sZWdhY3lfc3lzZnMoY2hpcCk7DQo+ID4gCXRwbV9iaW9zX2xvZ190ZWFyZG93bihjaGlwKTsN
-Cj4gPiAJdHBtX2RlbF9jaGFyX2RldmljZShjaGlwKTsNCj4gDQo+IC0tDQo+IFNlbnQgZnJvbSBt
-eSBtb2JpbGUNCg==
+This appears to be the latest version on the TCG website:
+
+*TCG ACPI Specification for Family 1.2 and 2.0, Level 00, Revision 00.37
+December 19, 2014
+
+Which is what ACPICA is using.
+
+Please send me a link to a newer version if you have it.
+Thanks,
+Bob
+
+> -----Original Message-----
+> From: Jiandi An [mailto:anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org]
+> Sent: Friday, March 10, 2017 1:58 AM
+> To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+> Cc: peterhuewe-Mmb7MZpHnFY@public.gmane.org; tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org;
+> jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org; jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org; Moore,
+> Robert <robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>; Zheng, Lv <lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>;
+> Wysocki, Rafael J <rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>; lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org; Jiandi
+> An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+> Subject: [PATCH 1/3] ACPICA: Update TPM2 ACPI table
+> 
+> TCG ACPI Specification Family "1.2" and "2.0" Version 1.2 Revision 8
+> introduces new start method for ARM SMC.
+> 
+> - Add new start method (type 11) for ARM SMC
+> - Add start method specific parameters for ARM SMC start method
+> 
+> Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+> ---
+>  drivers/char/tpm/tpm_crb.c |  6 +++++-
+>  drivers/char/tpm/tpm_tis.c |  6 +++++-
+>  include/acpi/actbl2.h      | 12 ++++++++++++
+>  3 files changed, 22 insertions(+), 2 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+> index cb6fb13..089fcf8 100644
+> --- a/drivers/char/tpm/tpm_crb.c
+> +++ b/drivers/char/tpm/tpm_crb.c
+> @@ -410,12 +410,16 @@ static int crb_acpi_add(struct acpi_device
+> *device)
+>  	struct tpm_chip *chip;
+>  	struct device *dev = &device->dev;
+>  	acpi_status status;
+> +	u32 default_len;
+>  	u32 sm;
+>  	int rc;
+> 
+> +	default_len = sizeof(struct acpi_table_tpm2) -
+> +		      sizeof(union platform_params);
+> +
+>  	status = acpi_get_table(ACPI_SIG_TPM2, 1,
+>  				(struct acpi_table_header **) &buf);
+> -	if (ACPI_FAILURE(status) || buf->header.length < sizeof(*buf)) {
+> +	if (ACPI_FAILURE(status) || buf->header.length < default_len) {
+>  		dev_err(dev, FW_BUG "failed to get TPM2 ACPI table\n");
+>  		return -EINVAL;
+>  	}
+> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+> index c7e1384..0e2e5f6 100644
+> --- a/drivers/char/tpm/tpm_tis.c
+> +++ b/drivers/char/tpm/tpm_tis.c
+> @@ -253,11 +253,15 @@ static int tpm_tis_acpi_init(struct acpi_device
+> *acpi_dev)
+>  	acpi_status st;
+>  	struct list_head resources;
+>  	struct tpm_info tpm_info = {};
+> +	u32 default_len;
+>  	int ret;
+> 
+> +	default_len = sizeof(struct acpi_table_tpm2) -
+> +		      sizeof(union platform_params);
+> +
+>  	st = acpi_get_table(ACPI_SIG_TPM2, 1,
+>  			    (struct acpi_table_header **) &tbl);
+> -	if (ACPI_FAILURE(st) || tbl->header.length < sizeof(*tbl)) {
+> +	if (ACPI_FAILURE(st) || tbl->header.length < default_len) {
+>  		dev_err(&acpi_dev->dev,
+>  			FW_BUG "failed to get TPM2 ACPI table\n");
+>  		return -EINVAL;
+> diff --git a/include/acpi/actbl2.h b/include/acpi/actbl2.h index
+> 7aee9fb..9612049 100644
+> --- a/include/acpi/actbl2.h
+> +++ b/include/acpi/actbl2.h
+> @@ -1277,6 +1277,14 @@ struct acpi_table_tcpa_server {
+>   *
+> 
+> ************************************************************************
+> ******/
+> 
+> +struct tpm2_crb_smc {
+> +	u32 interrupt;
+> +	u8 interrupt_flags;
+> +	u8 op_flags;
+> +	u16 reserved2;
+> +	u32 smc_func_id;
+> +};
+> +
+>  struct acpi_table_tpm2 {
+>  	struct acpi_table_header header;	/* Common ACPI table header
+> */
+>  	u16 platform_class;
+> @@ -1285,6 +1293,9 @@ struct acpi_table_tpm2 {
+>  	u32 start_method;
+> 
+>  	/* Platform-specific data follows */
+> +	union platform_params {
+> +		struct tpm2_crb_smc smc_params;
+> +	} platform_data;
+>  };
+> 
+>  /* Values for start_method above */
+> @@ -1294,6 +1305,7 @@ struct acpi_table_tpm2 {
+>  #define ACPI_TPM2_MEMORY_MAPPED                     6
+>  #define ACPI_TPM2_COMMAND_BUFFER                    7
+>  #define ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD  8
+> +#define ACPI_TPM2_COMMAND_BUFFER_WITH_SMC          11
+> 
+> 
+> /***********************************************************************
+> ********
+>   *
+> --
+> Jiandi An
+> Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm
+> Technologies, Inc.
+> Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a
+> Linux Foundation Collaborative Project.
+
+
+------------------------------------------------------------------------------
+Announcing the Oxford Dictionaries API! The API offers world-renowned
+dictionary content that is easy and intuitive to access. Sign up for an
+account today to start using our lexical data to power your apps and
+projects. Get started today and enter our developer competition.
+http://sdm.link/oxford
