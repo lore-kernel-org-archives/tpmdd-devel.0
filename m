@@ -1,45 +1,76 @@
-From: Nayna Jain <nayna@linux.vnet.ibm.com>
-Subject: [PATCH 2/2] tpm: add sleep only for retry in i2c_nuvoton_write_status()
-Date: Fri, 10 Mar 2017 13:45:54 -0500
-Message-ID: <1489171554-6844-2-git-send-email-nayna@linux.vnet.ibm.com>
-References: <1489171554-6844-1-git-send-email-nayna@linux.vnet.ibm.com>
-Return-path: <stable-owner@vger.kernel.org>
-In-Reply-To: <1489171554-6844-1-git-send-email-nayna@linux.vnet.ibm.com>
-Sender: stable-owner@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, dan.morav@nuvoton.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Nayna Jain <nayna@linux.vnet.ibm.com>, "linux-4.8" <stable@vger.kernel.org>
+From: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+Subject: Re: [PATCH 3/3] tpm/tpm_crb: Enable TPM CRB interface
+	for ARM64
+Date: Fri, 10 Mar 2017 13:50:04 -0600
+Message-ID: <58C3036C.2050808@codeaurora.org>
+References: <1489139889-14376-1-git-send-email-anjiandi@codeaurora.org>
+	<1489139889-14376-4-git-send-email-anjiandi@codeaurora.org>
+	<20170310170216.GD22960@obsidianresearch.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170310170216.GD22960-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Currently, there is an unnecessary 1 msec delay added in
-i2c_nuvoton_write_status() for the successful case. This 
-function is called multiple times during send() and recv(),
-which implies adding multiple extra delays for every TPM
-operation.
+On 03/10/17 11:02, Jason Gunthorpe wrote:
+> On Fri, Mar 10, 2017 at 03:58:09AM -0600, Jiandi An wrote:
+>
+>>   	tristate "TPM 2.0 CRB Interface"
+>> -	depends on X86 && ACPI
+>> +	depends on (X86 || ARM64) && ACPI
+>
+> Oh, and why is the X86 even here?
+>
+> Surely it should just be 'depends on ACPI'? I don't remember anything
+> x86 specific in CRB?
+>
+> Jason
+>
 
-This patch calls usleep_range() only if retry is to be done.
+During testing of my patches on ARM64, I hit crb_cmd_ready() and
+crb_go_idle() that fails.  Looking at the comment and commit history,
+it was added for fixing Intel PTT hw bug in Skylake and Broxton.
+The functions themselves do nothing if flag is CRB_FL_ACPI_START.
+I added CRB_FL_CRB_SMC_START which is the new ARM64 start method for
+those two functions to also do nothing.  So crb_cmd_ready() and
+crb_go_idle() are only for when CRB_FL_ACPI_START.
 
-Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
-Cc: stable@vger.kernel.org (linux-4.8)
-Reviewed-by: Mimi Zohar <zohar@linux.vnet.ibm.com>
----
- drivers/char/tpm/tpm_i2c_nuvoton.c | 5 +++--
- 1 file changed, 3 insertions(+), 2 deletions(-)
+And in crb_acpi_add(), there is also comments on what drives
+CRB_FL_CRB_START to be set.  ACPI_TPM2_COMMAND_BUFFER or
+ACPI_TPM2_MEMORY_MAPPED
 
-diff --git a/drivers/char/tpm/tpm_i2c_nuvoton.c b/drivers/char/tpm/tpm_i2c_nuvoton.c
-index 0c98c42..c642877 100644
---- a/drivers/char/tpm/tpm_i2c_nuvoton.c
-+++ b/drivers/char/tpm/tpm_i2c_nuvoton.c
-@@ -124,8 +124,9 @@ static s32 i2c_nuvoton_write_status(struct i2c_client *client, u8 data)
- 	/* this causes the current command to be aborted */
- 	for (i = 0, status = -1; i < TPM_I2C_RETRY_COUNT && status < 0; i++) {
- 		status = i2c_nuvoton_write_buf(client, TPM_STS, 1, &data);
--		usleep_range(TPM_I2C_BUS_DELAY, TPM_I2C_BUS_DELAY
--			     + TPM_I2C_DELAY_RANGE);
-+		if (status < 0)
-+			usleep_range(TPM_I2C_BUS_DELAY, TPM_I2C_BUS_DELAY
-+				     + TPM_I2C_DELAY_RANGE);
- 	}
- 	return status;
- }
+/* The reason for the extra quirk is that the PTT in 4th Gen Core CPUs
+  * report only ACPI start but in practice seems to require both
+  * ACPI start and CRB start.
+  */
+
+I didn't have too much background on the CRB driver for X86.  I
+thought to be safe just or in ARM64.  But if you see no issues,
+I'll remove (X86 || ARM64) and just make it depend on ACPI.
+
+Thanks.
+- Jiandi
+
 -- 
-2.9.3
+Qualcomm Datacenter Technologies, Inc.
+as an affiliate of Qualcomm Technologies, Inc.
+Qualcomm Technologies, Inc. is a member of the Code Aurora Forum,
+a Linux Foundation Collaborative Project.
+
+------------------------------------------------------------------------------
+Announcing the Oxford Dictionaries API! The API offers world-renowned
+dictionary content that is easy and intuitive to access. Sign up for an
+account today to start using our lexical data to power your apps and
+projects. Get started today and enter our developer competition.
+http://sdm.link/oxford
