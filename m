@@ -1,7 +1,8 @@
 From: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
-Subject: [PATCH 1/3] ACPICA: Update TPM2 ACPI table
-Date: Fri, 10 Mar 2017 03:58:07 -0600
-Message-ID: <1489139889-14376-2-git-send-email-anjiandi@codeaurora.org>
+Subject: [PATCH 3/3] tpm/tpm_crb: Enable TPM CRB interface for
+	ARM64
+Date: Fri, 10 Mar 2017 03:58:09 -0600
+Message-ID: <1489139889-14376-4-git-send-email-anjiandi@codeaurora.org>
 References: <1489139889-14376-1-git-send-email-anjiandi@codeaurora.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,99 +21,100 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 Cc: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>, rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-TCG ACPI Specification Family "1.2" and "2.0" Version 1.2
-Revision 8 introduces new start method for ARM SMC.
-
-- Add new start method (type 11) for ARM SMC
-- Add start method specific parameters for ARM SMC start method
+This enables TPM Command Response Buffer interface driver for
+ARM64 and implements an ARM specific TPM CRB start method that
+invokes a Secure Monitor Call to request the Firmware to execute
+or cancel a TPM 2.0 command.
 
 Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
 ---
- drivers/char/tpm/tpm_crb.c |  6 +++++-
- drivers/char/tpm/tpm_tis.c |  6 +++++-
- include/acpi/actbl2.h      | 12 ++++++++++++
- 3 files changed, 22 insertions(+), 2 deletions(-)
+ drivers/char/tpm/Kconfig   |  2 +-
+ drivers/char/tpm/tpm_crb.c | 24 ++++++++++++++++++++++--
+ 2 files changed, 23 insertions(+), 3 deletions(-)
 
+diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
+index d520ac5..9659f40 100644
+--- a/drivers/char/tpm/Kconfig
++++ b/drivers/char/tpm/Kconfig
+@@ -136,7 +136,7 @@ config TCG_XEN
+ 
+ config TCG_CRB
+ 	tristate "TPM 2.0 CRB Interface"
+-	depends on X86 && ACPI
++	depends on (X86 || ARM64) && ACPI
+ 	---help---
+ 	  If you have a TPM security chip that is compliant with the
+ 	  TCG CRB 2.0 TPM specification say Yes and it will be accessible
 diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index cb6fb13..089fcf8 100644
+index 089fcf8..d29a84a 100644
 --- a/drivers/char/tpm/tpm_crb.c
 +++ b/drivers/char/tpm/tpm_crb.c
-@@ -410,12 +410,16 @@ static int crb_acpi_add(struct acpi_device *device)
- 	struct tpm_chip *chip;
- 	struct device *dev = &device->dev;
- 	acpi_status status;
-+	u32 default_len;
- 	u32 sm;
- 	int rc;
- 
-+	default_len = sizeof(struct acpi_table_tpm2) -
-+		      sizeof(union platform_params);
-+
- 	status = acpi_get_table(ACPI_SIG_TPM2, 1,
- 				(struct acpi_table_header **) &buf);
--	if (ACPI_FAILURE(status) || buf->header.length < sizeof(*buf)) {
-+	if (ACPI_FAILURE(status) || buf->header.length < default_len) {
- 		dev_err(dev, FW_BUG "failed to get TPM2 ACPI table\n");
- 		return -EINVAL;
- 	}
-diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index c7e1384..0e2e5f6 100644
---- a/drivers/char/tpm/tpm_tis.c
-+++ b/drivers/char/tpm/tpm_tis.c
-@@ -253,11 +253,15 @@ static int tpm_tis_acpi_init(struct acpi_device *acpi_dev)
- 	acpi_status st;
- 	struct list_head resources;
- 	struct tpm_info tpm_info = {};
-+	u32 default_len;
- 	int ret;
- 
-+	default_len = sizeof(struct acpi_table_tpm2) -
-+		      sizeof(union platform_params);
-+
- 	st = acpi_get_table(ACPI_SIG_TPM2, 1,
- 			    (struct acpi_table_header **) &tbl);
--	if (ACPI_FAILURE(st) || tbl->header.length < sizeof(*tbl)) {
-+	if (ACPI_FAILURE(st) || tbl->header.length < default_len) {
- 		dev_err(&acpi_dev->dev,
- 			FW_BUG "failed to get TPM2 ACPI table\n");
- 		return -EINVAL;
-diff --git a/include/acpi/actbl2.h b/include/acpi/actbl2.h
-index 7aee9fb..9612049 100644
---- a/include/acpi/actbl2.h
-+++ b/include/acpi/actbl2.h
-@@ -1277,6 +1277,14 @@ struct acpi_table_tcpa_server {
-  *
-  ******************************************************************************/
- 
-+struct tpm2_crb_smc {
-+	u32 interrupt;
-+	u8 interrupt_flags;
-+	u8 op_flags;
-+	u16 reserved2;
-+	u32 smc_func_id;
-+};
-+
- struct acpi_table_tpm2 {
- 	struct acpi_table_header header;	/* Common ACPI table header */
- 	u16 platform_class;
-@@ -1285,6 +1293,9 @@ struct acpi_table_tpm2 {
- 	u32 start_method;
- 
- 	/* Platform-specific data follows */
-+	union platform_params {
-+		struct tpm2_crb_smc smc_params;
-+	} platform_data;
+@@ -73,6 +73,7 @@ enum crb_status {
+ enum crb_flags {
+ 	CRB_FL_ACPI_START	= BIT(0),
+ 	CRB_FL_CRB_START	= BIT(1),
++	CRB_FL_CRB_SMC_START	= BIT(2),
  };
  
- /* Values for start_method above */
-@@ -1294,6 +1305,7 @@ struct acpi_table_tpm2 {
- #define ACPI_TPM2_MEMORY_MAPPED                     6
- #define ACPI_TPM2_COMMAND_BUFFER                    7
- #define ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD  8
-+#define ACPI_TPM2_COMMAND_BUFFER_WITH_SMC          11
+ struct crb_priv {
+@@ -82,6 +83,7 @@ struct crb_priv {
+ 	u8 __iomem *cmd;
+ 	u8 __iomem *rsp;
+ 	u32 cmd_size;
++	u32 smc_func_id;
+ };
  
- /*******************************************************************************
-  *
+ /**
+@@ -101,7 +103,8 @@ struct crb_priv {
+  */
+ static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+ {
+-	if (priv->flags & CRB_FL_ACPI_START)
++	if ((priv->flags & CRB_FL_ACPI_START) ||
++	    (priv->flags & CRB_FL_CRB_SMC_START))
+ 		return 0;
+ 
+ 	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->cca->req);
+@@ -129,7 +132,8 @@ static int __maybe_unused crb_cmd_ready(struct device *dev,
+ {
+ 	ktime_t stop, start;
+ 
+-	if (priv->flags & CRB_FL_ACPI_START)
++	if ((priv->flags & CRB_FL_ACPI_START) ||
++	    (priv->flags & CRB_FL_CRB_SMC_START))
+ 		return 0;
+ 
+ 	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->cca->req);
+@@ -229,6 +233,11 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+ 	if (priv->flags & CRB_FL_ACPI_START)
+ 		rc = crb_do_acpi_start(chip);
+ 
++	if (priv->flags & CRB_FL_CRB_SMC_START) {
++		iowrite32(CRB_START_INVOKE, &priv->cca->start);
++		rc = tpm_crb_smc_start(priv->smc_func_id);
++	}
++
+ 	return rc;
+ }
+ 
+@@ -445,6 +454,17 @@ static int crb_acpi_add(struct acpi_device *device)
+ 	    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
+ 		priv->flags |= CRB_FL_ACPI_START;
+ 
++	if (sm == ACPI_TPM2_COMMAND_BUFFER_WITH_SMC) {
++		if ((buf->header.length - default_len) !=
++		    sizeof(struct tpm2_crb_smc)) {
++			dev_err(dev, "TPM2 ACPI table has wrong size %u for start method type %d\n",
++				buf->header.length, ACPI_TPM2_COMMAND_BUFFER_WITH_SMC);
++			return -EINVAL;
++		}
++		priv->flags |= CRB_FL_CRB_SMC_START;
++		priv->smc_func_id = buf->platform_data.smc_params.smc_func_id;
++	}
++
+ 	rc = crb_map_io(device, priv, buf);
+ 	if (rc)
+ 		return rc;
 -- 
 Jiandi An
 Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
