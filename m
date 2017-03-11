@@ -1,15 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 1/3] ACPICA: Update TPM2 ACPI table
-Date: Sat, 11 Mar 2017 10:19:14 +0200
-Message-ID: <20170311081914.k5qrbfwmjfb3fa7e@intel.com>
+Subject: Re: [PATCH 2/3] tpm: Add start method for ARM Secure
+	Monitor Call
+Date: Sat, 11 Mar 2017 10:39:25 +0200
+Message-ID: <20170311083925.ogw5ugwj6qxemp2j@intel.com>
 References: <1489139889-14376-1-git-send-email-anjiandi@codeaurora.org>
-	<1489139889-14376-2-git-send-email-anjiandi@codeaurora.org>
+	<1489139889-14376-3-git-send-email-anjiandi@codeaurora.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1489139889-14376-2-git-send-email-anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+In-Reply-To: <1489139889-14376-3-git-send-email-anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,108 +23,68 @@ To: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
 Cc: rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Mar 10, 2017 at 03:58:07AM -0600, Jiandi An wrote:
-> TCG ACPI Specification Family "1.2" and "2.0" Version 1.2
-> Revision 8 introduces new start method for ARM SMC.
-> 
-> - Add new start method (type 11) for ARM SMC
-> - Add start method specific parameters for ARM SMC start method
+On Fri, Mar 10, 2017 at 03:58:08AM -0600, Jiandi An wrote:
+> Add a TPM Command Response Buffer start method that invokes
+> a secure Monitor Call to request the firmware to execute or
+> cancel a TPM 2.0 command for ARM64.
 > 
 > Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+> ---
 
-Could you briefly describe what SMC is? I don't know
-
-1. What the abbrevation stands for.
-2. What it is.
+These are placed incorrectly. They should be in tpm_crb.c
 
 /Jarkko
 
-> ---
->  drivers/char/tpm/tpm_crb.c |  6 +++++-
->  drivers/char/tpm/tpm_tis.c |  6 +++++-
->  include/acpi/actbl2.h      | 12 ++++++++++++
->  3 files changed, 22 insertions(+), 2 deletions(-)
+>  drivers/char/tpm/tpm.h | 29 +++++++++++++++++++++++++++++
+>  1 file changed, 29 insertions(+)
 > 
-> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> index cb6fb13..089fcf8 100644
-> --- a/drivers/char/tpm/tpm_crb.c
-> +++ b/drivers/char/tpm/tpm_crb.c
-> @@ -410,12 +410,16 @@ static int crb_acpi_add(struct acpi_device *device)
->  	struct tpm_chip *chip;
->  	struct device *dev = &device->dev;
->  	acpi_status status;
-> +	u32 default_len;
->  	u32 sm;
->  	int rc;
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 4937b56..4341594 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -35,6 +35,9 @@
+>  #include <linux/cdev.h>
+>  #include <linux/highmem.h>
+>  #include <crypto/hash_info.h>
+> +#ifdef CONFIG_ARM64
+> +#include <linux/arm-smccc.h>
+> +#endif
 >  
-> +	default_len = sizeof(struct acpi_table_tpm2) -
-> +		      sizeof(union platform_params);
+>  enum tpm_const {
+>  	TPM_MINOR = 224,	/* officially assigned */
+> @@ -484,6 +487,32 @@ static inline void tpm_buf_append_u32(struct tpm_buf *buf, const u32 value)
+>  	tpm_buf_append(buf, (u8 *) &value2, 4);
+>  }
+>  
+> +#ifdef CONFIG_ARM64
+> +/*
+> + * This is a TPM Command Response Buffer start method that invokes a
+> + * Secure Monitor Call to requrest the firmware to execute or cancel
+> + * a TPM 2.0 command.
+> + */
+> +static inline int tpm_crb_smc_start(unsigned long func_id)
+> +{
+> +	struct arm_smccc_res res;
 > +
->  	status = acpi_get_table(ACPI_SIG_TPM2, 1,
->  				(struct acpi_table_header **) &buf);
-> -	if (ACPI_FAILURE(status) || buf->header.length < sizeof(*buf)) {
-> +	if (ACPI_FAILURE(status) || buf->header.length < default_len) {
->  		dev_err(dev, FW_BUG "failed to get TPM2 ACPI table\n");
->  		return -EINVAL;
->  	}
-> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-> index c7e1384..0e2e5f6 100644
-> --- a/drivers/char/tpm/tpm_tis.c
-> +++ b/drivers/char/tpm/tpm_tis.c
-> @@ -253,11 +253,15 @@ static int tpm_tis_acpi_init(struct acpi_device *acpi_dev)
->  	acpi_status st;
->  	struct list_head resources;
->  	struct tpm_info tpm_info = {};
-> +	u32 default_len;
->  	int ret;
->  
-> +	default_len = sizeof(struct acpi_table_tpm2) -
-> +		      sizeof(union platform_params);
+> +	arm_smccc_smc(func_id, 0, 0, 0, 0, 0, 0, 0, &res);
+> +	if (res.a0 != 0) {
+> +		WARN(1, "tpm_crb_smc_start() returns res.a0 = 0x%lx\n", res.a0);
+> +		return -EIO;
+> +	}
 > +
->  	st = acpi_get_table(ACPI_SIG_TPM2, 1,
->  			    (struct acpi_table_header **) &tbl);
-> -	if (ACPI_FAILURE(st) || tbl->header.length < sizeof(*tbl)) {
-> +	if (ACPI_FAILURE(st) || tbl->header.length < default_len) {
->  		dev_err(&acpi_dev->dev,
->  			FW_BUG "failed to get TPM2 ACPI table\n");
->  		return -EINVAL;
-> diff --git a/include/acpi/actbl2.h b/include/acpi/actbl2.h
-> index 7aee9fb..9612049 100644
-> --- a/include/acpi/actbl2.h
-> +++ b/include/acpi/actbl2.h
-> @@ -1277,6 +1277,14 @@ struct acpi_table_tcpa_server {
->   *
->   ******************************************************************************/
->  
-> +struct tpm2_crb_smc {
-> +	u32 interrupt;
-> +	u8 interrupt_flags;
-> +	u8 op_flags;
-> +	u16 reserved2;
-> +	u32 smc_func_id;
-> +};
+> +	return 0;
+> +}
+> +#else
+> +static inline int tpm_crb_smc_start(unsigned long func_id)
+> +{
+> +	WARN(1, "tpm_crb: incorrect start method\n");
+> +	return -EINVAL;
+> +}
+> +#endif
 > +
->  struct acpi_table_tpm2 {
->  	struct acpi_table_header header;	/* Common ACPI table header */
->  	u16 platform_class;
-> @@ -1285,6 +1293,9 @@ struct acpi_table_tpm2 {
->  	u32 start_method;
->  
->  	/* Platform-specific data follows */
-> +	union platform_params {
-> +		struct tpm2_crb_smc smc_params;
-> +	} platform_data;
->  };
->  
->  /* Values for start_method above */
-> @@ -1294,6 +1305,7 @@ struct acpi_table_tpm2 {
->  #define ACPI_TPM2_MEMORY_MAPPED                     6
->  #define ACPI_TPM2_COMMAND_BUFFER                    7
->  #define ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD  8
-> +#define ACPI_TPM2_COMMAND_BUFFER_WITH_SMC          11
->  
->  /*******************************************************************************
->   *
+>  extern struct class *tpm_class;
+>  extern dev_t tpm_devt;
+>  extern const struct file_operations tpm_fops;
 > -- 
 > Jiandi An
 > Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
