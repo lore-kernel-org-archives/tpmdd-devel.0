@@ -1,36 +1,55 @@
-From: Jerry Snitselaar <jsnitsel@redhat.com>
-Subject: [PATCH] tpm_crb: check for bad response size
-Date: Fri, 10 Mar 2017 17:46:04 -0700
-Message-ID: <20170311004604.4442-1-jsnitsel@redhat.com>
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Sender: linux-kernel-owner@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: linux-kernel@vger.kernel.org, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Jerry Snitselaar <jsnitsel@redhat.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm_crb: request and relinquish locality 0
+Date: Sat, 11 Mar 2017 10:15:32 +0200
+Message-ID: <20170311081532.qfxwrx3xqjzoppa2@intel.com>
+References: <20170310235802.30765-1-jarkko.sakkinen@linux.intel.com>
+	<20170311002709.GA14174@obsidianresearch.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20170311002709.GA14174-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gang.wei-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Make sure size of response buffer is at least 6 bytes, or
-we will underflow and pass large size_t to memcpy_fromio().
-This was encountered while testing earlier version of
-locality patchset.
+On Fri, Mar 10, 2017 at 05:27:09PM -0700, Jason Gunthorpe wrote:
+> On Sat, Mar 11, 2017 at 01:58:00AM +0200, Jarkko Sakkinen wrote:
+> > Added two new callbacks to struct tpm_class_ops:
+> > 
+> > - request_locality
+> > - relinquish_locality
+> > 
+> > These are called before sending and receiving data from the TPM.
+> 
+> If we are going to add new ops, I think we should also adjust the
+> existing drivers to use this mechanism as well?
+> 
+> eg tis just calls its request_locality as the first thing in send..
+> 
+> Jason
 
-Fixes: 30fc8d138e912 ("tpm: TPM 2.0 CRB Interface")
-Signed-off-by: Jerry Snitselaar <jsnitsel@redhat.com>
----
- drivers/char/tpm/tpm_crb.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+Would it be sufficient to adjust tpm_tis in addition to tpm_crb? Those
+are the only once where I can edit edit-compile-run cycle.
 
-diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index 89dc8a176ff1..cda4f312d1c9 100644
---- a/drivers/char/tpm/tpm_crb.c
-+++ b/drivers/char/tpm/tpm_crb.c
-@@ -236,7 +236,7 @@ static int crb_recv(struct tpm_chip *chip, u8 *buf, size_t count)
- 
- 	memcpy_fromio(buf, priv->rsp, 6);
- 	expected = be32_to_cpup((__be32 *) &buf[2]);
--	if (expected > count)
-+	if (expected > count || expected < 6)
- 		return -EIO;
- 
- 	memcpy_fromio(&buf[6], &priv->rsp[6], expected - 6);
--- 
-2.11.0.258.ge05806da9
+The original commit I did worked on SKL platform that I tested but fails
+on KBL but keeping the locality throughout the transmit makes it stable
+on every platform I've tested.
+
+/Jarkko
+
+------------------------------------------------------------------------------
+Announcing the Oxford Dictionaries API! The API offers world-renowned
+dictionary content that is easy and intuitive to access. Sign up for an
+account today to start using our lexical data to power your apps and
+projects. Get started today and enter our developer competition.
+http://sdm.link/oxford
