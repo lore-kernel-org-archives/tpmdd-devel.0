@@ -1,210 +1,153 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [PATCH v2] tpm_crb: request and relinquish locality 0
-Date: Sat, 11 Mar 2017 15:02:14 +0200
-Message-ID: <20170311130216.21419-1-jarkko.sakkinen@linux.intel.com>
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Sender: owner-linux-security-module@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: linux-security-module@vger.kernel.org, Jerry Snitselaar <jsnitsel@redhat.com>, gang.wei@intel.com, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
+From: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+Subject: Re: [PATCH 3/3] tpm/tpm_crb: Enable TPM CRB interface
+	for ARM64
+Date: Sat, 11 Mar 2017 14:40:30 -0600
+Message-ID: <58C460BE.2090109@codeaurora.org>
+References: <1489139889-14376-1-git-send-email-anjiandi@codeaurora.org>
+	<1489139889-14376-4-git-send-email-anjiandi@codeaurora.org>
+	<20170311084244.shypuhzdtvppscye@intel.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170311084244.shypuhzdtvppscye-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Added two new callbacks to struct tpm_class_ops:
+On 03/11/17 02:42, Jarkko Sakkinen wrote:
+> On Fri, Mar 10, 2017 at 03:58:09AM -0600, Jiandi An wrote:
+>> This enables TPM Command Response Buffer interface driver for
+>> ARM64 and implements an ARM specific TPM CRB start method that
+>> invokes a Secure Monitor Call to request the Firmware to execute
+>> or cancel a TPM 2.0 command.
+>>
+>> Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+>
+> Does look good to me. I might consider to squash this with the
+> two inline functions.
+>
+> /Jarkko
 
-- request_locality
-- relinquish_locality
+I'll squash the SMC inline function patch with this in next version
+to address this.
 
-These are called before sending and receiving data from the TPM.  We
-update also tpm_tis_core to use these callbacks. Small modification to
-request_locality() is done so that it returns -EBUSY instead of locality
-number when check_locality() fails.
+Thanks.
+- Jiandi
 
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
----
- drivers/char/tpm/tpm-interface.c |  9 +++++++++
- drivers/char/tpm/tpm_crb.c       | 41 +++++++++++++++++++++++++++++++++++++++-
- drivers/char/tpm/tpm_tis_core.c  | 12 ++++--------
- include/linux/tpm.h              |  3 ++-
- 4 files changed, 55 insertions(+), 10 deletions(-)
+>
+>> ---
+>>   drivers/char/tpm/Kconfig   |  2 +-
+>>   drivers/char/tpm/tpm_crb.c | 24 ++++++++++++++++++++++--
+>>   2 files changed, 23 insertions(+), 3 deletions(-)
+>>
+>> diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
+>> index d520ac5..9659f40 100644
+>> --- a/drivers/char/tpm/Kconfig
+>> +++ b/drivers/char/tpm/Kconfig
+>> @@ -136,7 +136,7 @@ config TCG_XEN
+>>
+>>   config TCG_CRB
+>>   	tristate "TPM 2.0 CRB Interface"
+>> -	depends on X86 && ACPI
+>> +	depends on (X86 || ARM64) && ACPI
+>>   	---help---
+>>   	  If you have a TPM security chip that is compliant with the
+>>   	  TCG CRB 2.0 TPM specification say Yes and it will be accessible
+>> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+>> index 089fcf8..d29a84a 100644
+>> --- a/drivers/char/tpm/tpm_crb.c
+>> +++ b/drivers/char/tpm/tpm_crb.c
+>> @@ -73,6 +73,7 @@ enum crb_status {
+>>   enum crb_flags {
+>>   	CRB_FL_ACPI_START	= BIT(0),
+>>   	CRB_FL_CRB_START	= BIT(1),
+>> +	CRB_FL_CRB_SMC_START	= BIT(2),
+>>   };
+>>
+>>   struct crb_priv {
+>> @@ -82,6 +83,7 @@ struct crb_priv {
+>>   	u8 __iomem *cmd;
+>>   	u8 __iomem *rsp;
+>>   	u32 cmd_size;
+>> +	u32 smc_func_id;
+>>   };
+>>
+>>   /**
+>> @@ -101,7 +103,8 @@ struct crb_priv {
+>>    */
+>>   static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+>>   {
+>> -	if (priv->flags & CRB_FL_ACPI_START)
+>> +	if ((priv->flags & CRB_FL_ACPI_START) ||
+>> +	    (priv->flags & CRB_FL_CRB_SMC_START))
+>>   		return 0;
+>>
+>>   	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->cca->req);
+>> @@ -129,7 +132,8 @@ static int __maybe_unused crb_cmd_ready(struct device *dev,
+>>   {
+>>   	ktime_t stop, start;
+>>
+>> -	if (priv->flags & CRB_FL_ACPI_START)
+>> +	if ((priv->flags & CRB_FL_ACPI_START) ||
+>> +	    (priv->flags & CRB_FL_CRB_SMC_START))
+>>   		return 0;
+>>
+>>   	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->cca->req);
+>> @@ -229,6 +233,11 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+>>   	if (priv->flags & CRB_FL_ACPI_START)
+>>   		rc = crb_do_acpi_start(chip);
+>>
+>> +	if (priv->flags & CRB_FL_CRB_SMC_START) {
+>> +		iowrite32(CRB_START_INVOKE, &priv->cca->start);
+>> +		rc = tpm_crb_smc_start(priv->smc_func_id);
+>> +	}
+>> +
+>>   	return rc;
+>>   }
+>>
+>> @@ -445,6 +454,17 @@ static int crb_acpi_add(struct acpi_device *device)
+>>   	    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
+>>   		priv->flags |= CRB_FL_ACPI_START;
+>>
+>> +	if (sm == ACPI_TPM2_COMMAND_BUFFER_WITH_SMC) {
+>> +		if ((buf->header.length - default_len) !=
+>> +		    sizeof(struct tpm2_crb_smc)) {
+>> +			dev_err(dev, "TPM2 ACPI table has wrong size %u for start method type %d\n",
+>> +				buf->header.length, ACPI_TPM2_COMMAND_BUFFER_WITH_SMC);
+>> +			return -EINVAL;
+>> +		}
+>> +		priv->flags |= CRB_FL_CRB_SMC_START;
+>> +		priv->smc_func_id = buf->platform_data.smc_params.smc_func_id;
+>> +	}
+>> +
+>>   	rc = crb_map_io(device, priv, buf);
+>>   	if (rc)
+>>   		return rc;
+>> --
+>> Jiandi An
+>> Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
+>> Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
+>>
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index e38c792..9c56581 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -407,6 +407,12 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
- 	if (chip->dev.parent)
- 		pm_runtime_get_sync(chip->dev.parent);
- 
-+	if (chip->ops->request_locality)  {
-+		rc = chip->ops->request_locality(chip, 0);
-+		if (rc)
-+			goto out;
-+	}
-+
- 	rc = tpm2_prepare_space(chip, space, ordinal, buf);
- 	if (rc)
- 		goto out;
-@@ -466,6 +472,9 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
- 	rc = tpm2_commit_space(chip, space, ordinal, buf, &len);
- 
- out:
-+	if (chip->ops->relinquish_locality)
-+		chip->ops->relinquish_locality(chip, 0, false);
-+
- 	if (chip->dev.parent)
- 		pm_runtime_put_sync(chip->dev.parent);
- 
-diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index 3245618..15b22a0 100644
---- a/drivers/char/tpm/tpm_crb.c
-+++ b/drivers/char/tpm/tpm_crb.c
-@@ -34,6 +34,15 @@ enum crb_defaults {
- 	CRB_ACPI_START_INDEX = 1,
- };
- 
-+enum crb_loc_ctrl {
-+	CRB_LOC_CTRL_REQUEST_ACCESS	= BIT(0),
-+	CRB_LOC_CTRL_RELINQUISH		= BIT(1),
-+};
-+
-+enum crb_loc_state {
-+	CRB_LOC_STATE_LOC_ASSIGNED	= BIT(1),
-+};
-+
- enum crb_ctrl_req {
- 	CRB_CTRL_REQ_CMD_READY	= BIT(0),
- 	CRB_CTRL_REQ_GO_IDLE	= BIT(1),
-@@ -172,6 +181,35 @@ static int __maybe_unused crb_cmd_ready(struct device *dev,
- 	return 0;
- }
- 
-+static int crb_request_locality(struct tpm_chip *chip, int loc)
-+{
-+	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-+
-+	if (!priv->regs_h)
-+		return 0;
-+
-+	iowrite32(CRB_LOC_CTRL_REQUEST_ACCESS, &priv->regs_h->loc_ctrl);
-+	if (!crb_wait_for_reg_32(&priv->regs_h->loc_state,
-+				 CRB_LOC_STATE_LOC_ASSIGNED, /* mask */
-+				 CRB_LOC_STATE_LOC_ASSIGNED, /* value */
-+				 TPM2_TIMEOUT_C)) {
-+		dev_warn(&chip->dev, "TPM_LOC_STATE_x.requestAccess timed out\n");
-+		return -ETIME;
-+	}
-+
-+	return 0;
-+}
-+
-+static void crb_relinquish_locality(struct tpm_chip *chip, int loc, bool force)
-+{
-+	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-+
-+	if (!priv->regs_h)
-+		return;
-+
-+	iowrite32(CRB_LOC_CTRL_RELINQUISH, &priv->regs_h->loc_ctrl);
-+}
-+
- static u8 crb_status(struct tpm_chip *chip)
- {
- 	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-@@ -198,7 +236,6 @@ static int crb_recv(struct tpm_chip *chip, u8 *buf, size_t count)
- 
- 	memcpy_fromio(buf, priv->rsp, 6);
- 	expected = be32_to_cpup((__be32 *) &buf[2]);
--
- 	if (expected > count)
- 		return -EIO;
- 
-@@ -279,6 +316,8 @@ static const struct tpm_class_ops tpm_crb = {
- 	.send = crb_send,
- 	.cancel = crb_cancel,
- 	.req_canceled = crb_req_canceled,
-+	.request_locality = crb_request_locality,
-+	.relinquish_locality = crb_relinquish_locality,
- 	.req_complete_mask = CRB_DRV_STS_COMPLETE,
- 	.req_complete_val = CRB_DRV_STS_COMPLETE,
- };
-diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-index fc0e9a2..c3cbe24 100644
---- a/drivers/char/tpm/tpm_tis_core.c
-+++ b/drivers/char/tpm/tpm_tis_core.c
-@@ -73,7 +73,7 @@ static int check_locality(struct tpm_chip *chip, int l)
- 	return -1;
- }
- 
--static void release_locality(struct tpm_chip *chip, int l, int force)
-+static void release_locality(struct tpm_chip *chip, int l, bool force)
- {
- 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	int rc;
-@@ -97,7 +97,7 @@ static int request_locality(struct tpm_chip *chip, int l)
- 	long rc;
- 
- 	if (check_locality(chip, l) >= 0)
--		return l;
-+		return -EBUSY;
- 
- 	rc = tpm_tis_write8(priv, TPM_ACCESS(l), TPM_ACCESS_REQUEST_USE);
- 	if (rc < 0)
-@@ -252,7 +252,6 @@ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
- 
- out:
- 	tpm_tis_ready(chip);
--	release_locality(chip, priv->locality, 0);
- 	return size;
- }
- 
-@@ -268,9 +267,6 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 	size_t count = 0;
- 	bool itpm = priv->flags & TPM_TIS_ITPM_WORKAROUND;
- 
--	if (request_locality(chip, 0) < 0)
--		return -EBUSY;
--
- 	status = tpm_tis_status(chip);
- 	if ((status & TPM_STS_COMMAND_READY) == 0) {
- 		tpm_tis_ready(chip);
-@@ -329,7 +325,6 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 
- out_err:
- 	tpm_tis_ready(chip);
--	release_locality(chip, priv->locality, 0);
- 	return rc;
- }
- 
-@@ -390,7 +385,6 @@ static int tpm_tis_send_main(struct tpm_chip *chip, u8 *buf, size_t len)
- 	return len;
- out_err:
- 	tpm_tis_ready(chip);
--	release_locality(chip, priv->locality, 0);
- 	return rc;
- }
- 
-@@ -681,6 +675,8 @@ static const struct tpm_class_ops tpm_tis = {
- 	.send = tpm_tis_send,
- 	.cancel = tpm_tis_ready,
- 	.update_timeouts = tpm_tis_update_timeouts,
-+	.request_locality = request_locality,
-+	.relinquish_locality = release_locality,
- 	.req_complete_mask = TPM_STS_DATA_AVAIL | TPM_STS_VALID,
- 	.req_complete_val = TPM_STS_DATA_AVAIL | TPM_STS_VALID,
- 	.req_canceled = tpm_tis_req_canceled,
-diff --git a/include/linux/tpm.h b/include/linux/tpm.h
-index da158f0..65e05f9 100644
---- a/include/linux/tpm.h
-+++ b/include/linux/tpm.h
-@@ -48,7 +48,8 @@ struct tpm_class_ops {
- 	u8 (*status) (struct tpm_chip *chip);
- 	bool (*update_timeouts)(struct tpm_chip *chip,
- 				unsigned long *timeout_cap);
--
-+	int (*request_locality)(struct tpm_chip *chip, int loc);
-+	void (*relinquish_locality)(struct tpm_chip *chip, int loc, bool force);
- };
- 
- #if defined(CONFIG_TCG_TPM) || defined(CONFIG_TCG_TPM_MODULE)
+
 -- 
-2.9.3
+Qualcomm Datacenter Technologies, Inc.
+as an affiliate of Qualcomm Technologies, Inc.
+Qualcomm Technologies, Inc. is a member of the Code Aurora Forum,
+a Linux Foundation Collaborative Project.
 
+------------------------------------------------------------------------------
+Announcing the Oxford Dictionaries API! The API offers world-renowned
+dictionary content that is easy and intuitive to access. Sign up for an
+account today to start using our lexical data to power your apps and
+projects. Get started today and enter our developer competition.
+http://sdm.link/oxford
