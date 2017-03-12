@@ -1,162 +1,63 @@
-From: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
-Subject: Re: [PATCH 1/3] ACPICA: Update TPM2 ACPI table
-Date: Sat, 11 Mar 2017 15:18:03 -0600
-Message-ID: <58C4698B.3030601@codeaurora.org>
-References: <1489139889-14376-1-git-send-email-anjiandi@codeaurora.org>
-	<1489139889-14376-2-git-send-email-anjiandi@codeaurora.org>
-	<20170311081914.k5qrbfwmjfb3fa7e@intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170311081914.k5qrbfwmjfb3fa7e-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
+From: Geert Uytterhoeven <geert@linux-m68k.org>
+Subject: [PATCH v2 20/23] MAINTAINERS: Add file patterns for tpm device tree bindings
+Date: Sun, 12 Mar 2017 14:17:04 +0100
+Message-ID: <1489324627-19126-21-git-send-email-geert@linux-m68k.org>
+References: <1489324627-19126-1-git-send-email-geert@linux-m68k.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <1489324627-19126-1-git-send-email-geert@linux-m68k.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: devicetree@vger.kernel.org
+Cc: Rob Herring <robh+dt@kernel.org>, Mark Rutland <mark.rutland@arm.com>, linux-kernel@vger.kernel.org, Geert Uytterhoeven <geert@linux-m68k.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 03/11/17 02:19, Jarkko Sakkinen wrote:
-> On Fri, Mar 10, 2017 at 03:58:07AM -0600, Jiandi An wrote:
->> TCG ACPI Specification Family "1.2" and "2.0" Version 1.2
->> Revision 8 introduces new start method for ARM SMC.
->>
->> - Add new start method (type 11) for ARM SMC
->> - Add start method specific parameters for ARM SMC start method
->>
->> Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
->
-> Could you briefly describe what SMC is? I don't know
->
-> 1. What the abbrevation stands for.
-SMC stands for Secure Monitor Call.
+Submitters of device tree binding documentation may forget to CC
+the subsystem maintainer if this is missing.
 
-> 2. What it is.
-In ARM, TrustZone security extensions ennable a Secure software
-environment with Secure Monitor mode.  A Secure Monitor Call (SMC) is
-used to enter the Secure Monitor mode and perform a Secure Monitor
-service call.  Software executing in the non-secure state and in the
-secure state at exception levels lower than EL3 in ARM will request
-runtime services using the Secure Monitor Call (SMC) instruction to
-enter EL3 secure mode.
+Signed-off-by: Geert Uytterhoeven <geert@linux-m68k.org>
+Acked-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>
+Cc: Marcel Selhorst <tpmdd@selhorst.net>
+Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: tpmdd-devel@lists.sourceforge.net
+---
+Please apply this patch directly if you want to be involved in device
+tree binding documentation for your subsystem.
 
-I'll include a brief description in commit message of patch as well
-in next version of the patch.
+v2:
+  - Add Acked-by.
 
-Thanks.
-- Jiandi
+Impact on next-20170310:
 
->
-> /Jarkko
->
->> ---
->>   drivers/char/tpm/tpm_crb.c |  6 +++++-
->>   drivers/char/tpm/tpm_tis.c |  6 +++++-
->>   include/acpi/actbl2.h      | 12 ++++++++++++
->>   3 files changed, 22 insertions(+), 2 deletions(-)
->>
->> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
->> index cb6fb13..089fcf8 100644
->> --- a/drivers/char/tpm/tpm_crb.c
->> +++ b/drivers/char/tpm/tpm_crb.c
->> @@ -410,12 +410,16 @@ static int crb_acpi_add(struct acpi_device *device)
->>   	struct tpm_chip *chip;
->>   	struct device *dev = &device->dev;
->>   	acpi_status status;
->> +	u32 default_len;
->>   	u32 sm;
->>   	int rc;
->>
->> +	default_len = sizeof(struct acpi_table_tpm2) -
->> +		      sizeof(union platform_params);
->> +
->>   	status = acpi_get_table(ACPI_SIG_TPM2, 1,
->>   				(struct acpi_table_header **) &buf);
->> -	if (ACPI_FAILURE(status) || buf->header.length < sizeof(*buf)) {
->> +	if (ACPI_FAILURE(status) || buf->header.length < default_len) {
->>   		dev_err(dev, FW_BUG "failed to get TPM2 ACPI table\n");
->>   		return -EINVAL;
->>   	}
->> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
->> index c7e1384..0e2e5f6 100644
->> --- a/drivers/char/tpm/tpm_tis.c
->> +++ b/drivers/char/tpm/tpm_tis.c
->> @@ -253,11 +253,15 @@ static int tpm_tis_acpi_init(struct acpi_device *acpi_dev)
->>   	acpi_status st;
->>   	struct list_head resources;
->>   	struct tpm_info tpm_info = {};
->> +	u32 default_len;
->>   	int ret;
->>
->> +	default_len = sizeof(struct acpi_table_tpm2) -
->> +		      sizeof(union platform_params);
->> +
->>   	st = acpi_get_table(ACPI_SIG_TPM2, 1,
->>   			    (struct acpi_table_header **) &tbl);
->> -	if (ACPI_FAILURE(st) || tbl->header.length < sizeof(*tbl)) {
->> +	if (ACPI_FAILURE(st) || tbl->header.length < default_len) {
->>   		dev_err(&acpi_dev->dev,
->>   			FW_BUG "failed to get TPM2 ACPI table\n");
->>   		return -EINVAL;
->> diff --git a/include/acpi/actbl2.h b/include/acpi/actbl2.h
->> index 7aee9fb..9612049 100644
->> --- a/include/acpi/actbl2.h
->> +++ b/include/acpi/actbl2.h
->> @@ -1277,6 +1277,14 @@ struct acpi_table_tcpa_server {
->>    *
->>    ******************************************************************************/
->>
->> +struct tpm2_crb_smc {
->> +	u32 interrupt;
->> +	u8 interrupt_flags;
->> +	u8 op_flags;
->> +	u16 reserved2;
->> +	u32 smc_func_id;
->> +};
->> +
->>   struct acpi_table_tpm2 {
->>   	struct acpi_table_header header;	/* Common ACPI table header */
->>   	u16 platform_class;
->> @@ -1285,6 +1293,9 @@ struct acpi_table_tpm2 {
->>   	u32 start_method;
->>
->>   	/* Platform-specific data follows */
->> +	union platform_params {
->> +		struct tpm2_crb_smc smc_params;
->> +	} platform_data;
->>   };
->>
->>   /* Values for start_method above */
->> @@ -1294,6 +1305,7 @@ struct acpi_table_tpm2 {
->>   #define ACPI_TPM2_MEMORY_MAPPED                     6
->>   #define ACPI_TPM2_COMMAND_BUFFER                    7
->>   #define ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD  8
->> +#define ACPI_TPM2_COMMAND_BUFFER_WITH_SMC          11
->>
->>   /*******************************************************************************
->>    *
->> --
->> Jiandi An
->> Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
->> Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
->>
+-Rob Herring <robh+dt@kernel.org> (maintainer:OPEN FIRMWARE AND FLATTENED DEVICE TREE BINDINGS,commit_signer:3/4=75%)
++Peter Huewe <peterhuewe@gmx.de> (maintainer:TPM DEVICE DRIVER)
++Marcel Selhorst <tpmdd@selhorst.net> (maintainer:TPM DEVICE DRIVER)
++Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> (maintainer:TPM DEVICE DRIVER)
++Jason Gunthorpe <jgunthorpe@obsidianresearch.com> (reviewer:TPM DEVICE DRIVER)
++Rob Herring <robh+dt@kernel.org> (maintainer:OPEN FIRMWARE AND FLATTENED DEVICE TREE BINDINGS)
+ Mark Rutland <mark.rutland@arm.com> (maintainer:OPEN FIRMWARE AND FLATTENED DEVICE TREE BINDINGS)
+-Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> (commit_signer:6/4=100%)
+-Nayna Jain <nayna@linux.vnet.ibm.com> (commit_signer:2/4=50%,authored:2/4=50%)
+-Christophe Ricard <christophe.ricard@gmail.com> (commit_signer:1/4=25%,authored:1/4=25%)
+-Jason Gunthorpe <jgunthorpe@obsidianresearch.com> (commit_signer:1/4=25%,authored:1/4=25%)
++tpmdd-devel@lists.sourceforge.net (moderated list:TPM DEVICE DRIVER)
+ devicetree@vger.kernel.org (open list:OPEN FIRMWARE AND FLATTENED DEVICE TREE BINDINGS)
+ linux-kernel@vger.kernel.org (open list)
+---
+ MAINTAINERS | 1 +
+ 1 file changed, 1 insertion(+)
 
-
+diff --git a/MAINTAINERS b/MAINTAINERS
+index 6cd9daf3a2f9a44a..000342ab65971a8c 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -12713,6 +12713,7 @@ L:	tpmdd-devel@lists.sourceforge.net (moderated for non-subscribers)
+ Q:	https://patchwork.kernel.org/project/tpmdd-devel/list/
+ T:	git git://git.infradead.org/users/jjs/linux-tpmdd.git
+ S:	Maintained
++F:	Documentation/devicetree/bindings/security/tpm/
+ F:	drivers/char/tpm/
+ 
+ TPM IBM_VTPM DEVICE DRIVER
 -- 
-Qualcomm Datacenter Technologies, Inc.
-as an affiliate of Qualcomm Technologies, Inc.
-Qualcomm Technologies, Inc. is a member of the Code Aurora Forum,
-a Linux Foundation Collaborative Project.
-
-------------------------------------------------------------------------------
-Announcing the Oxford Dictionaries API! The API offers world-renowned
-dictionary content that is easy and intuitive to access. Sign up for an
-account today to start using our lexical data to power your apps and
-projects. Get started today and enter our developer competition.
-http://sdm.link/oxford
+2.7.4
