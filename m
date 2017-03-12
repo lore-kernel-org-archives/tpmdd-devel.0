@@ -1,63 +1,82 @@
-From: Geert Uytterhoeven <geert@linux-m68k.org>
-Subject: [PATCH v2 20/23] MAINTAINERS: Add file patterns for tpm device tree bindings
-Date: Sun, 12 Mar 2017 14:17:04 +0100
-Message-ID: <1489324627-19126-21-git-send-email-geert@linux-m68k.org>
-References: <1489324627-19126-1-git-send-email-geert@linux-m68k.org>
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <1489324627-19126-1-git-send-email-geert@linux-m68k.org>
-Sender: linux-kernel-owner@vger.kernel.org
-To: devicetree@vger.kernel.org
-Cc: Rob Herring <robh+dt@kernel.org>, Mark Rutland <mark.rutland@arm.com>, linux-kernel@vger.kernel.org, Geert Uytterhoeven <geert@linux-m68k.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net
+From: Rob Herring <robh-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
+Subject: Re: [PATCH v3] tpm: do not suspend/resume if power stays on
+Date: Sun, 12 Mar 2017 09:28:38 -0500
+Message-ID: <20170312142838.ecsm4uig67qpp24n@rob-hp-laptop>
+References: <20170303160959.27422-1-enric.balletbo@collabora.com>
+ <20170306205925.ynkwmy7acsunpewd@intel.com>
+ <15829d71-ceff-d1f6-3112-5df8897a97dc@collabora.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Return-path: <devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <15829d71-ceff-d1f6-3112-5df8897a97dc-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
+Sender: devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
+Cc: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Submitters of device tree binding documentation may forget to CC
-the subsystem maintainer if this is missing.
+On Tue, Mar 07, 2017 at 09:44:55AM +0100, Enric Balletbo i Serra wrote:
+> Hi Jarkko,
+> 
+> On 06/03/17 21:59, Jarkko Sakkinen wrote:
+> > On Fri, Mar 03, 2017 at 05:09:59PM +0100, Enric Balletbo i Serra wrote:
+> >> From: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+> >>
+> >> The suspend/resume behavior of the TPM can be controlled by setting
+> >> "powered-while-suspended" in the DTS. This is useful for the cases
+> >> when hardware does not power-off the TPM.
+> >>
+> >> Signed-off-by: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+> >> Signed-off-by: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
+> >> ---
+> >> Changes since v2:
+> >>  Jarkko Sakkinen
+> >>   - Add a new TPM_CHIP_FLAG_ALWAYS_POWERED flag instead of using a boolean variable.
+> >>   - Remove a trailing newline.
+> >> Changes since v1:
+> >>  Jason Gunthorpe :
+> >>   - Move the code to handle suspend/resume in the common chip code.
+> >>
+> >>  Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt | 6 ++++++
+> >>  drivers/char/tpm/tpm-interface.c                           | 3 +++
+> >>  drivers/char/tpm/tpm.h                                     | 1 +
+> >>  drivers/char/tpm/tpm_of.c                                  | 3 +++
+> >>  4 files changed, 13 insertions(+)
+> >>
+> >> diff --git a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
+> >> index 8cb638b..85c8216 100644
+> >> --- a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
+> >> +++ b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
+> >> @@ -8,6 +8,12 @@ Required properties:
+> >>                     the firmware event log
+> >>  - linux,sml-size : size of the memory allocated for the firmware event log
+> >>  
+> >> +Optional properties:
+> >> +
+> >> +- powered-while-suspended: present when the TPM is left powered on between
+> >> +                           suspend and resume (makes the suspend/resume
+> >> +                           callbacks do nothing).
+> >> +
+> >>  Example (for OpenPower Systems with Nuvoton TPM 2.0 on I2C)
+> >>  ----------------------------------------------------------
+> > 
+> > Hey, just noticed something. Shouldn't this be a separate commit?
+> 
+> During my life submitting patches I saw the both options, sometimes the maintainer asked me to join the DT patch and the driver and sometimes he asked me to do in different patches, so I think this is more a maintainer option. Maybe Rob Herring or Mark Rutland can share their preferences?
+> 
 
-Signed-off-by: Geert Uytterhoeven <geert@linux-m68k.org>
-Acked-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>
-Cc: Marcel Selhorst <tpmdd@selhorst.net>
-Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: tpmdd-devel@lists.sourceforge.net
----
-Please apply this patch directly if you want to be involved in device
-tree binding documentation for your subsystem.
+Need to fix your mailer to wrap lines...
 
-v2:
-  - Add Acked-by.
+We prefer DT bindings to be separate commits, but don't enforce it. I 
+don't ask for on small changes or if there's no other reason to respin 
+the patch.
 
-Impact on next-20170310:
+It makes the history for the DT only tree generated from git 
+filter-branch cleaner. Any other maintainers tell you to combine them, 
+they need to talk to me.
 
--Rob Herring <robh+dt@kernel.org> (maintainer:OPEN FIRMWARE AND FLATTENED DEVICE TREE BINDINGS,commit_signer:3/4=75%)
-+Peter Huewe <peterhuewe@gmx.de> (maintainer:TPM DEVICE DRIVER)
-+Marcel Selhorst <tpmdd@selhorst.net> (maintainer:TPM DEVICE DRIVER)
-+Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> (maintainer:TPM DEVICE DRIVER)
-+Jason Gunthorpe <jgunthorpe@obsidianresearch.com> (reviewer:TPM DEVICE DRIVER)
-+Rob Herring <robh+dt@kernel.org> (maintainer:OPEN FIRMWARE AND FLATTENED DEVICE TREE BINDINGS)
- Mark Rutland <mark.rutland@arm.com> (maintainer:OPEN FIRMWARE AND FLATTENED DEVICE TREE BINDINGS)
--Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> (commit_signer:6/4=100%)
--Nayna Jain <nayna@linux.vnet.ibm.com> (commit_signer:2/4=50%,authored:2/4=50%)
--Christophe Ricard <christophe.ricard@gmail.com> (commit_signer:1/4=25%,authored:1/4=25%)
--Jason Gunthorpe <jgunthorpe@obsidianresearch.com> (commit_signer:1/4=25%,authored:1/4=25%)
-+tpmdd-devel@lists.sourceforge.net (moderated list:TPM DEVICE DRIVER)
- devicetree@vger.kernel.org (open list:OPEN FIRMWARE AND FLATTENED DEVICE TREE BINDINGS)
- linux-kernel@vger.kernel.org (open list)
----
- MAINTAINERS | 1 +
- 1 file changed, 1 insertion(+)
-
-diff --git a/MAINTAINERS b/MAINTAINERS
-index 6cd9daf3a2f9a44a..000342ab65971a8c 100644
---- a/MAINTAINERS
-+++ b/MAINTAINERS
-@@ -12713,6 +12713,7 @@ L:	tpmdd-devel@lists.sourceforge.net (moderated for non-subscribers)
- Q:	https://patchwork.kernel.org/project/tpmdd-devel/list/
- T:	git git://git.infradead.org/users/jjs/linux-tpmdd.git
- S:	Maintained
-+F:	Documentation/devicetree/bindings/security/tpm/
- F:	drivers/char/tpm/
- 
- TPM IBM_VTPM DEVICE DRIVER
--- 
-2.7.4
+Rob
+--
+To unsubscribe from this list: send the line "unsubscribe devicetree" in
+the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+More majordomo info at  http://vger.kernel.org/majordomo-info.html
