@@ -1,17 +1,15 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: Add sysfs interface to show TPM
-	family version
-Date: Mon, 13 Mar 2017 16:59:58 +0200
-Message-ID: <20170313145958.zoh2fdxnh3ytyr2z@intel.com>
-References: <1489396817-24855-1-git-send-email-Meng.Li@windriver.com>
-	<20170313115415.2czyr4woaq4h3ncr@intel.com>
-	<529F9A9100AE8045A7A5B5A00A39FBB83DE9325F@ALA-MBC.corp.ad.wrs.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH v2] tpm_crb: request and relinquish
+	locality 0
+Date: Mon, 13 Mar 2017 10:34:52 -0600
+Message-ID: <20170313163452.GD22997@obsidianresearch.com>
+References: <20170311130216.21419-1-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <529F9A9100AE8045A7A5B5A00A39FBB83DE9325F-/c0cZIGrDsgyzarUywkIaosyD1qQU09I@public.gmane.org>
+In-Reply-To: <20170311130216.21419-1-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,77 +18,59 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Li, Meng" <Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org>
-Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gang.wei-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Mar 13, 2017 at 12:54:24PM +0000, Li, Meng wrote:
+On Sat, Mar 11, 2017 at 03:02:14PM +0200, Jarkko Sakkinen wrote:
+> Added two new callbacks to struct tpm_class_ops:
 > 
+> - request_locality
+> - relinquish_locality
 > 
-> > -----Original Message-----
-> > From: Jarkko Sakkinen [mailto:jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org]
-> > Sent: Monday, March 13, 2017 7:54 PM
-> > To: Li, Meng
-> > Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org; peterhuewe-Mmb7MZpHnFY@public.gmane.org;
-> > tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org; jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org; tpmdd-
-> > devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-> > Subject: Re: [PATCH] tpm: Add sysfs interface to show TPM family version
-> > 
-> > On Mon, Mar 13, 2017 at 05:20:17PM +0800, Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org wrote:
-> > > From: Limeng <Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org>
-> > >
-> > > So far, there is not a sysfs interface for user space code to check
-> > > the TPM family version(TPM1.x or TPM2). So, add a file named
-> > > description in /sys/class/tpm/tpmX/ to show it.
-> > >
-> > > Signed-off-by: Meng Li <Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org>
-> > > ---
-> > 
-> > Is this the first or which version of the patch is this? Version number and
-> > changelog are missing :/
+> These are called before sending and receiving data from the TPM.  We
+> update also tpm_tis_core to use these callbacks. Small modification to
+> request_locality() is done so that it returns -EBUSY instead of locality
+> number when check_locality() fails.
+
+Make sense
+
+I think you may as well do the other two drivers, even though you
+can't run them the transformation looks safe enough to me.
+
+> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+>  drivers/char/tpm/tpm-interface.c |  9 +++++++++
+>  drivers/char/tpm/tpm_crb.c       | 41 +++++++++++++++++++++++++++++++++++++++-
+>  drivers/char/tpm/tpm_tis_core.c  | 12 ++++--------
+>  include/linux/tpm.h              |  3 ++-
+>  4 files changed, 55 insertions(+), 10 deletions(-)
 > 
-> Hi Jarkko,
-> 
-> This is the second version of this patch. The first one is reviewed by Peter who give out some good advices.
-> 
-> It is my first time to submit patch to upstream(main line),  and I am not very clear with the submitting rule.
-> So, could you please give me a template to record the version and changing log?
-> In my previous experience, I will attach a patch-0000 to record version and describe the background of this patch.
-> But how to show the changing log when submit patch into mainline, I am not very  clear.
-> 
-> Regards,
-> Limeng
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index e38c792..9c56581 100644
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -407,6 +407,12 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+>  	if (chip->dev.parent)
+>  		pm_runtime_get_sync(chip->dev.parent);
+>  
+> +	if (chip->ops->request_locality)  {
+> +		rc = chip->ops->request_locality(chip, 0);
+> +		if (rc)
+> +			goto out;
 
-Maybe this will help for the moment:
+If request_locality fails we probably shouldn't call
+relinquish_locality on the unwind path..
 
-https://kernelnewbies.org/FirstKernelPatch#head-5c81b3c517a1d0bbc24f92594cb734e155fcbbcb
+I think you should also put a relinquish_locality inside tpm_remove ?
 
-In the long run you probably should check this too:
+> +	int (*request_locality)(struct tpm_chip *chip, int loc);
+> +	void (*relinquish_locality)(struct tpm_chip *chip, int loc,
+> bool force);
 
-https://www.kernel.org/doc/html/latest/process/submitting-patches.html
+Let us document what force is supposed to do...
 
-You probably should document in the commit message why this new sysfs
-attribute is needed. Saying that it is needed to detect the TPM version
-does not give any insight of any actual workload. User space facing
-things are something where I rather not apply something unless it is
-absolutely essetial because they have to be maintained forever.
+I'm not sure why we have it?
 
-In addition this looks odd:
-
-if (chip->flags & TPM_CHIP_FLAG_TPM2)
-	ret = sprintf(buf, "TPM 2.0");
-else
-	ret = sprintf(buf, "TPM 1.x");
-
-I do not undertand for what specific purpose is the string "TPM " before
-the family number is needed. And I'm not sure whether the attribute
-should have both major and minor number, or should they be separate
-attributes. For this the commit message does not give any insight on the
-design choice.
-
-And please remove the dangling store function...
-
-/Jarkko
+Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
