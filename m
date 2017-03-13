@@ -1,15 +1,15 @@
 From: "Li, Meng" <Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org>
 Subject: Re: [PATCH] tpm: Add sysfs interface to show TPM
-	hardware version
-Date: Mon, 13 Mar 2017 12:37:30 +0000
-Message-ID: <529F9A9100AE8045A7A5B5A00A39FBB83DE93249@ALA-MBC.corp.ad.wrs.com>
-References: <1489382517-9078-1-git-send-email-Meng.Li@windriver.com>
-	<20170313114852.kmfequmchxi3jams@intel.com>
+	family version
+Date: Mon, 13 Mar 2017 12:54:24 +0000
+Message-ID: <529F9A9100AE8045A7A5B5A00A39FBB83DE9325F@ALA-MBC.corp.ad.wrs.com>
+References: <1489396817-24855-1-git-send-email-Meng.Li@windriver.com>
+	<20170313115415.2czyr4woaq4h3ncr@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170313114852.kmfequmchxi3jams-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20170313115415.2czyr4woaq4h3ncr-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
@@ -27,38 +27,50 @@ List-Id: tpmdd-devel@lists.sourceforge.net
 
 > -----Original Message-----
 > From: Jarkko Sakkinen [mailto:jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org]
-> Sent: Monday, March 13, 2017 7:49 PM
+> Sent: Monday, March 13, 2017 7:54 PM
 > To: Li, Meng
 > Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org; peterhuewe-Mmb7MZpHnFY@public.gmane.org;
 > tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org; jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org; tpmdd-
 > devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-> Subject: Re: [PATCH] tpm: Add sysfs interface to show TPM hardware
-> version
+> Subject: Re: [PATCH] tpm: Add sysfs interface to show TPM family version
 > 
-> On Mon, Mar 13, 2017 at 01:21:57PM +0800, Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org wrote:
+> On Mon, Mar 13, 2017 at 05:20:17PM +0800, Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org wrote:
 > > From: Limeng <Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org>
 > >
 > > So far, there is not a sysfs interface for user space code to check
-> > the TPM hardware version(TPM1.x or TPM2). So, add a file named
+> > the TPM family version(TPM1.x or TPM2). So, add a file named
 > > description in /sys/class/tpm/tpmX/ to show it.
 > >
 > > Signed-off-by: Meng Li <Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org>
 > > ---
-> >  drivers/char/tpm/tpm-chip.c |   85
+> 
+> Is this the first or which version of the patch is this? Version number and
+> changelog are missing :/
+
+Hi Jarkko,
+
+This is the second version of this patch. The first one is reviewed by Peter who give out some good advices.
+
+It is my first time to submit patch to upstream(main line),  and I am not very clear with the submitting rule.
+So, could you please give me a template to record the version and changing log?
+In my previous experience, I will attach a patch-0000 to record version and describe the background of this patch.
+But how to show the changing log when submit patch into mainline, I am not very  clear.
+
+Regards,
+Limeng
+
+> 
+> /Jarkko
+> 
+> >  drivers/char/tpm/tpm-chip.c |   70
 > +++++++++++++++++++++++++++++++++++++++++++
-> >  1 file changed, 85 insertions(+)
+> >  1 file changed, 70 insertions(+)
 > >
 > > diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> > index c406343..da2cd69 100644
+> > index c406343..b222421 100644
 > > --- a/drivers/char/tpm/tpm-chip.c
 > > +++ b/drivers/char/tpm/tpm-chip.c
-> 
-> tpm-sysfs.c Probably makes sense to rename legacy group there as tpm1_
-
-Thanks for this advice.
-
-> 
-> > @@ -36,6 +36,83 @@
+> > @@ -36,6 +36,68 @@
 > >  dev_t tpm_devt;
 > >
 > >  /**
@@ -71,11 +83,7 @@ Thanks for this advice.
 > > + * Provides sysfs interface for showing current TPM hardware version.
 > > + */
 > > +static ssize_t show_description(struct device *dev,
-> > +		struct device_attribute *attr, char *buf)
-> 
-> family
-> 
-> > +{
+> > +		struct device_attribute *attr, char *buf) {
 > > +	struct tpm_chip *chip = (struct tpm_chip *)container_of(dev,struct
 > tpm_chip,dev);
 > > +	int ret;
@@ -88,28 +96,8 @@ Thanks for this advice.
 > > +	return ret;
 > > +}
 > > +
-> > +/**
-> > + * store_description - interface for manually setting data.
-> > + * @dev:	unused
-> > + * @attr:	unused
-> > + * @buf:	unused
-> > + * @count:	unused
-> > + *
-> > + * There is not any process in this function, reserve for feature.
-> > + */
-> > +static ssize_t store_description(struct device *dev, struct
-> device_attribute *attr,
-> > +		const char *buf, size_t count)
-> > +{
-> > +	return count;
-> > +}
-> 
-> What is this??
-> 
-> > +
 > > +static struct device_attribute tpm_attrs[] = {
-> > +	__ATTR(description, S_IRUGO | S_IWUSR, show_description,
-> > +store_description), };
+> > +	__ATTR(description, S_IRUGO, show_description, NULL), };
 > > +
 > > +/**
 > > + * tpm_create_sysfs - Create tpm sysfs interface.
@@ -149,7 +137,7 @@ Thanks for this advice.
 > >   * tpm_try_get_ops() - Get a ref to the tpm_chip
 > >   * @chip: Chip to ref
 > >   *
-> > @@ -363,6 +440,13 @@ int tpm_chip_register(struct tpm_chip *chip)
+> > @@ -363,6 +425,13 @@ int tpm_chip_register(struct tpm_chip *chip)
 > >  		return rc;
 > >  	}
 > >
@@ -163,7 +151,7 @@ Thanks for this advice.
 > >  	return 0;
 > >  }
 > >  EXPORT_SYMBOL_GPL(tpm_chip_register);
-> > @@ -382,6 +466,7 @@ int tpm_chip_register(struct tpm_chip *chip)
+> > @@ -382,6 +451,7 @@ int tpm_chip_register(struct tpm_chip *chip)
 > >   */
 > >  void tpm_chip_unregister(struct tpm_chip *chip)  {
 > > +	tpm_remove_sysfs(&chip->dev);
@@ -172,17 +160,7 @@ Thanks for this advice.
 > >  	tpm_del_char_device(chip);
 > > --
 > > 1.7.9.5
-> 
-> You should put the attributes to chip->groups instead of racy creation of
-> them.
-
-Thanks for your advice. It is more reasonable in to chip->groups.
-
-Regards,
-Limeng
-
-> 
-> /Jarkko
+> >
 
 ------------------------------------------------------------------------------
 Announcing the Oxford Dictionaries API! The API offers world-renowned
