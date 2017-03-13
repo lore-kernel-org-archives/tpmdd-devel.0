@@ -1,9 +1,11 @@
-From: Yan Kun <samyankun-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: tpm issue
-Date: Tue, 28 Feb 2017 10:53:40 +0800
-Message-ID: <CA3AB7F7-7498-42C2-8344-C229B259A9E2@gmail.com>
-Mime-Version: 1.0 (Mac OS X Mail 10.2 \(3259\))
-Content-Type: multipart/mixed; boundary="===============3136685115927505928=="
+From: <Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org>
+Subject: [PATCH] tpm: Add sysfs interface to show TPM family
+	version
+Date: Mon, 13 Mar 2017 17:20:17 +0800
+Message-ID: <1489396817-24855-1-git-send-email-Meng.Li@windriver.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
@@ -13,82 +15,119 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+From: Limeng <Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org>
 
---===============3136685115927505928==
-Content-Type: multipart/alternative;
-	boundary="Apple-Mail=_19B3E0BC-3602-4296-9BA8-B1ECF140A917"
+So far, there is not a sysfs interface for user space code to
+check the TPM family version(TPM1.x or TPM2). So, add a
+file named description in /sys/class/tpm/tpmX/ to show it.
 
+Signed-off-by: Meng Li <Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org>
+---
+ drivers/char/tpm/tpm-chip.c |   70 +++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 70 insertions(+)
 
---Apple-Mail=_19B3E0BC-3602-4296-9BA8-B1ECF140A917
-Content-Transfer-Encoding: 7bit
-Content-Type: text/plain;
-	charset=us-ascii
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index c406343..b222421 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -36,6 +36,68 @@
+ dev_t tpm_devt;
+ 
+ /**
++ * show_description - sysfs interface for checking current TPM hardware version.
++ * @dev:	pointer to tpm chip device
++ * @attr:	unused
++ * @buf:	char buffer to be filled with TPM hardware version info
++ *
++ * Provides sysfs interface for showing current TPM hardware version.
++ */
++static ssize_t show_description(struct device *dev,
++		struct device_attribute *attr, char *buf)
++{
++	struct tpm_chip *chip = (struct tpm_chip *)container_of(dev,struct tpm_chip,dev);
++	int ret;
++
++	if (chip->flags & TPM_CHIP_FLAG_TPM2)
++		ret = sprintf(buf, "TPM 2.0");
++	else
++		ret = sprintf(buf, "TPM 1.x");
++
++	return ret;
++}
++
++static struct device_attribute tpm_attrs[] = {
++	__ATTR(description, S_IRUGO, show_description, NULL),
++};
++
++/**
++ * tpm_create_sysfs - Create tpm sysfs interface.
++ * @dev:	pointer to tpm chip device
++ *
++ * Create sysfs interface for checking current TPM hardware version.
++ */
++static int tpm_create_sysfs(struct device *dev)
++{
++	int r, t;
++
++	for (t = 0; t < ARRAY_SIZE(tpm_attrs); t++) {
++		r = device_create_file(dev, &tpm_attrs[t]);
++		if (r) {
++			dev_err(dev, "failed to create sysfs file\n");
++			return r;
++		}
++	}
++
++	return 0;
++}
++
++/**
++ * tpm_remove_sysfs - Remove tpm sysfs interface.
++ * @dev:	pointer to tpm chip device
++ *
++ * Remove sysfs interface for checking current TPM hardware version.
++ */
++static void tpm_remove_sysfs(struct device *dev)
++{
++	int  t;
++
++	for (t = 0; t < ARRAY_SIZE(tpm_attrs); t++) {
++		device_remove_file(dev, &tpm_attrs[t]);
++	}
++}
++
++/**
+  * tpm_try_get_ops() - Get a ref to the tpm_chip
+  * @chip: Chip to ref
+  *
+@@ -363,6 +425,13 @@ int tpm_chip_register(struct tpm_chip *chip)
+ 		return rc;
+ 	}
+ 
++	rc = tpm_create_sysfs(&chip->dev);
++	if (rc) {
++		tpm_del_legacy_sysfs(chip);
++		tpm_chip_unregister(chip);
++		return rc;
++	}
++
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(tpm_chip_register);
+@@ -382,6 +451,7 @@ int tpm_chip_register(struct tpm_chip *chip)
+  */
+ void tpm_chip_unregister(struct tpm_chip *chip)
+ {
++	tpm_remove_sysfs(&chip->dev);
+ 	tpm_del_legacy_sysfs(chip);
+ 	tpm_bios_log_teardown(chip);
+ 	tpm_del_char_device(chip);
+-- 
+1.7.9.5
 
-Hi,all,
-
-When I try take owner of TPM,there is an issues :
-
-#tpm_takeownership 
-
-null tpm owner secret
-
-So I can not set the password(tpm1.2). Can anyone help me?
-
-Regards,
-
-Sam
---Apple-Mail=_19B3E0BC-3602-4296-9BA8-B1ECF140A917
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/html;
-	charset=us-ascii
-
-<html><head><meta http-equiv=3D"Content-Type" content=3D"text/html =
-charset=3Dus-ascii"></head><body style=3D"word-wrap: break-word; =
--webkit-nbsp-mode: space; -webkit-line-break: after-white-space;" =
-class=3D"">Hi,all,<div class=3D""><br class=3D""></div><div =
-class=3D"">When I try take owner of TPM,there is an issues :</div><div =
-class=3D""><br class=3D""></div><div class=3D"">#<span =
-style=3D"font-family: Times; font-size: 14px; orphans: 2; widows: 2; =
-background-color: rgb(240, 240, 240);" =
-class=3D"">tpm_takeownership</span><span style=3D"font-family: Times; =
-font-size: 14px; orphans: 2; widows: 2; background-color: rgb(240, 240, =
-240);" class=3D"">&nbsp;</span></div><div class=3D""><span =
-style=3D"orphans: 2; widows: 2; background-color: rgb(240, 240, 240); =
-font-size: 14px;" class=3D""><font face=3D"Times" class=3D""><br =
-class=3D""></font></span></div><div class=3D""><span style=3D"orphans: =
-2; widows: 2; background-color: rgb(240, 240, 240); font-size: 14px;" =
-class=3D""><font face=3D"Times" class=3D"">null tpm owner =
-secret</font></span></div><div class=3D""><span style=3D"orphans: 2; =
-widows: 2; background-color: rgb(240, 240, 240); font-size: 14px;" =
-class=3D""><font face=3D"Times" class=3D""><br =
-class=3D""></font></span></div><div style=3D"orphans: 2; widows: 2;" =
-class=3D""><font face=3D"Times" class=3D""><span style=3D"font-size: =
-14px; background-color: rgb(240, 240, 240);" class=3D"">So I can not set =
-the password(tpm1.2). Can anyone help me?</span></font></div><div =
-style=3D"orphans: 2; widows: 2;" class=3D""><font face=3D"Times" =
-class=3D""><span style=3D"font-size: 14px; background-color: rgb(240, =
-240, 240);" class=3D""><br class=3D""></span></font></div><div =
-style=3D"orphans: 2; widows: 2;" class=3D""><font face=3D"Times" =
-class=3D""><span style=3D"font-size: 14px; background-color: rgb(240, =
-240, 240);" class=3D"">Regards,</span></font></div><div style=3D"orphans: =
-2; widows: 2;" class=3D""><font face=3D"Times" class=3D""><span =
-style=3D"font-size: 14px; background-color: rgb(240, 240, 240);" =
-class=3D""><br class=3D""></span></font></div><div style=3D"orphans: 2; =
-widows: 2;" class=3D""><font face=3D"Times" class=3D""><span =
-style=3D"font-size: 14px; background-color: rgb(240, 240, 240);" =
-class=3D"">Sam</span></font></div></body></html>=
-
---Apple-Mail=_19B3E0BC-3602-4296-9BA8-B1ECF140A917--
-
-
---===============3136685115927505928==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
 
 ------------------------------------------------------------------------------
 Announcing the Oxford Dictionaries API! The API offers world-renowned
@@ -96,15 +135,3 @@ dictionary content that is easy and intuitive to access. Sign up for an
 account today to start using our lexical data to power your apps and
 projects. Get started today and enter our developer competition.
 http://sdm.link/oxford
---===============3136685115927505928==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-_______________________________________________
-tpmdd-devel mailing list
-tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-
---===============3136685115927505928==--
