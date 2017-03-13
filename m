@@ -1,135 +1,97 @@
-From: <Meng.Li@windriver.com>
-Subject: [PATCH] tpm: Add sysfs interface to show TPM hardware version
-Date: Mon, 13 Mar 2017 13:21:57 +0800
-Message-ID: <1489382517-9078-1-git-send-email-Meng.Li@windriver.com>
+From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+Subject: Re: [PATCH] tpm: Add sysfs interface to show TPM
+	hardware version
+Date: Mon, 13 Mar 2017 08:10:53 +0100
+Message-ID: <29B2C361-A0C0-410E-ACCA-07AFA382A251@gmx.de>
+References: <1489382517-9078-1-git-send-email-Meng.Li@windriver.com>
 Mime-Version: 1.0
-Content-Type: text/plain
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Sender: linux-kernel-owner@vger.kernel.org
-To: linux-kernel@vger.kernel.org
-Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1489382517-9078-1-git-send-email-Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Limeng <Meng.Li@windriver.com>
-
-So far, there is not a sysfs interface for user space code to
-check the TPM hardware version(TPM1.x or TPM2). So, add a
-file named description in /sys/class/tpm/tpmX/ to show it.
-
-Signed-off-by: Meng Li <Meng.Li@windriver.com>
----
- drivers/char/tpm/tpm-chip.c |   85 +++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 85 insertions(+)
-
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index c406343..da2cd69 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -36,6 +36,83 @@
- dev_t tpm_devt;
- 
- /**
-+ * show_description - sysfs interface for checking current TPM hardware version.
-+ * @dev:	pointer to tpm chip device
-+ * @attr:	unused
-+ * @buf:	char buffer to be filled with TPM hardware version info
-+ *
-+ * Provides sysfs interface for showing current TPM hardware version.
-+ */
-+static ssize_t show_description(struct device *dev,
-+		struct device_attribute *attr, char *buf)
-+{
-+	struct tpm_chip *chip = (struct tpm_chip *)container_of(dev,struct tpm_chip,dev);
-+	int ret;
-+
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+		ret = sprintf(buf, "TPM 2.0");
-+	else
-+		ret = sprintf(buf, "TPM 1.x");
-+
-+	return ret;
-+}
-+
-+/**
-+ * store_description - interface for manually setting data.
-+ * @dev:	unused
-+ * @attr:	unused
-+ * @buf:	unused
-+ * @count:	unused
-+ *
-+ * There is not any process in this function, reserve for feature.
-+ */
-+static ssize_t store_description(struct device *dev, struct device_attribute *attr,
-+		const char *buf, size_t count)
-+{
-+	return count;
-+}
-+
-+static struct device_attribute tpm_attrs[] = {
-+	__ATTR(description, S_IRUGO | S_IWUSR, show_description, store_description),
-+};
-+
-+/**
-+ * tpm_create_sysfs - Create tpm sysfs interface.
-+ * @dev:	pointer to tpm chip device
-+ *
-+ * Create sysfs interface for checking current TPM hardware version.
-+ */
-+static int tpm_create_sysfs(struct device *dev)
-+{
-+	int r, t;
-+
-+	for (t = 0; t < ARRAY_SIZE(tpm_attrs); t++) {
-+		r = device_create_file(dev, &tpm_attrs[t]);
-+		if (r) {
-+			dev_err(dev, "failed to create sysfs file\n");
-+			return r;
-+		}
-+	}
-+
-+	return 0;
-+}
-+
-+/**
-+ * tpm_remove_sysfs - Remove tpm sysfs interface.
-+ * @dev:	pointer to tpm chip device
-+ *
-+ * Remove sysfs interface for checking current TPM hardware version.
-+ */
-+static void tpm_remove_sysfs(struct device *dev)
-+{
-+	int  t;
-+
-+	for (t = 0; t < ARRAY_SIZE(tpm_attrs); t++) {
-+		device_remove_file(dev, &tpm_attrs[t]);
-+	}
-+}
-+
-+/**
-  * tpm_try_get_ops() - Get a ref to the tpm_chip
-  * @chip: Chip to ref
-  *
-@@ -363,6 +440,13 @@ int tpm_chip_register(struct tpm_chip *chip)
- 		return rc;
- 	}
- 
-+	rc = tpm_create_sysfs(&chip->dev);
-+	if (rc) {
-+		tpm_del_legacy_sysfs(chip);
-+		tpm_chip_unregister(chip);
-+		return rc;
-+	}
-+
- 	return 0;
- }
- EXPORT_SYMBOL_GPL(tpm_chip_register);
-@@ -382,6 +466,7 @@ int tpm_chip_register(struct tpm_chip *chip)
-  */
- void tpm_chip_unregister(struct tpm_chip *chip)
- {
-+	tpm_remove_sysfs(&chip->dev);
- 	tpm_del_legacy_sysfs(chip);
- 	tpm_bios_log_teardown(chip);
- 	tpm_del_char_device(chip);
--- 
-1.7.9.5
+SGksClRoYW5rcyBmb3IgeW91ciBwYXRjaC4KCkFtIDEzLiBNw6RyeiAyMDE3IDA2OjIxOjU3IE1F
+WiBzY2hyaWViIE1lbmcuTGlAd2luZHJpdmVyLmNvbToKPkZyb206IExpbWVuZyA8TWVuZy5MaUB3
+aW5kcml2ZXIuY29tPgo+Cj5TbyBmYXIsIHRoZXJlIGlzIG5vdCBhIHN5c2ZzIGludGVyZmFjZSBm
+b3IgdXNlciBzcGFjZSBjb2RlIHRvCj5jaGVjayB0aGUgVFBNIGhhcmR3YXJlIHZlcnNpb24oVFBN
+MS54IG9yIFRQTTIpLiBTbywgYWRkIGEKPmZpbGUgbmFtZWQgZGVzY3JpcHRpb24gaW4gL3N5cy9j
+bGFzcy90cG0vdHBtWC8gdG8gc2hvdyBpdC4KSXQncyBub3QgcmVhbGx5IHRoZSBoYXJkd2FyZSB2
+ZXJzaW9uIGJ1dCB0aGUgIlRQTSBGYW1pbHkiIGFjY29yZGluZyB0byB0Y2cuCgpBbmQgeWVzIHlv
+dSBhcmUgcmlnaHQgdGhlcmUgaXMgY3VycmVudGx5IG5vIHdheSwgZXhjZXB0IGZvciB0cmlhbCBh
+bmQgZXJyb3IsIGZvciB0aGUgdXNlcnNwYWNlIHRvIGRldGVybWluZSB0aGlzLgpTbyBhbiBpbnRl
+cmZhY2UgdG8gZ2V0IHRoaXMgaW5mb3JtYXRpb24gbWFrZXMgc2Vuc2UgdG8gbWUuCj4KPlNpZ25l
+ZC1vZmYtYnk6IE1lbmcgTGkgPE1lbmcuTGlAd2luZHJpdmVyLmNvbT4KPi0tLQo+ZHJpdmVycy9j
+aGFyL3RwbS90cG0tY2hpcC5jIHwgICA4NQo+KysrKysrKysrKysrKysrKysrKysrKysrKysrKysr
+KysrKysrKysrKysrKwo+IDEgZmlsZSBjaGFuZ2VkLCA4NSBpbnNlcnRpb25zKCspCj4KPmRpZmYg
+LS1naXQgYS9kcml2ZXJzL2NoYXIvdHBtL3RwbS1jaGlwLmMgYi9kcml2ZXJzL2NoYXIvdHBtL3Rw
+bS1jaGlwLmMKPmluZGV4IGM0MDYzNDMuLmRhMmNkNjkgMTAwNjQ0Cj4tLS0gYS9kcml2ZXJzL2No
+YXIvdHBtL3RwbS1jaGlwLmMKPisrKyBiL2RyaXZlcnMvY2hhci90cG0vdHBtLWNoaXAuYwo+QEAg
+LTM2LDYgKzM2LDgzIEBACj4gZGV2X3QgdHBtX2RldnQ7Cj4gCj4gLyoqCj4rICogc2hvd19kZXNj
+cmlwdGlvbiAtIHN5c2ZzIGludGVyZmFjZSBmb3IgY2hlY2tpbmcgY3VycmVudCBUUE0KPmhhcmR3
+YXJlIHZlcnNpb24uCj4rICogQGRldjoJcG9pbnRlciB0byB0cG0gY2hpcCBkZXZpY2UKPisgKiBA
+YXR0cjoJdW51c2VkCj4rICogQGJ1ZjoJY2hhciBidWZmZXIgdG8gYmUgZmlsbGVkIHdpdGggVFBN
+IGhhcmR3YXJlIHZlcnNpb24gaW5mbwo+KyAqCj4rICogUHJvdmlkZXMgc3lzZnMgaW50ZXJmYWNl
+IGZvciBzaG93aW5nIGN1cnJlbnQgVFBNIGhhcmR3YXJlIHZlcnNpb24uCj4rICovCj4rc3RhdGlj
+IHNzaXplX3Qgc2hvd19kZXNjcmlwdGlvbihzdHJ1Y3QgZGV2aWNlICpkZXYsCj4rCQlzdHJ1Y3Qg
+ZGV2aWNlX2F0dHJpYnV0ZSAqYXR0ciwgY2hhciAqYnVmKQo+K3sKPisJc3RydWN0IHRwbV9jaGlw
+ICpjaGlwID0gKHN0cnVjdCB0cG1fY2hpcCAqKWNvbnRhaW5lcl9vZihkZXYsc3RydWN0Cj50cG1f
+Y2hpcCxkZXYpOwo+KwlpbnQgcmV0Owo+Kwo+KwlpZiAoY2hpcC0+ZmxhZ3MgJiBUUE1fQ0hJUF9G
+TEFHX1RQTTIpCj4rCQlyZXQgPSBzcHJpbnRmKGJ1ZiwgIlRQTSAyLjAiKTsKPisJZWxzZQo+KwkJ
+cmV0ID0gc3ByaW50ZihidWYsICJUUE0gMS54Iik7Cj4rCj4rCXJldHVybiByZXQ7Cj4rfQo+Kwo+
+Ky8qKgo+KyAqIHN0b3JlX2Rlc2NyaXB0aW9uIC0gaW50ZXJmYWNlIGZvciBtYW51YWxseSBzZXR0
+aW5nIGRhdGEuCj4rICogQGRldjoJdW51c2VkCj4rICogQGF0dHI6CXVudXNlZAo+KyAqIEBidWY6
+CXVudXNlZAo+KyAqIEBjb3VudDoJdW51c2VkCj4rICoKPisgKiBUaGVyZSBpcyBub3QgYW55IHBy
+b2Nlc3MgaW4gdGhpcyBmdW5jdGlvbiwgcmVzZXJ2ZSBmb3IgZmVhdHVyZS4KPisgKi8KPitzdGF0
+aWMgc3NpemVfdCBzdG9yZV9kZXNjcmlwdGlvbihzdHJ1Y3QgZGV2aWNlICpkZXYsIHN0cnVjdAo+
+ZGV2aWNlX2F0dHJpYnV0ZSAqYXR0ciwKPisJCWNvbnN0IGNoYXIgKmJ1Ziwgc2l6ZV90IGNvdW50
+KQo+K3sKPisJcmV0dXJuIGNvdW50Owo+K30KU2luY2UgaXQgZG9lcyBub3QgZG8gYW55dGhpbmcK
+SSB3b3VsZCBub3QgY3JlYXRlIHRoaXMgZnVuY3Rpb24gYW5kIGxlYXZlIHRoZSBzeXNmcyBub2Rl
+IGFzIFNfSVJVR08uCgo+Kwo+K3N0YXRpYyBzdHJ1Y3QgZGV2aWNlX2F0dHJpYnV0ZSB0cG1fYXR0
+cnNbXSA9IHsKPisJX19BVFRSKGRlc2NyaXB0aW9uLCBTX0lSVUdPIHwgU19JV1VTUiwgc2hvd19k
+ZXNjcmlwdGlvbiwKPnN0b3JlX2Rlc2NyaXB0aW9uKSwKPit9Owo+Kwo+Ky8qKgo+KyAqIHRwbV9j
+cmVhdGVfc3lzZnMgLSBDcmVhdGUgdHBtIHN5c2ZzIGludGVyZmFjZS4KPisgKiBAZGV2Oglwb2lu
+dGVyIHRvIHRwbSBjaGlwIGRldmljZQo+KyAqCj4rICogQ3JlYXRlIHN5c2ZzIGludGVyZmFjZSBm
+b3IgY2hlY2tpbmcgY3VycmVudCBUUE0gaGFyZHdhcmUgdmVyc2lvbi4KPisgKi8KPitzdGF0aWMg
+aW50IHRwbV9jcmVhdGVfc3lzZnMoc3RydWN0IGRldmljZSAqZGV2KQo+K3sKPisJaW50IHIsIHQ7
+Cj4rCj4rCWZvciAodCA9IDA7IHQgPCBBUlJBWV9TSVpFKHRwbV9hdHRycyk7IHQrKykgewo+KwkJ
+ciA9IGRldmljZV9jcmVhdGVfZmlsZShkZXYsICZ0cG1fYXR0cnNbdF0pOwo+KwkJaWYgKHIpIHsK
+PisJCQlkZXZfZXJyKGRldiwgImZhaWxlZCB0byBjcmVhdGUgc3lzZnMgZmlsZVxuIik7Cj4rCQkJ
+cmV0dXJuIHI7Cj4rCQl9Cj4rCX0KPisKPisJcmV0dXJuIDA7Cj4rfQo+Kwo+Ky8qKgo+KyAqIHRw
+bV9yZW1vdmVfc3lzZnMgLSBSZW1vdmUgdHBtIHN5c2ZzIGludGVyZmFjZS4KPisgKiBAZGV2Oglw
+b2ludGVyIHRvIHRwbSBjaGlwIGRldmljZQo+KyAqCj4rICogUmVtb3ZlIHN5c2ZzIGludGVyZmFj
+ZSBmb3IgY2hlY2tpbmcgY3VycmVudCBUUE0gaGFyZHdhcmUgdmVyc2lvbi4KPisgKi8KPitzdGF0
+aWMgdm9pZCB0cG1fcmVtb3ZlX3N5c2ZzKHN0cnVjdCBkZXZpY2UgKmRldikKPit7Cj4rCWludCAg
+dDsKPisKPisJZm9yICh0ID0gMDsgdCA8IEFSUkFZX1NJWkUodHBtX2F0dHJzKTsgdCsrKSB7Cj4r
+CQlkZXZpY2VfcmVtb3ZlX2ZpbGUoZGV2LCAmdHBtX2F0dHJzW3RdKTsKPisJfQo+K30KPisKPisv
+KioKPiAgKiB0cG1fdHJ5X2dldF9vcHMoKSAtIEdldCBhIHJlZiB0byB0aGUgdHBtX2NoaXAKPiAg
+KiBAY2hpcDogQ2hpcCB0byByZWYKPiAgKgo+QEAgLTM2Myw2ICs0NDAsMTMgQEAgaW50IHRwbV9j
+aGlwX3JlZ2lzdGVyKHN0cnVjdCB0cG1fY2hpcCAqY2hpcCkKPiAJCXJldHVybiByYzsKPiAJfQo+
+IAo+KwlyYyA9IHRwbV9jcmVhdGVfc3lzZnMoJmNoaXAtPmRldik7Cj4rCWlmIChyYykgewo+KwkJ
+dHBtX2RlbF9sZWdhY3lfc3lzZnMoY2hpcCk7Cj4rCQl0cG1fY2hpcF91bnJlZ2lzdGVyKGNoaXAp
+Owo+KwkJcmV0dXJuIHJjOwo+Kwl9Cj4rCj4gCXJldHVybiAwOwo+IH0KPiBFWFBPUlRfU1lNQk9M
+X0dQTCh0cG1fY2hpcF9yZWdpc3Rlcik7Cj5AQCAtMzgyLDYgKzQ2Niw3IEBAIGludCB0cG1fY2hp
+cF9yZWdpc3RlcihzdHJ1Y3QgdHBtX2NoaXAgKmNoaXApCj4gICovCj4gdm9pZCB0cG1fY2hpcF91
+bnJlZ2lzdGVyKHN0cnVjdCB0cG1fY2hpcCAqY2hpcCkKPiB7Cj4rCXRwbV9yZW1vdmVfc3lzZnMo
+JmNoaXAtPmRldik7Cj4gCXRwbV9kZWxfbGVnYWN5X3N5c2ZzKGNoaXApOwo+IAl0cG1fYmlvc19s
+b2dfdGVhcmRvd24oY2hpcCk7Cj4gCXRwbV9kZWxfY2hhcl9kZXZpY2UoY2hpcCk7CgotLSAKU2Vu
+dCBmcm9tIG15IG1vYmlsZQoKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCkFubm91bmNpbmcgdGhlIE94
+Zm9yZCBEaWN0aW9uYXJpZXMgQVBJISBUaGUgQVBJIG9mZmVycyB3b3JsZC1yZW5vd25lZApkaWN0
+aW9uYXJ5IGNvbnRlbnQgdGhhdCBpcyBlYXN5IGFuZCBpbnR1aXRpdmUgdG8gYWNjZXNzLiBTaWdu
+IHVwIGZvciBhbgphY2NvdW50IHRvZGF5IHRvIHN0YXJ0IHVzaW5nIG91ciBsZXhpY2FsIGRhdGEg
+dG8gcG93ZXIgeW91ciBhcHBzIGFuZApwcm9qZWN0cy4gR2V0IHN0YXJ0ZWQgdG9kYXkgYW5kIGVu
+dGVyIG91ciBkZXZlbG9wZXIgY29tcGV0aXRpb24uCmh0dHA6Ly9zZG0ubGluay9veGZvcmQKX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwg
+bWFpbGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xp
+c3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
