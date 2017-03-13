@@ -1,147 +1,77 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: Add sysfs interface to show TPM
-	family version
-Date: Mon, 13 Mar 2017 13:54:15 +0200
-Message-ID: <20170313115415.2czyr4woaq4h3ncr@intel.com>
-References: <1489396817-24855-1-git-send-email-Meng.Li@windriver.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v2 20/23] MAINTAINERS: Add file patterns for tpm device
+ tree bindings
+Date: Mon, 13 Mar 2017 13:55:08 +0200
+Message-ID: <20170313115508.5ipzlg6uigvnxh5q@intel.com>
+References: <1489324627-19126-1-git-send-email-geert@linux-m68k.org>
+ <1489324627-19126-21-git-send-email-geert@linux-m68k.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1489396817-24855-1-git-send-email-Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+In-Reply-To: <1489324627-19126-21-git-send-email-geert@linux-m68k.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Geert Uytterhoeven <geert@linux-m68k.org>
+Cc: devicetree@vger.kernel.org, Rob Herring <robh+dt@kernel.org>, Mark Rutland <mark.rutland@arm.com>, linux-kernel@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Mar 13, 2017 at 05:20:17PM +0800, Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org wrote:
-> From: Limeng <Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org>
+On Sun, Mar 12, 2017 at 02:17:04PM +0100, Geert Uytterhoeven wrote:
+> Submitters of device tree binding documentation may forget to CC
+> the subsystem maintainer if this is missing.
 > 
-> So far, there is not a sysfs interface for user space code to
-> check the TPM family version(TPM1.x or TPM2). So, add a
-> file named description in /sys/class/tpm/tpmX/ to show it.
-> 
-> Signed-off-by: Meng Li <Meng.Li-CWA4WttNNZF54TAoqtyWWQ@public.gmane.org>
+> Signed-off-by: Geert Uytterhoeven <geert@linux-m68k.org>
+> Acked-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> Cc: Peter Huewe <peterhuewe@gmx.de>
+> Cc: Marcel Selhorst <tpmdd@selhorst.net>
+> Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+> Cc: tpmdd-devel@lists.sourceforge.net
 > ---
+> Please apply this patch directly if you want to be involved in device
+> tree binding documentation for your subsystem.
 
-Is this the first or which version of the patch is this? Version
-number and changelog are missing :/
+Thanks
+
+Acked-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
 /Jarkko
 
->  drivers/char/tpm/tpm-chip.c |   70 +++++++++++++++++++++++++++++++++++++++++++
->  1 file changed, 70 insertions(+)
 > 
-> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> index c406343..b222421 100644
-> --- a/drivers/char/tpm/tpm-chip.c
-> +++ b/drivers/char/tpm/tpm-chip.c
-> @@ -36,6 +36,68 @@
->  dev_t tpm_devt;
+> v2:
+>   - Add Acked-by.
+> 
+> Impact on next-20170310:
+> 
+> -Rob Herring <robh+dt@kernel.org> (maintainer:OPEN FIRMWARE AND FLATTENED DEVICE TREE BINDINGS,commit_signer:3/4=75%)
+> +Peter Huewe <peterhuewe@gmx.de> (maintainer:TPM DEVICE DRIVER)
+> +Marcel Selhorst <tpmdd@selhorst.net> (maintainer:TPM DEVICE DRIVER)
+> +Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> (maintainer:TPM DEVICE DRIVER)
+> +Jason Gunthorpe <jgunthorpe@obsidianresearch.com> (reviewer:TPM DEVICE DRIVER)
+> +Rob Herring <robh+dt@kernel.org> (maintainer:OPEN FIRMWARE AND FLATTENED DEVICE TREE BINDINGS)
+>  Mark Rutland <mark.rutland@arm.com> (maintainer:OPEN FIRMWARE AND FLATTENED DEVICE TREE BINDINGS)
+> -Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> (commit_signer:6/4=100%)
+> -Nayna Jain <nayna@linux.vnet.ibm.com> (commit_signer:2/4=50%,authored:2/4=50%)
+> -Christophe Ricard <christophe.ricard@gmail.com> (commit_signer:1/4=25%,authored:1/4=25%)
+> -Jason Gunthorpe <jgunthorpe@obsidianresearch.com> (commit_signer:1/4=25%,authored:1/4=25%)
+> +tpmdd-devel@lists.sourceforge.net (moderated list:TPM DEVICE DRIVER)
+>  devicetree@vger.kernel.org (open list:OPEN FIRMWARE AND FLATTENED DEVICE TREE BINDINGS)
+>  linux-kernel@vger.kernel.org (open list)
+> ---
+>  MAINTAINERS | 1 +
+>  1 file changed, 1 insertion(+)
+> 
+> diff --git a/MAINTAINERS b/MAINTAINERS
+> index 6cd9daf3a2f9a44a..000342ab65971a8c 100644
+> --- a/MAINTAINERS
+> +++ b/MAINTAINERS
+> @@ -12713,6 +12713,7 @@ L:	tpmdd-devel@lists.sourceforge.net (moderated for non-subscribers)
+>  Q:	https://patchwork.kernel.org/project/tpmdd-devel/list/
+>  T:	git git://git.infradead.org/users/jjs/linux-tpmdd.git
+>  S:	Maintained
+> +F:	Documentation/devicetree/bindings/security/tpm/
+>  F:	drivers/char/tpm/
 >  
->  /**
-> + * show_description - sysfs interface for checking current TPM hardware version.
-> + * @dev:	pointer to tpm chip device
-> + * @attr:	unused
-> + * @buf:	char buffer to be filled with TPM hardware version info
-> + *
-> + * Provides sysfs interface for showing current TPM hardware version.
-> + */
-> +static ssize_t show_description(struct device *dev,
-> +		struct device_attribute *attr, char *buf)
-> +{
-> +	struct tpm_chip *chip = (struct tpm_chip *)container_of(dev,struct tpm_chip,dev);
-> +	int ret;
-> +
-> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> +		ret = sprintf(buf, "TPM 2.0");
-> +	else
-> +		ret = sprintf(buf, "TPM 1.x");
-> +
-> +	return ret;
-> +}
-> +
-> +static struct device_attribute tpm_attrs[] = {
-> +	__ATTR(description, S_IRUGO, show_description, NULL),
-> +};
-> +
-> +/**
-> + * tpm_create_sysfs - Create tpm sysfs interface.
-> + * @dev:	pointer to tpm chip device
-> + *
-> + * Create sysfs interface for checking current TPM hardware version.
-> + */
-> +static int tpm_create_sysfs(struct device *dev)
-> +{
-> +	int r, t;
-> +
-> +	for (t = 0; t < ARRAY_SIZE(tpm_attrs); t++) {
-> +		r = device_create_file(dev, &tpm_attrs[t]);
-> +		if (r) {
-> +			dev_err(dev, "failed to create sysfs file\n");
-> +			return r;
-> +		}
-> +	}
-> +
-> +	return 0;
-> +}
-> +
-> +/**
-> + * tpm_remove_sysfs - Remove tpm sysfs interface.
-> + * @dev:	pointer to tpm chip device
-> + *
-> + * Remove sysfs interface for checking current TPM hardware version.
-> + */
-> +static void tpm_remove_sysfs(struct device *dev)
-> +{
-> +	int  t;
-> +
-> +	for (t = 0; t < ARRAY_SIZE(tpm_attrs); t++) {
-> +		device_remove_file(dev, &tpm_attrs[t]);
-> +	}
-> +}
-> +
-> +/**
->   * tpm_try_get_ops() - Get a ref to the tpm_chip
->   * @chip: Chip to ref
->   *
-> @@ -363,6 +425,13 @@ int tpm_chip_register(struct tpm_chip *chip)
->  		return rc;
->  	}
->  
-> +	rc = tpm_create_sysfs(&chip->dev);
-> +	if (rc) {
-> +		tpm_del_legacy_sysfs(chip);
-> +		tpm_chip_unregister(chip);
-> +		return rc;
-> +	}
-> +
->  	return 0;
->  }
->  EXPORT_SYMBOL_GPL(tpm_chip_register);
-> @@ -382,6 +451,7 @@ int tpm_chip_register(struct tpm_chip *chip)
->   */
->  void tpm_chip_unregister(struct tpm_chip *chip)
->  {
-> +	tpm_remove_sysfs(&chip->dev);
->  	tpm_del_legacy_sysfs(chip);
->  	tpm_bios_log_teardown(chip);
->  	tpm_del_char_device(chip);
+>  TPM IBM_VTPM DEVICE DRIVER
 > -- 
-> 1.7.9.5
+> 2.7.4
 > 
-
-------------------------------------------------------------------------------
-Announcing the Oxford Dictionaries API! The API offers world-renowned
-dictionary content that is easy and intuitive to access. Sign up for an
-account today to start using our lexical data to power your apps and
-projects. Get started today and enter our developer competition.
-http://sdm.link/oxford
