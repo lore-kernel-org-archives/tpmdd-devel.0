@@ -1,238 +1,135 @@
-From: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH v2] tpm_crb: request and relinquish
-	locality 0
-Date: Sun, 12 Mar 2017 12:47:58 -0700
-Message-ID: <87tw6ys2dt.fsf@redhat.com>
-References: <20170311130216.21419-1-jarkko.sakkinen@linux.intel.com>
+From: <Meng.Li@windriver.com>
+Subject: [PATCH] tpm: Add sysfs interface to show TPM hardware version
+Date: Mon, 13 Mar 2017 13:21:57 +0800
+Message-ID: <1489382517-9078-1-git-send-email-Meng.Li@windriver.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-reply-to: <20170311130216.21419-1-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gang.wei-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org
+Content-Type: text/plain
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: linux-kernel@vger.kernel.org
+Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+From: Limeng <Meng.Li@windriver.com>
 
-Jarkko Sakkinen @ 2017-03-11 13:02 GMT:
+So far, there is not a sysfs interface for user space code to
+check the TPM hardware version(TPM1.x or TPM2). So, add a
+file named description in /sys/class/tpm/tpmX/ to show it.
 
-> Added two new callbacks to struct tpm_class_ops:
->
-> - request_locality
-> - relinquish_locality
->
-> These are called before sending and receiving data from the TPM.  We
-> update also tpm_tis_core to use these callbacks. Small modification to
-> request_locality() is done so that it returns -EBUSY instead of locality
-> number when check_locality() fails.
->
-> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> ---
->  drivers/char/tpm/tpm-interface.c |  9 +++++++++
->  drivers/char/tpm/tpm_crb.c       | 41 +++++++++++++++++++++++++++++++++++++++-
->  drivers/char/tpm/tpm_tis_core.c  | 12 ++++--------
->  include/linux/tpm.h              |  3 ++-
->  4 files changed, 55 insertions(+), 10 deletions(-)
->
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index e38c792..9c56581 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -407,6 +407,12 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
->  	if (chip->dev.parent)
->  		pm_runtime_get_sync(chip->dev.parent);
->  
-> +	if (chip->ops->request_locality)  {
-> +		rc = chip->ops->request_locality(chip, 0);
-> +		if (rc)
-> +			goto out;
-> +	}
-> +
->  	rc = tpm2_prepare_space(chip, space, ordinal, buf);
->  	if (rc)
->  		goto out;
-> @@ -466,6 +472,9 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
->  	rc = tpm2_commit_space(chip, space, ordinal, buf, &len);
->  
->  out:
-> +	if (chip->ops->relinquish_locality)
-> +		chip->ops->relinquish_locality(chip, 0, false);
-> +
->  	if (chip->dev.parent)
->  		pm_runtime_put_sync(chip->dev.parent);
->  
-> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> index 3245618..15b22a0 100644
-> --- a/drivers/char/tpm/tpm_crb.c
-> +++ b/drivers/char/tpm/tpm_crb.c
-> @@ -34,6 +34,15 @@ enum crb_defaults {
->  	CRB_ACPI_START_INDEX = 1,
->  };
->  
-> +enum crb_loc_ctrl {
-> +	CRB_LOC_CTRL_REQUEST_ACCESS	= BIT(0),
-> +	CRB_LOC_CTRL_RELINQUISH		= BIT(1),
-> +};
-> +
-> +enum crb_loc_state {
-> +	CRB_LOC_STATE_LOC_ASSIGNED	= BIT(1),
-> +};
-> +
->  enum crb_ctrl_req {
->  	CRB_CTRL_REQ_CMD_READY	= BIT(0),
->  	CRB_CTRL_REQ_GO_IDLE	= BIT(1),
-> @@ -172,6 +181,35 @@ static int __maybe_unused crb_cmd_ready(struct device *dev,
->  	return 0;
->  }
->  
-> +static int crb_request_locality(struct tpm_chip *chip, int loc)
-> +{
-> +	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-> +
-> +	if (!priv->regs_h)
-> +		return 0;
-> +
-> +	iowrite32(CRB_LOC_CTRL_REQUEST_ACCESS, &priv->regs_h->loc_ctrl);
-> +	if (!crb_wait_for_reg_32(&priv->regs_h->loc_state,
-> +				 CRB_LOC_STATE_LOC_ASSIGNED, /* mask */
-> +				 CRB_LOC_STATE_LOC_ASSIGNED, /* value */
+Signed-off-by: Meng Li <Meng.Li@windriver.com>
+---
+ drivers/char/tpm/tpm-chip.c |   85 +++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 85 insertions(+)
 
-Should this mask and check bit 7 as well (tpmRegValidSts)? The
-table with the definition in the PTP spec says it indicates whether
-all other bits contain valid values, but the text above it doesn't
-discuss the locAssigned and activeLocality bits with respect to
-tpmRegValidSts, so not completely clear.
-
-> +				 TPM2_TIMEOUT_C)) {
-> +		dev_warn(&chip->dev, "TPM_LOC_STATE_x.requestAccess timed out\n");
-> +		return -ETIME;
-> +	}
-> +
-> +	return 0;
-> +}
-> +
-> +static void crb_relinquish_locality(struct tpm_chip *chip, int loc, bool force)
-> +{
-> +	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-> +
-> +	if (!priv->regs_h)
-> +		return;
-> +
-> +	iowrite32(CRB_LOC_CTRL_RELINQUISH, &priv->regs_h->loc_ctrl);
-> +}
-> +
->  static u8 crb_status(struct tpm_chip *chip)
->  {
->  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-> @@ -198,7 +236,6 @@ static int crb_recv(struct tpm_chip *chip, u8 *buf, size_t count)
->  
->  	memcpy_fromio(buf, priv->rsp, 6);
->  	expected = be32_to_cpup((__be32 *) &buf[2]);
-> -
->  	if (expected > count)
->  		return -EIO;
->  
-> @@ -279,6 +316,8 @@ static const struct tpm_class_ops tpm_crb = {
->  	.send = crb_send,
->  	.cancel = crb_cancel,
->  	.req_canceled = crb_req_canceled,
-> +	.request_locality = crb_request_locality,
-> +	.relinquish_locality = crb_relinquish_locality,
->  	.req_complete_mask = CRB_DRV_STS_COMPLETE,
->  	.req_complete_val = CRB_DRV_STS_COMPLETE,
->  };
-> diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-> index fc0e9a2..c3cbe24 100644
-> --- a/drivers/char/tpm/tpm_tis_core.c
-> +++ b/drivers/char/tpm/tpm_tis_core.c
-> @@ -73,7 +73,7 @@ static int check_locality(struct tpm_chip *chip, int l)
->  	return -1;
->  }
->  
-> -static void release_locality(struct tpm_chip *chip, int l, int force)
-> +static void release_locality(struct tpm_chip *chip, int l, bool force)
->  {
->  	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
->  	int rc;
-> @@ -97,7 +97,7 @@ static int request_locality(struct tpm_chip *chip, int l)
->  	long rc;
->  
->  	if (check_locality(chip, l) >= 0)
-> -		return l;
-> +		return -EBUSY;
->  
->  	rc = tpm_tis_write8(priv, TPM_ACCESS(l), TPM_ACCESS_REQUEST_USE);
->  	if (rc < 0)
-> @@ -252,7 +252,6 @@ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
->  
->  out:
->  	tpm_tis_ready(chip);
-> -	release_locality(chip, priv->locality, 0);
->  	return size;
->  }
->  
-> @@ -268,9 +267,6 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
->  	size_t count = 0;
->  	bool itpm = priv->flags & TPM_TIS_ITPM_WORKAROUND;
->  
-> -	if (request_locality(chip, 0) < 0)
-> -		return -EBUSY;
-> -
->  	status = tpm_tis_status(chip);
->  	if ((status & TPM_STS_COMMAND_READY) == 0) {
->  		tpm_tis_ready(chip);
-> @@ -329,7 +325,6 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
->  
->  out_err:
->  	tpm_tis_ready(chip);
-> -	release_locality(chip, priv->locality, 0);
->  	return rc;
->  }
->  
-> @@ -390,7 +385,6 @@ static int tpm_tis_send_main(struct tpm_chip *chip, u8 *buf, size_t len)
->  	return len;
->  out_err:
->  	tpm_tis_ready(chip);
-> -	release_locality(chip, priv->locality, 0);
->  	return rc;
->  }
->  
-> @@ -681,6 +675,8 @@ static const struct tpm_class_ops tpm_tis = {
->  	.send = tpm_tis_send,
->  	.cancel = tpm_tis_ready,
->  	.update_timeouts = tpm_tis_update_timeouts,
-> +	.request_locality = request_locality,
-> +	.relinquish_locality = release_locality,
->  	.req_complete_mask = TPM_STS_DATA_AVAIL | TPM_STS_VALID,
->  	.req_complete_val = TPM_STS_DATA_AVAIL | TPM_STS_VALID,
->  	.req_canceled = tpm_tis_req_canceled,
-> diff --git a/include/linux/tpm.h b/include/linux/tpm.h
-> index da158f0..65e05f9 100644
-> --- a/include/linux/tpm.h
-> +++ b/include/linux/tpm.h
-> @@ -48,7 +48,8 @@ struct tpm_class_ops {
->  	u8 (*status) (struct tpm_chip *chip);
->  	bool (*update_timeouts)(struct tpm_chip *chip,
->  				unsigned long *timeout_cap);
-> -
-> +	int (*request_locality)(struct tpm_chip *chip, int loc);
-> +	void (*relinquish_locality)(struct tpm_chip *chip, int loc, bool force);
->  };
->  
->  #if defined(CONFIG_TCG_TPM) || defined(CONFIG_TCG_TPM_MODULE)
-
-
-------------------------------------------------------------------------------
-Announcing the Oxford Dictionaries API! The API offers world-renowned
-dictionary content that is easy and intuitive to access. Sign up for an
-account today to start using our lexical data to power your apps and
-projects. Get started today and enter our developer competition.
-http://sdm.link/oxford
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index c406343..da2cd69 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -36,6 +36,83 @@
+ dev_t tpm_devt;
+ 
+ /**
++ * show_description - sysfs interface for checking current TPM hardware version.
++ * @dev:	pointer to tpm chip device
++ * @attr:	unused
++ * @buf:	char buffer to be filled with TPM hardware version info
++ *
++ * Provides sysfs interface for showing current TPM hardware version.
++ */
++static ssize_t show_description(struct device *dev,
++		struct device_attribute *attr, char *buf)
++{
++	struct tpm_chip *chip = (struct tpm_chip *)container_of(dev,struct tpm_chip,dev);
++	int ret;
++
++	if (chip->flags & TPM_CHIP_FLAG_TPM2)
++		ret = sprintf(buf, "TPM 2.0");
++	else
++		ret = sprintf(buf, "TPM 1.x");
++
++	return ret;
++}
++
++/**
++ * store_description - interface for manually setting data.
++ * @dev:	unused
++ * @attr:	unused
++ * @buf:	unused
++ * @count:	unused
++ *
++ * There is not any process in this function, reserve for feature.
++ */
++static ssize_t store_description(struct device *dev, struct device_attribute *attr,
++		const char *buf, size_t count)
++{
++	return count;
++}
++
++static struct device_attribute tpm_attrs[] = {
++	__ATTR(description, S_IRUGO | S_IWUSR, show_description, store_description),
++};
++
++/**
++ * tpm_create_sysfs - Create tpm sysfs interface.
++ * @dev:	pointer to tpm chip device
++ *
++ * Create sysfs interface for checking current TPM hardware version.
++ */
++static int tpm_create_sysfs(struct device *dev)
++{
++	int r, t;
++
++	for (t = 0; t < ARRAY_SIZE(tpm_attrs); t++) {
++		r = device_create_file(dev, &tpm_attrs[t]);
++		if (r) {
++			dev_err(dev, "failed to create sysfs file\n");
++			return r;
++		}
++	}
++
++	return 0;
++}
++
++/**
++ * tpm_remove_sysfs - Remove tpm sysfs interface.
++ * @dev:	pointer to tpm chip device
++ *
++ * Remove sysfs interface for checking current TPM hardware version.
++ */
++static void tpm_remove_sysfs(struct device *dev)
++{
++	int  t;
++
++	for (t = 0; t < ARRAY_SIZE(tpm_attrs); t++) {
++		device_remove_file(dev, &tpm_attrs[t]);
++	}
++}
++
++/**
+  * tpm_try_get_ops() - Get a ref to the tpm_chip
+  * @chip: Chip to ref
+  *
+@@ -363,6 +440,13 @@ int tpm_chip_register(struct tpm_chip *chip)
+ 		return rc;
+ 	}
+ 
++	rc = tpm_create_sysfs(&chip->dev);
++	if (rc) {
++		tpm_del_legacy_sysfs(chip);
++		tpm_chip_unregister(chip);
++		return rc;
++	}
++
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(tpm_chip_register);
+@@ -382,6 +466,7 @@ int tpm_chip_register(struct tpm_chip *chip)
+  */
+ void tpm_chip_unregister(struct tpm_chip *chip)
+ {
++	tpm_remove_sysfs(&chip->dev);
+ 	tpm_del_legacy_sysfs(chip);
+ 	tpm_bios_log_teardown(chip);
+ 	tpm_del_char_device(chip);
+-- 
+1.7.9.5
