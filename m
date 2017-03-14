@@ -1,51 +1,72 @@
-From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: [PATCH] tpm: Add sysfs interface to show TPM
- hardware version
-Date: Tue, 14 Mar 2017 14:42:51 -0700
-Message-ID: <1489527771.19081.49.camel@HansenPartnership.com>
-References: <1489382517-9078-1-git-send-email-Meng.Li@windriver.com>
-	<29B2C361-A0C0-410E-ACCA-07AFA382A251@gmx.de>
-	<9f67321b-50bd-9e6f-61f8-c29ae14f261f@linux.vnet.ibm.com>
-	<074515F2-51E7-485B-B1AB-11B913CC4B46@gmx.de>
-	<20170314212425.GA29359@obsidianresearch.com>
+From: "Hon Ching(Vicky) Lo" <honclo@linux.vnet.ibm.com>
+Subject: Re: [tpmdd-devel] [PATCH] vTPM: Fix missing NULL check
+Date: Tue, 14 Mar 2017 18:42:20 -0400
+Message-ID: <1489531340.7013.13.camel@vtpm2014.ibm.com>
+References: <1488839535-11822-1-git-send-email-honclo@linux.vnet.ibm.com>
+         <20170306231946.GA23953@obsidianresearch.com>
+         <1488946363.15595.17.camel@vtpm2014.ibm.com>
+         <20170308171729.GC16709@obsidianresearch.com>
+         <1489004891.15595.37.camel@vtpm2014.ibm.com>
+         <20170308205236.GA28643@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170314212425.GA29359-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Return-path: <stable-owner@vger.kernel.org>
+In-Reply-To: <20170308205236.GA28643@obsidianresearch.com>
+Sender: stable-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: tpmdd-devel@lists.sourceforge.net, Ashley Lai <ashley@ashleylai.com>, linux-kernel@vger.kernel.org, stable@vger.kernel.org, Peter Huewe <PeterHuewe@gmx.de>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, 2017-03-14 at 15:24 -0600, Jason Gunthorpe wrote:
-> On Tue, Mar 14, 2017 at 07:58:37PM +0100, Peter Huewe wrote:
+On Wed, 2017-03-08 at 13:52 -0700, Jason Gunthorpe wrote:
+> On Wed, Mar 08, 2017 at 03:28:11PM -0500, Hon Ching(Vicky) Lo wrote:
+> > On Wed, 2017-03-08 at 10:17 -0700, Jason Gunthorpe wrote:
+> > > On Tue, Mar 07, 2017 at 11:12:43PM -0500, Hon Ching(Vicky) Lo wrote:
+> > > > On Mon, 2017-03-06 at 16:19 -0700, Jason Gunthorpe wrote:
+> > > 
+> > > > > Also, how does locking work here? Does the vio core prevent
+> > > > > tpm_ibmvtpm_get_desired_dma and tpm_ibmvtpm_remove from running
+> > > > > concurrently?
+> > > > 
+> > > > No, vio core doesn't prevent tpm_ibmvtpm_get_desired_dma and tpm_ibmvtpm_remove
+> > > > from running concurrently.
+> > > > 
+> > > > vio_bus_probe calls vio_cmo_bus_probe which calls tpm_ibmvtpm_get_desired_dma.
+> > > > tpm_ibmvtpm_get_desired_dma is called before the code enters critical section.
+> > > > 
+> > > > There is no locking mechanism around tpm_ibmvtpm_remove in vio_bus_remove.
+> > > > 
+> > > > What's the concern here?
+> > > 
+> > > tpm_ibmvtpm_remove makes the pointer that tpm_ibmvtpm_get_desired_dma
+> > > is accessing invalid, so some kind of locking is technically required
+> > > so that the two things do not create a use after free race:
+> > 
+> > I don't think we need to worry about locking in this specific case. 
+> > tpm_ibmvtpm_get_desired_dma was designed to return a default value
+> > in the case when the chip is not available.
 > 
-> > > In practice, I suspect that a single user space application won't
-> > > support both TPMs. 
-> > Think of init scripts.
-> > Which daemon should it start?
+> You have to worry about it to prevent a use after free race:
 > 
-> Right, ideally we'd have a udev rule that triggers systemd to start
-> the userspace daemons when a TPM is detected, as other hardware does.
+>           CPU0                                CPU1
+> tpm_ibmvtpm_remove()                 tpm_ibmvtpm_get_desired_dma()
 > 
-> So whatever format we use has to be compatible with udev's matcher..
+> 				     chip = dev_get_drvdata(dev);
+> dev_set_drvdata(&vdev->dev, NULL);  
+>                                      if (chip)
+>                  		        ibmvtpm = dev_get_drvdata(&chip->dev);
+> kfree(ibmvtpm);
+>                                         // *ibmvtpm is now a use-after-free
+> 
+> Jason
+> 
+I have dug further up along the call stack of
+tpm_ibmvtpm_get_desired_dma() and found that there is a locking
+mechanism in place at the bus probe level.  'probe' and 'remove'
+callbacks are both surrounded by mutex_lock and mutex_unlock on the
+device.  The code is in the really_probe() and
+device_release_driver_internal() accordingly.  
 
-Technically, we have that already: my TPM2.0 detection stuff for udev
-triggers off the presence of the SUBSYSTEM=="tpmrm"  that matches any
-TPM2 device but not a 1.x one.
+Thanks for pointing this out!  
 
-James
-
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+Vicky
