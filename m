@@ -1,7 +1,7 @@
-From: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
-Subject: [PATCH v2 1/2] ACPICA: Update TPM2 ACPI table
-Date: Tue, 14 Mar 2017 20:32:32 -0500
-Message-ID: <1489541553-2066-1-git-send-email-anjiandi@codeaurora.org>
+From: "Hon Ching(Vicky) Lo" <honclo-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH v2] vTPM: Fix missing NULL check
+Date: Wed, 15 Mar 2017 01:28:07 -0400
+Message-ID: <1489555687-27943-1-git-send-email-honclo@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
@@ -15,106 +15,63 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>, rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
+Cc: "Hon Ching(Vicky) Lo" <honclo-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, Ashley Lai <ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Peter Huewe <PeterHuewe-Mmb7MZpHnFY@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-TCG ACPI Specification Family "1.2" and "2.0" Version 1.2
-Revision 8 introduces new start method for ARM SMC.
+The current code passes the address of tpm_chip as the argument to
+dev_get_drvdata() without prior NULL check in
+tpm_ibmvtpm_get_desired_dma.  This resulted an oops during kernel
+boot when vTPM is enabled in Power partition configured in active
+memory sharing mode.
 
-- Add new start method (type 11) for ARM SMC
-- Add start method specific parameters for ARM SMC start method
+The vio_driver's get_desired_dma() is called before the probe(), which
+for vtpm is tpm_ibmvtpm_probe, and it's this latter function that
+initializes the driver and set data.  Attempting to get data before
+the probe() caused the problem.
 
-Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+This patch adds a NULL check to the tpm_ibmvtpm_get_desired_dma.
+
+fixes: 9e0d39d8a6a0 ("tpm: Remove useless priv field in struct tpm_vendor_specific")
+Cc: <stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Signed-off-by: Hon Ching(Vicky) Lo <honclo-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 ---
- drivers/char/tpm/tpm_crb.c |  6 +++++-
- drivers/char/tpm/tpm_tis.c |  6 +++++-
- include/acpi/actbl2.h      | 12 ++++++++++++
- 3 files changed, 22 insertions(+), 2 deletions(-)
+ drivers/char/tpm/tpm_ibmvtpm.c |    8 ++++++--
+ 1 files changed, 6 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index cb6fb13..089fcf8 100644
---- a/drivers/char/tpm/tpm_crb.c
-+++ b/drivers/char/tpm/tpm_crb.c
-@@ -410,12 +410,16 @@ static int crb_acpi_add(struct acpi_device *device)
- 	struct tpm_chip *chip;
- 	struct device *dev = &device->dev;
- 	acpi_status status;
-+	u32 default_len;
- 	u32 sm;
- 	int rc;
- 
-+	default_len = sizeof(struct acpi_table_tpm2) -
-+		      sizeof(union platform_params);
-+
- 	status = acpi_get_table(ACPI_SIG_TPM2, 1,
- 				(struct acpi_table_header **) &buf);
--	if (ACPI_FAILURE(status) || buf->header.length < sizeof(*buf)) {
-+	if (ACPI_FAILURE(status) || buf->header.length < default_len) {
- 		dev_err(dev, FW_BUG "failed to get TPM2 ACPI table\n");
- 		return -EINVAL;
+diff --git a/drivers/char/tpm/tpm_ibmvtpm.c b/drivers/char/tpm/tpm_ibmvtpm.c
+index 1b9d61f..f01d083 100644
+--- a/drivers/char/tpm/tpm_ibmvtpm.c
++++ b/drivers/char/tpm/tpm_ibmvtpm.c
+@@ -299,6 +299,8 @@ static int tpm_ibmvtpm_remove(struct vio_dev *vdev)
  	}
-diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index c7e1384..0e2e5f6 100644
---- a/drivers/char/tpm/tpm_tis.c
-+++ b/drivers/char/tpm/tpm_tis.c
-@@ -253,11 +253,15 @@ static int tpm_tis_acpi_init(struct acpi_device *acpi_dev)
- 	acpi_status st;
- 	struct list_head resources;
- 	struct tpm_info tpm_info = {};
-+	u32 default_len;
- 	int ret;
  
-+	default_len = sizeof(struct acpi_table_tpm2) -
-+		      sizeof(union platform_params);
-+
- 	st = acpi_get_table(ACPI_SIG_TPM2, 1,
- 			    (struct acpi_table_header **) &tbl);
--	if (ACPI_FAILURE(st) || tbl->header.length < sizeof(*tbl)) {
-+	if (ACPI_FAILURE(st) || tbl->header.length < default_len) {
- 		dev_err(&acpi_dev->dev,
- 			FW_BUG "failed to get TPM2 ACPI table\n");
- 		return -EINVAL;
-diff --git a/include/acpi/actbl2.h b/include/acpi/actbl2.h
-index 7aee9fb..9612049 100644
---- a/include/acpi/actbl2.h
-+++ b/include/acpi/actbl2.h
-@@ -1277,6 +1277,14 @@ struct acpi_table_tcpa_server {
-  *
-  ******************************************************************************/
+ 	kfree(ibmvtpm);
++	/* For tpm_ibmvtpm_get_desired_dma */
++	dev_set_drvdata(&vdev->dev, NULL);
  
-+struct tpm2_crb_smc {
-+	u32 interrupt;
-+	u8 interrupt_flags;
-+	u8 op_flags;
-+	u16 reserved2;
-+	u32 smc_func_id;
-+};
-+
- struct acpi_table_tpm2 {
- 	struct acpi_table_header header;	/* Common ACPI table header */
- 	u16 platform_class;
-@@ -1285,6 +1293,9 @@ struct acpi_table_tpm2 {
- 	u32 start_method;
+ 	return 0;
+ }
+@@ -313,14 +315,16 @@ static int tpm_ibmvtpm_remove(struct vio_dev *vdev)
+ static unsigned long tpm_ibmvtpm_get_desired_dma(struct vio_dev *vdev)
+ {
+ 	struct tpm_chip *chip = dev_get_drvdata(&vdev->dev);
+-	struct ibmvtpm_dev *ibmvtpm = dev_get_drvdata(&chip->dev);
++	struct ibmvtpm_dev *ibmvtpm;
  
- 	/* Platform-specific data follows */
-+	union platform_params {
-+		struct tpm2_crb_smc smc_params;
-+	} platform_data;
- };
+ 	/*
+ 	 * ibmvtpm initializes at probe time, so the data we are
+ 	 * asking for may not be set yet. Estimate that 4K required
+ 	 * for TCE-mapped buffer in addition to CRQ.
+ 	 */
+-	if (!ibmvtpm)
++	if (chip)
++		ibmvtpm = dev_get_drvdata(&chip->dev);
++	else
+ 		return CRQ_RES_BUF_SIZE + PAGE_SIZE;
  
- /* Values for start_method above */
-@@ -1294,6 +1305,7 @@ struct acpi_table_tpm2 {
- #define ACPI_TPM2_MEMORY_MAPPED                     6
- #define ACPI_TPM2_COMMAND_BUFFER                    7
- #define ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD  8
-+#define ACPI_TPM2_COMMAND_BUFFER_WITH_SMC          11
- 
- /*******************************************************************************
-  *
+ 	return CRQ_RES_BUF_SIZE + ibmvtpm->rtce_size;
 -- 
-Jiandi An
-Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
-Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
+1.7.1
 
 
 ------------------------------------------------------------------------------
