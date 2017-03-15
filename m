@@ -1,72 +1,183 @@
-From: "Hon Ching(Vicky) Lo" <honclo@linux.vnet.ibm.com>
-Subject: Re: [tpmdd-devel] [PATCH] vTPM: Fix missing NULL check
-Date: Tue, 14 Mar 2017 18:42:20 -0400
-Message-ID: <1489531340.7013.13.camel@vtpm2014.ibm.com>
-References: <1488839535-11822-1-git-send-email-honclo@linux.vnet.ibm.com>
-         <20170306231946.GA23953@obsidianresearch.com>
-         <1488946363.15595.17.camel@vtpm2014.ibm.com>
-         <20170308171729.GC16709@obsidianresearch.com>
-         <1489004891.15595.37.camel@vtpm2014.ibm.com>
-         <20170308205236.GA28643@obsidianresearch.com>
+From: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+Subject: [PATCH v2 2/2] tpm/tpm_crb: Enable TPM CRB interface
+	for ARM64
+Date: Tue, 14 Mar 2017 20:32:33 -0500
+Message-ID: <1489541553-2066-2-git-send-email-anjiandi@codeaurora.org>
+References: <1489541553-2066-1-git-send-email-anjiandi@codeaurora.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <stable-owner@vger.kernel.org>
-In-Reply-To: <20170308205236.GA28643@obsidianresearch.com>
-Sender: stable-owner@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: tpmdd-devel@lists.sourceforge.net, Ashley Lai <ashley@ashleylai.com>, linux-kernel@vger.kernel.org, stable@vger.kernel.org, Peter Huewe <PeterHuewe@gmx.de>
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1489541553-2066-1-git-send-email-anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>, rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, 2017-03-08 at 13:52 -0700, Jason Gunthorpe wrote:
-> On Wed, Mar 08, 2017 at 03:28:11PM -0500, Hon Ching(Vicky) Lo wrote:
-> > On Wed, 2017-03-08 at 10:17 -0700, Jason Gunthorpe wrote:
-> > > On Tue, Mar 07, 2017 at 11:12:43PM -0500, Hon Ching(Vicky) Lo wrote:
-> > > > On Mon, 2017-03-06 at 16:19 -0700, Jason Gunthorpe wrote:
-> > > 
-> > > > > Also, how does locking work here? Does the vio core prevent
-> > > > > tpm_ibmvtpm_get_desired_dma and tpm_ibmvtpm_remove from running
-> > > > > concurrently?
-> > > > 
-> > > > No, vio core doesn't prevent tpm_ibmvtpm_get_desired_dma and tpm_ibmvtpm_remove
-> > > > from running concurrently.
-> > > > 
-> > > > vio_bus_probe calls vio_cmo_bus_probe which calls tpm_ibmvtpm_get_desired_dma.
-> > > > tpm_ibmvtpm_get_desired_dma is called before the code enters critical section.
-> > > > 
-> > > > There is no locking mechanism around tpm_ibmvtpm_remove in vio_bus_remove.
-> > > > 
-> > > > What's the concern here?
-> > > 
-> > > tpm_ibmvtpm_remove makes the pointer that tpm_ibmvtpm_get_desired_dma
-> > > is accessing invalid, so some kind of locking is technically required
-> > > so that the two things do not create a use after free race:
-> > 
-> > I don't think we need to worry about locking in this specific case. 
-> > tpm_ibmvtpm_get_desired_dma was designed to return a default value
-> > in the case when the chip is not available.
-> 
-> You have to worry about it to prevent a use after free race:
-> 
->           CPU0                                CPU1
-> tpm_ibmvtpm_remove()                 tpm_ibmvtpm_get_desired_dma()
-> 
-> 				     chip = dev_get_drvdata(dev);
-> dev_set_drvdata(&vdev->dev, NULL);  
->                                      if (chip)
->                  		        ibmvtpm = dev_get_drvdata(&chip->dev);
-> kfree(ibmvtpm);
->                                         // *ibmvtpm is now a use-after-free
-> 
-> Jason
-> 
-I have dug further up along the call stack of
-tpm_ibmvtpm_get_desired_dma() and found that there is a locking
-mechanism in place at the bus probe level.  'probe' and 'remove'
-callbacks are both surrounded by mutex_lock and mutex_unlock on the
-device.  The code is in the really_probe() and
-device_release_driver_internal() accordingly.  
+This enables TPM Command Response Buffer interface driver for
+ARM64 and implements an ARM specific TPM CRB start method that
+invokes a Secure Monitor Call (SMC) to request the TrustZone
+Firmware to execute or cancel a TPM 2.0 command.
 
-Thanks for pointing this out!  
+An ARM, TrustZone security extensions enable a secure software
+environment with Secure Monitor mode.  A Secure Monitor Call
+(SMC) is used to enter the Secure Monitor mode and perform a
+Secure Monitor service to communicate with TrustZone firmware
+which has control over the TPM hardware.
 
-Vicky
+Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+---
+v2
+- Squash commit of inline SMC function with commit of
+  tpm_crb driver change for TPM CRB ARM64 enablement
+- Replace WARN to dev_err FW_BUG in tpm_crb_smc_start()
+- Fix dev_err to indicate FW_BUG for wrong size of TPM2
+  ACPI table with SMC start method
+- Make tpm_crb driver only dependent on ACPI in Kconfig
+
+ drivers/char/tpm/Kconfig   |  2 +-
+ drivers/char/tpm/tpm_crb.c | 53 ++++++++++++++++++++++++++++++++++++++++++++--
+ 2 files changed, 52 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
+index d520ac5..a3035220 100644
+--- a/drivers/char/tpm/Kconfig
++++ b/drivers/char/tpm/Kconfig
+@@ -136,7 +136,7 @@ config TCG_XEN
+ 
+ config TCG_CRB
+ 	tristate "TPM 2.0 CRB Interface"
+-	depends on X86 && ACPI
++	depends on ACPI
+ 	---help---
+ 	  If you have a TPM security chip that is compliant with the
+ 	  TCG CRB 2.0 TPM specification say Yes and it will be accessible
+diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+index 089fcf8..abc29ad 100644
+--- a/drivers/char/tpm/tpm_crb.c
++++ b/drivers/char/tpm/tpm_crb.c
+@@ -20,6 +20,9 @@
+ #include <linux/rculist.h>
+ #include <linux/module.h>
+ #include <linux/pm_runtime.h>
++#ifdef CONFIG_ARM64
++#include <linux/arm-smccc.h>
++#endif
+ #include "tpm.h"
+ 
+ #define ACPI_SIG_TPM2 "TPM2"
+@@ -73,6 +76,7 @@ enum crb_status {
+ enum crb_flags {
+ 	CRB_FL_ACPI_START	= BIT(0),
+ 	CRB_FL_CRB_START	= BIT(1),
++	CRB_FL_CRB_SMC_START	= BIT(2),
+ };
+ 
+ struct crb_priv {
+@@ -82,6 +86,7 @@ struct crb_priv {
+ 	u8 __iomem *cmd;
+ 	u8 __iomem *rsp;
+ 	u32 cmd_size;
++	u32 smc_func_id;
+ };
+ 
+ /**
+@@ -101,7 +106,8 @@ struct crb_priv {
+  */
+ static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+ {
+-	if (priv->flags & CRB_FL_ACPI_START)
++	if ((priv->flags & CRB_FL_ACPI_START) ||
++	    (priv->flags & CRB_FL_CRB_SMC_START))
+ 		return 0;
+ 
+ 	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->cca->req);
+@@ -129,7 +135,8 @@ static int __maybe_unused crb_cmd_ready(struct device *dev,
+ {
+ 	ktime_t stop, start;
+ 
+-	if (priv->flags & CRB_FL_ACPI_START)
++	if ((priv->flags & CRB_FL_ACPI_START) ||
++	    (priv->flags & CRB_FL_CRB_SMC_START))
+ 		return 0;
+ 
+ 	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->cca->req);
+@@ -202,6 +209,32 @@ static int crb_do_acpi_start(struct tpm_chip *chip)
+ 	return rc;
+ }
+ 
++#ifdef CONFIG_ARM64
++/*
++ * This is a TPM Command Response Buffer start method that invokes a
++ * Secure Monitor Call to requrest the firmware to execute or cancel
++ * a TPM 2.0 command.
++ */
++static inline int tpm_crb_smc_start(struct device *dev, unsigned long func_id)
++{
++	struct arm_smccc_res res;
++
++	arm_smccc_smc(func_id, 0, 0, 0, 0, 0, 0, 0, &res);
++	if (res.a0 != 0) {
++		dev_err(dev, FW_BUG "tpm_crb_smc_start() returns res.a0 = 0x%lx\n", res.a0);
++		return -EIO;
++	}
++
++	return 0;
++}
++#else
++static inline int tpm_crb_smc_start(struct device *dev, unsigned long func_id)
++{
++	dev_err(dev, FW_BUG "tpm_crb: incorrect start method\n");
++	return -EINVAL;
++}
++#endif
++
+ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+ {
+ 	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+@@ -229,6 +262,11 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+ 	if (priv->flags & CRB_FL_ACPI_START)
+ 		rc = crb_do_acpi_start(chip);
+ 
++	if (priv->flags & CRB_FL_CRB_SMC_START) {
++		iowrite32(CRB_START_INVOKE, &priv->cca->start);
++		rc = tpm_crb_smc_start(&chip->dev, priv->smc_func_id);
++	}
++
+ 	return rc;
+ }
+ 
+@@ -445,6 +483,17 @@ static int crb_acpi_add(struct acpi_device *device)
+ 	    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
+ 		priv->flags |= CRB_FL_ACPI_START;
+ 
++	if (sm == ACPI_TPM2_COMMAND_BUFFER_WITH_SMC) {
++		if ((buf->header.length - default_len) !=
++		    sizeof(struct tpm2_crb_smc)) {
++			dev_err(dev, FW_BUG "TPM2 ACPI table has wrong size %u for start method type %d\n",
++				buf->header.length, ACPI_TPM2_COMMAND_BUFFER_WITH_SMC);
++			return -EINVAL;
++		}
++		priv->flags |= CRB_FL_CRB_SMC_START;
++		priv->smc_func_id = buf->platform_data.smc_params.smc_func_id;
++	}
++
+ 	rc = crb_map_io(device, priv, buf);
+ 	if (rc)
+ 		return rc;
+-- 
+Jiandi An
+Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
+Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
