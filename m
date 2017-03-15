@@ -1,16 +1,15 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 2/2] tpm/tpm_crb: Enable TPM CRB
-	interface for ARM64
-Date: Wed, 15 Mar 2017 18:03:50 +0200
-Message-ID: <20170315160350.3wr7o3m7zent35rf@intel.com>
-References: <1489541553-2066-1-git-send-email-anjiandi@codeaurora.org>
-	<1489541553-2066-2-git-send-email-anjiandi@codeaurora.org>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH v1 1/2] tpm: msleep() delays - replace
+ with usleep_range() in i2c nuvoton driver
+Date: Wed, 15 Mar 2017 21:51:47 +0530
+Message-ID: <58C96A1B.3080803@linux.vnet.ibm.com>
+References: <1489171554-6844-1-git-send-email-nayna@linux.vnet.ibm.com>
+	<20170315155226.xtgpttv5slej77ep@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1489541553-2066-2-git-send-email-anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+In-Reply-To: <20170315155226.xtgpttv5slej77ep-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,171 +18,85 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
-Cc: rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "linux-4.8" <stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Mar 14, 2017 at 08:32:33PM -0500, Jiandi An wrote:
-> This enables TPM Command Response Buffer interface driver for
-> ARM64 and implements an ARM specific TPM CRB start method that
-> invokes a Secure Monitor Call (SMC) to request the TrustZone
-> Firmware to execute or cancel a TPM 2.0 command.
-> 
-> An ARM, TrustZone security extensions enable a secure software
-> environment with Secure Monitor mode.  A Secure Monitor Call
-> (SMC) is used to enter the Secure Monitor mode and perform a
-> Secure Monitor service to communicate with TrustZone firmware
-> which has control over the TPM hardware.
-> 
-> Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
-> ---
-> v2
-> - Squash commit of inline SMC function with commit of
->   tpm_crb driver change for TPM CRB ARM64 enablement
-> - Replace WARN to dev_err FW_BUG in tpm_crb_smc_start()
-> - Fix dev_err to indicate FW_BUG for wrong size of TPM2
->   ACPI table with SMC start method
-> - Make tpm_crb driver only dependent on ACPI in Kconfig
 
-The change log should be in the cover letter not scattered in the
-patches if you send more than one patch.
 
-> 
->  drivers/char/tpm/Kconfig   |  2 +-
->  drivers/char/tpm/tpm_crb.c | 53 ++++++++++++++++++++++++++++++++++++++++++++--
->  2 files changed, 52 insertions(+), 3 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
-> index d520ac5..a3035220 100644
-> --- a/drivers/char/tpm/Kconfig
-> +++ b/drivers/char/tpm/Kconfig
-> @@ -136,7 +136,7 @@ config TCG_XEN
->  
->  config TCG_CRB
->  	tristate "TPM 2.0 CRB Interface"
-> -	depends on X86 && ACPI
-> +	depends on ACPI
->  	---help---
->  	  If you have a TPM security chip that is compliant with the
->  	  TCG CRB 2.0 TPM specification say Yes and it will be accessible
-> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> index 089fcf8..abc29ad 100644
-> --- a/drivers/char/tpm/tpm_crb.c
-> +++ b/drivers/char/tpm/tpm_crb.c
-> @@ -20,6 +20,9 @@
->  #include <linux/rculist.h>
->  #include <linux/module.h>
->  #include <linux/pm_runtime.h>
-> +#ifdef CONFIG_ARM64
-> +#include <linux/arm-smccc.h>
-> +#endif
->  #include "tpm.h"
->  
->  #define ACPI_SIG_TPM2 "TPM2"
-> @@ -73,6 +76,7 @@ enum crb_status {
->  enum crb_flags {
->  	CRB_FL_ACPI_START	= BIT(0),
->  	CRB_FL_CRB_START	= BIT(1),
-> +	CRB_FL_CRB_SMC_START	= BIT(2),
->  };
->  
->  struct crb_priv {
-> @@ -82,6 +86,7 @@ struct crb_priv {
->  	u8 __iomem *cmd;
->  	u8 __iomem *rsp;
->  	u32 cmd_size;
-> +	u32 smc_func_id;
->  };
->  
->  /**
-> @@ -101,7 +106,8 @@ struct crb_priv {
->   */
->  static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
->  {
-> -	if (priv->flags & CRB_FL_ACPI_START)
-> +	if ((priv->flags & CRB_FL_ACPI_START) ||
-> +	    (priv->flags & CRB_FL_CRB_SMC_START))
->  		return 0;
->  
->  	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->cca->req);
-> @@ -129,7 +135,8 @@ static int __maybe_unused crb_cmd_ready(struct device *dev,
->  {
->  	ktime_t stop, start;
->  
-> -	if (priv->flags & CRB_FL_ACPI_START)
-> +	if ((priv->flags & CRB_FL_ACPI_START) ||
-> +	    (priv->flags & CRB_FL_CRB_SMC_START))
->  		return 0;
->  
->  	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->cca->req);
-> @@ -202,6 +209,32 @@ static int crb_do_acpi_start(struct tpm_chip *chip)
->  	return rc;
->  }
->  
-> +#ifdef CONFIG_ARM64
-> +/*
-> + * This is a TPM Command Response Buffer start method that invokes a
-> + * Secure Monitor Call to requrest the firmware to execute or cancel
-> + * a TPM 2.0 command.
-> + */
-> +static inline int tpm_crb_smc_start(struct device *dev, unsigned long func_id)
-> +{
-> +	struct arm_smccc_res res;
-> +
-> +	arm_smccc_smc(func_id, 0, 0, 0, 0, 0, 0, 0, &res);
-> +	if (res.a0 != 0) {
-> +		dev_err(dev, FW_BUG "tpm_crb_smc_start() returns res.a0 = 0x%lx\n", res.a0);
-> +		return -EIO;
-> +	}
-> +
-> +	return 0;
-> +}
-> +#else
-> +static inline int tpm_crb_smc_start(struct device *dev, unsigned long func_id)
-> +{
-> +	dev_err(dev, FW_BUG "tpm_crb: incorrect start method\n");
-> +	return -EINVAL;
-> +}
-> +#endif
-> +
->  static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
->  {
->  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-> @@ -229,6 +262,11 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
->  	if (priv->flags & CRB_FL_ACPI_START)
->  		rc = crb_do_acpi_start(chip);
->  
-> +	if (priv->flags & CRB_FL_CRB_SMC_START) {
-> +		iowrite32(CRB_START_INVOKE, &priv->cca->start);
-> +		rc = tpm_crb_smc_start(&chip->dev, priv->smc_func_id);
-> +	}
-> +
->  	return rc;
->  }
->  
-> @@ -445,6 +483,17 @@ static int crb_acpi_add(struct acpi_device *device)
->  	    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
->  		priv->flags |= CRB_FL_ACPI_START;
->  
-> +	if (sm == ACPI_TPM2_COMMAND_BUFFER_WITH_SMC) {
-> +		if ((buf->header.length - default_len) !=
-> +		    sizeof(struct tpm2_crb_smc)) {
-> +			dev_err(dev, FW_BUG "TPM2 ACPI table has wrong size %u for start method type %d\n",
-> +				buf->header.length, ACPI_TPM2_COMMAND_BUFFER_WITH_SMC);
-> +			return -EINVAL;
-> +		}
-> +		priv->flags |= CRB_FL_CRB_SMC_START;
-> +		priv->smc_func_id = buf->platform_data.smc_params.smc_func_id;
-> +	}
-> +
->  	rc = crb_map_io(device, priv, buf);
->  	if (rc)
->  		return rc;
-> -- 
-> Jiandi An
-> Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
-> Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
-> 
+On 03/15/2017 09:22 PM, Jarkko Sakkinen wrote:
+> On Fri, Mar 10, 2017 at 01:45:53PM -0500, Nayna Jain wrote:
+>> Commit 500462a9de65 "timers: Switch to a non-cascading wheel" replaced
+>> the 'classic' timer wheel, which aimed for near 'exact' expiry of the
+>> timers.  Their analysis was that the vast majority of timeout timers
+>> are used as safeguards, not as real timers, and are cancelled or
+>> rearmed before expiration.  The only exception noted to this were
+>> networking timers with a small expiry time.
+>>
+>> Not included in the analysis was the TPM polling timer, which resulted
+>> in a longer normal delay and, every so often, a very long delay.  The
+>> non-cascading wheel delay is based on CONFIG_HZ.  For a description of
+>> the different rings and their delays, refer to the comments in
+>> kernel/time/timer.c.
+>>
+>> Below are the delays given for rings 0 - 2, which explains the longer
+>> "normal" delays and the very, long delays as seen on systems with
+>> CONFIG_HZ 250.
+>>
+>> * HZ 1000 steps
+>>   * Level Offset  Granularity            Range
+>>   *  0      0         1 ms                0 ms - 63 ms
+>>   *  1     64         8 ms               64 ms - 511 ms
+>>   *  2    128        64 ms              512 ms - 4095 ms (512ms - ~4s)
+>>
+>> * HZ  250
+>>   * Level Offset  Granularity            Range
+>>   *  0      0         4 ms                0 ms - 255 ms
+>>   *  1     64        32 ms              256 ms - 2047 ms (256ms - ~2s)
+>>   *  2    128       256 ms             2048 ms - 16383 ms (~2s - ~16s)
+>>
+>> Below is a comparison of extending the TPM with 1000 measurements,
+>> using msleep() vs. usleep_delay() when configured for 1000 hz vs. 250
+>> hz, before and after commit 500462a9de65.
+>>
+>> linux-4.7 | msleep() usleep_range()
+>> 1000 hz: 0m44.628s | 1m34.497s 29.243s
+>> 250 hz: 1m28.510s | 4m49.269s 32.386s
+>>
+>> linux-4.7  | min-max (msleep)  min-max (usleep_range)
+>> 1000 hz: 0:017 - 2:760s | 0:015 - 3:967s    0:014 - 0:418s
+>> 250 hz: 0:028 - 1:954s | 0:040 - 4:096s    0:016 - 0:816s
+>>
+>> This patch replaces the msleep() with usleep_range() calls in the
+>> i2c nuvoton driver with a consistent max range value.
+>>
+>> Signed-of-by: Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+>> Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org (linux-4.8)
+>> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+>> ---
+>> Changelog v1:
+>>
+>> - Included Jason's feedbacks related to #defines.
+>
+> What was changed?
+>
+
+Changelog v1:
+ >>
+ >> - Included Jason's feedbacks related to #defines.
+
+Based on Jason's review:
+- Added () in #define
+- Replaced hardcoded maximum range value with defined name.
+
+Hmm.. could have included exact details.
+
+Thanks & Regards,
+- Nayna
+
+> /Jarkko
+>
+
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
