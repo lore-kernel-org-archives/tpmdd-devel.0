@@ -1,154 +1,49 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v1] tpm/st33zp24: Add GPIO ACPI mapping
-	table
-Date: Wed, 15 Mar 2017 10:28:28 +0200
-Message-ID: <20170315082828.7cuwlrcmyqwfijbo@intel.com>
-References: <20170313173811.21668-1-andriy.shevchenko@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH] tpm: select CONFIG_CRYPTO
+Date: Wed, 15 Mar 2017 10:30:24 +0200
+Message-ID: <20170315083024.loltipc7h3uxwfaa@intel.com>
+References: <20170314214043.3895041-1-arnd@arndb.de>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170313173811.21668-1-andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Andy Shevchenko <andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <20170314214043.3895041-1-arnd@arndb.de>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Arnd Bergmann <arnd@arndb.de>
+Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Stefan Berger <stefanb@linux.vnet.ibm.com>, Christophe Ricard <christophe.ricard@gmail.com>, Nayna Jain <nayna@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Mar 13, 2017 at 07:38:11PM +0200, Andy Shevchenko wrote:
-> In order to make GPIO ACPI library stricter prepare users of
-> gpiod_get_index() to correctly behave when there no mapping is
-> provided by firmware.
-> 
-> Here we add explicit mapping between _CRS GpioIo() resources and
-> their names used in the driver.
-> 
-> Signed-off-by: Andy Shevchenko <andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Arnd,
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+On Tue, Mar 14, 2017 at 10:40:24PM +0100, Arnd Bergmann wrote:
+> As we need the CRYPTO_HASH_INFO implementation, we should also
+> select CRYPTO itself to avoid this build warning:
+> 
+> warning: (TCG_TPM && TRUSTED_KEYS && IMA) selects CRYPTO_HASH_INFO which has unmet direct dependencies (CRYPTO)
+> 
+> Fixes: c1f92b4b04ad ("tpm: enhance TPM 2.0 PCR extend to support multiple banks")
+> Signed-off-by: Arnd Bergmann <arnd@arndb.de>
 
-I do not have means to test this though.
+I've already merged this and put to my next branch.
 
 /Jarkko
 
 > ---
->  drivers/char/tpm/st33zp24/i2c.c | 23 ++++++++++++++++++++---
->  drivers/char/tpm/st33zp24/spi.c | 23 ++++++++++++++++++++---
->  2 files changed, 40 insertions(+), 6 deletions(-)
+>  drivers/char/tpm/Kconfig | 1 +
+>  1 file changed, 1 insertion(+)
 > 
-> diff --git a/drivers/char/tpm/st33zp24/i2c.c b/drivers/char/tpm/st33zp24/i2c.c
-> index 028a9cd76b63..349fc72447a1 100644
-> --- a/drivers/char/tpm/st33zp24/i2c.c
-> +++ b/drivers/char/tpm/st33zp24/i2c.c
-> @@ -111,6 +111,13 @@ static const struct st33zp24_phy_ops i2c_phy_ops = {
->  	.recv = st33zp24_i2c_recv,
->  };
->  
-> +static const struct acpi_gpio_params lpcpd_gpios = { 1, 0, false };
-> +
-> +static const struct acpi_gpio_mapping acpi_st33zp24_gpios[] = {
-> +	{ "lpcpd-gpios", &lpcpd_gpios, 1 },
-> +	{},
-> +};
-> +
->  static int st33zp24_i2c_acpi_request_resources(struct i2c_client *client)
->  {
->  	struct tpm_chip *chip = i2c_get_clientdata(client);
-> @@ -118,10 +125,14 @@ static int st33zp24_i2c_acpi_request_resources(struct i2c_client *client)
->  	struct st33zp24_i2c_phy *phy = tpm_dev->phy_id;
->  	struct gpio_desc *gpiod_lpcpd;
->  	struct device *dev = &client->dev;
-> +	int ret;
-> +
-> +	ret = acpi_dev_add_driver_gpios(ACPI_COMPANION(dev), acpi_st33zp24_gpios);
-> +	if (ret)
-> +		return ret;
->  
->  	/* Get LPCPD GPIO from ACPI */
-> -	gpiod_lpcpd = devm_gpiod_get_index(dev, "TPM IO LPCPD", 1,
-> -					   GPIOD_OUT_HIGH);
-> +	gpiod_lpcpd = devm_gpiod_get(dev, "lpcpd", GPIOD_OUT_HIGH);
->  	if (IS_ERR(gpiod_lpcpd)) {
->  		dev_err(&client->dev,
->  			"Failed to retrieve lpcpd-gpios from acpi.\n");
-> @@ -268,8 +279,14 @@ static int st33zp24_i2c_probe(struct i2c_client *client,
->  static int st33zp24_i2c_remove(struct i2c_client *client)
->  {
->  	struct tpm_chip *chip = i2c_get_clientdata(client);
-> +	int ret;
->  
-> -	return st33zp24_remove(chip);
-> +	ret = st33zp24_remove(chip);
-> +	if (ret)
-> +		return ret;
-> +
-> +	acpi_dev_remove_driver_gpios(ACPI_COMPANION(&dev->dev));
-> +	return 0;
->  }
->  
->  static const struct i2c_device_id st33zp24_i2c_id[] = {
-> diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
-> index 9f5a0117098c..c69d15198f84 100644
-> --- a/drivers/char/tpm/st33zp24/spi.c
-> +++ b/drivers/char/tpm/st33zp24/spi.c
-> @@ -230,6 +230,13 @@ static const struct st33zp24_phy_ops spi_phy_ops = {
->  	.recv = st33zp24_spi_recv,
->  };
->  
-> +static const struct acpi_gpio_params lpcpd_gpios = { 1, 0, false };
-> +
-> +static const struct acpi_gpio_mapping acpi_st33zp24_gpios[] = {
-> +	{ "lpcpd-gpios", &lpcpd_gpios, 1 },
-> +	{},
-> +};
-> +
->  static int st33zp24_spi_acpi_request_resources(struct spi_device *spi_dev)
->  {
->  	struct tpm_chip *chip = spi_get_drvdata(spi_dev);
-> @@ -237,10 +244,14 @@ static int st33zp24_spi_acpi_request_resources(struct spi_device *spi_dev)
->  	struct st33zp24_spi_phy *phy = tpm_dev->phy_id;
->  	struct gpio_desc *gpiod_lpcpd;
->  	struct device *dev = &spi_dev->dev;
-> +	int ret;
-> +
-> +	ret = acpi_dev_add_driver_gpios(ACPI_COMPANION(dev), acpi_st33zp24_gpios);
-> +	if (ret)
-> +		return ret;
->  
->  	/* Get LPCPD GPIO from ACPI */
-> -	gpiod_lpcpd = devm_gpiod_get_index(dev, "TPM IO LPCPD", 1,
-> -					   GPIOD_OUT_HIGH);
-> +	gpiod_lpcpd = devm_gpiod_get(dev, "lpcpd", GPIOD_OUT_HIGH);
->  	if (IS_ERR(gpiod_lpcpd)) {
->  		dev_err(dev, "Failed to retrieve lpcpd-gpios from acpi.\n");
->  		phy->io_lpcpd = -1;
-> @@ -385,8 +396,14 @@ static int st33zp24_spi_probe(struct spi_device *dev)
->  static int st33zp24_spi_remove(struct spi_device *dev)
->  {
->  	struct tpm_chip *chip = spi_get_drvdata(dev);
-> +	int ret;
->  
-> -	return st33zp24_remove(chip);
-> +	ret = st33zp24_remove(chip);
-> +	if (ret)
-> +		return ret;
-> +
-> +	acpi_dev_remove_driver_gpios(ACPI_COMPANION(&dev->dev));
-> +	return 0;
->  }
->  
->  static const struct spi_device_id st33zp24_spi_id[] = {
+> diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
+> index af985cca413c..d520ac51c11c 100644
+> --- a/drivers/char/tpm/Kconfig
+> +++ b/drivers/char/tpm/Kconfig
+> @@ -6,6 +6,7 @@ menuconfig TCG_TPM
+>  	tristate "TPM Hardware Support"
+>  	depends on HAS_IOMEM
+>  	select SECURITYFS
+> +	select CRYPTO
+>  	select CRYPTO_HASH_INFO
+>  	---help---
+>  	  If you have a TPM security chip in your system, which
 > -- 
-> 2.11.0
+> 2.9.0
 > 
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
