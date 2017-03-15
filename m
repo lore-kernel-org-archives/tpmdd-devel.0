@@ -1,14 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 1/2] ACPICA: Update TPM2 ACPI table
-Date: Wed, 15 Mar 2017 18:02:26 +0200
-Message-ID: <20170315160226.apxecoujeqsbuk67@intel.com>
+Subject: Re: [PATCH v2 2/2] tpm/tpm_crb: Enable TPM CRB
+	interface for ARM64
+Date: Wed, 15 Mar 2017 18:03:50 +0200
+Message-ID: <20170315160350.3wr7o3m7zent35rf@intel.com>
 References: <1489541553-2066-1-git-send-email-anjiandi@codeaurora.org>
+	<1489541553-2066-2-git-send-email-anjiandi@codeaurora.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1489541553-2066-1-git-send-email-anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+In-Reply-To: <1489541553-2066-2-git-send-email-anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,101 +23,167 @@ To: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
 Cc: rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Mar 14, 2017 at 08:32:32PM -0500, Jiandi An wrote:
-> TCG ACPI Specification Family "1.2" and "2.0" Version 1.2
-> Revision 8 introduces new start method for ARM SMC.
+On Tue, Mar 14, 2017 at 08:32:33PM -0500, Jiandi An wrote:
+> This enables TPM Command Response Buffer interface driver for
+> ARM64 and implements an ARM specific TPM CRB start method that
+> invokes a Secure Monitor Call (SMC) to request the TrustZone
+> Firmware to execute or cancel a TPM 2.0 command.
 > 
-> - Add new start method (type 11) for ARM SMC
-> - Add start method specific parameters for ARM SMC start method
+> An ARM, TrustZone security extensions enable a secure software
+> environment with Secure Monitor mode.  A Secure Monitor Call
+> (SMC) is used to enter the Secure Monitor mode and perform a
+> Secure Monitor service to communicate with TrustZone firmware
+> which has control over the TPM hardware.
 > 
 > Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
 > ---
->  drivers/char/tpm/tpm_crb.c |  6 +++++-
->  drivers/char/tpm/tpm_tis.c |  6 +++++-
->  include/acpi/actbl2.h      | 12 ++++++++++++
->  3 files changed, 22 insertions(+), 2 deletions(-)
+> v2
+> - Squash commit of inline SMC function with commit of
+>   tpm_crb driver change for TPM CRB ARM64 enablement
+> - Replace WARN to dev_err FW_BUG in tpm_crb_smc_start()
+> - Fix dev_err to indicate FW_BUG for wrong size of TPM2
+>   ACPI table with SMC start method
+> - Make tpm_crb driver only dependent on ACPI in Kconfig
+
+The change log should be in the cover letter not scattered in the
+patches if you send more than one patch.
+
 > 
+>  drivers/char/tpm/Kconfig   |  2 +-
+>  drivers/char/tpm/tpm_crb.c | 53 ++++++++++++++++++++++++++++++++++++++++++++--
+>  2 files changed, 52 insertions(+), 3 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
+> index d520ac5..a3035220 100644
+> --- a/drivers/char/tpm/Kconfig
+> +++ b/drivers/char/tpm/Kconfig
+> @@ -136,7 +136,7 @@ config TCG_XEN
+>  
+>  config TCG_CRB
+>  	tristate "TPM 2.0 CRB Interface"
+> -	depends on X86 && ACPI
+> +	depends on ACPI
+>  	---help---
+>  	  If you have a TPM security chip that is compliant with the
+>  	  TCG CRB 2.0 TPM specification say Yes and it will be accessible
 > diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> index cb6fb13..089fcf8 100644
+> index 089fcf8..abc29ad 100644
 > --- a/drivers/char/tpm/tpm_crb.c
 > +++ b/drivers/char/tpm/tpm_crb.c
-> @@ -410,12 +410,16 @@ static int crb_acpi_add(struct acpi_device *device)
->  	struct tpm_chip *chip;
->  	struct device *dev = &device->dev;
->  	acpi_status status;
-> +	u32 default_len;
->  	u32 sm;
->  	int rc;
+> @@ -20,6 +20,9 @@
+>  #include <linux/rculist.h>
+>  #include <linux/module.h>
+>  #include <linux/pm_runtime.h>
+> +#ifdef CONFIG_ARM64
+> +#include <linux/arm-smccc.h>
+> +#endif
+>  #include "tpm.h"
 >  
-> +	default_len = sizeof(struct acpi_table_tpm2) -
-> +		      sizeof(union platform_params);
-
-Maybe you should consider not putting struct crb_smc to actbl2.h. This
-makes tpm_crb.c a mess.
-
-> +
->  	status = acpi_get_table(ACPI_SIG_TPM2, 1,
->  				(struct acpi_table_header **) &buf);
-> -	if (ACPI_FAILURE(status) || buf->header.length < sizeof(*buf)) {
-> +	if (ACPI_FAILURE(status) || buf->header.length < default_len) {
->  		dev_err(dev, FW_BUG "failed to get TPM2 ACPI table\n");
->  		return -EINVAL;
->  	}
-> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-> index c7e1384..0e2e5f6 100644
-> --- a/drivers/char/tpm/tpm_tis.c
-> +++ b/drivers/char/tpm/tpm_tis.c
-> @@ -253,11 +253,15 @@ static int tpm_tis_acpi_init(struct acpi_device *acpi_dev)
->  	acpi_status st;
->  	struct list_head resources;
->  	struct tpm_info tpm_info = {};
-> +	u32 default_len;
->  	int ret;
+>  #define ACPI_SIG_TPM2 "TPM2"
+> @@ -73,6 +76,7 @@ enum crb_status {
+>  enum crb_flags {
+>  	CRB_FL_ACPI_START	= BIT(0),
+>  	CRB_FL_CRB_START	= BIT(1),
+> +	CRB_FL_CRB_SMC_START	= BIT(2),
+>  };
 >  
-> +	default_len = sizeof(struct acpi_table_tpm2) -
-> +		      sizeof(union platform_params);
-> +
-
-And more clutter.
-
->  	st = acpi_get_table(ACPI_SIG_TPM2, 1,
->  			    (struct acpi_table_header **) &tbl);
-> -	if (ACPI_FAILURE(st) || tbl->header.length < sizeof(*tbl)) {
-> +	if (ACPI_FAILURE(st) || tbl->header.length < default_len) {
->  		dev_err(&acpi_dev->dev,
->  			FW_BUG "failed to get TPM2 ACPI table\n");
->  		return -EINVAL;
-> diff --git a/include/acpi/actbl2.h b/include/acpi/actbl2.h
-> index 7aee9fb..9612049 100644
-> --- a/include/acpi/actbl2.h
-> +++ b/include/acpi/actbl2.h
-> @@ -1277,6 +1277,14 @@ struct acpi_table_tcpa_server {
->   *
->   ******************************************************************************/
->  
-> +struct tpm2_crb_smc {
-> +	u32 interrupt;
-> +	u8 interrupt_flags;
-> +	u8 op_flags;
-> +	u16 reserved2;
+>  struct crb_priv {
+> @@ -82,6 +86,7 @@ struct crb_priv {
+>  	u8 __iomem *cmd;
+>  	u8 __iomem *rsp;
+>  	u32 cmd_size;
 > +	u32 smc_func_id;
-> +};
-> +
->  struct acpi_table_tpm2 {
->  	struct acpi_table_header header;	/* Common ACPI table header */
->  	u16 platform_class;
-> @@ -1285,6 +1293,9 @@ struct acpi_table_tpm2 {
->  	u32 start_method;
+>  };
 >  
->  	/* Platform-specific data follows */
-> +	union platform_params {
-> +		struct tpm2_crb_smc smc_params;
-> +	} platform_data;
-
-Why the union type is not anonymous? ACPICA change should be its
-own commit.
-
-/Jarkko
+>  /**
+> @@ -101,7 +106,8 @@ struct crb_priv {
+>   */
+>  static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+>  {
+> -	if (priv->flags & CRB_FL_ACPI_START)
+> +	if ((priv->flags & CRB_FL_ACPI_START) ||
+> +	    (priv->flags & CRB_FL_CRB_SMC_START))
+>  		return 0;
+>  
+>  	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->cca->req);
+> @@ -129,7 +135,8 @@ static int __maybe_unused crb_cmd_ready(struct device *dev,
+>  {
+>  	ktime_t stop, start;
+>  
+> -	if (priv->flags & CRB_FL_ACPI_START)
+> +	if ((priv->flags & CRB_FL_ACPI_START) ||
+> +	    (priv->flags & CRB_FL_CRB_SMC_START))
+>  		return 0;
+>  
+>  	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->cca->req);
+> @@ -202,6 +209,32 @@ static int crb_do_acpi_start(struct tpm_chip *chip)
+>  	return rc;
+>  }
+>  
+> +#ifdef CONFIG_ARM64
+> +/*
+> + * This is a TPM Command Response Buffer start method that invokes a
+> + * Secure Monitor Call to requrest the firmware to execute or cancel
+> + * a TPM 2.0 command.
+> + */
+> +static inline int tpm_crb_smc_start(struct device *dev, unsigned long func_id)
+> +{
+> +	struct arm_smccc_res res;
+> +
+> +	arm_smccc_smc(func_id, 0, 0, 0, 0, 0, 0, 0, &res);
+> +	if (res.a0 != 0) {
+> +		dev_err(dev, FW_BUG "tpm_crb_smc_start() returns res.a0 = 0x%lx\n", res.a0);
+> +		return -EIO;
+> +	}
+> +
+> +	return 0;
+> +}
+> +#else
+> +static inline int tpm_crb_smc_start(struct device *dev, unsigned long func_id)
+> +{
+> +	dev_err(dev, FW_BUG "tpm_crb: incorrect start method\n");
+> +	return -EINVAL;
+> +}
+> +#endif
+> +
+>  static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+>  {
+>  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+> @@ -229,6 +262,11 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+>  	if (priv->flags & CRB_FL_ACPI_START)
+>  		rc = crb_do_acpi_start(chip);
+>  
+> +	if (priv->flags & CRB_FL_CRB_SMC_START) {
+> +		iowrite32(CRB_START_INVOKE, &priv->cca->start);
+> +		rc = tpm_crb_smc_start(&chip->dev, priv->smc_func_id);
+> +	}
+> +
+>  	return rc;
+>  }
+>  
+> @@ -445,6 +483,17 @@ static int crb_acpi_add(struct acpi_device *device)
+>  	    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
+>  		priv->flags |= CRB_FL_ACPI_START;
+>  
+> +	if (sm == ACPI_TPM2_COMMAND_BUFFER_WITH_SMC) {
+> +		if ((buf->header.length - default_len) !=
+> +		    sizeof(struct tpm2_crb_smc)) {
+> +			dev_err(dev, FW_BUG "TPM2 ACPI table has wrong size %u for start method type %d\n",
+> +				buf->header.length, ACPI_TPM2_COMMAND_BUFFER_WITH_SMC);
+> +			return -EINVAL;
+> +		}
+> +		priv->flags |= CRB_FL_CRB_SMC_START;
+> +		priv->smc_func_id = buf->platform_data.smc_params.smc_func_id;
+> +	}
+> +
+>  	rc = crb_map_io(device, priv, buf);
+>  	if (rc)
+>  		return rc;
+> -- 
+> Jiandi An
+> Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
+> Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
+> 
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
