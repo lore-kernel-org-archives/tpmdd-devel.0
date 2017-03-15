@@ -1,42 +1,49 @@
-From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [tpmdd-devel] [PATCH] tpm: Add sysfs interface to show TPM
- hardware version
-Date: Wed, 15 Mar 2017 11:25:56 -0600
-Message-ID: <20170315172556.GA6399@obsidianresearch.com>
-References: <1489382517-9078-1-git-send-email-Meng.Li@windriver.com>
- <29B2C361-A0C0-410E-ACCA-07AFA382A251@gmx.de>
- <9f67321b-50bd-9e6f-61f8-c29ae14f261f@linux.vnet.ibm.com>
- <074515F2-51E7-485B-B1AB-11B913CC4B46@gmx.de>
- <20170314212425.GA29359@obsidianresearch.com>
- <1489527771.19081.49.camel@HansenPartnership.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH] tpm: select CONFIG_CRYPTO
+Date: Wed, 15 Mar 2017 19:58:09 +0200
+Message-ID: <20170315175809.3ebyzy3r54s6g4nm@intel.com>
+References: <20170314214043.3895041-1-arnd@arndb.de>
+ <20170315083024.loltipc7h3uxwfaa@intel.com>
+ <CAK8P3a2QgsDAuK2F5kQYha+yMwFoLU8N-O1x9ovX+zkax5Xk7Q@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1489527771.19081.49.camel@HansenPartnership.com>
+In-Reply-To: <CAK8P3a2QgsDAuK2F5kQYha+yMwFoLU8N-O1x9ovX+zkax5Xk7Q@mail.gmail.com>
 Sender: linux-kernel-owner@vger.kernel.org
-To: James Bottomley <James.Bottomley@HansenPartnership.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+To: Arnd Bergmann <arnd@arndb.de>
+Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Stefan Berger <stefanb@linux.vnet.ibm.com>, Christophe Ricard <christophe.ricard@gmail.com>, Nayna Jain <nayna@linux.vnet.ibm.com>, tpmdd-devel@lists.sourceforge.net, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Mar 14, 2017 at 02:42:51PM -0700, James Bottomley wrote:
-> On Tue, 2017-03-14 at 15:24 -0600, Jason Gunthorpe wrote:
-> > On Tue, Mar 14, 2017 at 07:58:37PM +0100, Peter Huewe wrote:
-> > 
-> > > > In practice, I suspect that a single user space application won't
-> > > > support both TPMs. 
-> > > Think of init scripts.
-> > > Which daemon should it start?
-> > 
-> > Right, ideally we'd have a udev rule that triggers systemd to start
-> > the userspace daemons when a TPM is detected, as other hardware does.
-> > 
-> > So whatever format we use has to be compatible with udev's matcher..
+On Wed, Mar 15, 2017 at 12:39:16PM +0100, Arnd Bergmann wrote:
+> On Wed, Mar 15, 2017 at 9:30 AM, Jarkko Sakkinen
+> <jarkko.sakkinen@linux.intel.com> wrote:
+> > Arnd,
+> >
+> > On Tue, Mar 14, 2017 at 10:40:24PM +0100, Arnd Bergmann wrote:
+> >> As we need the CRYPTO_HASH_INFO implementation, we should also
+> >> select CRYPTO itself to avoid this build warning:
+> >>
+> >> warning: (TCG_TPM && TRUSTED_KEYS && IMA) selects CRYPTO_HASH_INFO which has unmet direct dependencies (CRYPTO)
+> >>
+> >> Fixes: c1f92b4b04ad ("tpm: enhance TPM 2.0 PCR extend to support multiple banks")
+> >> Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+> >
+> > I've already merged this and put to my next branch.
 > 
-> Technically, we have that already: my TPM2.0 detection stuff for udev
-> triggers off the presence of the SUBSYSTEM=="tpmrm"  that matches any
-> TPM2 device but not a 1.x one.
+> Ah, I see my mistake: I had made an identical patch earlier, which you merged
+> into linux-next, and I dropped it from my series after rebasing on
+> -next, but then
+> rebased again on mainline and did the new patch without checking whether
+> it was already fixed in -next.
+> 
+> I guess the warning is rare enough that we don't really need this in v4.11
+> even though it does apply there.
+> 
+>     Arnd
 
-but long term tpmrm won't be TPM2 exclusive..
+Ah. Right, now that I remember that was my conclusion. I'm sorry that
+I did not remember to respond :-) If you think this would make sense
+for 4.11 I could send it to stable.
 
-Jason
+/Jarkko
