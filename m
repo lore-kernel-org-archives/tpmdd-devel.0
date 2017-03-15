@@ -1,97 +1,144 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v1 1/2] tpm: msleep() delays - replace with
- usleep_range() in i2c nuvoton driver
-Date: Wed, 15 Mar 2017 19:59:33 +0200
-Message-ID: <20170315175933.6em3xgkulpndql2o@intel.com>
-References: <1489171554-6844-1-git-send-email-nayna@linux.vnet.ibm.com>
- <20170315155226.xtgpttv5slej77ep@intel.com>
- <58C96A1B.3080803@linux.vnet.ibm.com>
+From: Andy Shevchenko <andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: [PATCH v2 1/1] tpm/st33zp24: Add GPIO ACPI mapping
+	table
+Date: Wed, 15 Mar 2017 21:58:00 +0200
+Message-ID: <20170315195800.47263-1-andriy.shevchenko@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <stable-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <58C96A1B.3080803@linux.vnet.ibm.com>
-Sender: stable-owner@vger.kernel.org
-To: Nayna <nayna@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, dan.morav@nuvoton.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, "linux-4.8" <stable@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: Andy Shevchenko <andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Mar 15, 2017 at 09:51:47PM +0530, Nayna wrote:
-> 
-> 
-> On 03/15/2017 09:22 PM, Jarkko Sakkinen wrote:
-> > On Fri, Mar 10, 2017 at 01:45:53PM -0500, Nayna Jain wrote:
-> > > Commit 500462a9de65 "timers: Switch to a non-cascading wheel" replaced
-> > > the 'classic' timer wheel, which aimed for near 'exact' expiry of the
-> > > timers.  Their analysis was that the vast majority of timeout timers
-> > > are used as safeguards, not as real timers, and are cancelled or
-> > > rearmed before expiration.  The only exception noted to this were
-> > > networking timers with a small expiry time.
-> > > 
-> > > Not included in the analysis was the TPM polling timer, which resulted
-> > > in a longer normal delay and, every so often, a very long delay.  The
-> > > non-cascading wheel delay is based on CONFIG_HZ.  For a description of
-> > > the different rings and their delays, refer to the comments in
-> > > kernel/time/timer.c.
-> > > 
-> > > Below are the delays given for rings 0 - 2, which explains the longer
-> > > "normal" delays and the very, long delays as seen on systems with
-> > > CONFIG_HZ 250.
-> > > 
-> > > * HZ 1000 steps
-> > >   * Level Offset  Granularity            Range
-> > >   *  0      0         1 ms                0 ms - 63 ms
-> > >   *  1     64         8 ms               64 ms - 511 ms
-> > >   *  2    128        64 ms              512 ms - 4095 ms (512ms - ~4s)
-> > > 
-> > > * HZ  250
-> > >   * Level Offset  Granularity            Range
-> > >   *  0      0         4 ms                0 ms - 255 ms
-> > >   *  1     64        32 ms              256 ms - 2047 ms (256ms - ~2s)
-> > >   *  2    128       256 ms             2048 ms - 16383 ms (~2s - ~16s)
-> > > 
-> > > Below is a comparison of extending the TPM with 1000 measurements,
-> > > using msleep() vs. usleep_delay() when configured for 1000 hz vs. 250
-> > > hz, before and after commit 500462a9de65.
-> > > 
-> > > linux-4.7 | msleep() usleep_range()
-> > > 1000 hz: 0m44.628s | 1m34.497s 29.243s
-> > > 250 hz: 1m28.510s | 4m49.269s 32.386s
-> > > 
-> > > linux-4.7  | min-max (msleep)  min-max (usleep_range)
-> > > 1000 hz: 0:017 - 2:760s | 0:015 - 3:967s    0:014 - 0:418s
-> > > 250 hz: 0:028 - 1:954s | 0:040 - 4:096s    0:016 - 0:816s
-> > > 
-> > > This patch replaces the msleep() with usleep_range() calls in the
-> > > i2c nuvoton driver with a consistent max range value.
-> > > 
-> > > Signed-of-by: Mimi Zohar <zohar@linux.vnet.ibm.com>
-> > > Cc: stable@vger.kernel.org (linux-4.8)
-> > > Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
-> > > ---
-> > > Changelog v1:
-> > > 
-> > > - Included Jason's feedbacks related to #defines.
-> > 
-> > What was changed?
-> > 
-> 
-> Changelog v1:
-> >>
-> >> - Included Jason's feedbacks related to #defines.
-> 
-> Based on Jason's review:
-> - Added () in #define
-> - Replaced hardcoded maximum range value with defined name.
-> 
-> Hmm.. could have included exact details.
-> 
-> Thanks & Regards,
-> - Nayna
-> 
-> > /Jarkko
-> > 
+In order to make GPIO ACPI library stricter prepare users of
+gpiod_get_index() to correctly behave when there no mapping is
+provided by firmware.
 
-OK, I'll replace the original patch with this. Thanks.
+Here we add explicit mapping between _CRS GpioIo() resources and
+their names used in the driver.
 
-/Jarkko
+Signed-off-by: Andy Shevchenko <andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+---
+- Fix copy'n'paste typo in i2c driver
+ drivers/char/tpm/st33zp24/i2c.c | 23 ++++++++++++++++++++---
+ drivers/char/tpm/st33zp24/spi.c | 23 ++++++++++++++++++++---
+ 2 files changed, 40 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/char/tpm/st33zp24/i2c.c b/drivers/char/tpm/st33zp24/i2c.c
+index 028a9cd76b63..1b10e38f214e 100644
+--- a/drivers/char/tpm/st33zp24/i2c.c
++++ b/drivers/char/tpm/st33zp24/i2c.c
+@@ -111,6 +111,13 @@ static const struct st33zp24_phy_ops i2c_phy_ops = {
+ 	.recv = st33zp24_i2c_recv,
+ };
+ 
++static const struct acpi_gpio_params lpcpd_gpios = { 1, 0, false };
++
++static const struct acpi_gpio_mapping acpi_st33zp24_gpios[] = {
++	{ "lpcpd-gpios", &lpcpd_gpios, 1 },
++	{},
++};
++
+ static int st33zp24_i2c_acpi_request_resources(struct i2c_client *client)
+ {
+ 	struct tpm_chip *chip = i2c_get_clientdata(client);
+@@ -118,10 +125,14 @@ static int st33zp24_i2c_acpi_request_resources(struct i2c_client *client)
+ 	struct st33zp24_i2c_phy *phy = tpm_dev->phy_id;
+ 	struct gpio_desc *gpiod_lpcpd;
+ 	struct device *dev = &client->dev;
++	int ret;
++
++	ret = acpi_dev_add_driver_gpios(ACPI_COMPANION(dev), acpi_st33zp24_gpios);
++	if (ret)
++		return ret;
+ 
+ 	/* Get LPCPD GPIO from ACPI */
+-	gpiod_lpcpd = devm_gpiod_get_index(dev, "TPM IO LPCPD", 1,
+-					   GPIOD_OUT_HIGH);
++	gpiod_lpcpd = devm_gpiod_get(dev, "lpcpd", GPIOD_OUT_HIGH);
+ 	if (IS_ERR(gpiod_lpcpd)) {
+ 		dev_err(&client->dev,
+ 			"Failed to retrieve lpcpd-gpios from acpi.\n");
+@@ -268,8 +279,14 @@ static int st33zp24_i2c_probe(struct i2c_client *client,
+ static int st33zp24_i2c_remove(struct i2c_client *client)
+ {
+ 	struct tpm_chip *chip = i2c_get_clientdata(client);
++	int ret;
+ 
+-	return st33zp24_remove(chip);
++	ret = st33zp24_remove(chip);
++	if (ret)
++		return ret;
++
++	acpi_dev_remove_driver_gpios(ACPI_COMPANION(&client->dev));
++	return 0;
+ }
+ 
+ static const struct i2c_device_id st33zp24_i2c_id[] = {
+diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
+index 9f5a0117098c..c69d15198f84 100644
+--- a/drivers/char/tpm/st33zp24/spi.c
++++ b/drivers/char/tpm/st33zp24/spi.c
+@@ -230,6 +230,13 @@ static const struct st33zp24_phy_ops spi_phy_ops = {
+ 	.recv = st33zp24_spi_recv,
+ };
+ 
++static const struct acpi_gpio_params lpcpd_gpios = { 1, 0, false };
++
++static const struct acpi_gpio_mapping acpi_st33zp24_gpios[] = {
++	{ "lpcpd-gpios", &lpcpd_gpios, 1 },
++	{},
++};
++
+ static int st33zp24_spi_acpi_request_resources(struct spi_device *spi_dev)
+ {
+ 	struct tpm_chip *chip = spi_get_drvdata(spi_dev);
+@@ -237,10 +244,14 @@ static int st33zp24_spi_acpi_request_resources(struct spi_device *spi_dev)
+ 	struct st33zp24_spi_phy *phy = tpm_dev->phy_id;
+ 	struct gpio_desc *gpiod_lpcpd;
+ 	struct device *dev = &spi_dev->dev;
++	int ret;
++
++	ret = acpi_dev_add_driver_gpios(ACPI_COMPANION(dev), acpi_st33zp24_gpios);
++	if (ret)
++		return ret;
+ 
+ 	/* Get LPCPD GPIO from ACPI */
+-	gpiod_lpcpd = devm_gpiod_get_index(dev, "TPM IO LPCPD", 1,
+-					   GPIOD_OUT_HIGH);
++	gpiod_lpcpd = devm_gpiod_get(dev, "lpcpd", GPIOD_OUT_HIGH);
+ 	if (IS_ERR(gpiod_lpcpd)) {
+ 		dev_err(dev, "Failed to retrieve lpcpd-gpios from acpi.\n");
+ 		phy->io_lpcpd = -1;
+@@ -385,8 +396,14 @@ static int st33zp24_spi_probe(struct spi_device *dev)
+ static int st33zp24_spi_remove(struct spi_device *dev)
+ {
+ 	struct tpm_chip *chip = spi_get_drvdata(dev);
++	int ret;
+ 
+-	return st33zp24_remove(chip);
++	ret = st33zp24_remove(chip);
++	if (ret)
++		return ret;
++
++	acpi_dev_remove_driver_gpios(ACPI_COMPANION(&dev->dev));
++	return 0;
+ }
+ 
+ static const struct spi_device_id st33zp24_spi_id[] = {
+-- 
+2.11.0
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
