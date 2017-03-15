@@ -1,15 +1,14 @@
-From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v1 1/2] tpm: msleep() delays - replace
- with usleep_range() in i2c nuvoton driver
-Date: Wed, 15 Mar 2017 21:51:47 +0530
-Message-ID: <58C96A1B.3080803@linux.vnet.ibm.com>
-References: <1489171554-6844-1-git-send-email-nayna@linux.vnet.ibm.com>
-	<20170315155226.xtgpttv5slej77ep@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v2] vTPM: Fix missing NULL check
+Date: Wed, 15 Mar 2017 18:43:10 +0200
+Message-ID: <20170315164310.f2rlyev77nd3fsev@intel.com>
+References: <1489555687-27943-1-git-send-email-honclo@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170315155226.xtgpttv5slej77ep-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <1489555687-27943-1-git-send-email-honclo-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,85 +17,71 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "linux-4.8" <stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: "Hon Ching(Vicky) Lo" <honclo-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, g@intel.com
+Cc: Ashley Lai <ashley-fm2HMyfA2y6tG0bUXCXiUA@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Peter Huewe <PeterHuewe-Mmb7MZpHnFY@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Wed, Mar 15, 2017 at 01:28:07AM -0400, Hon Ching(Vicky) Lo wrote:
+> The current code passes the address of tpm_chip as the argument to
+> dev_get_drvdata() without prior NULL check in
+> tpm_ibmvtpm_get_desired_dma.  This resulted an oops during kernel
+> boot when vTPM is enabled in Power partition configured in active
+> memory sharing mode.
+> 
+> The vio_driver's get_desired_dma() is called before the probe(), which
+> for vtpm is tpm_ibmvtpm_probe, and it's this latter function that
+> initializes the driver and set data.  Attempting to get data before
+> the probe() caused the problem.
+> 
+> This patch adds a NULL check to the tpm_ibmvtpm_get_desired_dma.
+> 
+> fixes: 9e0d39d8a6a0 ("tpm: Remove useless priv field in struct tpm_vendor_specific")
+> Cc: <stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+> Signed-off-by: Hon Ching(Vicky) Lo <honclo-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 
+Reviewed-by: Jarkko Sakkine <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
-On 03/15/2017 09:22 PM, Jarkko Sakkinen wrote:
-> On Fri, Mar 10, 2017 at 01:45:53PM -0500, Nayna Jain wrote:
->> Commit 500462a9de65 "timers: Switch to a non-cascading wheel" replaced
->> the 'classic' timer wheel, which aimed for near 'exact' expiry of the
->> timers.  Their analysis was that the vast majority of timeout timers
->> are used as safeguards, not as real timers, and are cancelled or
->> rearmed before expiration.  The only exception noted to this were
->> networking timers with a small expiry time.
->>
->> Not included in the analysis was the TPM polling timer, which resulted
->> in a longer normal delay and, every so often, a very long delay.  The
->> non-cascading wheel delay is based on CONFIG_HZ.  For a description of
->> the different rings and their delays, refer to the comments in
->> kernel/time/timer.c.
->>
->> Below are the delays given for rings 0 - 2, which explains the longer
->> "normal" delays and the very, long delays as seen on systems with
->> CONFIG_HZ 250.
->>
->> * HZ 1000 steps
->>   * Level Offset  Granularity            Range
->>   *  0      0         1 ms                0 ms - 63 ms
->>   *  1     64         8 ms               64 ms - 511 ms
->>   *  2    128        64 ms              512 ms - 4095 ms (512ms - ~4s)
->>
->> * HZ  250
->>   * Level Offset  Granularity            Range
->>   *  0      0         4 ms                0 ms - 255 ms
->>   *  1     64        32 ms              256 ms - 2047 ms (256ms - ~2s)
->>   *  2    128       256 ms             2048 ms - 16383 ms (~2s - ~16s)
->>
->> Below is a comparison of extending the TPM with 1000 measurements,
->> using msleep() vs. usleep_delay() when configured for 1000 hz vs. 250
->> hz, before and after commit 500462a9de65.
->>
->> linux-4.7 | msleep() usleep_range()
->> 1000 hz: 0m44.628s | 1m34.497s 29.243s
->> 250 hz: 1m28.510s | 4m49.269s 32.386s
->>
->> linux-4.7  | min-max (msleep)  min-max (usleep_range)
->> 1000 hz: 0:017 - 2:760s | 0:015 - 3:967s    0:014 - 0:418s
->> 250 hz: 0:028 - 1:954s | 0:040 - 4:096s    0:016 - 0:816s
->>
->> This patch replaces the msleep() with usleep_range() calls in the
->> i2c nuvoton driver with a consistent max range value.
->>
->> Signed-of-by: Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
->> Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org (linux-4.8)
->> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
->> ---
->> Changelog v1:
->>
->> - Included Jason's feedbacks related to #defines.
->
-> What was changed?
->
+/Jarkko
 
-Changelog v1:
- >>
- >> - Included Jason's feedbacks related to #defines.
-
-Based on Jason's review:
-- Added () in #define
-- Replaced hardcoded maximum range value with defined name.
-
-Hmm.. could have included exact details.
-
-Thanks & Regards,
-- Nayna
-
-> /Jarkko
->
-
+> ---
+>  drivers/char/tpm/tpm_ibmvtpm.c |    8 ++++++--
+>  1 files changed, 6 insertions(+), 2 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_ibmvtpm.c b/drivers/char/tpm/tpm_ibmvtpm.c
+> index 1b9d61f..f01d083 100644
+> --- a/drivers/char/tpm/tpm_ibmvtpm.c
+> +++ b/drivers/char/tpm/tpm_ibmvtpm.c
+> @@ -299,6 +299,8 @@ static int tpm_ibmvtpm_remove(struct vio_dev *vdev)
+>  	}
+>  
+>  	kfree(ibmvtpm);
+> +	/* For tpm_ibmvtpm_get_desired_dma */
+> +	dev_set_drvdata(&vdev->dev, NULL);
+>  
+>  	return 0;
+>  }
+> @@ -313,14 +315,16 @@ static int tpm_ibmvtpm_remove(struct vio_dev *vdev)
+>  static unsigned long tpm_ibmvtpm_get_desired_dma(struct vio_dev *vdev)
+>  {
+>  	struct tpm_chip *chip = dev_get_drvdata(&vdev->dev);
+> -	struct ibmvtpm_dev *ibmvtpm = dev_get_drvdata(&chip->dev);
+> +	struct ibmvtpm_dev *ibmvtpm;
+>  
+>  	/*
+>  	 * ibmvtpm initializes at probe time, so the data we are
+>  	 * asking for may not be set yet. Estimate that 4K required
+>  	 * for TCE-mapped buffer in addition to CRQ.
+>  	 */
+> -	if (!ibmvtpm)
+> +	if (chip)
+> +		ibmvtpm = dev_get_drvdata(&chip->dev);
+> +	else
+>  		return CRQ_RES_BUF_SIZE + PAGE_SIZE;
+>  
+>  	return CRQ_RES_BUF_SIZE + ibmvtpm->rtce_size;
+> -- 
+> 1.7.1
+> 
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
