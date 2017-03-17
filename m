@@ -1,15 +1,15 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 1/1] tpm/st33zp24: Add GPIO ACPI
-	mapping table
-Date: Fri, 17 Mar 2017 15:20:23 +0200
-Message-ID: <20170317132023.ysnmw6hejz3rkkse@intel.com>
-References: <20170315195800.47263-1-andriy.shevchenko@linux.intel.com>
+From: <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+Subject: Re: [PATCH v3 2/7] tpm: validate TPM 2.0 commands
+Date: Fri, 17 Mar 2017 15:40:15 +0000
+Message-ID: <22e8fa0caf8b4386a12cd93ee7170ed5@MUCSE603.infineon.com>
+References: <20170303151912.14752-1-jarkko.sakkinen@linux.intel.com>
+	<20170303151912.14752-3-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170315195800.47263-1-andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+In-Reply-To: <20170303151912.14752-3-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,136 +18,31 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Andy Shevchenko <andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Mar 15, 2017 at 09:58:00PM +0200, Andy Shevchenko wrote:
-> In order to make GPIO ACPI library stricter prepare users of
-> gpiod_get_index() to correctly behave when there no mapping is
-> provided by firmware.
-> 
-> Here we add explicit mapping between _CRS GpioIo() resources and
-> their names used in the driver.
-> 
-> Signed-off-by: Andy Shevchenko <andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> Check for every TPM 2.0 command that the command code is supported and
+> the command buffer has at least the length that can contain the header
+> and the handle area.
 
-Thanks I replaced the commit.
+This breaks several use cases for me:
 
-/Jarkko
+1. I've got a TPM that implements vendor-specific command codes. Those cannot be send to the TPM anymore, but are rejected with EINVAL.
 
-> ---
-> - Fix copy'n'paste typo in i2c driver
->  drivers/char/tpm/st33zp24/i2c.c | 23 ++++++++++++++++++++---
->  drivers/char/tpm/st33zp24/spi.c | 23 ++++++++++++++++++++---
->  2 files changed, 40 insertions(+), 6 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/st33zp24/i2c.c b/drivers/char/tpm/st33zp24/i2c.c
-> index 028a9cd76b63..1b10e38f214e 100644
-> --- a/drivers/char/tpm/st33zp24/i2c.c
-> +++ b/drivers/char/tpm/st33zp24/i2c.c
-> @@ -111,6 +111,13 @@ static const struct st33zp24_phy_ops i2c_phy_ops = {
->  	.recv = st33zp24_i2c_recv,
->  };
->  
-> +static const struct acpi_gpio_params lpcpd_gpios = { 1, 0, false };
-> +
-> +static const struct acpi_gpio_mapping acpi_st33zp24_gpios[] = {
-> +	{ "lpcpd-gpios", &lpcpd_gpios, 1 },
-> +	{},
-> +};
-> +
->  static int st33zp24_i2c_acpi_request_resources(struct i2c_client *client)
->  {
->  	struct tpm_chip *chip = i2c_get_clientdata(client);
-> @@ -118,10 +125,14 @@ static int st33zp24_i2c_acpi_request_resources(struct i2c_client *client)
->  	struct st33zp24_i2c_phy *phy = tpm_dev->phy_id;
->  	struct gpio_desc *gpiod_lpcpd;
->  	struct device *dev = &client->dev;
-> +	int ret;
-> +
-> +	ret = acpi_dev_add_driver_gpios(ACPI_COMPANION(dev), acpi_st33zp24_gpios);
-> +	if (ret)
-> +		return ret;
->  
->  	/* Get LPCPD GPIO from ACPI */
-> -	gpiod_lpcpd = devm_gpiod_get_index(dev, "TPM IO LPCPD", 1,
-> -					   GPIOD_OUT_HIGH);
-> +	gpiod_lpcpd = devm_gpiod_get(dev, "lpcpd", GPIOD_OUT_HIGH);
->  	if (IS_ERR(gpiod_lpcpd)) {
->  		dev_err(&client->dev,
->  			"Failed to retrieve lpcpd-gpios from acpi.\n");
-> @@ -268,8 +279,14 @@ static int st33zp24_i2c_probe(struct i2c_client *client,
->  static int st33zp24_i2c_remove(struct i2c_client *client)
->  {
->  	struct tpm_chip *chip = i2c_get_clientdata(client);
-> +	int ret;
->  
-> -	return st33zp24_remove(chip);
-> +	ret = st33zp24_remove(chip);
-> +	if (ret)
-> +		return ret;
-> +
-> +	acpi_dev_remove_driver_gpios(ACPI_COMPANION(&client->dev));
-> +	return 0;
->  }
->  
->  static const struct i2c_device_id st33zp24_i2c_id[] = {
-> diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
-> index 9f5a0117098c..c69d15198f84 100644
-> --- a/drivers/char/tpm/st33zp24/spi.c
-> +++ b/drivers/char/tpm/st33zp24/spi.c
-> @@ -230,6 +230,13 @@ static const struct st33zp24_phy_ops spi_phy_ops = {
->  	.recv = st33zp24_spi_recv,
->  };
->  
-> +static const struct acpi_gpio_params lpcpd_gpios = { 1, 0, false };
-> +
-> +static const struct acpi_gpio_mapping acpi_st33zp24_gpios[] = {
-> +	{ "lpcpd-gpios", &lpcpd_gpios, 1 },
-> +	{},
-> +};
-> +
->  static int st33zp24_spi_acpi_request_resources(struct spi_device *spi_dev)
->  {
->  	struct tpm_chip *chip = spi_get_drvdata(spi_dev);
-> @@ -237,10 +244,14 @@ static int st33zp24_spi_acpi_request_resources(struct spi_device *spi_dev)
->  	struct st33zp24_spi_phy *phy = tpm_dev->phy_id;
->  	struct gpio_desc *gpiod_lpcpd;
->  	struct device *dev = &spi_dev->dev;
-> +	int ret;
-> +
-> +	ret = acpi_dev_add_driver_gpios(ACPI_COMPANION(dev), acpi_st33zp24_gpios);
-> +	if (ret)
-> +		return ret;
->  
->  	/* Get LPCPD GPIO from ACPI */
-> -	gpiod_lpcpd = devm_gpiod_get_index(dev, "TPM IO LPCPD", 1,
-> -					   GPIOD_OUT_HIGH);
-> +	gpiod_lpcpd = devm_gpiod_get(dev, "lpcpd", GPIOD_OUT_HIGH);
->  	if (IS_ERR(gpiod_lpcpd)) {
->  		dev_err(dev, "Failed to retrieve lpcpd-gpios from acpi.\n");
->  		phy->io_lpcpd = -1;
-> @@ -385,8 +396,14 @@ static int st33zp24_spi_probe(struct spi_device *dev)
->  static int st33zp24_spi_remove(struct spi_device *dev)
->  {
->  	struct tpm_chip *chip = spi_get_drvdata(dev);
-> +	int ret;
->  
-> -	return st33zp24_remove(chip);
-> +	ret = st33zp24_remove(chip);
-> +	if (ret)
-> +		return ret;
-> +
-> +	acpi_dev_remove_driver_gpios(ACPI_COMPANION(&dev->dev));
-> +	return 0;
->  }
->  
->  static const struct spi_device_id st33zp24_spi_id[] = {
-> -- 
-> 2.11.0
-> 
+2. When upgrading the firmware on my TPM, it switches to a non-standard communication mode for the upgrade process and does not communicate using TPM2.0 commands during this time. Rejecting non-TPM2.0 commands means upgrading won't be possible anymore.
 
+3. I'd like to use the kernel driver to test my TPM implementation. So for example, I send an invalid command code to the TPM and expect TPM_RC_COMMAND_CODE in response, but now I get EINVAL instead and the TPM never sees the command.
+
+>From my point of view, the kernel driver should provide a transparent communication channel to the TPM. Whatever I write to /dev/tpm<n> should arrive at the TPM device, so that the TPM can handle it and return the appropriate response. Otherwise, you'll end up reimplementing all the command handling logic, that is already part of the TPM's job, and as soon as you miss one case and behave differently than the TPM, something relying on this behavior will break.
+
+I see two possible solutions:
+
+1. When the driver does not know a command code, it passes through the command unmodified. This bears the risk of unknown side effects though, so TPM spaces might not be as independent as they should be.
+
+2. Since the command code lookup is only really necessary for TPM spaces, it only gets activated when space != NULL. So the change will not affect /dev/tpm<n>, but only the new /dev/tpmrm<n>. As /dev/tpmrm<n> is not meant to be a transparent interface anyway, rejecting unknown commands is acceptable.
+
+Alexander
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
 engaging tech sites, Slashdot.org! http://sdm.link/slashdot
