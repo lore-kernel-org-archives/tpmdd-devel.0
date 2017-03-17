@@ -1,16 +1,18 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 1/2] ACPICA: Update TPM2 ACPI table
-Date: Fri, 17 Mar 2017 22:32:16 +0200
-Message-ID: <20170317203216.xxreazeu5etw7bul@intel.com>
-References: <1489541553-2066-1-git-send-email-anjiandi@codeaurora.org>
-	<20170315160226.apxecoujeqsbuk67@intel.com>
-	<58CB2E11.9030509@codeaurora.org>
+Subject: Re: [PATCH v3] tpm_crb: request and relinquish
+	locality 0
+Date: Fri, 17 Mar 2017 22:34:47 +0200
+Message-ID: <20170317203447.hrzex4lss5mazmrl@intel.com>
+References: <20170315055738.11088-1-jarkko.sakkinen@iki.fi>
+	<87h92uvtce.fsf@redhat.com> <87fuidx5mt.fsf@redhat.com>
+	<20170316115543.jw23imcvkcriaam5@intel.com>
+	<878to3x2h2.fsf@redhat.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <58CB2E11.9030509-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+In-Reply-To: <878to3x2h2.fsf-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,128 +21,369 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org
+To: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Cc: Jarkko Sakkinen <jarkko.sakkinen-X3B1VOXEql0@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gang.wei-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Mar 16, 2017 at 07:30:09PM -0500, Jiandi An wrote:
-> On 03/15/17 11:02, Jarkko Sakkinen wrote:
-> > On Tue, Mar 14, 2017 at 08:32:32PM -0500, Jiandi An wrote:
-> > > TCG ACPI Specification Family "1.2" and "2.0" Version 1.2
-> > > Revision 8 introduces new start method for ARM SMC.
-> > > 
-> > > - Add new start method (type 11) for ARM SMC
-> > > - Add start method specific parameters for ARM SMC start method
-> > > 
-> > > Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
-> > > ---
-> > >   drivers/char/tpm/tpm_crb.c |  6 +++++-
-> > >   drivers/char/tpm/tpm_tis.c |  6 +++++-
-> > >   include/acpi/actbl2.h      | 12 ++++++++++++
-> > >   3 files changed, 22 insertions(+), 2 deletions(-)
-> > > 
-> > > diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> > > index cb6fb13..089fcf8 100644
-> > > --- a/drivers/char/tpm/tpm_crb.c
-> > > +++ b/drivers/char/tpm/tpm_crb.c
-> > > @@ -410,12 +410,16 @@ static int crb_acpi_add(struct acpi_device
-> > *device)
-> > >   	struct tpm_chip *chip;
-> > >   	struct device *dev = &device->dev;
-> > >   	acpi_status status;
-> > > +	u32 default_len;
-> > >   	u32 sm;
-> > >   	int rc;
-> > > 
-> > > +	default_len = sizeof(struct acpi_table_tpm2) -
-> > > +		      sizeof(union platform_params);
-> > 
-> > Maybe you should consider not putting struct crb_smc to actbl2.h. This
-> > makes tpm_crb.c a mess.
+On Fri, Mar 17, 2017 at 10:00:41AM -0700, Jerry Snitselaar wrote:
 > 
-> Will fix this in v3.
-> - Jiandi
+> Jarkko Sakkinen @ 2017-03-16 11:55 GMT:
 > 
-> > 
-> > > +
-> > >   	status = acpi_get_table(ACPI_SIG_TPM2, 1,
-> > >   				(struct acpi_table_header **) &buf);
-> > > -	if (ACPI_FAILURE(status) || buf->header.length < sizeof(*buf)) {
-> > > +	if (ACPI_FAILURE(status) || buf->header.length < default_len) {
-> > >   		dev_err(dev, FW_BUG "failed to get TPM2 ACPI table\n");
-> > >   		return -EINVAL;
-> > >   	}
-> > > diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-> > > index c7e1384..0e2e5f6 100644
-> > > --- a/drivers/char/tpm/tpm_tis.c
-> > > +++ b/drivers/char/tpm/tpm_tis.c
-> > > @@ -253,11 +253,15 @@ static int tpm_tis_acpi_init(struct acpi_device
-> > *acpi_dev)
-> > >   	acpi_status st;
-> > >   	struct list_head resources;
-> > >   	struct tpm_info tpm_info = {};
-> > > +	u32 default_len;
-> > >   	int ret;
-> > > 
-> > > +	default_len = sizeof(struct acpi_table_tpm2) -
-> > > +		      sizeof(union platform_params);
-> > > +
-> > 
-> > And more clutter.
-> > 
-> > >   	st = acpi_get_table(ACPI_SIG_TPM2, 1,
-> > >   			    (struct acpi_table_header **) &tbl);
-> > > -	if (ACPI_FAILURE(st) || tbl->header.length < sizeof(*tbl)) {
-> > > +	if (ACPI_FAILURE(st) || tbl->header.length < default_len) {
-> > >   		dev_err(&acpi_dev->dev,
-> > >   			FW_BUG "failed to get TPM2 ACPI table\n");
-> > >   		return -EINVAL;
-> > > diff --git a/include/acpi/actbl2.h b/include/acpi/actbl2.h
-> > > index 7aee9fb..9612049 100644
-> > > --- a/include/acpi/actbl2.h
-> > > +++ b/include/acpi/actbl2.h
-> > > @@ -1277,6 +1277,14 @@ struct acpi_table_tcpa_server {
-> > >    *
-> > > 
-> > **************************************************************************
-> > ****/
-> > > 
-> > > +struct tpm2_crb_smc {
-> > > +	u32 interrupt;
-> > > +	u8 interrupt_flags;
-> > > +	u8 op_flags;
-> > > +	u16 reserved2;
-> > > +	u32 smc_func_id;
-> > > +};
-> > > +
-> > >   struct acpi_table_tpm2 {
-> > >   	struct acpi_table_header header;	/* Common ACPI table
-> > header */
-> > >   	u16 platform_class;
-> > > @@ -1285,6 +1293,9 @@ struct acpi_table_tpm2 {
-> > >   	u32 start_method;
-> > > 
-> > >   	/* Platform-specific data follows */
-> > > +	union platform_params {
-> > > +		struct tpm2_crb_smc smc_params;
-> > > +	} platform_data;
-> > 
-> > Why the union type is not anonymous? ACPICA change should be its
-> > own commit.
-> > 
-> > /Jarkko
+> > On Wed, Mar 15, 2017 at 08:27:54PM -0700, Jerry Snitselaar wrote:
+> >> 
+> >> Jerry Snitselaar @ 2017-03-16 02:38 GMT:
+> >> 
+> >> > Jarkko Sakkinen @ 2017-03-15 05:57 GMT:
+> >> >
+> >> >> From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> >> >>
+> >> >> This commit adds support for requesting and relinquishing locality 0 in
+> >> >> tpm_crb for the course of command transmission.
+> >> >>
+> >> >> In order to achieve this, two new callbacks are added to struct
+> >> >> tpm_class_ops:
+> >> >>
+> >> >> - request_locality
+> >> >> - relinquish_locality
+> >> >>
+> >> >> These are called before sending and receiving data from the TPM.  We
+> >> >> update also tpm_tis_core to use these callbacks. A small modification to
+> >> >> request_locality() is done so that it returns -EBUSY instead of locality
+> >> >> number when check_locality() fails in order to return something
+> >> >> meaningful to the user space.
+> >> >>
+> >> >> With CRB interface you first set either requestAccess or relinquish bit
+> >> >> from TPM_LOC_CTRL_x register and then wait for locAssigned and
+> >> >> tpmRegValidSts bits to be set in the TPM_LOC_STATE_x register.
+> >> >>
+> >> >> The reason why were are doing this is to make sure that the driver
+> >> >> will work properly with Intel TXT that uses locality 2. There's no
+> >> >> explicit guarantee that it would relinquish this locality. In more
+> >> >> general sense this commit enables tpm_crb to be a well behaving
+> >> >> citizen in a multi locality environment.
+> >> >>
+> >> >> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> >> >> ---
+> >> >> v2:
+> >> >> - TPM driver level calllbacks
+> >> >> v3:
+> >> >> - Call ops->relinquish_locality only if ops->request_locality has been
+> >> >>   successful.
+> >> >> - Do not reserve locality in nested tpm_transmit calls.
+> >> >> - Check for tpmRegValidSts to make sure that the value in TPM_LOC_STATE_x is
+> >> >>   stable.
+> >> >>  drivers/char/tpm/tpm-interface.c | 10 ++++++++++
+> >> >>  drivers/char/tpm/tpm.h           |  3 ++-
+> >> >>  drivers/char/tpm/tpm2-space.c    | 15 +++++++++------
+> >> >>  drivers/char/tpm/tpm_crb.c       | 41 ++++++++++++++++++++++++++++++++++++++++
+> >> >>  drivers/char/tpm/tpm_tis_core.c  | 12 ++++--------
+> >> >>  include/linux/tpm.h              |  3 ++-
+> >> >>  6 files changed, 68 insertions(+), 16 deletions(-)
+> >> >>
+> >> >> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> >> >> index 95c6f98..4cd216f 100644
+> >> >> --- a/drivers/char/tpm/tpm-interface.c
+> >> >> +++ b/drivers/char/tpm/tpm-interface.c
+> >> >> @@ -384,6 +384,7 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+> >> >>  	ssize_t len = 0;
+> >> >>  	u32 count, ordinal;
+> >> >>  	unsigned long stop;
+> >> >> +	bool no_locality = !(flags & TPM_TRANSMIT_HAS_LOCALITY);
+> >> >>
+> >> >>  	if (!tpm_validate_command(chip, buf, bufsiz))
+> >> >>  		return -EINVAL;
+> >> >> @@ -407,6 +408,12 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+> >> >>  	if (chip->dev.parent)
+> >> >>  		pm_runtime_get_sync(chip->dev.parent);
+> >> >>
+> >> >> +	if (no_locality && chip->ops->request_locality)  {
+> >> >> +		rc = chip->ops->request_locality(chip, 0);
+> >> >> +		if (rc)
+> >> >> +			goto out_no_locality;
+> >> >> +	}
+> >> >> +
+> >> >>  	rc = tpm2_prepare_space(chip, space, ordinal, buf);
+> >> >>  	if (rc)
+> >> >>  		goto out;
+> >> >> @@ -466,6 +473,9 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+> >> >>  	rc = tpm2_commit_space(chip, space, ordinal, buf, &len);
+> >> >>
+> >> >>  out:
+> >> >> +	if (no_locality && chip->ops->relinquish_locality)
+> >> >> +		chip->ops->relinquish_locality(chip, 0, false);
+> >> >> +out_no_locality:
+> >> >>  	if (chip->dev.parent)
+> >> >>  		pm_runtime_put_sync(chip->dev.parent);
+> >> >>
+> >> >> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> >> >> index 5eacb3f..ba2c00d 100644
+> >> >> --- a/drivers/char/tpm/tpm.h
+> >> >> +++ b/drivers/char/tpm/tpm.h
+> >> >> @@ -521,7 +521,8 @@ extern const struct file_operations tpmrm_fops;
+> >> >>  extern struct idr dev_nums_idr;
+> >> >>
+> >> >>  enum tpm_transmit_flags {
+> >> >> -	TPM_TRANSMIT_UNLOCKED	= BIT(0),
+> >> >> +	TPM_TRANSMIT_UNLOCKED		= BIT(0),
+> >> >> +	TPM_TRANSMIT_HAS_LOCALITY	= BIT(1),
+> >> >>  };
+> >> >>
+> >> >>  ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+> >> >> diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2-space.c
+> >> >> index d36d81e..43d05ab 100644
+> >> >> --- a/drivers/char/tpm/tpm2-space.c
+> >> >> +++ b/drivers/char/tpm/tpm2-space.c
+> >> >> @@ -19,6 +19,9 @@
+> >> >>  #include <asm/unaligned.h>
+> >> >>  #include "tpm.h"
+> >> >>
+> >> >> +#define TPM_TRANSMIT_NESTED \
+> >> >> +	(TPM_TRANSMIT_UNLOCKED | TPM_TRANSMIT_HAS_LOCALITY)
+> >> >> +
+> >> >>  enum tpm2_handle_types {
+> >> >>  	TPM2_HT_HMAC_SESSION	= 0x02000000,
+> >> >>  	TPM2_HT_POLICY_SESSION	= 0x03000000,
+> >> >> @@ -39,7 +42,7 @@ static void tpm2_flush_sessions(struct tpm_chip *chip, struct tpm_space *space)
+> >> >>  	for (i = 0; i < ARRAY_SIZE(space->session_tbl); i++) {
+> >> >>  		if (space->session_tbl[i])
+> >> >>  			tpm2_flush_context_cmd(chip, space->session_tbl[i],
+> >> >> -					       TPM_TRANSMIT_UNLOCKED);
+> >> >> +					       TPM_TRANSMIT_NESTED);
+> >> >>  	}
+> >> >>  }
+> >> >>
+> >> >> @@ -84,7 +87,7 @@ static int tpm2_load_context(struct tpm_chip *chip, u8 *buf,
+> >> >>  	tpm_buf_append(&tbuf, &buf[*offset], body_size);
+> >> >>
+> >> >>  	rc = tpm_transmit_cmd(chip, NULL, tbuf.data, PAGE_SIZE, 4,
+> >> >> -			      TPM_TRANSMIT_UNLOCKED, NULL);
+> >> >> +			      TPM_TRANSMIT_NESTED, NULL);
+> >> >>  	if (rc < 0) {
+> >> >>  		dev_warn(&chip->dev, "%s: failed with a system error %d\n",
+> >> >>  			 __func__, rc);
+> >> >> @@ -132,7 +135,7 @@ static int tpm2_save_context(struct tpm_chip *chip, u32 handle, u8 *buf,
+> >> >>  	tpm_buf_append_u32(&tbuf, handle);
+> >> >>
+> >> >>  	rc = tpm_transmit_cmd(chip, NULL, tbuf.data, PAGE_SIZE, 0,
+> >> >> -			      TPM_TRANSMIT_UNLOCKED, NULL);
+> >> >> +			      TPM_TRANSMIT_NESTED, NULL);
+> >> >>  	if (rc < 0) {
+> >> >>  		dev_warn(&chip->dev, "%s: failed with a system error %d\n",
+> >> >>  			 __func__, rc);
+> >> >> @@ -169,7 +172,7 @@ static void tpm2_flush_space(struct tpm_chip *chip)
+> >> >>  	for (i = 0; i < ARRAY_SIZE(space->context_tbl); i++)
+> >> >>  		if (space->context_tbl[i] && ~space->context_tbl[i])
+> >> >>  			tpm2_flush_context_cmd(chip, space->context_tbl[i],
+> >> >> -					       TPM_TRANSMIT_UNLOCKED);
+> >> >> +					       TPM_TRANSMIT_NESTED);
+> >> >>
+> >> >>  	tpm2_flush_sessions(chip, space);
+> >> >>  }
+> >> >> @@ -376,7 +379,7 @@ static int tpm2_map_response_header(struct tpm_chip *chip, u32 cc, u8 *rsp,
+> >> >>
+> >> >>  	return 0;
+> >> >>  out_no_slots:
+> >> >> -	tpm2_flush_context_cmd(chip, phandle, TPM_TRANSMIT_UNLOCKED);
+> >> >> +	tpm2_flush_context_cmd(chip, phandle, TPM_TRANSMIT_NESTED);
+> >> >>  	dev_warn(&chip->dev, "%s: out of slots for 0x%08X\n", __func__,
+> >> >>  		 phandle);
+> >> >>  	return -ENOMEM;
+> >> >> @@ -468,7 +471,7 @@ static int tpm2_save_space(struct tpm_chip *chip)
+> >> >>  			return rc;
+> >> >>
+> >> >>  		tpm2_flush_context_cmd(chip, space->context_tbl[i],
+> >> >> -				       TPM_TRANSMIT_UNLOCKED);
+> >> >> +				       TPM_TRANSMIT_NESTED);
+> >> >>  		space->context_tbl[i] = ~0;
+> >> >>  	}
+> >> >>
+> >> >> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+> >> >> index 1dfc37e..eb2fcf1 100644
+> >> >> --- a/drivers/char/tpm/tpm_crb.c
+> >> >> +++ b/drivers/char/tpm/tpm_crb.c
+> >> >> @@ -34,6 +34,16 @@ enum crb_defaults {
+> >> >>  	CRB_ACPI_START_INDEX = 1,
+> >> >>  };
+> >> >>
+> >> >> +enum crb_loc_ctrl {
+> >> >> +	CRB_LOC_CTRL_REQUEST_ACCESS	= BIT(0),
+> >> >> +	CRB_LOC_CTRL_RELINQUISH		= BIT(1),
+> >> >> +};
+> >> >> +
+> >> >> +enum crb_loc_state {
+> >> >> +	CRB_LOC_STATE_LOC_ASSIGNED	= BIT(1),
+> >> >> +	CRB_LOC_STATE_TPM_REG_VALID_STS	= BIT(7),
+> >> >> +};
+> >> >> +
+> >> >>  enum crb_ctrl_req {
+> >> >>  	CRB_CTRL_REQ_CMD_READY	= BIT(0),
+> >> >>  	CRB_CTRL_REQ_GO_IDLE	= BIT(1),
+> >> >> @@ -172,6 +182,35 @@ static int __maybe_unused crb_cmd_ready(struct device *dev,
+> >> >>  	return 0;
+> >> >>  }
+> >> >>
+> >> >> +static int crb_request_locality(struct tpm_chip *chip, int loc)
+> >> >> +{
+> >> >> +	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+> >> >> +	u32 value = CRB_LOC_STATE_LOC_ASSIGNED |
+> >> >> +		CRB_LOC_STATE_TPM_REG_VALID_STS;
+> >> >> +
+> >> >> +	if (!priv->regs_h)
+> >> >> +		return 0;
+> >> >> +
+> >> >> +	iowrite32(CRB_LOC_CTRL_REQUEST_ACCESS, &priv->regs_h->loc_ctrl);
+> >> >> +	if (!crb_wait_for_reg_32(&priv->regs_h->loc_state, value, value,
+> >> >> +				 TPM2_TIMEOUT_C)) {
+> >> >> +		dev_warn(&chip->dev, "TPM_LOC_STATE_x.requestAccess timed out\n");
+> >> >> +		return -ETIME;
+> >> >> +	}
+> >> >> +
+> >> >> +	return 0;
+> >> >> +}
+> >> >> +
+> >> >> +static void crb_relinquish_locality(struct tpm_chip *chip, int loc, bool force)
+> >> >> +{
+> >> >> +	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+> >> >> +
+> >> >> +	if (!priv->regs_h)
+> >> >> +		return;
+> >> >> +
+> >> >> +	iowrite32(CRB_LOC_CTRL_RELINQUISH, &priv->regs_h->loc_ctrl);
+> >> >> +}
+> >> >> +
+> >> >>  static u8 crb_status(struct tpm_chip *chip)
+> >> >>  {
+> >> >>  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+> >> >> @@ -278,6 +317,8 @@ static const struct tpm_class_ops tpm_crb = {
+> >> >>  	.send = crb_send,
+> >> >>  	.cancel = crb_cancel,
+> >> >>  	.req_canceled = crb_req_canceled,
+> >> >> +	.request_locality = crb_request_locality,
+> >> >> +	.relinquish_locality = crb_relinquish_locality,
+> >> >>  	.req_complete_mask = CRB_DRV_STS_COMPLETE,
+> >> >>  	.req_complete_val = CRB_DRV_STS_COMPLETE,
+> >> >>  };
+> >> >> diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+> >> >> index fc0e9a2..c3cbe24 100644
+> >> >> --- a/drivers/char/tpm/tpm_tis_core.c
+> >> >> +++ b/drivers/char/tpm/tpm_tis_core.c
+> >> >> @@ -73,7 +73,7 @@ static int check_locality(struct tpm_chip *chip, int l)
+> >> >>  	return -1;
+> >> >>  }
+> >> >>
+> >> >> -static void release_locality(struct tpm_chip *chip, int l, int force)
+> >> >> +static void release_locality(struct tpm_chip *chip, int l, bool force)
+> >> >>  {
+> >> >>  	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+> >> >>  	int rc;
+> >> >> @@ -97,7 +97,7 @@ static int request_locality(struct tpm_chip *chip, int l)
+> >> >>  	long rc;
+> >> >>
+> >> >>  	if (check_locality(chip, l) >= 0)
+> >> >> -		return l;
+> >> >> +		return -EBUSY;
+> >> >>
+> >> >>  	rc = tpm_tis_write8(priv, TPM_ACCESS(l), TPM_ACCESS_REQUEST_USE);
+> >> >>  	if (rc < 0)
+> >> >> @@ -252,7 +252,6 @@ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+> >> >>
+> >> >>  out:
+> >> >>  	tpm_tis_ready(chip);
+> >> >> -	release_locality(chip, priv->locality, 0);
+> >> >>  	return size;
+> >> >>  }
+> >> >>
+> >> >> @@ -268,9 +267,6 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+> >> >>  	size_t count = 0;
+> >> >>  	bool itpm = priv->flags & TPM_TIS_ITPM_WORKAROUND;
+> >> >>
+> >> >> -	if (request_locality(chip, 0) < 0)
+> >> >> -		return -EBUSY;
+> >> >> -
+> >> >>  	status = tpm_tis_status(chip);
+> >> >>  	if ((status & TPM_STS_COMMAND_READY) == 0) {
+> >> >>  		tpm_tis_ready(chip);
+> >> >> @@ -329,7 +325,6 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+> >> >>
+> >> >>  out_err:
+> >> >>  	tpm_tis_ready(chip);
+> >> >> -	release_locality(chip, priv->locality, 0);
+> >> >>  	return rc;
+> >> >>  }
+> >> >>
+> >> >> @@ -390,7 +385,6 @@ static int tpm_tis_send_main(struct tpm_chip *chip, u8 *buf, size_t len)
+> >> >>  	return len;
+> >> >>  out_err:
+> >> >>  	tpm_tis_ready(chip);
+> >> >> -	release_locality(chip, priv->locality, 0);
+> >> >>  	return rc;
+> >> >>  }
+> >> >>
+> >> >> @@ -681,6 +675,8 @@ static const struct tpm_class_ops tpm_tis = {
+> >> >>  	.send = tpm_tis_send,
+> >> >>  	.cancel = tpm_tis_ready,
+> >> >>  	.update_timeouts = tpm_tis_update_timeouts,
+> >> >> +	.request_locality = request_locality,
+> >> >> +	.relinquish_locality = release_locality,
+> >> >>  	.req_complete_mask = TPM_STS_DATA_AVAIL | TPM_STS_VALID,
+> >> >>  	.req_complete_val = TPM_STS_DATA_AVAIL | TPM_STS_VALID,
+> >> >>  	.req_canceled = tpm_tis_req_canceled,
+> >> >> diff --git a/include/linux/tpm.h b/include/linux/tpm.h
+> >> >> index da158f0..65e05f9 100644
+> >> >> --- a/include/linux/tpm.h
+> >> >> +++ b/include/linux/tpm.h
+> >> >> @@ -48,7 +48,8 @@ struct tpm_class_ops {
+> >> >>  	u8 (*status) (struct tpm_chip *chip);
+> >> >>  	bool (*update_timeouts)(struct tpm_chip *chip,
+> >> >>  				unsigned long *timeout_cap);
+> >> >> -
+> >> >> +	int (*request_locality)(struct tpm_chip *chip, int loc);
+> >> >> +	void (*relinquish_locality)(struct tpm_chip *chip, int loc, bool force);
+> >> >>  };
+> >> >>
+> >> >>  #if defined(CONFIG_TCG_TPM) || defined(CONFIG_TCG_TPM_MODULE)
+> >> >
+> >> > This is broken for me on tpm_tis at the moment. release_locality only
+> >> > actually follows through with releasing if you've set force or there is
+> >> > a pending request for the TPM from another locality. So first time
+> >> > through it requests and gets the locality, does its work, goes
+> >> > to release it and doesn't because there is no pending request. Then
+> >> > next time through, request_locality calls check_locality and returns
+> >> > -EBUSY causing it to bail out of tpm_transmit.
+> >> 
+> >> Actually I should amend that, I'd been debugging a bit. With the
+> >> patch itself, tpm_tis_core_init() calls tpm2_probe() which fails
+> >> because tpm_transmit_cmd -> tpm_transmit -> request_locality returns
+> >> -EBUSY. There is a request_locality() call right before the
+> >> tpm2_probe(). I'd dropped that as part of my debugging which allowed
+> >> it to get further along, but then run into the problem mentioned above.
+> >
+> > I see.
+> >
+> > The request_locality call in tpm_tis_core_init should works with this
+> > change because it does only whether the return value is zero so that
+> > can be safely ignored.
+> >
 > 
-> Thanks. I realized it's not a good idea to change the size of
-> acpi_table_tpm2.
-> I will address this in V3 to avoid clutters in tpm_crb and tpm_tis
-> driver and make ACPICA change its own commit.
+> Yes, the request_locality call works there, I just wasn't sure it was
+> necessary since tpm2_probe will end up calling it (and returning
+> -EBUSY). I guess it would be needed prior to the probe_itpm call since
+> nothing in there calls request_locality now. It seems a bit odd
+> that probe_iptm calls release_locality twice though.
 > 
-> - Jiandi
+> > The send data case totally breaks.
+> >
+> > Changing the return value to -EBUSY was a stupid mistake from my side.
+> >
+> > I'll try revise this a bit in a way that the API will allow positive
+> > value for stating that the given locality has been already taking.
+> >
+> 
+> Is there a big performance hit with requesting and releasing locality?
+> If instead it just released it when release_locality is called I think
+> the changes are pretty minor.
 
-It would make life easier in terms of maintenance of the dirver if
-you didn't add this new stuff to ACPICA in the first place. No other
-will ever need it. Do you have some specific reason you want to put
-it there?
+I wouldn't think so with modern TPMs. I could go with this.
 
 /Jarkko
 
