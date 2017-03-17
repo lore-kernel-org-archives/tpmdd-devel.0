@@ -1,15 +1,15 @@
-From: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
-Subject: Re: [PATCH v2 2/2] tpm/tpm_crb: Enable TPM
- CRB	interface for ARM64
-Date: Thu, 16 Mar 2017 19:31:23 -0500
-Message-ID: <58CB2E5B.4000302@codeaurora.org>
-References: <1489541553-2066-1-git-send-email-anjiandi@codeaurora.org>	<1489541553-2066-2-git-send-email-anjiandi@codeaurora.org>
-	<20170315160350.3wr7o3m7zent35rf@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v2 1/1] tpm/st33zp24: Add GPIO ACPI
+	mapping table
+Date: Fri, 17 Mar 2017 15:20:23 +0200
+Message-ID: <20170317132023.ysnmw6hejz3rkkse@intel.com>
+References: <20170315195800.47263-1-andriy.shevchenko@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170315160350.3wr7o3m7zent35rf-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20170315195800.47263-1-andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,205 +18,135 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org
+To: Andy Shevchenko <andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 03/15/17 11:03, Jarkko Sakkinen wrote:
-> On Tue, Mar 14, 2017 at 08:32:33PM -0500, Jiandi An wrote:
->> This enables TPM Command Response Buffer interface driver for
->> ARM64 and implements an ARM specific TPM CRB start method that
->> invokes a Secure Monitor Call (SMC) to request the TrustZone
->> Firmware to execute or cancel a TPM 2.0 command.
->>
->> An ARM, TrustZone security extensions enable a secure software
->> environment with Secure Monitor mode.  A Secure Monitor Call
->> (SMC) is used to enter the Secure Monitor mode and perform a
->> Secure Monitor service to communicate with TrustZone firmware
->> which has control over the TPM hardware.
->>
->> Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
->> ---
->> v2
->> - Squash commit of inline SMC function with commit of
->>    tpm_crb driver change for TPM CRB ARM64 enablement
->> - Replace WARN to dev_err FW_BUG in tpm_crb_smc_start()
->> - Fix dev_err to indicate FW_BUG for wrong size of TPM2
->>    ACPI table with SMC start method
->> - Make tpm_crb driver only dependent on ACPI in Kconfig
->
-> The change log should be in the cover letter not scattered in the
-> patches if you send more than one patch.
+On Wed, Mar 15, 2017 at 09:58:00PM +0200, Andy Shevchenko wrote:
+> In order to make GPIO ACPI library stricter prepare users of
+> gpiod_get_index() to correctly behave when there no mapping is
+> provided by firmware.
+> 
+> Here we add explicit mapping between _CRS GpioIo() resources and
+> their names used in the driver.
+> 
+> Signed-off-by: Andy Shevchenko <andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
-Will move change log to cover letter next time.
-- Jiandi
+Thanks I replaced the commit.
 
->
->>
->>   drivers/char/tpm/Kconfig   |  2 +-
->>   drivers/char/tpm/tpm_crb.c | 53
-> ++++++++++++++++++++++++++++++++++++++++++++--
->>   2 files changed, 52 insertions(+), 3 deletions(-)
->>
->> diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
->> index d520ac5..a3035220 100644
->> --- a/drivers/char/tpm/Kconfig
->> +++ b/drivers/char/tpm/Kconfig
->> @@ -136,7 +136,7 @@ config TCG_XEN
->>
->>   config TCG_CRB
->>   	tristate "TPM 2.0 CRB Interface"
->> -	depends on X86 && ACPI
->> +	depends on ACPI
->>   	---help---
->>   	  If you have a TPM security chip that is compliant with the
->>   	  TCG CRB 2.0 TPM specification say Yes and it will be accessible
->> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
->> index 089fcf8..abc29ad 100644
->> --- a/drivers/char/tpm/tpm_crb.c
->> +++ b/drivers/char/tpm/tpm_crb.c
->> @@ -20,6 +20,9 @@
->>   #include <linux/rculist.h>
->>   #include <linux/module.h>
->>   #include <linux/pm_runtime.h>
->> +#ifdef CONFIG_ARM64
->> +#include <linux/arm-smccc.h>
->> +#endif
->>   #include "tpm.h"
->>
->>   #define ACPI_SIG_TPM2 "TPM2"
->> @@ -73,6 +76,7 @@ enum crb_status {
->>   enum crb_flags {
->>   	CRB_FL_ACPI_START	= BIT(0),
->>   	CRB_FL_CRB_START	= BIT(1),
->> +	CRB_FL_CRB_SMC_START	= BIT(2),
->>   };
->>
->>   struct crb_priv {
->> @@ -82,6 +86,7 @@ struct crb_priv {
->>   	u8 __iomem *cmd;
->>   	u8 __iomem *rsp;
->>   	u32 cmd_size;
->> +	u32 smc_func_id;
->>   };
->>
->>   /**
->> @@ -101,7 +106,8 @@ struct crb_priv {
->>    */
->>   static int __maybe_unused crb_go_idle(struct device *dev, struct
-> crb_priv *priv)
->>   {
->> -	if (priv->flags & CRB_FL_ACPI_START)
->> +	if ((priv->flags & CRB_FL_ACPI_START) ||
->> +	    (priv->flags & CRB_FL_CRB_SMC_START))
->>   		return 0;
->>
->>   	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->cca->req);
->> @@ -129,7 +135,8 @@ static int __maybe_unused crb_cmd_ready(struct
-> device *dev,
->>   {
->>   	ktime_t stop, start;
->>
->> -	if (priv->flags & CRB_FL_ACPI_START)
->> +	if ((priv->flags & CRB_FL_ACPI_START) ||
->> +	    (priv->flags & CRB_FL_CRB_SMC_START))
->>   		return 0;
->>
->>   	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->cca->req);
->> @@ -202,6 +209,32 @@ static int crb_do_acpi_start(struct tpm_chip *chip)
->>   	return rc;
->>   }
->>
->> +#ifdef CONFIG_ARM64
->> +/*
->> + * This is a TPM Command Response Buffer start method that invokes a
->> + * Secure Monitor Call to requrest the firmware to execute or cancel
->> + * a TPM 2.0 command.
->> + */
->> +static inline int tpm_crb_smc_start(struct device *dev, unsigned long
-> func_id)
->> +{
->> +	struct arm_smccc_res res;
->> +
->> +	arm_smccc_smc(func_id, 0, 0, 0, 0, 0, 0, 0, &res);
->> +	if (res.a0 != 0) {
->> +		dev_err(dev, FW_BUG "tpm_crb_smc_start() returns res.a0 =
-> 0x%lx\n", res.a0);
->> +		return -EIO;
->> +	}
->> +
->> +	return 0;
->> +}
->> +#else
->> +static inline int tpm_crb_smc_start(struct device *dev, unsigned long
-> func_id)
->> +{
->> +	dev_err(dev, FW_BUG "tpm_crb: incorrect start method\n");
->> +	return -EINVAL;
->> +}
->> +#endif
->> +
->>   static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
->>   {
->>   	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
->> @@ -229,6 +262,11 @@ static int crb_send(struct tpm_chip *chip, u8 *buf,
-> size_t len)
->>   	if (priv->flags & CRB_FL_ACPI_START)
->>   		rc = crb_do_acpi_start(chip);
->>
->> +	if (priv->flags & CRB_FL_CRB_SMC_START) {
->> +		iowrite32(CRB_START_INVOKE, &priv->cca->start);
->> +		rc = tpm_crb_smc_start(&chip->dev, priv->smc_func_id);
->> +	}
->> +
->>   	return rc;
->>   }
->>
->> @@ -445,6 +483,17 @@ static int crb_acpi_add(struct acpi_device *device)
->>   	    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
->>   		priv->flags |= CRB_FL_ACPI_START;
->>
->> +	if (sm == ACPI_TPM2_COMMAND_BUFFER_WITH_SMC) {
->> +		if ((buf->header.length - default_len) !=
->> +		    sizeof(struct tpm2_crb_smc)) {
->> +			dev_err(dev, FW_BUG "TPM2 ACPI table has wrong
-> size %u for start method type %d\n",
->> +				buf->header.length,
-> ACPI_TPM2_COMMAND_BUFFER_WITH_SMC);
->> +			return -EINVAL;
->> +		}
->> +		priv->flags |= CRB_FL_CRB_SMC_START;
->> +		priv->smc_func_id =
-> buf->platform_data.smc_params.smc_func_id;
->> +	}
->> +
->>   	rc = crb_map_io(device, priv, buf);
->>   	if (rc)
->>   		return rc;
->> --
->> Jiandi An
->> Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm
-> Technologies, Inc.
->> Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a
-> Linux Foundation Collaborative Project.
->>
->
-> --------------------------------------------------------------------------
-> ----
-> Check out the vibrant tech community on one of the world's most
-> engaging tech sites, Slashdot.org! http://sdm.link/slashdot
-> _______________________________________________
-> tpmdd-devel mailing list
-> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
->
+/Jarkko
 
-
--- 
-Qualcomm Datacenter Technologies, Inc.
-as an affiliate of Qualcomm Technologies, Inc.
-Qualcomm Technologies, Inc. is a member of the Code Aurora Forum,
-a Linux Foundation Collaborative Project.
+> ---
+> - Fix copy'n'paste typo in i2c driver
+>  drivers/char/tpm/st33zp24/i2c.c | 23 ++++++++++++++++++++---
+>  drivers/char/tpm/st33zp24/spi.c | 23 ++++++++++++++++++++---
+>  2 files changed, 40 insertions(+), 6 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/st33zp24/i2c.c b/drivers/char/tpm/st33zp24/i2c.c
+> index 028a9cd76b63..1b10e38f214e 100644
+> --- a/drivers/char/tpm/st33zp24/i2c.c
+> +++ b/drivers/char/tpm/st33zp24/i2c.c
+> @@ -111,6 +111,13 @@ static const struct st33zp24_phy_ops i2c_phy_ops = {
+>  	.recv = st33zp24_i2c_recv,
+>  };
+>  
+> +static const struct acpi_gpio_params lpcpd_gpios = { 1, 0, false };
+> +
+> +static const struct acpi_gpio_mapping acpi_st33zp24_gpios[] = {
+> +	{ "lpcpd-gpios", &lpcpd_gpios, 1 },
+> +	{},
+> +};
+> +
+>  static int st33zp24_i2c_acpi_request_resources(struct i2c_client *client)
+>  {
+>  	struct tpm_chip *chip = i2c_get_clientdata(client);
+> @@ -118,10 +125,14 @@ static int st33zp24_i2c_acpi_request_resources(struct i2c_client *client)
+>  	struct st33zp24_i2c_phy *phy = tpm_dev->phy_id;
+>  	struct gpio_desc *gpiod_lpcpd;
+>  	struct device *dev = &client->dev;
+> +	int ret;
+> +
+> +	ret = acpi_dev_add_driver_gpios(ACPI_COMPANION(dev), acpi_st33zp24_gpios);
+> +	if (ret)
+> +		return ret;
+>  
+>  	/* Get LPCPD GPIO from ACPI */
+> -	gpiod_lpcpd = devm_gpiod_get_index(dev, "TPM IO LPCPD", 1,
+> -					   GPIOD_OUT_HIGH);
+> +	gpiod_lpcpd = devm_gpiod_get(dev, "lpcpd", GPIOD_OUT_HIGH);
+>  	if (IS_ERR(gpiod_lpcpd)) {
+>  		dev_err(&client->dev,
+>  			"Failed to retrieve lpcpd-gpios from acpi.\n");
+> @@ -268,8 +279,14 @@ static int st33zp24_i2c_probe(struct i2c_client *client,
+>  static int st33zp24_i2c_remove(struct i2c_client *client)
+>  {
+>  	struct tpm_chip *chip = i2c_get_clientdata(client);
+> +	int ret;
+>  
+> -	return st33zp24_remove(chip);
+> +	ret = st33zp24_remove(chip);
+> +	if (ret)
+> +		return ret;
+> +
+> +	acpi_dev_remove_driver_gpios(ACPI_COMPANION(&client->dev));
+> +	return 0;
+>  }
+>  
+>  static const struct i2c_device_id st33zp24_i2c_id[] = {
+> diff --git a/drivers/char/tpm/st33zp24/spi.c b/drivers/char/tpm/st33zp24/spi.c
+> index 9f5a0117098c..c69d15198f84 100644
+> --- a/drivers/char/tpm/st33zp24/spi.c
+> +++ b/drivers/char/tpm/st33zp24/spi.c
+> @@ -230,6 +230,13 @@ static const struct st33zp24_phy_ops spi_phy_ops = {
+>  	.recv = st33zp24_spi_recv,
+>  };
+>  
+> +static const struct acpi_gpio_params lpcpd_gpios = { 1, 0, false };
+> +
+> +static const struct acpi_gpio_mapping acpi_st33zp24_gpios[] = {
+> +	{ "lpcpd-gpios", &lpcpd_gpios, 1 },
+> +	{},
+> +};
+> +
+>  static int st33zp24_spi_acpi_request_resources(struct spi_device *spi_dev)
+>  {
+>  	struct tpm_chip *chip = spi_get_drvdata(spi_dev);
+> @@ -237,10 +244,14 @@ static int st33zp24_spi_acpi_request_resources(struct spi_device *spi_dev)
+>  	struct st33zp24_spi_phy *phy = tpm_dev->phy_id;
+>  	struct gpio_desc *gpiod_lpcpd;
+>  	struct device *dev = &spi_dev->dev;
+> +	int ret;
+> +
+> +	ret = acpi_dev_add_driver_gpios(ACPI_COMPANION(dev), acpi_st33zp24_gpios);
+> +	if (ret)
+> +		return ret;
+>  
+>  	/* Get LPCPD GPIO from ACPI */
+> -	gpiod_lpcpd = devm_gpiod_get_index(dev, "TPM IO LPCPD", 1,
+> -					   GPIOD_OUT_HIGH);
+> +	gpiod_lpcpd = devm_gpiod_get(dev, "lpcpd", GPIOD_OUT_HIGH);
+>  	if (IS_ERR(gpiod_lpcpd)) {
+>  		dev_err(dev, "Failed to retrieve lpcpd-gpios from acpi.\n");
+>  		phy->io_lpcpd = -1;
+> @@ -385,8 +396,14 @@ static int st33zp24_spi_probe(struct spi_device *dev)
+>  static int st33zp24_spi_remove(struct spi_device *dev)
+>  {
+>  	struct tpm_chip *chip = spi_get_drvdata(dev);
+> +	int ret;
+>  
+> -	return st33zp24_remove(chip);
+> +	ret = st33zp24_remove(chip);
+> +	if (ret)
+> +		return ret;
+> +
+> +	acpi_dev_remove_driver_gpios(ACPI_COMPANION(&dev->dev));
+> +	return 0;
+>  }
+>  
+>  static const struct spi_device_id st33zp24_spi_id[] = {
+> -- 
+> 2.11.0
+> 
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
