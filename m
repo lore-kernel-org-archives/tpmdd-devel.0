@@ -1,16 +1,12 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3 4/7] tpm: infrastructure for TPM spaces
-Date: Fri, 17 Mar 2017 22:44:29 +0200
-Message-ID: <20170317204429.wsoe4r4jne437kyc@intel.com>
-References: <20170303151912.14752-1-jarkko.sakkinen@linux.intel.com>
-	<20170303151912.14752-5-jarkko.sakkinen@linux.intel.com>
-	<1aa1c9d32fd446f69551a36c37f0ed16@MUCSE603.infineon.com>
+From: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+Subject: [PATCH v3 0/2] tpm/tpm_crb: Enable TPM CRB interface
+	for ARM64
+Date: Fri, 17 Mar 2017 18:43:11 -0500
+Message-ID: <1489794193-17233-1-git-send-email-anjiandi@codeaurora.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1aa1c9d32fd446f69551a36c37f0ed16-nFblLGNE8XKJSz+rYg/bSJowlv4uC7bZ@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,35 +15,37 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org
-Cc: James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>, rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Mar 17, 2017 at 03:41:38PM +0000, Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org wrote:
-> > diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-
-> > interface.c
-> > index 20b1fe3..db5ffe9 100644
-> > --- a/drivers/char/tpm/tpm-interface.c
-> > +++ b/drivers/char/tpm/tpm-interface.c
-> > @@ -376,11 +376,12 @@ static bool tpm_validate_command(struct
-> > tpm_chip *chip, const u8 *cmd,
-> >   *     0 when the operation is successful.
-> >   *     A negative number for system errors (errno).
-> >   */
-> > -ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
-> > -		     unsigned int flags)
-> > +ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
-> > +		     u8 *buf, size_t bufsiz, unsigned int flags)
-> 
-> When adding parameters, please also update the parameter documentation
-> at the top of the function. It is missing for the new parameter
-> "space" here.
+TCG ACPI Specification Family "1.2" and "2.0" Version 1.2 Revision 8
+introduces a new start method (type 11) for ARM64, along with platform
+specific parameters for this new start method.  This new start method
+invokes a Secure Monitor Call to request the firmware to execute or
+cancel a TPM 2.0 command.
 
-I missed that. I'll update the commits with the proper documentation.
+v3 Change Log:
+- Added start method specific parameter offset define
+- Moved tpm_crb_smc definition to tpm_crb.c
+- Removed platform_params union from acpi_table_tpm2
+- Removed clutter on length calculation of acpi_table_tpm2
+  caused by changing size of acpi_table_tpm2
 
-> Alexander
+Jiandi An (2):
+  ACPICA: Update TPM2 ACPI table
+  tpm/tpm_crb: Enable TPM CRB interface for ARM64
 
-/Jarkko
+ drivers/char/tpm/Kconfig   |  2 +-
+ drivers/char/tpm/tpm_crb.c | 64 ++++++++++++++++++++++++++++++++++++++++++++--
+ include/acpi/actbl2.h      |  3 +++
+ 3 files changed, 66 insertions(+), 3 deletions(-)
+
+-- 
+Jiandi An
+Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
+Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
+
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
