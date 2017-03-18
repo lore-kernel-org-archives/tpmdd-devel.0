@@ -1,14 +1,11 @@
-From: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
-Subject: [PATCH v3 2/2] tpm/tpm_crb: Enable TPM CRB interface
-	for ARM64
-Date: Fri, 17 Mar 2017 18:43:13 -0500
-Message-ID: <1489794193-17233-3-git-send-email-anjiandi@codeaurora.org>
-References: <1489794193-17233-1-git-send-email-anjiandi@codeaurora.org>
+From: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Subject: [PATCH] tpm: make check_locality return bool
+Date: Sat, 18 Mar 2017 01:59:57 -0700
+Message-ID: <20170318085957.12277-1-jsnitsel@redhat.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1489794193-17233-1-git-send-email-anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,174 +15,194 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>, rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
+Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This enables TPM Command Response Buffer interface driver for
-ARM64 and implements an ARM specific TPM CRB start method that
-invokes a Secure Monitor Call (SMC) to request the TrustZone
-Firmware to execute or cancel a TPM 2.0 command.
+Since check_locality is checking to see if a certain
+locality is active, return true if active otherwise
+return false.
 
-In ARM, TrustZone security extensions enable a secure software
-environment with Secure Monitor mode.  A Secure Monitor Call
-(SMC) is used to enter the Secure Monitor mode and perform a
-Secure Monitor service to communicate with TrustZone firmware
-which has control over the TPM hardware.
-
-Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Cc: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>
+Cc: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+Signed-off-by: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
 ---
- drivers/char/tpm/Kconfig   |  2 +-
- drivers/char/tpm/tpm_crb.c | 64 ++++++++++++++++++++++++++++++++++++++++++++--
- 2 files changed, 63 insertions(+), 3 deletions(-)
+Tested tpm_tis, but don't have the ability to
+test Infineon or STMicro drivers.
 
-diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
-index d520ac5..a3035220 100644
---- a/drivers/char/tpm/Kconfig
-+++ b/drivers/char/tpm/Kconfig
-@@ -136,7 +136,7 @@ config TCG_XEN
- 
- config TCG_CRB
- 	tristate "TPM 2.0 CRB Interface"
--	depends on X86 && ACPI
-+	depends on ACPI
- 	---help---
- 	  If you have a TPM security chip that is compliant with the
- 	  TCG CRB 2.0 TPM specification say Yes and it will be accessible
-diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index cb6fb13..f8a5470 100644
---- a/drivers/char/tpm/tpm_crb.c
-+++ b/drivers/char/tpm/tpm_crb.c
-@@ -20,6 +20,9 @@
- #include <linux/rculist.h>
- #include <linux/module.h>
- #include <linux/pm_runtime.h>
-+#ifdef CONFIG_ARM64
-+#include <linux/arm-smccc.h>
-+#endif
- #include "tpm.h"
- 
- #define ACPI_SIG_TPM2 "TPM2"
-@@ -73,6 +76,7 @@ enum crb_status {
- enum crb_flags {
- 	CRB_FL_ACPI_START	= BIT(0),
- 	CRB_FL_CRB_START	= BIT(1),
-+	CRB_FL_CRB_SMC_START	= BIT(2),
- };
- 
- struct crb_priv {
-@@ -82,6 +86,15 @@ struct crb_priv {
- 	u8 __iomem *cmd;
- 	u8 __iomem *rsp;
- 	u32 cmd_size;
-+	u32 smc_func_id;
-+};
-+
-+struct tpm2_crb_smc {
-+	u32 interrupt;
-+	u8 interrupt_flags;
-+	u8 op_flags;
-+	u16 reserved2;
-+	u32 smc_func_id;
- };
- 
- /**
-@@ -101,7 +114,8 @@ struct crb_priv {
+ drivers/char/tpm/st33zp24/st33zp24.c | 12 ++++++------
+ drivers/char/tpm/tpm_i2c_infineon.c  | 12 ++++++------
+ drivers/char/tpm/tpm_tis_core.c      | 20 +++++++++++---------
+ 3 files changed, 23 insertions(+), 21 deletions(-)
+
+diff --git a/drivers/char/tpm/st33zp24/st33zp24.c b/drivers/char/tpm/st33zp24/st33zp24.c
+index e8e0f7c02686..4d1dc8b46877 100644
+--- a/drivers/char/tpm/st33zp24/st33zp24.c
++++ b/drivers/char/tpm/st33zp24/st33zp24.c
+@@ -117,9 +117,9 @@ static u8 st33zp24_status(struct tpm_chip *chip)
+ /*
+  * check_locality if the locality is active
+  * @param: chip, the tpm chip description
+- * @return: the active locality or -EACCESS.
++ * @return: true if LOCALITY0 is active, otherwise false
   */
- static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+-static int check_locality(struct tpm_chip *chip)
++static bool check_locality(struct tpm_chip *chip)
  {
--	if (priv->flags & CRB_FL_ACPI_START)
-+	if ((priv->flags & CRB_FL_ACPI_START) ||
-+	    (priv->flags & CRB_FL_CRB_SMC_START))
- 		return 0;
+ 	struct st33zp24_dev *tpm_dev = dev_get_drvdata(&chip->dev);
+ 	u8 data;
+@@ -129,9 +129,9 @@ static int check_locality(struct tpm_chip *chip)
+ 	if (status && (data &
+ 		(TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID)) ==
+ 		(TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID))
+-		return tpm_dev->locality;
++		return true;
  
- 	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->cca->req);
-@@ -129,7 +143,8 @@ static int __maybe_unused crb_cmd_ready(struct device *dev,
+-	return -EACCES;
++	return false;
+ } /* check_locality() */
+ 
+ /*
+@@ -146,7 +146,7 @@ static int request_locality(struct tpm_chip *chip)
+ 	long ret;
+ 	u8 data;
+ 
+-	if (check_locality(chip) == tpm_dev->locality)
++	if (check_locality(chip))
+ 		return tpm_dev->locality;
+ 
+ 	data = TPM_ACCESS_REQUEST_USE;
+@@ -158,7 +158,7 @@ static int request_locality(struct tpm_chip *chip)
+ 
+ 	/* Request locality is usually effective after the request */
+ 	do {
+-		if (check_locality(chip) >= 0)
++		if (check_locality(chip))
+ 			return tpm_dev->locality;
+ 		msleep(TPM_TIMEOUT);
+ 	} while (time_before(jiffies, stop));
+diff --git a/drivers/char/tpm/tpm_i2c_infineon.c b/drivers/char/tpm/tpm_i2c_infineon.c
+index 62ee44e57ddc..dc47fa222a26 100644
+--- a/drivers/char/tpm/tpm_i2c_infineon.c
++++ b/drivers/char/tpm/tpm_i2c_infineon.c
+@@ -278,22 +278,22 @@ enum tis_defaults {
+ #define	TPM_DATA_FIFO(l)		(0x0005 | ((l) << 4))
+ #define	TPM_DID_VID(l)			(0x0006 | ((l) << 4))
+ 
+-static int check_locality(struct tpm_chip *chip, int loc)
++static bool check_locality(struct tpm_chip *chip, int loc)
  {
- 	ktime_t stop, start;
- 
--	if (priv->flags & CRB_FL_ACPI_START)
-+	if ((priv->flags & CRB_FL_ACPI_START) ||
-+	    (priv->flags & CRB_FL_CRB_SMC_START))
- 		return 0;
- 
- 	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->cca->req);
-@@ -202,6 +217,33 @@ static int crb_do_acpi_start(struct tpm_chip *chip)
- 	return rc;
- }
- 
-+#ifdef CONFIG_ARM64
-+/*
-+ * This is a TPM Command Response Buffer start method that invokes a
-+ * Secure Monitor Call to requrest the firmware to execute or cancel
-+ * a TPM 2.0 command.
-+ */
-+static inline int tpm_crb_smc_start(struct device *dev, unsigned long func_id)
-+{
-+	struct arm_smccc_res res;
-+
-+	arm_smccc_smc(func_id, 0, 0, 0, 0, 0, 0, 0, &res);
-+	if (res.a0 != 0) {
-+		dev_err(dev, FW_BUG "tpm_crb_smc_start() returns res.a0 = 0x%lx\n",
-+			res.a0);
-+		return -EIO;
-+	}
-+
-+	return 0;
-+}
-+#else
-+static inline int tpm_crb_smc_start(struct device *dev, unsigned long func_id)
-+{
-+	dev_err(dev, FW_BUG "tpm_crb: incorrect start method\n");
-+	return -EINVAL;
-+}
-+#endif
-+
- static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
- {
- 	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-@@ -229,6 +271,11 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
- 	if (priv->flags & CRB_FL_ACPI_START)
- 		rc = crb_do_acpi_start(chip);
- 
-+	if (priv->flags & CRB_FL_CRB_SMC_START) {
-+		iowrite32(CRB_START_INVOKE, &priv->cca->start);
-+		rc = tpm_crb_smc_start(&chip->dev, priv->smc_func_id);
-+	}
-+
- 	return rc;
- }
- 
-@@ -409,6 +456,7 @@ static int crb_acpi_add(struct acpi_device *device)
- 	struct crb_priv *priv;
- 	struct tpm_chip *chip;
- 	struct device *dev = &device->dev;
-+	struct tpm2_crb_smc *crb_smc;
- 	acpi_status status;
- 	u32 sm;
+ 	u8 buf;
  	int rc;
-@@ -441,6 +489,18 @@ static int crb_acpi_add(struct acpi_device *device)
- 	    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
- 		priv->flags |= CRB_FL_ACPI_START;
  
-+	if (sm == ACPI_TPM2_COMMAND_BUFFER_WITH_SMC) {
-+		if (buf->header.length < (sizeof(*buf) + sizeof(*crb_smc))) {
-+			dev_err(dev, FW_BUG "TPM2 ACPI table has wrong size %u for start method type %d\n",
-+				buf->header.length, ACPI_TPM2_COMMAND_BUFFER_WITH_SMC);
-+			return -EINVAL;
-+		}
-+		crb_smc = (struct tpm2_crb_smc *) (((u8 *) buf) +
-+			  ACPI_TPM2_START_METHOD_PARAMETER_OFFSET);
-+		priv->smc_func_id = crb_smc->smc_func_id;
-+		priv->flags |= CRB_FL_CRB_SMC_START;
+ 	rc = iic_tpm_read(TPM_ACCESS(loc), &buf, 1);
+ 	if (rc < 0)
+-		return rc;
++		return false;
+ 
+ 	if ((buf & (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID)) ==
+ 	    (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID)) {
+ 		tpm_dev.locality = loc;
+-		return loc;
++		return true;
+ 	}
+ 
+-	return -EIO;
++	return false;
+ }
+ 
+ /* implementation similar to tpm_tis */
+@@ -315,7 +315,7 @@ static int request_locality(struct tpm_chip *chip, int loc)
+ 	unsigned long stop;
+ 	u8 buf = TPM_ACCESS_REQUEST_USE;
+ 
+-	if (check_locality(chip, loc) >= 0)
++	if (check_locality(chip, loc))
+ 		return loc;
+ 
+ 	iic_tpm_write(TPM_ACCESS(loc), &buf, 1);
+@@ -323,7 +323,7 @@ static int request_locality(struct tpm_chip *chip, int loc)
+ 	/* wait for burstcount */
+ 	stop = jiffies + chip->timeout_a;
+ 	do {
+-		if (check_locality(chip, loc) >= 0)
++		if (check_locality(chip, loc))
+ 			return loc;
+ 		usleep_range(TPM_TIMEOUT_US_LOW, TPM_TIMEOUT_US_HI);
+ 	} while (time_before(jiffies, stop));
+diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+index c0f296b5d413..93d641996249 100644
+--- a/drivers/char/tpm/tpm_tis_core.c
++++ b/drivers/char/tpm/tpm_tis_core.c
+@@ -56,7 +56,7 @@ static int wait_startup(struct tpm_chip *chip, int l)
+ 	return -1;
+ }
+ 
+-static int check_locality(struct tpm_chip *chip, int l)
++static bool check_locality(struct tpm_chip *chip, int l)
+ {
+ 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+ 	int rc;
+@@ -64,13 +64,15 @@ static int check_locality(struct tpm_chip *chip, int l)
+ 
+ 	rc = tpm_tis_read8(priv, TPM_ACCESS(l), &access);
+ 	if (rc < 0)
+-		return rc;
++		return false;
+ 
+ 	if ((access & (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID)) ==
+-	    (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID))
+-		return priv->locality = l;
++	    (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID)) {
++		priv->locality = l;
++		return true;
 +	}
-+
- 	rc = crb_map_io(device, priv, buf);
- 	if (rc)
- 		return rc;
+ 
+-	return -1;
++	return false;
+ }
+ 
+ static void release_locality(struct tpm_chip *chip, int l, int force)
+@@ -96,7 +98,7 @@ static int request_locality(struct tpm_chip *chip, int l)
+ 	unsigned long stop, timeout;
+ 	long rc;
+ 
+-	if (check_locality(chip, l) >= 0)
++	if (check_locality(chip, l))
+ 		return l;
+ 
+ 	rc = tpm_tis_write8(priv, TPM_ACCESS(l), TPM_ACCESS_REQUEST_USE);
+@@ -112,7 +114,7 @@ static int request_locality(struct tpm_chip *chip, int l)
+ 			return -1;
+ 		rc = wait_event_interruptible_timeout(priv->int_queue,
+ 						      (check_locality
+-						       (chip, l) >= 0),
++						       (chip, l)),
+ 						      timeout);
+ 		if (rc > 0)
+ 			return l;
+@@ -123,7 +125,7 @@ static int request_locality(struct tpm_chip *chip, int l)
+ 	} else {
+ 		/* wait for burstcount */
+ 		do {
+-			if (check_locality(chip, l) >= 0)
++			if (check_locality(chip, l))
+ 				return l;
+ 			msleep(TPM_TIMEOUT);
+ 		} while (time_before(jiffies, stop));
+@@ -533,7 +535,7 @@ static irqreturn_t tis_int_handler(int dummy, void *dev_id)
+ 		wake_up_interruptible(&priv->read_queue);
+ 	if (interrupt & TPM_INTF_LOCALITY_CHANGE_INT)
+ 		for (i = 0; i < 5; i++)
+-			if (check_locality(chip, i) >= 0)
++			if (check_locality(chip, i))
+ 				break;
+ 	if (interrupt &
+ 	    (TPM_INTF_LOCALITY_CHANGE_INT | TPM_INTF_STS_VALID_INT |
 -- 
-Jiandi An
-Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
-Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
+2.12.0.399.g9d77b0405ce6
 
 
 ------------------------------------------------------------------------------
