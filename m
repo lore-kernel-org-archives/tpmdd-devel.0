@@ -1,18 +1,17 @@
-From: Ken Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v3 2/7] tpm: validate TPM 2.0 commands
-Date: Mon, 20 Mar 2017 15:42:13 -0400
-Message-ID: <a518f288-f084-2d11-161a-79ff884b936d@linux.vnet.ibm.com>
-References: <20170303151912.14752-1-jarkko.sakkinen@linux.intel.com>
-	<20170303151912.14752-3-jarkko.sakkinen@linux.intel.com>
-	<22e8fa0caf8b4386a12cd93ee7170ed5@MUCSE603.infineon.com>
-	<20170317161614.GA28082@obsidianresearch.com>
-	<bca2bee3c1b84100ac72238425ac4791@MUCSE612.infineon.com>
-	<12e63cdba1e34cac9b82e4bff9621ae6@MUCSE603.infineon.com>
+From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Subject: Re: [PATCH] tpm/tpm_crb: mark PM functions as
+	__maybe_unused
+Date: Mon, 20 Mar 2017 23:01:36 +0000
+Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B543B0620@hasmsx108.ger.corp.intel.com>
+References: <20170320091755.1043811-1-arnd@arndb.de>
+	<5B8DA87D05A7694D9FA63FD143655C1B543B032E@hasmsx108.ger.corp.intel.com>
+	<CAK8P3a25sh0U=N9E1pWACL_9h7VBseUBX50WZe5rXMpNHY=GbA@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <12e63cdba1e34cac9b82e4bff9621ae6-nFblLGNE8XKJSz+rYg/bSJowlv4uC7bZ@public.gmane.org>
+In-Reply-To: <CAK8P3a25sh0U=N9E1pWACL_9h7VBseUBX50WZe5rXMpNHY=GbA-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
+Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,24 +20,68 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Arnd Bergmann <arnd-r2nGTMty4D4@public.gmane.org>
+Cc: "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 3/20/2017 5:54 AM, Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org wrote:
->
-> There are a few special cases that need some thought though. For
-> example, it is possible to use an upgrade to switch the TPM family
-> from 1.2 to 2.0 (or vice versa). In this case it seems useful to let
-> the kernel reinitialize the TPM driver, so it uses the correct
-> timeouts for communication, activates the correct features (resource
-> manager or not?), etc., without needing to reboot the system.
 
-In practice, would a TPM upgrade from TPM 1.2 to TPM 2.0 even occur 
-without a reboot?  Is it an important use case?
+> On Mon, Mar 20, 2017 at 1:11 PM, Winkler, Tomas
+> <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org> wrote:
+> >>
+> >> When CONFIG_PM_SLEEP is disabled, we get a warning about unused
+> >> functions:
+> >>
+> >> drivers/char/tpm/tpm_crb.c:551:12: error: 'crb_pm_resume' defined but
+> >> not used [-Werror=unused-function]
+> >> drivers/char/tpm/tpm_crb.c:540:12: error: 'crb_pm_suspend' defined
+> >> but not used [-Werror=unused-function]
+> >>
+> > Note that the runtime_pm functions are not affected by this issue the
+> > macro SET_RUNTIME_PM_OPS is under CONFIG_PM. This patch does more
+> than described.
+> 
+> Well, the problem is that there is an #ifdef that is wrong here as I tried to
+> indicate:
 
-1 - It would leave the SHA-256 PCRs in the reset state.
+Yep, I've taken a bit easy path here and reused the runtime function inside pm callbacks, unaware of the change in the 'ifdefs'
+If I use drictly go_idle/cmd_ready  functions this will unclutter it. 
 
-2 - It's possible that this upgrade would also require a BIOS upgrade.
+> >> We could solve this with more sophistated #ifdefs, but a simpler and
+> >> safer way is to just mark them as __maybe_unused.
+> 
+> >> @@ -547,7 +546,7 @@ static int crb_pm_suspend(struct device *dev)
+> >>       return crb_pm_runtime_suspend(dev);  }
+> >
+> > It's enough to
+> > #endif /* CONFIG_PM */
+> > #ifdef CONFIG_PM_SLEEP
+> >> -static int crb_pm_resume(struct device *dev)
+> >> +static __maybe_unused int crb_pm_resume(struct device *dev)
+> >>  {
+> >>       int ret;
+> >>
+> >> @@ -558,8 +557,6 @@ static int crb_pm_resume(struct device *dev)
+> >>       return tpm_pm_resume(dev);
+> >>  }
+> >>
+> >> -#endif /* CONFIG_PM */
+> > And
+> > #endif CONFIG_PM_SLEEP
+> 
+> This tends to cause other warnings half of the time, when both the runtime-
+> pm and pm-sleep variants call into another function that becomes unused
+> when both are disabled.
+
+Then usually such functions  should be also under 'ifdef', but I understand your point in
+some cases it might be not so straight forward.
+The only reason against marking the function __maybe_unsed is  maybe the binary size.
+
+I believe that  in this case the #ifdefs can be done correctly quite easily, 
+but now I'm not against your solution as well, just maybe put some of this info to the commit message. 
+
+Thanks
+Tomas
+
 
 
 ------------------------------------------------------------------------------
