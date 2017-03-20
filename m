@@ -1,76 +1,47 @@
-From: Arnd Bergmann <arnd@arndb.de>
-Subject: [PATCH] tpm/tpm_crb: mark PM functions as __maybe_unused
-Date: Mon, 20 Mar 2017 10:17:19 +0100
-Message-ID: <20170320091755.1043811-1-arnd@arndb.de>
+From: <Alexander.Steffen@infineon.com>
+Subject: RE: [tpmdd-devel] [PATCH v3 2/7] tpm: validate TPM 2.0 commands
+Date: Mon, 20 Mar 2017 09:54:41 +0000
+Message-ID: <12e63cdba1e34cac9b82e4bff9621ae6@MUCSE603.infineon.com>
+References: <20170303151912.14752-1-jarkko.sakkinen@linux.intel.com>
+        <20170303151912.14752-3-jarkko.sakkinen@linux.intel.com>
+        <22e8fa0caf8b4386a12cd93ee7170ed5@MUCSE603.infineon.com>
+ <20170317161614.GA28082@obsidianresearch.com>
+ <bca2bee3c1b84100ac72238425ac4791@MUCSE612.infineon.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <bca2bee3c1b84100ac72238425ac4791@MUCSE612.infineon.com>
+Content-Language: en-US
 Sender: linux-kernel-owner@vger.kernel.org
-To: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: Arnd Bergmann <arnd@arndb.de>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "Winkler, Tomas" <tomas.winkler@intel.com>, Jerry Snitselaar <jsnitsel@redhat.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+To: Peter.Huewe@infineon.com, jgunthorpe@obsidianresearch.com
+Cc: James.Bottomley@HansenPartnership.com, linux-kernel@vger.kernel.org, dhowells@redhat.com, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-When CONFIG_PM_SLEEP is disabled, we get a warning about unused functions:
-
-drivers/char/tpm/tpm_crb.c:551:12: error: 'crb_pm_resume' defined but not used [-Werror=unused-function]
-drivers/char/tpm/tpm_crb.c:540:12: error: 'crb_pm_suspend' defined but not used [-Werror=unused-function]
-
-We could solve this with more sophistated #ifdefs, but a simpler and safer
-way is to just mark them as __maybe_unused.
-
-Fixes: 848efcfb560c ("tpm/tpm_crb: enter the low power state upon device suspend")
-Signed-off-by: Arnd Bergmann <arnd@arndb.de>
----
- drivers/char/tpm/tpm_crb.c | 11 ++++-------
- 1 file changed, 4 insertions(+), 7 deletions(-)
-
-diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index 1dfc37e33c02..15f1118982a6 100644
---- a/drivers/char/tpm/tpm_crb.c
-+++ b/drivers/char/tpm/tpm_crb.c
-@@ -519,8 +519,7 @@ static int crb_acpi_remove(struct acpi_device *device)
- 	return 0;
- }
- 
--#ifdef CONFIG_PM
--static int crb_pm_runtime_suspend(struct device *dev)
-+static __maybe_unused int crb_pm_runtime_suspend(struct device *dev)
- {
- 	struct tpm_chip *chip = dev_get_drvdata(dev);
- 	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-@@ -528,7 +527,7 @@ static int crb_pm_runtime_suspend(struct device *dev)
- 	return crb_go_idle(dev, priv);
- }
- 
--static int crb_pm_runtime_resume(struct device *dev)
-+static __maybe_unused int crb_pm_runtime_resume(struct device *dev)
- {
- 	struct tpm_chip *chip = dev_get_drvdata(dev);
- 	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
-@@ -536,7 +535,7 @@ static int crb_pm_runtime_resume(struct device *dev)
- 	return crb_cmd_ready(dev, priv);
- }
- 
--static int crb_pm_suspend(struct device *dev)
-+static __maybe_unused int crb_pm_suspend(struct device *dev)
- {
- 	int ret;
- 
-@@ -547,7 +546,7 @@ static int crb_pm_suspend(struct device *dev)
- 	return crb_pm_runtime_suspend(dev);
- }
- 
--static int crb_pm_resume(struct device *dev)
-+static __maybe_unused int crb_pm_resume(struct device *dev)
- {
- 	int ret;
- 
-@@ -558,8 +557,6 @@ static int crb_pm_resume(struct device *dev)
- 	return tpm_pm_resume(dev);
- }
- 
--#endif /* CONFIG_PM */
--
- static const struct dev_pm_ops crb_pm = {
- 	SET_SYSTEM_SLEEP_PM_OPS(crb_pm_suspend, crb_pm_resume)
- 	SET_RUNTIME_PM_OPS(crb_pm_runtime_suspend, crb_pm_runtime_resume, NULL)
--- 
-2.9.0
+Pj4+IDIuIFdoZW4gdXBncmFkaW5nIHRoZSBmaXJtd2FyZSBvbiBteSBUUE0sIGl0IHN3aXRjaGVz
+IHRvIGENCj4+PiBub24tc3RhbmRhcmQgY29tbXVuaWNhdGlvbiBtb2RlIGZvciB0aGUgdXBncmFk
+ZSBwcm9jZXNzIGFuZCBkb2VzIG5vdA0KPj4+IGNvbW11bmljYXRlIHVzaW5nIFRQTTIuMCBjb21t
+YW5kcyBkdXJpbmcgdGhpcyB0aW1lLiBSZWplY3RpbmcNCj4+PiBub24tVFBNMi4wIGNvbW1hbmRz
+IG1lYW5zIHVwZ3JhZGluZyB3b24ndCBiZSBwb3NzaWJsZSBhbnltb3JlLg0KPj4NCj4+IEhvdyBu
+b24gc3RhbmRhcmQ/IElzIHRoZSBiYXNpYyBoZWFkZXIgZXZlbiB0aGVyZT8gQXJlIHRoZSBsZW5n
+dGhzIGFuZA0KPj4gc3RhdHVzIGNvZGUgcmlnaHQ/DQo+Pg0KPj4gVGhpcyBtaWdodCBiZSBhbiBh
+cmd1bWVudCB0byBhZGQgYSAncmF3JyBpb2N0bCBvciBzb21ldGhpbmcgc3BlY2lmaWNhbGx5DQo+
+PiBmb3IgdGhpcyBzcGVjaWFsIGNhc2UuDQo+DQo+IEl0IGZvbGxvd3MgdGhlIHJlZ3VsYXIgVFBN
+IGNvbW1hbmQgc3ludGF4IGFuZCBsb29rcyBzb21ldGhpbmcgbGlrZSAxLjINCj4gY29tbWFuZHMu
+DQoNClllcCwgc28gbW9zdCBvZiBpdCBhbHJlYWR5IHdvcmtzIHdpdGggdGhlIGN1cnJlbnQgaW1w
+bGVtZW50YXRpb24uDQoNClRoZXJlIGFyZSBhIGZldyBzcGVjaWFsIGNhc2VzIHRoYXQgbmVlZCBz
+b21lIHRob3VnaHQgdGhvdWdoLiBGb3IgZXhhbXBsZSwgaXQgaXMgcG9zc2libGUgdG8gdXNlIGFu
+IHVwZ3JhZGUgdG8gc3dpdGNoIHRoZSBUUE0gZmFtaWx5IGZyb20gMS4yIHRvIDIuMCAob3Igdmlj
+ZSB2ZXJzYSkuIEluIHRoaXMgY2FzZSBpdCBzZWVtcyB1c2VmdWwgdG8gbGV0IHRoZSBrZXJuZWwg
+cmVpbml0aWFsaXplIHRoZSBUUE0gZHJpdmVyLCBzbyBpdCB1c2VzIHRoZSBjb3JyZWN0IHRpbWVv
+dXRzIGZvciBjb21tdW5pY2F0aW9uLCBhY3RpdmF0ZXMgdGhlIGNvcnJlY3QgZmVhdHVyZXMgKHJl
+c291cmNlIG1hbmFnZXIgb3Igbm90PyksIGV0Yy4sIHdpdGhvdXQgbmVlZGluZyB0byByZWJvb3Qg
+dGhlIHN5c3RlbS4NCg0KQW5vdGhlciBwcm9ibGVtIGFyaXNlcyB3aGVuIHRoZSB1cGdyYWRlIHBy
+b2Nlc3MgaXMgaW50ZXJydXB0ZWQsIGUuZy4gYmVjYXVzZSBwb3dlciBpcyBsb3N0LiBUaGVuIHRo
+ZSBUUE0gaXMgc3R1Y2sgaW4gaXRzIG5vbi1zdGFuZGFyZCB1cGdyYWRlIG1vZGUsIHNvIHRoZSBr
+ZXJuZWwgZG9lcyBub3QgcmVjb2duaXplIGl0IGFzIGEgdmFsaWQgVFBNIGRldmljZSBhbmQgZG9l
+cyBub3QgZXhwb3J0IC9kZXYvdHBtPG4+LiBCdXQgd2l0aG91dCB0aGUgZGV2aWNlIG5vZGUgdGhl
+IHVwZ3JhZGVyIGlzIHVuYWJsZSB0byByZXN0YXJ0IHRoZSB1cGdyYWRlIHByb2Nlc3MsIGxlYXZp
+bmcgdGhlIFRQTSBmb3JldmVyIGluYWNjZXNzaWJsZS4NCg0KSSdsbCB0cnkgdG8gd29yayBvbiB0
+aG9zZSBwcm9ibGVtcyBpbiB0aGUgY29taW5nIHdlZWtzIGFuZCBwcm92aWRlIHRoZSBmaXhlcy4g
+QW55IGlucHV0IGlzIGFwcHJlY2lhdGVkLg0KDQpBbGV4YW5kZXINCg==
