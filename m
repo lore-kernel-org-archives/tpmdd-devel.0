@@ -1,47 +1,39 @@
-From: <Alexander.Steffen@infineon.com>
-Subject: RE: [tpmdd-devel] [PATCH v3 2/7] tpm: validate TPM 2.0 commands
-Date: Mon, 20 Mar 2017 09:54:41 +0000
-Message-ID: <12e63cdba1e34cac9b82e4bff9621ae6@MUCSE603.infineon.com>
+From: <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+Subject: Re: [PATCH v3 2/7] tpm: validate TPM 2.0 commands
+Date: Mon, 20 Mar 2017 09:56:17 +0000
+Message-ID: <93c74fb96fe04433ac9c910204539d84@MUCSE603.infineon.com>
 References: <20170303151912.14752-1-jarkko.sakkinen@linux.intel.com>
-        <20170303151912.14752-3-jarkko.sakkinen@linux.intel.com>
-        <22e8fa0caf8b4386a12cd93ee7170ed5@MUCSE603.infineon.com>
- <20170317161614.GA28082@obsidianresearch.com>
- <bca2bee3c1b84100ac72238425ac4791@MUCSE612.infineon.com>
+	<20170303151912.14752-3-jarkko.sakkinen@linux.intel.com>
+	<22e8fa0caf8b4386a12cd93ee7170ed5@MUCSE603.infineon.com>
+	<20170317204243.5j376svqeky6bhqk@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <bca2bee3c1b84100ac72238425ac4791@MUCSE612.infineon.com>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170317204243.5j376svqeky6bhqk-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 Content-Language: en-US
-Sender: linux-kernel-owner@vger.kernel.org
-To: Peter.Huewe@infineon.com, jgunthorpe@obsidianresearch.com
-Cc: James.Bottomley@HansenPartnership.com, linux-kernel@vger.kernel.org, dhowells@redhat.com, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
+Cc: James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Pj4+IDIuIFdoZW4gdXBncmFkaW5nIHRoZSBmaXJtd2FyZSBvbiBteSBUUE0sIGl0IHN3aXRjaGVz
-IHRvIGENCj4+PiBub24tc3RhbmRhcmQgY29tbXVuaWNhdGlvbiBtb2RlIGZvciB0aGUgdXBncmFk
-ZSBwcm9jZXNzIGFuZCBkb2VzIG5vdA0KPj4+IGNvbW11bmljYXRlIHVzaW5nIFRQTTIuMCBjb21t
-YW5kcyBkdXJpbmcgdGhpcyB0aW1lLiBSZWplY3RpbmcNCj4+PiBub24tVFBNMi4wIGNvbW1hbmRz
-IG1lYW5zIHVwZ3JhZGluZyB3b24ndCBiZSBwb3NzaWJsZSBhbnltb3JlLg0KPj4NCj4+IEhvdyBu
-b24gc3RhbmRhcmQ/IElzIHRoZSBiYXNpYyBoZWFkZXIgZXZlbiB0aGVyZT8gQXJlIHRoZSBsZW5n
-dGhzIGFuZA0KPj4gc3RhdHVzIGNvZGUgcmlnaHQ/DQo+Pg0KPj4gVGhpcyBtaWdodCBiZSBhbiBh
-cmd1bWVudCB0byBhZGQgYSAncmF3JyBpb2N0bCBvciBzb21ldGhpbmcgc3BlY2lmaWNhbGx5DQo+
-PiBmb3IgdGhpcyBzcGVjaWFsIGNhc2UuDQo+DQo+IEl0IGZvbGxvd3MgdGhlIHJlZ3VsYXIgVFBN
-IGNvbW1hbmQgc3ludGF4IGFuZCBsb29rcyBzb21ldGhpbmcgbGlrZSAxLjINCj4gY29tbWFuZHMu
-DQoNClllcCwgc28gbW9zdCBvZiBpdCBhbHJlYWR5IHdvcmtzIHdpdGggdGhlIGN1cnJlbnQgaW1w
-bGVtZW50YXRpb24uDQoNClRoZXJlIGFyZSBhIGZldyBzcGVjaWFsIGNhc2VzIHRoYXQgbmVlZCBz
-b21lIHRob3VnaHQgdGhvdWdoLiBGb3IgZXhhbXBsZSwgaXQgaXMgcG9zc2libGUgdG8gdXNlIGFu
-IHVwZ3JhZGUgdG8gc3dpdGNoIHRoZSBUUE0gZmFtaWx5IGZyb20gMS4yIHRvIDIuMCAob3Igdmlj
-ZSB2ZXJzYSkuIEluIHRoaXMgY2FzZSBpdCBzZWVtcyB1c2VmdWwgdG8gbGV0IHRoZSBrZXJuZWwg
-cmVpbml0aWFsaXplIHRoZSBUUE0gZHJpdmVyLCBzbyBpdCB1c2VzIHRoZSBjb3JyZWN0IHRpbWVv
-dXRzIGZvciBjb21tdW5pY2F0aW9uLCBhY3RpdmF0ZXMgdGhlIGNvcnJlY3QgZmVhdHVyZXMgKHJl
-c291cmNlIG1hbmFnZXIgb3Igbm90PyksIGV0Yy4sIHdpdGhvdXQgbmVlZGluZyB0byByZWJvb3Qg
-dGhlIHN5c3RlbS4NCg0KQW5vdGhlciBwcm9ibGVtIGFyaXNlcyB3aGVuIHRoZSB1cGdyYWRlIHBy
-b2Nlc3MgaXMgaW50ZXJydXB0ZWQsIGUuZy4gYmVjYXVzZSBwb3dlciBpcyBsb3N0LiBUaGVuIHRo
-ZSBUUE0gaXMgc3R1Y2sgaW4gaXRzIG5vbi1zdGFuZGFyZCB1cGdyYWRlIG1vZGUsIHNvIHRoZSBr
-ZXJuZWwgZG9lcyBub3QgcmVjb2duaXplIGl0IGFzIGEgdmFsaWQgVFBNIGRldmljZSBhbmQgZG9l
-cyBub3QgZXhwb3J0IC9kZXYvdHBtPG4+LiBCdXQgd2l0aG91dCB0aGUgZGV2aWNlIG5vZGUgdGhl
-IHVwZ3JhZGVyIGlzIHVuYWJsZSB0byByZXN0YXJ0IHRoZSB1cGdyYWRlIHByb2Nlc3MsIGxlYXZp
-bmcgdGhlIFRQTSBmb3JldmVyIGluYWNjZXNzaWJsZS4NCg0KSSdsbCB0cnkgdG8gd29yayBvbiB0
-aG9zZSBwcm9ibGVtcyBpbiB0aGUgY29taW5nIHdlZWtzIGFuZCBwcm92aWRlIHRoZSBmaXhlcy4g
-QW55IGlucHV0IGlzIGFwcHJlY2lhdGVkLg0KDQpBbGV4YW5kZXINCg==
+> I think the most straight-forward way to sort this out would be to limit
+> validation to the resource manager.
+
+Sounds good to me.
+
+> If I send a fix, would you care to test it?
+
+Sure, will do.
+
+Alexander
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
