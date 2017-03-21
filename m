@@ -1,15 +1,20 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm/tpm_crb: fix unused warnings on
- suspend/resume functions
-Date: Tue, 21 Mar 2017 10:03:53 +0200
-Message-ID: <20170321080353.oh2apppp37nchuw7@intel.com>
-References: <20170317015133.2269-1-jeremy.lefaure@lse.epita.fr>
+From: <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+Subject: Re: [PATCH v3 2/7] tpm: validate TPM 2.0 commands
+Date: Tue, 21 Mar 2017 15:44:17 +0000
+Message-ID: <b480890a6abe4f9092a547c0f2b7ce17@MUCSE603.infineon.com>
+References: <20170303151912.14752-1-jarkko.sakkinen@linux.intel.com>
+	<20170303151912.14752-3-jarkko.sakkinen@linux.intel.com>
+	<22e8fa0caf8b4386a12cd93ee7170ed5@MUCSE603.infineon.com>
+	<20170317161614.GA28082@obsidianresearch.com>
+	<bca2bee3c1b84100ac72238425ac4791@MUCSE612.infineon.com>
+	<12e63cdba1e34cac9b82e4bff9621ae6@MUCSE603.infineon.com>
+	<a518f288-f084-2d11-161a-79ff884b936d@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170317015133.2269-1-jeremy.lefaure-tU7rkvAWjlwhT4uAktR2oQ@public.gmane.org>
+In-Reply-To: <a518f288-f084-2d11-161a-79ff884b936d-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,63 +23,29 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: =?iso-8859-1?B?Suly6W15?= Lefaure <jeremy.lefaure-tU7rkvAWjlwhT4uAktR2oQ@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gVGh1LCBNYXIgMTYsIDIwMTcgYXQgMDk6NTE6MzNQTSAtMDQwMCwgSsOpcsOpbXkgTGVmYXVy
-ZSB3cm90ZToKPiBXaGVuIFBNX1NMRUVQIGlzIGRpc2FibGVkIGNyYl9wbV9zdXNwZW5kIGFuZCBj
-cmJfcG1fcmVzdW1lIGFyZSBub3QgdXNlZCBieQo+IFNFVF9TWVNURU1fU0xFRVBfUE1fT1BTIGV2
-ZW4gaWYgUE0gaXMgZW5hYmxlZDoKPiAKPiBkcnZlcnMvY2hhci90cG0vdHBtX2NyYi5jOjU0MDox
-Mjogd2FybmluZzog4oCYY3JiX3BtX3N1c3BlbmTigJkgZGVmaW5lZCBidXQgbm90Cj4gdXNlZCBb
-LVd1bnVzZWQtZnVuY3Rpb25dCj4gIHN0YXRpYyBpbnQgY3JiX3BtX3N1c3BlbmQoc3RydWN0IGRl
-dmljZSAqZGV2KQo+ICAgICAgICAgICAgIF4KPiBkcml2ZXJzL2NoYXIvdHBtL3RwbV9jcmIuYzo1
-NTE6MTI6IHdhcm5pbmc6IOKAmGNyYl9wbV9yZXN1bWXigJkgZGVmaW5lZCBidXQgbm90Cj4gdXNl
-ZCBbLVd1bnVzZWQtZnVuY3Rpb25dCj4gIHN0YXRpYyBpbnQgY3JiX3BtX3Jlc3VtZShzdHJ1Y3Qg
-ZGV2aWNlICpkZXYpCj4gICAgICAgICAgICAgXgo+IAo+IFRoZSBwcmVwcm9jZXNzb3IgY29uZGl0
-aW9uIHNob3VsZCBiZSBvbiBDT05GSUdfUE1fU0xFRVAsIG5vdCBvbiBDT05GSUdfUE0uCj4gSG93
-ZXZlciwgdGhpcyBwYXRjaCBmaXhlcyB0aGlzIHdhcm5pbmcgYnkgdXNpbmcgX19tYXliZV91bnVz
-ZWQgb24gZnVuY3Rpb24KPiB0aGF0IGFyZSBpbiB0aGUgcHJlcHJvY2Vzc29yIGNvbmRpdGlvbi4K
-PiAKPiBTaWduZWQtb2ZmLWJ5OiBKw6lyw6lteSBMZWZhdXJlIDxqZXJlbXkubGVmYXVyZUBsc2Uu
-ZXBpdGEuZnI+CgpUaGFua3MuIFBsZWFzZSBpbmNsdWRlIGFsc28gbGludXgta2VybmVsQHZnZXIu
-a2VybmVsLm9yZyBpbiB0aGUgZnV0dXJlLgoKUmV2aWV3ZWQtYnk6IEphcmtrbyBTYXNra2luZW4g
-PGphcmtrby5zYWtraW5lbkBsaW51eC5pbnRlbC5jb20+CgovSmFya2tvCgo+IC0tLQo+ICBkcml2
-ZXJzL2NoYXIvdHBtL3RwbV9jcmIuYyB8IDExICsrKystLS0tLS0tCj4gIDEgZmlsZSBjaGFuZ2Vk
-LCA0IGluc2VydGlvbnMoKyksIDcgZGVsZXRpb25zKC0pCj4gCj4gZGlmZiAtLWdpdCBhL2RyaXZl
-cnMvY2hhci90cG0vdHBtX2NyYi5jIGIvZHJpdmVycy9jaGFyL3RwbS90cG1fY3JiLmMKPiBpbmRl
-eCAzMjQ1NjE4NDVkYzIuLjA0NGFmYjczZmRlYiAxMDA2NDQKPiAtLS0gYS9kcml2ZXJzL2NoYXIv
-dHBtL3RwbV9jcmIuYwo+ICsrKyBiL2RyaXZlcnMvY2hhci90cG0vdHBtX2NyYi5jCj4gQEAgLTUy
-MCw4ICs1MjAsNyBAQCBzdGF0aWMgaW50IGNyYl9hY3BpX3JlbW92ZShzdHJ1Y3QgYWNwaV9kZXZp
-Y2UgKmRldmljZSkKPiAgCXJldHVybiAwOwo+ICB9Cj4gIAo+IC0jaWZkZWYgQ09ORklHX1BNCj4g
-LXN0YXRpYyBpbnQgY3JiX3BtX3J1bnRpbWVfc3VzcGVuZChzdHJ1Y3QgZGV2aWNlICpkZXYpCj4g
-K3N0YXRpYyBpbnQgX19tYXliZV91bnVzZWQgY3JiX3BtX3J1bnRpbWVfc3VzcGVuZChzdHJ1Y3Qg
-ZGV2aWNlICpkZXYpCj4gIHsKPiAgCXN0cnVjdCB0cG1fY2hpcCAqY2hpcCA9IGRldl9nZXRfZHJ2
-ZGF0YShkZXYpOwo+ICAJc3RydWN0IGNyYl9wcml2ICpwcml2ID0gZGV2X2dldF9kcnZkYXRhKCZj
-aGlwLT5kZXYpOwo+IEBAIC01MjksNyArNTI4LDcgQEAgc3RhdGljIGludCBjcmJfcG1fcnVudGlt
-ZV9zdXNwZW5kKHN0cnVjdCBkZXZpY2UgKmRldikKPiAgCXJldHVybiBjcmJfZ29faWRsZShkZXYs
-IHByaXYpOwo+ICB9Cj4gIAo+IC1zdGF0aWMgaW50IGNyYl9wbV9ydW50aW1lX3Jlc3VtZShzdHJ1
-Y3QgZGV2aWNlICpkZXYpCj4gK3N0YXRpYyBpbnQgX19tYXliZV91bnVzZWQgY3JiX3BtX3J1bnRp
-bWVfcmVzdW1lKHN0cnVjdCBkZXZpY2UgKmRldikKPiAgewo+ICAJc3RydWN0IHRwbV9jaGlwICpj
-aGlwID0gZGV2X2dldF9kcnZkYXRhKGRldik7Cj4gIAlzdHJ1Y3QgY3JiX3ByaXYgKnByaXYgPSBk
-ZXZfZ2V0X2RydmRhdGEoJmNoaXAtPmRldik7Cj4gQEAgLTUzNyw3ICs1MzYsNyBAQCBzdGF0aWMg
-aW50IGNyYl9wbV9ydW50aW1lX3Jlc3VtZShzdHJ1Y3QgZGV2aWNlICpkZXYpCj4gIAlyZXR1cm4g
-Y3JiX2NtZF9yZWFkeShkZXYsIHByaXYpOwo+ICB9Cj4gIAo+IC1zdGF0aWMgaW50IGNyYl9wbV9z
-dXNwZW5kKHN0cnVjdCBkZXZpY2UgKmRldikKPiArc3RhdGljIGludCBfX21heWJlX3VudXNlZCBj
-cmJfcG1fc3VzcGVuZChzdHJ1Y3QgZGV2aWNlICpkZXYpCj4gIHsKPiAgCWludCByZXQ7Cj4gIAo+
-IEBAIC01NDgsNyArNTQ3LDcgQEAgc3RhdGljIGludCBjcmJfcG1fc3VzcGVuZChzdHJ1Y3QgZGV2
-aWNlICpkZXYpCj4gIAlyZXR1cm4gY3JiX3BtX3J1bnRpbWVfc3VzcGVuZChkZXYpOwo+ICB9Cj4g
-IAo+IC1zdGF0aWMgaW50IGNyYl9wbV9yZXN1bWUoc3RydWN0IGRldmljZSAqZGV2KQo+ICtzdGF0
-aWMgaW50IF9fbWF5YmVfdW51c2VkIGNyYl9wbV9yZXN1bWUoc3RydWN0IGRldmljZSAqZGV2KQo+
-ICB7Cj4gIAlpbnQgcmV0Owo+ICAKPiBAQCAtNTU5LDggKzU1OCw2IEBAIHN0YXRpYyBpbnQgY3Ji
-X3BtX3Jlc3VtZShzdHJ1Y3QgZGV2aWNlICpkZXYpCj4gIAlyZXR1cm4gdHBtX3BtX3Jlc3VtZShk
-ZXYpOwo+ICB9Cj4gIAo+IC0jZW5kaWYgLyogQ09ORklHX1BNICovCj4gLQo+ICBzdGF0aWMgY29u
-c3Qgc3RydWN0IGRldl9wbV9vcHMgY3JiX3BtID0gewo+ICAJU0VUX1NZU1RFTV9TTEVFUF9QTV9P
-UFMoY3JiX3BtX3N1c3BlbmQsIGNyYl9wbV9yZXN1bWUpCj4gIAlTRVRfUlVOVElNRV9QTV9PUFMo
-Y3JiX3BtX3J1bnRpbWVfc3VzcGVuZCwgY3JiX3BtX3J1bnRpbWVfcmVzdW1lLCBOVUxMKQo+IC0t
-IAo+IDIuMTIuMAo+IAoKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCkNoZWNrIG91dCB0aGUgdmlicmFu
-dCB0ZWNoIGNvbW11bml0eSBvbiBvbmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAplbmdhZ2luZyB0ZWNo
-IHNpdGVzLCBTbGFzaGRvdC5vcmchIGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdApfX19fX19fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwp0cG1kZC1kZXZlbCBtYWlsaW5n
-IGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8vbGlzdHMuc291
-cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
+> > There are a few special cases that need some thought though. For
+> > example, it is possible to use an upgrade to switch the TPM family
+> > from 1.2 to 2.0 (or vice versa). In this case it seems useful to let
+> > the kernel reinitialize the TPM driver, so it uses the correct
+> > timeouts for communication, activates the correct features (resource
+> > manager or not?), etc., without needing to reboot the system.
+> 
+> In practice, would a TPM upgrade from TPM 1.2 to TPM 2.0 even occur
+> without a reboot?  Is it an important use case?
+> 
+> 1 - It would leave the SHA-256 PCRs in the reset state.
+> 
+> 2 - It's possible that this upgrade would also require a BIOS upgrade.
+
+For a traditional PC and when your goal is platform integrity, a reboot is probably the way to go. But in an embedded environment where there is no BIOS or if you use the TPM more like a smartcard just to store some keys (or generate random numbers), a reboot is unnecessary and it is more comfortable to avoid it.
+
+We probably should inform the kernel before the upgrade anyway, so that it can shut down the TPM gracefully (and maybe switch to the upgrade mode, as Jason suggested). With that infrastructure in place, it does not seem like a lot of effort to also let it switch the TPM back to normal operation mode once the upgrade is complete.
+
+Alexander
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
