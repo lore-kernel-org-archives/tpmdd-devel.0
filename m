@@ -1,19 +1,15 @@
-From: Arnd Bergmann <arnd-r2nGTMty4D4@public.gmane.org>
-Subject: Re: [PATCH] tpm/tpm_crb: mark PM functions as
-	__maybe_unused
-Date: Tue, 21 Mar 2017 08:37:13 +0100
-Message-ID: <CAK8P3a1_0w7xOGXAczbYDE402GsnsbyRftsK3R0nuhCYiWT59g@mail.gmail.com>
-References: <20170320091755.1043811-1-arnd@arndb.de>
-	<5B8DA87D05A7694D9FA63FD143655C1B543B032E@hasmsx108.ger.corp.intel.com>
-	<CAK8P3a25sh0U=N9E1pWACL_9h7VBseUBX50WZe5rXMpNHY=GbA@mail.gmail.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B543B0620@hasmsx108.ger.corp.intel.com>
-	<20170320230430.GA25163@obsidianresearch.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B543B0650@hasmsx108.ger.corp.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm/tpm_crb: fix unused warnings on
+ suspend/resume functions
+Date: Tue, 21 Mar 2017 10:03:53 +0200
+Message-ID: <20170321080353.oh2apppp37nchuw7@intel.com>
+References: <20170317015133.2269-1-jeremy.lefaure@lse.epita.fr>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B543B0650-Jy8z56yoSI8MvF1YICWikbfspsVTdybXVpNB7YpNyf8@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20170317015133.2269-1-jeremy.lefaure-tU7rkvAWjlwhT4uAktR2oQ@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,39 +18,63 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Cc: "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+To: =?iso-8859-1?B?Suly6W15?= Lefaure <jeremy.lefaure-tU7rkvAWjlwhT4uAktR2oQ@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Mar 21, 2017 at 12:35 AM, Winkler, Tomas
-<tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org> wrote:
->
->>
->> On Mon, Mar 20, 2017 at 11:01:36PM +0000, Winkler, Tomas wrote:
->>
->> > I believe that in this case the #ifdefs can be done correctly quite
->> > easily, but now I'm not against your solution as well, just maybe put
->> > some of this info to the commit message.
->>
->> I perfer fewer ifdefs, it makes it more maintainable..
->
-> Sure,
->>
->> The compiler will remove unused static functions.
->
-> I'm not sure if this goes away w/o --gc-sections, but it might.
-> Will check, didn't looked at that for a while.
-
-gcc-4.1 had a bug where code it failed to eliminate a dead function
-if it was referenced through a function pointer in another unused
-static function, but it would work correctly in this case (obviously
-unused code) and compiler that people actually use don't have
-this problem. Note that the kernel depends on dead code elimination
-to work correctly in a lot of places, it wouldn't build at all if that
-was broken.
-
-      Arnd
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+T24gVGh1LCBNYXIgMTYsIDIwMTcgYXQgMDk6NTE6MzNQTSAtMDQwMCwgSsOpcsOpbXkgTGVmYXVy
+ZSB3cm90ZToKPiBXaGVuIFBNX1NMRUVQIGlzIGRpc2FibGVkIGNyYl9wbV9zdXNwZW5kIGFuZCBj
+cmJfcG1fcmVzdW1lIGFyZSBub3QgdXNlZCBieQo+IFNFVF9TWVNURU1fU0xFRVBfUE1fT1BTIGV2
+ZW4gaWYgUE0gaXMgZW5hYmxlZDoKPiAKPiBkcnZlcnMvY2hhci90cG0vdHBtX2NyYi5jOjU0MDox
+Mjogd2FybmluZzog4oCYY3JiX3BtX3N1c3BlbmTigJkgZGVmaW5lZCBidXQgbm90Cj4gdXNlZCBb
+LVd1bnVzZWQtZnVuY3Rpb25dCj4gIHN0YXRpYyBpbnQgY3JiX3BtX3N1c3BlbmQoc3RydWN0IGRl
+dmljZSAqZGV2KQo+ICAgICAgICAgICAgIF4KPiBkcml2ZXJzL2NoYXIvdHBtL3RwbV9jcmIuYzo1
+NTE6MTI6IHdhcm5pbmc6IOKAmGNyYl9wbV9yZXN1bWXigJkgZGVmaW5lZCBidXQgbm90Cj4gdXNl
+ZCBbLVd1bnVzZWQtZnVuY3Rpb25dCj4gIHN0YXRpYyBpbnQgY3JiX3BtX3Jlc3VtZShzdHJ1Y3Qg
+ZGV2aWNlICpkZXYpCj4gICAgICAgICAgICAgXgo+IAo+IFRoZSBwcmVwcm9jZXNzb3IgY29uZGl0
+aW9uIHNob3VsZCBiZSBvbiBDT05GSUdfUE1fU0xFRVAsIG5vdCBvbiBDT05GSUdfUE0uCj4gSG93
+ZXZlciwgdGhpcyBwYXRjaCBmaXhlcyB0aGlzIHdhcm5pbmcgYnkgdXNpbmcgX19tYXliZV91bnVz
+ZWQgb24gZnVuY3Rpb24KPiB0aGF0IGFyZSBpbiB0aGUgcHJlcHJvY2Vzc29yIGNvbmRpdGlvbi4K
+PiAKPiBTaWduZWQtb2ZmLWJ5OiBKw6lyw6lteSBMZWZhdXJlIDxqZXJlbXkubGVmYXVyZUBsc2Uu
+ZXBpdGEuZnI+CgpUaGFua3MuIFBsZWFzZSBpbmNsdWRlIGFsc28gbGludXgta2VybmVsQHZnZXIu
+a2VybmVsLm9yZyBpbiB0aGUgZnV0dXJlLgoKUmV2aWV3ZWQtYnk6IEphcmtrbyBTYXNra2luZW4g
+PGphcmtrby5zYWtraW5lbkBsaW51eC5pbnRlbC5jb20+CgovSmFya2tvCgo+IC0tLQo+ICBkcml2
+ZXJzL2NoYXIvdHBtL3RwbV9jcmIuYyB8IDExICsrKystLS0tLS0tCj4gIDEgZmlsZSBjaGFuZ2Vk
+LCA0IGluc2VydGlvbnMoKyksIDcgZGVsZXRpb25zKC0pCj4gCj4gZGlmZiAtLWdpdCBhL2RyaXZl
+cnMvY2hhci90cG0vdHBtX2NyYi5jIGIvZHJpdmVycy9jaGFyL3RwbS90cG1fY3JiLmMKPiBpbmRl
+eCAzMjQ1NjE4NDVkYzIuLjA0NGFmYjczZmRlYiAxMDA2NDQKPiAtLS0gYS9kcml2ZXJzL2NoYXIv
+dHBtL3RwbV9jcmIuYwo+ICsrKyBiL2RyaXZlcnMvY2hhci90cG0vdHBtX2NyYi5jCj4gQEAgLTUy
+MCw4ICs1MjAsNyBAQCBzdGF0aWMgaW50IGNyYl9hY3BpX3JlbW92ZShzdHJ1Y3QgYWNwaV9kZXZp
+Y2UgKmRldmljZSkKPiAgCXJldHVybiAwOwo+ICB9Cj4gIAo+IC0jaWZkZWYgQ09ORklHX1BNCj4g
+LXN0YXRpYyBpbnQgY3JiX3BtX3J1bnRpbWVfc3VzcGVuZChzdHJ1Y3QgZGV2aWNlICpkZXYpCj4g
+K3N0YXRpYyBpbnQgX19tYXliZV91bnVzZWQgY3JiX3BtX3J1bnRpbWVfc3VzcGVuZChzdHJ1Y3Qg
+ZGV2aWNlICpkZXYpCj4gIHsKPiAgCXN0cnVjdCB0cG1fY2hpcCAqY2hpcCA9IGRldl9nZXRfZHJ2
+ZGF0YShkZXYpOwo+ICAJc3RydWN0IGNyYl9wcml2ICpwcml2ID0gZGV2X2dldF9kcnZkYXRhKCZj
+aGlwLT5kZXYpOwo+IEBAIC01MjksNyArNTI4LDcgQEAgc3RhdGljIGludCBjcmJfcG1fcnVudGlt
+ZV9zdXNwZW5kKHN0cnVjdCBkZXZpY2UgKmRldikKPiAgCXJldHVybiBjcmJfZ29faWRsZShkZXYs
+IHByaXYpOwo+ICB9Cj4gIAo+IC1zdGF0aWMgaW50IGNyYl9wbV9ydW50aW1lX3Jlc3VtZShzdHJ1
+Y3QgZGV2aWNlICpkZXYpCj4gK3N0YXRpYyBpbnQgX19tYXliZV91bnVzZWQgY3JiX3BtX3J1bnRp
+bWVfcmVzdW1lKHN0cnVjdCBkZXZpY2UgKmRldikKPiAgewo+ICAJc3RydWN0IHRwbV9jaGlwICpj
+aGlwID0gZGV2X2dldF9kcnZkYXRhKGRldik7Cj4gIAlzdHJ1Y3QgY3JiX3ByaXYgKnByaXYgPSBk
+ZXZfZ2V0X2RydmRhdGEoJmNoaXAtPmRldik7Cj4gQEAgLTUzNyw3ICs1MzYsNyBAQCBzdGF0aWMg
+aW50IGNyYl9wbV9ydW50aW1lX3Jlc3VtZShzdHJ1Y3QgZGV2aWNlICpkZXYpCj4gIAlyZXR1cm4g
+Y3JiX2NtZF9yZWFkeShkZXYsIHByaXYpOwo+ICB9Cj4gIAo+IC1zdGF0aWMgaW50IGNyYl9wbV9z
+dXNwZW5kKHN0cnVjdCBkZXZpY2UgKmRldikKPiArc3RhdGljIGludCBfX21heWJlX3VudXNlZCBj
+cmJfcG1fc3VzcGVuZChzdHJ1Y3QgZGV2aWNlICpkZXYpCj4gIHsKPiAgCWludCByZXQ7Cj4gIAo+
+IEBAIC01NDgsNyArNTQ3LDcgQEAgc3RhdGljIGludCBjcmJfcG1fc3VzcGVuZChzdHJ1Y3QgZGV2
+aWNlICpkZXYpCj4gIAlyZXR1cm4gY3JiX3BtX3J1bnRpbWVfc3VzcGVuZChkZXYpOwo+ICB9Cj4g
+IAo+IC1zdGF0aWMgaW50IGNyYl9wbV9yZXN1bWUoc3RydWN0IGRldmljZSAqZGV2KQo+ICtzdGF0
+aWMgaW50IF9fbWF5YmVfdW51c2VkIGNyYl9wbV9yZXN1bWUoc3RydWN0IGRldmljZSAqZGV2KQo+
+ICB7Cj4gIAlpbnQgcmV0Owo+ICAKPiBAQCAtNTU5LDggKzU1OCw2IEBAIHN0YXRpYyBpbnQgY3Ji
+X3BtX3Jlc3VtZShzdHJ1Y3QgZGV2aWNlICpkZXYpCj4gIAlyZXR1cm4gdHBtX3BtX3Jlc3VtZShk
+ZXYpOwo+ICB9Cj4gIAo+IC0jZW5kaWYgLyogQ09ORklHX1BNICovCj4gLQo+ICBzdGF0aWMgY29u
+c3Qgc3RydWN0IGRldl9wbV9vcHMgY3JiX3BtID0gewo+ICAJU0VUX1NZU1RFTV9TTEVFUF9QTV9P
+UFMoY3JiX3BtX3N1c3BlbmQsIGNyYl9wbV9yZXN1bWUpCj4gIAlTRVRfUlVOVElNRV9QTV9PUFMo
+Y3JiX3BtX3J1bnRpbWVfc3VzcGVuZCwgY3JiX3BtX3J1bnRpbWVfcmVzdW1lLCBOVUxMKQo+IC0t
+IAo+IDIuMTIuMAo+IAoKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCkNoZWNrIG91dCB0aGUgdmlicmFu
+dCB0ZWNoIGNvbW11bml0eSBvbiBvbmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAplbmdhZ2luZyB0ZWNo
+IHNpdGVzLCBTbGFzaGRvdC5vcmchIGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdApfX19fX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwp0cG1kZC1kZXZlbCBtYWlsaW5n
+IGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8vbGlzdHMuc291
+cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
