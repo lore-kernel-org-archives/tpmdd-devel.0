@@ -1,56 +1,62 @@
-From: Colin Ian King <colin.king@canonical.com>
+From: Dan Carpenter <dan.carpenter@oracle.com>
 Subject: Re: [PATCH] tpm2: fix off-by-one comparison and out-of-bounds read
  error
-Date: Wed, 22 Mar 2017 11:45:37 +0000
-Message-ID: <d96bb5c9-e1b3-abe5-2273-fc525dc00190@canonical.com>
+Date: Wed, 22 Mar 2017 16:12:49 +0300
+Message-ID: <20170322131248.GJ32449@mwanda>
 References: <20170320142336.10997-1-colin.king@canonical.com>
  <20170322114256.pdwg6buj2wkhcooy@intel.com>
+ <d96bb5c9-e1b3-abe5-2273-fc525dc00190@canonical.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
-Return-path: <kernel-janitors-owner@vger.kernel.org>
-In-Reply-To: <20170322114256.pdwg6buj2wkhcooy@intel.com>
-Sender: kernel-janitors-owner@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, kernel-janitors@vger.kernel.org, linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <d96bb5c9-e1b3-abe5-2273-fc525dc00190@canonical.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Colin Ian King <colin.king@canonical.com>
+Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, kernel-janitors@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 22/03/17 11:42, Jarkko Sakkinen wrote:
-> On Mon, Mar 20, 2017 at 02:23:36PM +0000, Colin King wrote:
->> From: Colin Ian King <colin.king@canonical.com>
->>
->> The comparison of an out of range index into space->context_tbl is
->> off-by-one and should be using >= rather than > in the comparison.
->>
->> Detected by CoverityScan, CID#1419694 ("Out-of-bounds read")
->>
->> Fixes: 849246e7ce9ce ("tpm2: add session handle context saving and restoring to the space code")
->> Signed-off-by: Colin Ian King <colin.king@canonical.com>
->> ---
->>  drivers/char/tpm/tpm2-space.c | 2 +-
->>  1 file changed, 1 insertion(+), 1 deletion(-)
->>
->> diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2-space.c
->> index d36d81e07076..009934269514 100644
->> --- a/drivers/char/tpm/tpm2-space.c
->> +++ b/drivers/char/tpm/tpm2-space.c
->> @@ -229,7 +229,7 @@ static bool tpm2_map_to_phandle(struct tpm_space *space, void *handle)
->>  	int i;
->>  
->>  	i = 0xFFFFFF - (vhandle & 0xFFFFFF);
->> -	if (i > ARRAY_SIZE(space->context_tbl) || !space->context_tbl[i])
->> +	if (i >= ARRAY_SIZE(space->context_tbl) || !space->context_tbl[i])
->>  		return false;
->>  
->>  	phandle = space->context_tbl[i];
->> -- 
->> 2.11.0
-> 
-> Thanks. If you don't mind, I would squash this to that patch?
-> 
-> /Jarkko
-> 
-Sure squash it, and maybe add a Reported-by: Colin Ian King
-<colin.king@canonical.com> if that's OK with you.
+On Wed, Mar 22, 2017 at 11:45:37AM +0000, Colin Ian King wrote:
+> On 22/03/17 11:42, Jarkko Sakkinen wrote:
+> > On Mon, Mar 20, 2017 at 02:23:36PM +0000, Colin King wrote:
+> >> From: Colin Ian King <colin.king@canonical.com>
+> >>
+> >> The comparison of an out of range index into space->context_tbl is
+> >> off-by-one and should be using >= rather than > in the comparison.
+> >>
+> >> Detected by CoverityScan, CID#1419694 ("Out-of-bounds read")
+> >>
+> >> Fixes: 849246e7ce9ce ("tpm2: add session handle context saving and restoring to the space code")
+> >> Signed-off-by: Colin Ian King <colin.king@canonical.com>
+> >> ---
+> >>  drivers/char/tpm/tpm2-space.c | 2 +-
+> >>  1 file changed, 1 insertion(+), 1 deletion(-)
+> >>
+> >> diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2-space.c
+> >> index d36d81e07076..009934269514 100644
+> >> --- a/drivers/char/tpm/tpm2-space.c
+> >> +++ b/drivers/char/tpm/tpm2-space.c
+> >> @@ -229,7 +229,7 @@ static bool tpm2_map_to_phandle(struct tpm_space *space, void *handle)
+> >>  	int i;
+> >>  
+> >>  	i = 0xFFFFFF - (vhandle & 0xFFFFFF);
+> >> -	if (i > ARRAY_SIZE(space->context_tbl) || !space->context_tbl[i])
+> >> +	if (i >= ARRAY_SIZE(space->context_tbl) || !space->context_tbl[i])
+> >>  		return false;
+> >>  
+> >>  	phandle = space->context_tbl[i];
+> >> -- 
+> >> 2.11.0
+> > 
+> > Thanks. If you don't mind, I would squash this to that patch?
+> > 
+> > /Jarkko
+> > 
+> Sure squash it, and maybe add a Reported-by: Colin Ian King
+> <colin.king@canonical.com> if that's OK with you.
 
-Colin
+Reported-by isn't really correct though...  We should have a Fixes-from:
+tag for squashed fixes.
+
+regards,
+dan carpenter
