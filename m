@@ -1,37 +1,61 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm: make check_locality return bool
-Date: Wed, 22 Mar 2017 13:24:54 +0200
-Message-ID: <20170322112454.3bcdbqoxrxy4kfev@intel.com>
-References: <20170318085957.12277-1-jsnitsel@redhat.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm2: fix off-by-one comparison and
+ out-of-bounds read error
+Date: Wed, 22 Mar 2017 13:42:56 +0200
+Message-ID: <20170322114256.pdwg6buj2wkhcooy@intel.com>
+References: <20170320142336.10997-1-colin.king@canonical.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170318085957.12277-1-jsnitsel@redhat.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jerry Snitselaar <jsnitsel@redhat.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, Christophe Ricard <christophe.ricard@gmail.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Marcel Selhorst <tpmdd@selhorst.net>, Peter Huewe <peterhuewe@gmx.de>
+In-Reply-To: <20170320142336.10997-1-colin.king-Z7WLFzj8eWMS+FvcfC7Uqw@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Colin King <colin.king-Z7WLFzj8eWMS+FvcfC7Uqw@public.gmane.org>
+Cc: kernel-janitors-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat, Mar 18, 2017 at 01:59:57AM -0700, Jerry Snitselaar wrote:
-> Since check_locality is checking to see if a certain
-> locality is active, return true if active otherwise
-> return false.
+On Mon, Mar 20, 2017 at 02:23:36PM +0000, Colin King wrote:
+> From: Colin Ian King <colin.king-Z7WLFzj8eWMS+FvcfC7Uqw@public.gmane.org>
 > 
-> Cc: Christophe Ricard <christophe.ricard@gmail.com>
-> Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-> Cc: Marcel Selhorst <tpmdd@selhorst.net>
-> Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-> Cc: Peter Huewe <peterhuewe@gmx.de>
-> Signed-off-by: Jerry Snitselaar <jsnitsel@redhat.com>
+> The comparison of an out of range index into space->context_tbl is
+> off-by-one and should be using >= rather than > in the comparison.
+> 
+> Detected by CoverityScan, CID#1419694 ("Out-of-bounds read")
+> 
+> Fixes: 849246e7ce9ce ("tpm2: add session handle context saving and restoring to the space code")
+> Signed-off-by: Colin Ian King <colin.king-Z7WLFzj8eWMS+FvcfC7Uqw@public.gmane.org>
 > ---
-> Tested tpm_tis, but don't have the ability to
-> test Infineon or STMicro drivers.
+>  drivers/char/tpm/tpm2-space.c | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
+> 
+> diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2-space.c
+> index d36d81e07076..009934269514 100644
+> --- a/drivers/char/tpm/tpm2-space.c
+> +++ b/drivers/char/tpm/tpm2-space.c
+> @@ -229,7 +229,7 @@ static bool tpm2_map_to_phandle(struct tpm_space *space, void *handle)
+>  	int i;
+>  
+>  	i = 0xFFFFFF - (vhandle & 0xFFFFFF);
+> -	if (i > ARRAY_SIZE(space->context_tbl) || !space->context_tbl[i])
+> +	if (i >= ARRAY_SIZE(space->context_tbl) || !space->context_tbl[i])
+>  		return false;
+>  
+>  	phandle = space->context_tbl[i];
+> -- 
+> 2.11.0
 
-Thanks.
-
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Tested-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> 
-(with a TPM 1.2 chip on Dell E6400 laptop)
+Thanks. If you don't mind, I would squash this to that patch?
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
