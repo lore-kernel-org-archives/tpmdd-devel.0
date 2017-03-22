@@ -1,16 +1,16 @@
-From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: Re: [PATCH] tpm/tpm_crb: fix unused warnings on
- suspend/resume functions
-Date: Tue, 21 Mar 2017 22:05:36 +0000
-Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B543B122D@hasmsx108.ger.corp.intel.com>
-References: <20170317015133.2269-1-jeremy.lefaure@lse.epita.fr>
-	<20170321080353.oh2apppp37nchuw7@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v3 2/2] tpm/tpm_crb: Enable TPM CRB
+	interface for ARM64
+Date: Wed, 22 Mar 2017 08:12:41 +0200
+Message-ID: <20170322061241.j7avdfpnehcbjg6j@intel.com>
+References: <1489794193-17233-1-git-send-email-anjiandi@codeaurora.org>
+	<1489794193-17233-3-git-send-email-anjiandi@codeaurora.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170321080353.oh2apppp37nchuw7-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Content-Language: en-US
+Content-Disposition: inline
+In-Reply-To: <1489794193-17233-3-git-send-email-anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,76 +19,183 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, =?utf-8?B?SsOpcsOpbXkgTGVmYXVyZQ==?= <jeremy.lefaure-tU7rkvAWjlwhT4uAktR2oQ@public.gmane.org>
-Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "arnd-r2nGTMty4D4@public.gmane.org" <arnd-r2nGTMty4D4@public.gmane.org>
+To: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+Cc: rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-PiBPbiBUaHUsIE1hciAxNiwgMjAxNyBhdCAwOTo1MTozM1BNIC0wNDAwLCBKw6lyw6lteSBMZWZh
-dXJlIHdyb3RlOg0KPiA+IFdoZW4gUE1fU0xFRVAgaXMgZGlzYWJsZWQgY3JiX3BtX3N1c3BlbmQg
-YW5kIGNyYl9wbV9yZXN1bWUgYXJlIG5vdA0KPiA+IHVzZWQgYnkgU0VUX1NZU1RFTV9TTEVFUF9Q
-TV9PUFMgZXZlbiBpZiBQTSBpcyBlbmFibGVkOg0KPiA+DQo+ID4gZHJ2ZXJzL2NoYXIvdHBtL3Rw
-bV9jcmIuYzo1NDA6MTI6IHdhcm5pbmc6IOKAmGNyYl9wbV9zdXNwZW5k4oCZIGRlZmluZWQNCj4g
-PiBidXQgbm90IHVzZWQgWy1XdW51c2VkLWZ1bmN0aW9uXSAgc3RhdGljIGludCBjcmJfcG1fc3Vz
-cGVuZChzdHJ1Y3QNCj4gPiBkZXZpY2UgKmRldikNCj4gPiAgICAgICAgICAgICBeDQo+ID4gZHJp
-dmVycy9jaGFyL3RwbS90cG1fY3JiLmM6NTUxOjEyOiB3YXJuaW5nOiDigJhjcmJfcG1fcmVzdW1l
-4oCZIGRlZmluZWQNCj4gPiBidXQgbm90IHVzZWQgWy1XdW51c2VkLWZ1bmN0aW9uXSAgc3RhdGlj
-IGludCBjcmJfcG1fcmVzdW1lKHN0cnVjdA0KPiA+IGRldmljZSAqZGV2KQ0KPiA+ICAgICAgICAg
-ICAgIF4NCj4gPg0KPiA+IFRoZSBwcmVwcm9jZXNzb3IgY29uZGl0aW9uIHNob3VsZCBiZSBvbiBD
-T05GSUdfUE1fU0xFRVAsIG5vdCBvbg0KPiBDT05GSUdfUE0uDQo+ID4gSG93ZXZlciwgdGhpcyBw
-YXRjaCBmaXhlcyB0aGlzIHdhcm5pbmcgYnkgdXNpbmcgX19tYXliZV91bnVzZWQgb24NCj4gPiBm
-dW5jdGlvbiB0aGF0IGFyZSBpbiB0aGUgcHJlcHJvY2Vzc29yIGNvbmRpdGlvbi4NCj4gPg0KPiA+
-IFNpZ25lZC1vZmYtYnk6IErDqXLDqW15IExlZmF1cmUgPGplcmVteS5sZWZhdXJlQGxzZS5lcGl0
-YS5mcj4NCj4gDQo+IFRoYW5rcy4gUGxlYXNlIGluY2x1ZGUgYWxzbyBsaW51eC1rZXJuZWxAdmdl
-ci5rZXJuZWwub3JnIGluIHRoZSBmdXR1cmUuDQo+IA0KPiBSZXZpZXdlZC1ieTogSmFya2tvIFNh
-c2traW5lbiA8amFya2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbT4NCg0KV2Ugc2hvdWxkIGdv
-IHdpdGggQXJuZCdzIHBhdGNoLCB3aGljaCBpcyBhY3R1YWxseSB0aGUgc2FtZSwgIGJ1dCBpdCB3
-YXMgYWxyZWFkeSByZXZpZXdlZCBhbmQgaGFzIGJldHRlciBjb21taXQgbWVzc2FnZXMuDQpUaGFu
-a3MNClRvbWFzDQoNCg0KPiA+IC0tLQ0KPiA+ICBkcml2ZXJzL2NoYXIvdHBtL3RwbV9jcmIuYyB8
-IDExICsrKystLS0tLS0tDQo+ID4gIDEgZmlsZSBjaGFuZ2VkLCA0IGluc2VydGlvbnMoKyksIDcg
-ZGVsZXRpb25zKC0pDQo+ID4NCj4gPiBkaWZmIC0tZ2l0IGEvZHJpdmVycy9jaGFyL3RwbS90cG1f
-Y3JiLmMgYi9kcml2ZXJzL2NoYXIvdHBtL3RwbV9jcmIuYw0KPiA+IGluZGV4IDMyNDU2MTg0NWRj
-Mi4uMDQ0YWZiNzNmZGViIDEwMDY0NA0KPiA+IC0tLSBhL2RyaXZlcnMvY2hhci90cG0vdHBtX2Ny
-Yi5jDQo+ID4gKysrIGIvZHJpdmVycy9jaGFyL3RwbS90cG1fY3JiLmMNCj4gPiBAQCAtNTIwLDgg
-KzUyMCw3IEBAIHN0YXRpYyBpbnQgY3JiX2FjcGlfcmVtb3ZlKHN0cnVjdCBhY3BpX2RldmljZQ0K
-PiAqZGV2aWNlKQ0KPiA+ICAJcmV0dXJuIDA7DQo+ID4gIH0NCj4gPg0KPiA+IC0jaWZkZWYgQ09O
-RklHX1BNDQo+ID4gLXN0YXRpYyBpbnQgY3JiX3BtX3J1bnRpbWVfc3VzcGVuZChzdHJ1Y3QgZGV2
-aWNlICpkZXYpDQo+ID4gK3N0YXRpYyBpbnQgX19tYXliZV91bnVzZWQgY3JiX3BtX3J1bnRpbWVf
-c3VzcGVuZChzdHJ1Y3QgZGV2aWNlICpkZXYpDQo+ID4gIHsNCj4gPiAgCXN0cnVjdCB0cG1fY2hp
-cCAqY2hpcCA9IGRldl9nZXRfZHJ2ZGF0YShkZXYpOw0KPiA+ICAJc3RydWN0IGNyYl9wcml2ICpw
-cml2ID0gZGV2X2dldF9kcnZkYXRhKCZjaGlwLT5kZXYpOyBAQCAtNTI5LDcNCj4gPiArNTI4LDcg
-QEAgc3RhdGljIGludCBjcmJfcG1fcnVudGltZV9zdXNwZW5kKHN0cnVjdCBkZXZpY2UgKmRldikN
-Cj4gPiAgCXJldHVybiBjcmJfZ29faWRsZShkZXYsIHByaXYpOw0KPiA+ICB9DQo+ID4NCj4gPiAt
-c3RhdGljIGludCBjcmJfcG1fcnVudGltZV9yZXN1bWUoc3RydWN0IGRldmljZSAqZGV2KQ0KPiA+
-ICtzdGF0aWMgaW50IF9fbWF5YmVfdW51c2VkIGNyYl9wbV9ydW50aW1lX3Jlc3VtZShzdHJ1Y3Qg
-ZGV2aWNlICpkZXYpDQo+ID4gIHsNCj4gPiAgCXN0cnVjdCB0cG1fY2hpcCAqY2hpcCA9IGRldl9n
-ZXRfZHJ2ZGF0YShkZXYpOw0KPiA+ICAJc3RydWN0IGNyYl9wcml2ICpwcml2ID0gZGV2X2dldF9k
-cnZkYXRhKCZjaGlwLT5kZXYpOyBAQCAtNTM3LDcNCj4gPiArNTM2LDcgQEAgc3RhdGljIGludCBj
-cmJfcG1fcnVudGltZV9yZXN1bWUoc3RydWN0IGRldmljZSAqZGV2KQ0KPiA+ICAJcmV0dXJuIGNy
-Yl9jbWRfcmVhZHkoZGV2LCBwcml2KTsNCj4gPiAgfQ0KPiA+DQo+ID4gLXN0YXRpYyBpbnQgY3Ji
-X3BtX3N1c3BlbmQoc3RydWN0IGRldmljZSAqZGV2KQ0KPiA+ICtzdGF0aWMgaW50IF9fbWF5YmVf
-dW51c2VkIGNyYl9wbV9zdXNwZW5kKHN0cnVjdCBkZXZpY2UgKmRldikNCj4gPiAgew0KPiA+ICAJ
-aW50IHJldDsNCj4gPg0KPiA+IEBAIC01NDgsNyArNTQ3LDcgQEAgc3RhdGljIGludCBjcmJfcG1f
-c3VzcGVuZChzdHJ1Y3QgZGV2aWNlICpkZXYpDQo+ID4gIAlyZXR1cm4gY3JiX3BtX3J1bnRpbWVf
-c3VzcGVuZChkZXYpOw0KPiA+ICB9DQo+ID4NCj4gPiAtc3RhdGljIGludCBjcmJfcG1fcmVzdW1l
-KHN0cnVjdCBkZXZpY2UgKmRldikNCj4gPiArc3RhdGljIGludCBfX21heWJlX3VudXNlZCBjcmJf
-cG1fcmVzdW1lKHN0cnVjdCBkZXZpY2UgKmRldikNCj4gPiAgew0KPiA+ICAJaW50IHJldDsNCj4g
-Pg0KPiA+IEBAIC01NTksOCArNTU4LDYgQEAgc3RhdGljIGludCBjcmJfcG1fcmVzdW1lKHN0cnVj
-dCBkZXZpY2UgKmRldikNCj4gPiAgCXJldHVybiB0cG1fcG1fcmVzdW1lKGRldik7DQo+ID4gIH0N
-Cj4gPg0KPiA+IC0jZW5kaWYgLyogQ09ORklHX1BNICovDQo+ID4gLQ0KPiA+ICBzdGF0aWMgY29u
-c3Qgc3RydWN0IGRldl9wbV9vcHMgY3JiX3BtID0gew0KPiA+ICAJU0VUX1NZU1RFTV9TTEVFUF9Q
-TV9PUFMoY3JiX3BtX3N1c3BlbmQsIGNyYl9wbV9yZXN1bWUpDQo+ID4gIAlTRVRfUlVOVElNRV9Q
-TV9PUFMoY3JiX3BtX3J1bnRpbWVfc3VzcGVuZCwNCj4gY3JiX3BtX3J1bnRpbWVfcmVzdW1lLA0K
-PiA+IE5VTEwpDQo+ID4gLS0NCj4gPiAyLjEyLjANCj4gPg0KPiANCj4gLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tDQo+IENoZWNrIG91dCB0aGUgdmlicmFudCB0ZWNoIGNvbW11bml0eSBvbiBvbmUgb2Yg
-dGhlIHdvcmxkJ3MgbW9zdCBlbmdhZ2luZw0KPiB0ZWNoIHNpdGVzLCBTbGFzaGRvdC5vcmchIGh0
-dHA6Ly9zZG0ubGluay9zbGFzaGRvdA0KPiBfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fX19fX19fX19fXw0KPiB0cG1kZC1kZXZlbCBtYWlsaW5nIGxpc3QNCj4gdHBtZGQtZGV2
-ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0DQo+IGh0dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0
-L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsDQotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KQ2hlY2sg
-b3V0IHRoZSB2aWJyYW50IHRlY2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29ybGQncyBtb3N0
-CmVuZ2FnaW5nIHRlY2ggc2l0ZXMsIFNsYXNoZG90Lm9yZyEgaHR0cDovL3NkbS5saW5rL3NsYXNo
-ZG90Cl9fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fCnRwbWRk
-LWRldmVsIG1haWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0
-cHM6Ly9saXN0cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwK
+On Fri, Mar 17, 2017 at 06:43:13PM -0500, Jiandi An wrote:
+> This enables TPM Command Response Buffer interface driver for
+> ARM64 and implements an ARM specific TPM CRB start method that
+> invokes a Secure Monitor Call (SMC) to request the TrustZone
+> Firmware to execute or cancel a TPM 2.0 command.
+> 
+> In ARM, TrustZone security extensions enable a secure software
+> environment with Secure Monitor mode.  A Secure Monitor Call
+> (SMC) is used to enter the Secure Monitor mode and perform a
+> Secure Monitor service to communicate with TrustZone firmware
+> which has control over the TPM hardware.
+> 
+> Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+
+Does not compile.
+
+/Jarkko
+
+> ---
+>  drivers/char/tpm/Kconfig   |  2 +-
+>  drivers/char/tpm/tpm_crb.c | 64 ++++++++++++++++++++++++++++++++++++++++++++--
+>  2 files changed, 63 insertions(+), 3 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
+> index d520ac5..a3035220 100644
+> --- a/drivers/char/tpm/Kconfig
+> +++ b/drivers/char/tpm/Kconfig
+> @@ -136,7 +136,7 @@ config TCG_XEN
+>  
+>  config TCG_CRB
+>  	tristate "TPM 2.0 CRB Interface"
+> -	depends on X86 && ACPI
+> +	depends on ACPI
+>  	---help---
+>  	  If you have a TPM security chip that is compliant with the
+>  	  TCG CRB 2.0 TPM specification say Yes and it will be accessible
+> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+> index cb6fb13..f8a5470 100644
+> --- a/drivers/char/tpm/tpm_crb.c
+> +++ b/drivers/char/tpm/tpm_crb.c
+> @@ -20,6 +20,9 @@
+>  #include <linux/rculist.h>
+>  #include <linux/module.h>
+>  #include <linux/pm_runtime.h>
+> +#ifdef CONFIG_ARM64
+> +#include <linux/arm-smccc.h>
+> +#endif
+>  #include "tpm.h"
+>  
+>  #define ACPI_SIG_TPM2 "TPM2"
+> @@ -73,6 +76,7 @@ enum crb_status {
+>  enum crb_flags {
+>  	CRB_FL_ACPI_START	= BIT(0),
+>  	CRB_FL_CRB_START	= BIT(1),
+> +	CRB_FL_CRB_SMC_START	= BIT(2),
+>  };
+>  
+>  struct crb_priv {
+> @@ -82,6 +86,15 @@ struct crb_priv {
+>  	u8 __iomem *cmd;
+>  	u8 __iomem *rsp;
+>  	u32 cmd_size;
+> +	u32 smc_func_id;
+> +};
+> +
+> +struct tpm2_crb_smc {
+> +	u32 interrupt;
+> +	u8 interrupt_flags;
+> +	u8 op_flags;
+> +	u16 reserved2;
+> +	u32 smc_func_id;
+>  };
+>  
+>  /**
+> @@ -101,7 +114,8 @@ struct crb_priv {
+>   */
+>  static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+>  {
+> -	if (priv->flags & CRB_FL_ACPI_START)
+> +	if ((priv->flags & CRB_FL_ACPI_START) ||
+> +	    (priv->flags & CRB_FL_CRB_SMC_START))
+>  		return 0;
+>  
+>  	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->cca->req);
+> @@ -129,7 +143,8 @@ static int __maybe_unused crb_cmd_ready(struct device *dev,
+>  {
+>  	ktime_t stop, start;
+>  
+> -	if (priv->flags & CRB_FL_ACPI_START)
+> +	if ((priv->flags & CRB_FL_ACPI_START) ||
+> +	    (priv->flags & CRB_FL_CRB_SMC_START))
+>  		return 0;
+>  
+>  	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->cca->req);
+> @@ -202,6 +217,33 @@ static int crb_do_acpi_start(struct tpm_chip *chip)
+>  	return rc;
+>  }
+>  
+> +#ifdef CONFIG_ARM64
+> +/*
+> + * This is a TPM Command Response Buffer start method that invokes a
+> + * Secure Monitor Call to requrest the firmware to execute or cancel
+> + * a TPM 2.0 command.
+> + */
+> +static inline int tpm_crb_smc_start(struct device *dev, unsigned long func_id)
+> +{
+> +	struct arm_smccc_res res;
+> +
+> +	arm_smccc_smc(func_id, 0, 0, 0, 0, 0, 0, 0, &res);
+> +	if (res.a0 != 0) {
+> +		dev_err(dev, FW_BUG "tpm_crb_smc_start() returns res.a0 = 0x%lx\n",
+> +			res.a0);
+> +		return -EIO;
+> +	}
+> +
+> +	return 0;
+> +}
+> +#else
+> +static inline int tpm_crb_smc_start(struct device *dev, unsigned long func_id)
+> +{
+> +	dev_err(dev, FW_BUG "tpm_crb: incorrect start method\n");
+> +	return -EINVAL;
+> +}
+> +#endif
+> +
+>  static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+>  {
+>  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+> @@ -229,6 +271,11 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+>  	if (priv->flags & CRB_FL_ACPI_START)
+>  		rc = crb_do_acpi_start(chip);
+>  
+> +	if (priv->flags & CRB_FL_CRB_SMC_START) {
+> +		iowrite32(CRB_START_INVOKE, &priv->cca->start);
+> +		rc = tpm_crb_smc_start(&chip->dev, priv->smc_func_id);
+> +	}
+> +
+>  	return rc;
+>  }
+>  
+> @@ -409,6 +456,7 @@ static int crb_acpi_add(struct acpi_device *device)
+>  	struct crb_priv *priv;
+>  	struct tpm_chip *chip;
+>  	struct device *dev = &device->dev;
+> +	struct tpm2_crb_smc *crb_smc;
+>  	acpi_status status;
+>  	u32 sm;
+>  	int rc;
+> @@ -441,6 +489,18 @@ static int crb_acpi_add(struct acpi_device *device)
+>  	    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
+>  		priv->flags |= CRB_FL_ACPI_START;
+>  
+> +	if (sm == ACPI_TPM2_COMMAND_BUFFER_WITH_SMC) {
+> +		if (buf->header.length < (sizeof(*buf) + sizeof(*crb_smc))) {
+> +			dev_err(dev, FW_BUG "TPM2 ACPI table has wrong size %u for start method type %d\n",
+> +				buf->header.length, ACPI_TPM2_COMMAND_BUFFER_WITH_SMC);
+> +			return -EINVAL;
+> +		}
+> +		crb_smc = (struct tpm2_crb_smc *) (((u8 *) buf) +
+> +			  ACPI_TPM2_START_METHOD_PARAMETER_OFFSET);
+> +		priv->smc_func_id = crb_smc->smc_func_id;
+> +		priv->flags |= CRB_FL_CRB_SMC_START;
+> +	}
+> +
+>  	rc = crb_map_io(device, priv, buf);
+>  	if (rc)
+>  		return rc;
+> -- 
+> Jiandi An
+> Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
+> Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
+> 
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
