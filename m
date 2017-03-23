@@ -1,8 +1,8 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+From: Dan Carpenter <dan.carpenter@oracle.com>
 Subject: Re: [PATCH] tpm2: fix off-by-one comparison and out-of-bounds read
  error
-Date: Thu, 23 Mar 2017 18:23:15 +0200
-Message-ID: <20170323162315.jadlprsu6hevm4ip@intel.com>
+Date: Thu, 23 Mar 2017 19:42:09 +0300
+Message-ID: <20170323164209.GO32449@mwanda>
 References: <20170320142336.10997-1-colin.king@canonical.com>
  <20170322114256.pdwg6buj2wkhcooy@intel.com>
  <d96bb5c9-e1b3-abe5-2273-fc525dc00190@canonical.com>
@@ -10,12 +10,12 @@ References: <20170320142336.10997-1-colin.king@canonical.com>
  <20170323155358.jpotoweghjnl4vjx@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
 In-Reply-To: <20170323155358.jpotoweghjnl4vjx@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Dan Carpenter <dan.carpenter@oracle.com>
-Cc: Colin Ian King <colin.king@canonical.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, kernel-janitors@vger.kernel.org, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: Colin Ian King <colin.king@canonical.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, kernel-janitors@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
 On Thu, Mar 23, 2017 at 05:53:58PM +0200, Jarkko Sakkinen wrote:
@@ -67,13 +67,8 @@ On Thu, Mar 23, 2017 at 05:53:58PM +0200, Jarkko Sakkinen wrote:
 > 
 > Hmm... Maybe so depending on how you interpret Reported-by but
 > Fixes-from is not something that is used at the moment, is it?
-> 
-> /Jarkko
 
-When I started squashing the commit I realized what you meant so
-I'm adding this to the commit:
+No, but we should create it.
 
-Fixes-from: Colin Ian King <colin.king@canonical.com>
-
-/Jarkko
-
+regards,
+dan carpenter
