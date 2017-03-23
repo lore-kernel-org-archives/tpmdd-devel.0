@@ -1,15 +1,16 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH linux-next] tmp2: fix an off by one bug
-Date: Thu, 23 Mar 2017 20:15:39 +0200
-Message-ID: <20170323181539.y57qjubnciglapep@intel.com>
-References: <20170208110713.14070-4-jarkko.sakkinen@linux.intel.com>
-	<20170323154029.27816-1-vincent.stehle@laposte.net>
+From: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+Subject: Re: [PATCH v3 2/2] tpm/tpm_crb: Enable TPM CRB
+	interface for ARM64
+Date: Thu, 23 Mar 2017 18:28:47 -0500
+Message-ID: <58D45A2F.7030505@codeaurora.org>
+References: <1489794193-17233-1-git-send-email-anjiandi@codeaurora.org>
+	<1489794193-17233-3-git-send-email-anjiandi@codeaurora.org>
+	<20170322061241.j7avdfpnehcbjg6j@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="iso-8859-1"
-Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170323154029.27816-1-vincent.stehle-QFKgK+z4sOrR7s880joybQ@public.gmane.org>
+In-Reply-To: <20170322061241.j7avdfpnehcbjg6j-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,80 +19,198 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Vincent =?iso-8859-1?Q?Stehl=E9?= <vincent.stehle-QFKgK+z4sOrR7s880joybQ@public.gmane.org>
-Cc: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Mar 23, 2017 at 04:40:29PM +0100, Vincent Stehl=E9 wrote:
-> In tpm2_map_to_phandle(), avoid the case where i equals
-> ARRAY_SIZE(space->context_tbl) and we then access space->context_tbl[i].
-> =
+On 03/22/17 01:12, Jarkko Sakkinen wrote:
+> On Fri, Mar 17, 2017 at 06:43:13PM -0500, Jiandi An wrote:
+>> This enables TPM Command Response Buffer interface driver for
+>> ARM64 and implements an ARM specific TPM CRB start method that
+>> invokes a Secure Monitor Call (SMC) to request the TrustZone
+>> Firmware to execute or cancel a TPM 2.0 command.
+>>
+>> In ARM, TrustZone security extensions enable a secure software
+>> environment with Secure Monitor mode.  A Secure Monitor Call
+>> (SMC) is used to enter the Secure Monitor mode and perform a
+>> Secure Monitor service to communicate with TrustZone firmware
+>> which has control over the TPM hardware.
+>>
+>> Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+>
+> Does not compile.
+>
+> /Jarkko
 
-> This fixes the following smatch error:
-> =
+I appologize for this.  I see control area structure has
+recently changed.  I'll ensure to rebase to your latest in v4.
 
->   drivers/char/tpm/tpm2-space.c:232 tpm2_map_to_phandle() error: buffer o=
-verflow 'space->context_tbl' 3 <=3D 3
-> =
+- Jiandi
 
-> Fixes: 5f6b4fbc12c8fc97 ("tpm: infrastructure for TPM spaces")
-> Signed-off-by: Vincent Stehl=E9 <vincent.stehle-QFKgK+z4sOrR7s880joybQ@public.gmane.org>
-> Cc: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> Cc: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+>
+>> ---
+>>   drivers/char/tpm/Kconfig   |  2 +-
+>>   drivers/char/tpm/tpm_crb.c | 64 ++++++++++++++++++++++++++++++++++++++++++++--
+>>   2 files changed, 63 insertions(+), 3 deletions(-)
+>>
+>> diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
+>> index d520ac5..a3035220 100644
+>> --- a/drivers/char/tpm/Kconfig
+>> +++ b/drivers/char/tpm/Kconfig
+>> @@ -136,7 +136,7 @@ config TCG_XEN
+>>
+>>   config TCG_CRB
+>>   	tristate "TPM 2.0 CRB Interface"
+>> -	depends on X86 && ACPI
+>> +	depends on ACPI
+>>   	---help---
+>>   	  If you have a TPM security chip that is compliant with the
+>>   	  TCG CRB 2.0 TPM specification say Yes and it will be accessible
+>> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+>> index cb6fb13..f8a5470 100644
+>> --- a/drivers/char/tpm/tpm_crb.c
+>> +++ b/drivers/char/tpm/tpm_crb.c
+>> @@ -20,6 +20,9 @@
+>>   #include <linux/rculist.h>
+>>   #include <linux/module.h>
+>>   #include <linux/pm_runtime.h>
+>> +#ifdef CONFIG_ARM64
+>> +#include <linux/arm-smccc.h>
+>> +#endif
+>>   #include "tpm.h"
+>>
+>>   #define ACPI_SIG_TPM2 "TPM2"
+>> @@ -73,6 +76,7 @@ enum crb_status {
+>>   enum crb_flags {
+>>   	CRB_FL_ACPI_START	= BIT(0),
+>>   	CRB_FL_CRB_START	= BIT(1),
+>> +	CRB_FL_CRB_SMC_START	= BIT(2),
+>>   };
+>>
+>>   struct crb_priv {
+>> @@ -82,6 +86,15 @@ struct crb_priv {
+>>   	u8 __iomem *cmd;
+>>   	u8 __iomem *rsp;
+>>   	u32 cmd_size;
+>> +	u32 smc_func_id;
+>> +};
+>> +
+>> +struct tpm2_crb_smc {
+>> +	u32 interrupt;
+>> +	u8 interrupt_flags;
+>> +	u8 op_flags;
+>> +	u16 reserved2;
+>> +	u32 smc_func_id;
+>>   };
+>>
+>>   /**
+>> @@ -101,7 +114,8 @@ struct crb_priv {
+>>    */
+>>   static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+>>   {
+>> -	if (priv->flags & CRB_FL_ACPI_START)
+>> +	if ((priv->flags & CRB_FL_ACPI_START) ||
+>> +	    (priv->flags & CRB_FL_CRB_SMC_START))
+>>   		return 0;
+>>
+>>   	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->cca->req);
+>> @@ -129,7 +143,8 @@ static int __maybe_unused crb_cmd_ready(struct device *dev,
+>>   {
+>>   	ktime_t stop, start;
+>>
+>> -	if (priv->flags & CRB_FL_ACPI_START)
+>> +	if ((priv->flags & CRB_FL_ACPI_START) ||
+>> +	    (priv->flags & CRB_FL_CRB_SMC_START))
+>>   		return 0;
+>>
+>>   	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->cca->req);
+>> @@ -202,6 +217,33 @@ static int crb_do_acpi_start(struct tpm_chip *chip)
+>>   	return rc;
+>>   }
+>>
+>> +#ifdef CONFIG_ARM64
+>> +/*
+>> + * This is a TPM Command Response Buffer start method that invokes a
+>> + * Secure Monitor Call to requrest the firmware to execute or cancel
+>> + * a TPM 2.0 command.
+>> + */
+>> +static inline int tpm_crb_smc_start(struct device *dev, unsigned long func_id)
+>> +{
+>> +	struct arm_smccc_res res;
+>> +
+>> +	arm_smccc_smc(func_id, 0, 0, 0, 0, 0, 0, 0, &res);
+>> +	if (res.a0 != 0) {
+>> +		dev_err(dev, FW_BUG "tpm_crb_smc_start() returns res.a0 = 0x%lx\n",
+>> +			res.a0);
+>> +		return -EIO;
+>> +	}
+>> +
+>> +	return 0;
+>> +}
+>> +#else
+>> +static inline int tpm_crb_smc_start(struct device *dev, unsigned long func_id)
+>> +{
+>> +	dev_err(dev, FW_BUG "tpm_crb: incorrect start method\n");
+>> +	return -EINVAL;
+>> +}
+>> +#endif
+>> +
+>>   static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+>>   {
+>>   	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+>> @@ -229,6 +271,11 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+>>   	if (priv->flags & CRB_FL_ACPI_START)
+>>   		rc = crb_do_acpi_start(chip);
+>>
+>> +	if (priv->flags & CRB_FL_CRB_SMC_START) {
+>> +		iowrite32(CRB_START_INVOKE, &priv->cca->start);
+>> +		rc = tpm_crb_smc_start(&chip->dev, priv->smc_func_id);
+>> +	}
+>> +
+>>   	return rc;
+>>   }
+>>
+>> @@ -409,6 +456,7 @@ static int crb_acpi_add(struct acpi_device *device)
+>>   	struct crb_priv *priv;
+>>   	struct tpm_chip *chip;
+>>   	struct device *dev = &device->dev;
+>> +	struct tpm2_crb_smc *crb_smc;
+>>   	acpi_status status;
+>>   	u32 sm;
+>>   	int rc;
+>> @@ -441,6 +489,18 @@ static int crb_acpi_add(struct acpi_device *device)
+>>   	    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
+>>   		priv->flags |= CRB_FL_ACPI_START;
+>>
+>> +	if (sm == ACPI_TPM2_COMMAND_BUFFER_WITH_SMC) {
+>> +		if (buf->header.length < (sizeof(*buf) + sizeof(*crb_smc))) {
+>> +			dev_err(dev, FW_BUG "TPM2 ACPI table has wrong size %u for start method type %d\n",
+>> +				buf->header.length, ACPI_TPM2_COMMAND_BUFFER_WITH_SMC);
+>> +			return -EINVAL;
+>> +		}
+>> +		crb_smc = (struct tpm2_crb_smc *) (((u8 *) buf) +
+>> +			  ACPI_TPM2_START_METHOD_PARAMETER_OFFSET);
+>> +		priv->smc_func_id = crb_smc->smc_func_id;
+>> +		priv->flags |= CRB_FL_CRB_SMC_START;
+>> +	}
+>> +
+>>   	rc = crb_map_io(device, priv, buf);
+>>   	if (rc)
+>>   		return rc;
+>> --
+>> Jiandi An
+>> Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
+>> Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
+>>
 
-Hi
 
-Thanks for doing this. I just squashed a fix by Colin Ian King. Anyway,
-thank you.
+-- 
+Jiandi An
+Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm
+Technologies, Inc.
+Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a
+Linux Foundation Collaborative Project.
 
-/Jarkko
-
-> ---
-> =
-
-> =
-
-> Hi,
-> =
-
-> I saw that in Linux next-20170323.
-> =
-
-> Best regards,
-> =
-
-> Vincent.
-> =
-
-> =
-
->  drivers/char/tpm/tpm2-space.c | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
-> =
-
-> diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2-space.c
-> index d36d81e07076..009934269514 100644
-> --- a/drivers/char/tpm/tpm2-space.c
-> +++ b/drivers/char/tpm/tpm2-space.c
-> @@ -229,7 +229,7 @@ static bool tpm2_map_to_phandle(struct tpm_space *spa=
-ce, void *handle)
->  	int i;
->  =
-
->  	i =3D 0xFFFFFF - (vhandle & 0xFFFFFF);
-> -	if (i > ARRAY_SIZE(space->context_tbl) || !space->context_tbl[i])
-> +	if (i >=3D ARRAY_SIZE(space->context_tbl) || !space->context_tbl[i])
->  		return false;
->  =
-
->  	phandle =3D space->context_tbl[i];
-> -- =
-
-> 2.11.0
-> =
-
-
----------------------------------------------------------------------------=
----
+------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
 engaging tech sites, Slashdot.org! http://sdm.link/slashdot
