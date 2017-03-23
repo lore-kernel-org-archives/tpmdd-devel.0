@@ -1,17 +1,17 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm/tpm_crb: fix unused warnings on
- suspend/resume functions
-Date: Thu, 23 Mar 2017 17:51:17 +0200
-Message-ID: <20170323155117.w6zsewdxc6eeti4b@intel.com>
-References: <20170317015133.2269-1-jeremy.lefaure@lse.epita.fr>
-	<20170321080353.oh2apppp37nchuw7@intel.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B543B122D@hasmsx108.ger.corp.intel.com>
+Subject: Re: [PATCH] tpm2: fix off-by-one comparison and
+ out-of-bounds read error
+Date: Thu, 23 Mar 2017 17:51:54 +0200
+Message-ID: <20170323155154.xypbv4t6xsjrhkcc@intel.com>
+References: <20170320142336.10997-1-colin.king@canonical.com>
+	<20170322114256.pdwg6buj2wkhcooy@intel.com>
+	<d96bb5c9-e1b3-abe5-2273-fc525dc00190@canonical.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B543B122D-Jy8z56yoSI8MvF1YICWikbfspsVTdybXVpNB7YpNyf8@public.gmane.org>
+In-Reply-To: <d96bb5c9-e1b3-abe5-2273-fc525dc00190-Z7WLFzj8eWMS+FvcfC7Uqw@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,38 +20,55 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Cc: =?iso-8859-1?B?Suly6W15?= Lefaure <jeremy.lefaure-tU7rkvAWjlwhT4uAktR2oQ@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "arnd-r2nGTMty4D4@public.gmane.org" <arnd-r2nGTMty4D4@public.gmane.org>
+To: Colin Ian King <colin.king-Z7WLFzj8eWMS+FvcfC7Uqw@public.gmane.org>
+Cc: kernel-janitors-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gVHVlLCBNYXIgMjEsIDIwMTcgYXQgMTA6MDU6MzZQTSArMDAwMCwgV2lua2xlciwgVG9tYXMg
-d3JvdGU6Cj4gPiBPbiBUaHUsIE1hciAxNiwgMjAxNyBhdCAwOTo1MTozM1BNIC0wNDAwLCBKw6ly
-w6lteSBMZWZhdXJlIHdyb3RlOgo+ID4gPiBXaGVuIFBNX1NMRUVQIGlzIGRpc2FibGVkIGNyYl9w
-bV9zdXNwZW5kIGFuZCBjcmJfcG1fcmVzdW1lIGFyZSBub3QKPiA+ID4gdXNlZCBieSBTRVRfU1lT
-VEVNX1NMRUVQX1BNX09QUyBldmVuIGlmIFBNIGlzIGVuYWJsZWQ6Cj4gPiA+Cj4gPiA+IGRydmVy
-cy9jaGFyL3RwbS90cG1fY3JiLmM6NTQwOjEyOiB3YXJuaW5nOiDigJhjcmJfcG1fc3VzcGVuZOKA
-mSBkZWZpbmVkCj4gPiA+IGJ1dCBub3QgdXNlZCBbLVd1bnVzZWQtZnVuY3Rpb25dICBzdGF0aWMg
-aW50IGNyYl9wbV9zdXNwZW5kKHN0cnVjdAo+ID4gPiBkZXZpY2UgKmRldikKPiA+ID4gICAgICAg
-ICAgICAgXgo+ID4gPiBkcml2ZXJzL2NoYXIvdHBtL3RwbV9jcmIuYzo1NTE6MTI6IHdhcm5pbmc6
-IOKAmGNyYl9wbV9yZXN1bWXigJkgZGVmaW5lZAo+ID4gPiBidXQgbm90IHVzZWQgWy1XdW51c2Vk
-LWZ1bmN0aW9uXSAgc3RhdGljIGludCBjcmJfcG1fcmVzdW1lKHN0cnVjdAo+ID4gPiBkZXZpY2Ug
-KmRldikKPiA+ID4gICAgICAgICAgICAgXgo+ID4gPgo+ID4gPiBUaGUgcHJlcHJvY2Vzc29yIGNv
-bmRpdGlvbiBzaG91bGQgYmUgb24gQ09ORklHX1BNX1NMRUVQLCBub3Qgb24KPiA+IENPTkZJR19Q
-TS4KPiA+ID4gSG93ZXZlciwgdGhpcyBwYXRjaCBmaXhlcyB0aGlzIHdhcm5pbmcgYnkgdXNpbmcg
-X19tYXliZV91bnVzZWQgb24KPiA+ID4gZnVuY3Rpb24gdGhhdCBhcmUgaW4gdGhlIHByZXByb2Nl
-c3NvciBjb25kaXRpb24uCj4gPiA+Cj4gPiA+IFNpZ25lZC1vZmYtYnk6IErDqXLDqW15IExlZmF1
-cmUgPGplcmVteS5sZWZhdXJlQGxzZS5lcGl0YS5mcj4KPiA+IAo+ID4gVGhhbmtzLiBQbGVhc2Ug
-aW5jbHVkZSBhbHNvIGxpbnV4LWtlcm5lbEB2Z2VyLmtlcm5lbC5vcmcgaW4gdGhlIGZ1dHVyZS4K
-PiA+IAo+ID4gUmV2aWV3ZWQtYnk6IEphcmtrbyBTYXNra2luZW4gPGphcmtrby5zYWtraW5lbkBs
-aW51eC5pbnRlbC5jb20+Cj4gCj4gV2Ugc2hvdWxkIGdvIHdpdGggQXJuZCdzIHBhdGNoLCB3aGlj
-aCBpcyBhY3R1YWxseSB0aGUgc2FtZSwgIGJ1dCBpdAo+IHdhcyBhbHJlYWR5IHJldmlld2VkIGFu
-ZCBoYXMgYmV0dGVyIGNvbW1pdCBtZXNzYWdlcy4KPiBUaGFua3MKPiBUb21hcwoKWW91IGFyZSBy
-aWdodCBhYm91dCB0aGUgY29tbWl0IG1lc3NhZ2UgYnV0IHdoZXJlIGFyZSB0aGUgUmV2aWV3ZWQt
-YnkKdGFncz8gWzFdCgpbMV0gaHR0cHM6Ly9wYXRjaHdvcmsua2VybmVsLm9yZy9wYXRjaC85NjMz
-NTM3LwoKL0phcmtrbwoKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCkNoZWNrIG91dCB0aGUgdmlicmFu
-dCB0ZWNoIGNvbW11bml0eSBvbiBvbmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAplbmdhZ2luZyB0ZWNo
-IHNpdGVzLCBTbGFzaGRvdC5vcmchIGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdApfX19fX19fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwp0cG1kZC1kZXZlbCBtYWlsaW5n
-IGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8vbGlzdHMuc291
-cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
+On Wed, Mar 22, 2017 at 11:45:37AM +0000, Colin Ian King wrote:
+> On 22/03/17 11:42, Jarkko Sakkinen wrote:
+> > On Mon, Mar 20, 2017 at 02:23:36PM +0000, Colin King wrote:
+> >> From: Colin Ian King <colin.king-Z7WLFzj8eWMS+FvcfC7Uqw@public.gmane.org>
+> >>
+> >> The comparison of an out of range index into space->context_tbl is
+> >> off-by-one and should be using >= rather than > in the comparison.
+> >>
+> >> Detected by CoverityScan, CID#1419694 ("Out-of-bounds read")
+> >>
+> >> Fixes: 849246e7ce9ce ("tpm2: add session handle context saving and restoring to the space code")
+> >> Signed-off-by: Colin Ian King <colin.king-Z7WLFzj8eWMS+FvcfC7Uqw@public.gmane.org>
+> >> ---
+> >>  drivers/char/tpm/tpm2-space.c | 2 +-
+> >>  1 file changed, 1 insertion(+), 1 deletion(-)
+> >>
+> >> diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2-space.c
+> >> index d36d81e07076..009934269514 100644
+> >> --- a/drivers/char/tpm/tpm2-space.c
+> >> +++ b/drivers/char/tpm/tpm2-space.c
+> >> @@ -229,7 +229,7 @@ static bool tpm2_map_to_phandle(struct tpm_space *space, void *handle)
+> >>  	int i;
+> >>  
+> >>  	i = 0xFFFFFF - (vhandle & 0xFFFFFF);
+> >> -	if (i > ARRAY_SIZE(space->context_tbl) || !space->context_tbl[i])
+> >> +	if (i >= ARRAY_SIZE(space->context_tbl) || !space->context_tbl[i])
+> >>  		return false;
+> >>  
+> >>  	phandle = space->context_tbl[i];
+> >> -- 
+> >> 2.11.0
+> > 
+> > Thanks. If you don't mind, I would squash this to that patch?
+> > 
+> > /Jarkko
+> > 
+> Sure squash it, and maybe add a Reported-by: Colin Ian King
+> <colin.king-Z7WLFzj8eWMS+FvcfC7Uqw@public.gmane.org> if that's OK with you.
+> 
+> Colin
+
+Thanks I'll do that!
+
+/Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
