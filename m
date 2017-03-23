@@ -1,12 +1,13 @@
-From: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-Subject: [PATCH v2] tpm_tis: convert to using locality
-	callbacks
-Date: Mon, 27 Mar 2017 08:46:04 -0700
-Message-ID: <20170327154604.10744-1-jsnitsel@redhat.com>
+From: =?UTF-8?q?Vincent=20Stehl=C3=A9?= <vincent.stehle-QFKgK+z4sOrR7s880joybQ@public.gmane.org>
+Subject: [PATCH linux-next] tmp2: fix an off by one bug
+Date: Thu, 23 Mar 2017 16:40:29 +0100
+Message-ID: <20170323154029.27816-1-vincent.stehle@laposte.net>
+References: <20170208110713.14070-4-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170208110713.14070-4-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -16,157 +17,34 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>, =?UTF-8?q?Vincent=20Stehl=C3=A9?= <vincent.stehle-QFKgK+z4sOrR7s880joybQ@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This patch converts tpm_tis to use of the new tpm class ops
-request_locality, and relinquish_locality.
-
-With the move to using the callbacks, release_locality is changed so
-that we now release the locality even if there is no request pending.
-
-This required some changes to the tpm_tis_core_init code path to
-make sure locality is requested when needed:
-
-  - tpm2_probe code path will end up calling request/release through
-    callbacks, so request_locality prior to tpm2_probe not needed.
-
-  - probe_itpm makes calls to tpm_tis_send_data which no longer calls
-    request_locality, so add request_locality prior to tpm_tis_send_data
-    calls. Also drop release_locality call in middleof probe_itpm, and
-    keep locality until release_locality called at end of probe_itpm.
-
-Cc: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Cc: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>
-Signed-off-by: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
----
-v2: drop release_locality call in tpm_tis_remove
-
-drivers/char/tpm/tpm_tis_core.c | 34 ++++++++--------------------------
- 1 file changed, 8 insertions(+), 26 deletions(-)
-
-diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-index f31fc831c8f9..b617b2eeb080 100644
---- a/drivers/char/tpm/tpm_tis_core.c
-+++ b/drivers/char/tpm/tpm_tis_core.c
-@@ -75,21 +75,11 @@ static bool check_locality(struct tpm_chip *chip, int l)
- 	return false;
- }
- 
--static void release_locality(struct tpm_chip *chip, int l, int force)
-+static void release_locality(struct tpm_chip *chip, int l)
- {
- 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
--	int rc;
--	u8 access;
--
--	rc = tpm_tis_read8(priv, TPM_ACCESS(l), &access);
--	if (rc < 0)
--		return;
--
--	if (force || (access &
--		      (TPM_ACCESS_REQUEST_PENDING | TPM_ACCESS_VALID)) ==
--	    (TPM_ACCESS_REQUEST_PENDING | TPM_ACCESS_VALID))
--		tpm_tis_write8(priv, TPM_ACCESS(l), TPM_ACCESS_ACTIVE_LOCALITY);
- 
-+	tpm_tis_write8(priv, TPM_ACCESS(l), TPM_ACCESS_ACTIVE_LOCALITY);
- }
- 
- static int request_locality(struct tpm_chip *chip, int l)
-@@ -254,7 +244,6 @@ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
- 
- out:
- 	tpm_tis_ready(chip);
--	release_locality(chip, priv->locality, 0);
- 	return size;
- }
- 
-@@ -270,9 +259,6 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 	size_t count = 0;
- 	bool itpm = priv->flags & TPM_TIS_ITPM_WORKAROUND;
- 
--	if (request_locality(chip, 0) < 0)
--		return -EBUSY;
--
- 	status = tpm_tis_status(chip);
- 	if ((status & TPM_STS_COMMAND_READY) == 0) {
- 		tpm_tis_ready(chip);
-@@ -331,7 +317,6 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 
- out_err:
- 	tpm_tis_ready(chip);
--	release_locality(chip, priv->locality, 0);
- 	return rc;
- }
- 
-@@ -392,7 +377,6 @@ static int tpm_tis_send_main(struct tpm_chip *chip, u8 *buf, size_t len)
- 	return len;
- out_err:
- 	tpm_tis_ready(chip);
--	release_locality(chip, priv->locality, 0);
- 	return rc;
- }
- 
-@@ -479,12 +463,14 @@ static int probe_itpm(struct tpm_chip *chip)
- 	if (vendor != TPM_VID_INTEL)
- 		return 0;
- 
-+	if (request_locality(chip, 0) != 0)
-+		return -EBUSY;
-+
- 	rc = tpm_tis_send_data(chip, cmd_getticks, len);
- 	if (rc == 0)
- 		goto out;
- 
- 	tpm_tis_ready(chip);
--	release_locality(chip, priv->locality, 0);
- 
- 	priv->flags |= TPM_TIS_ITPM_WORKAROUND;
- 
-@@ -498,7 +484,7 @@ static int probe_itpm(struct tpm_chip *chip)
- 
- out:
- 	tpm_tis_ready(chip);
--	release_locality(chip, priv->locality, 0);
-+	release_locality(chip, priv->locality);
- 
- 	return rc;
- }
-@@ -672,7 +658,6 @@ void tpm_tis_remove(struct tpm_chip *chip)
- 		interrupt = 0;
- 
- 	tpm_tis_write32(priv, reg, ~TPM_GLOBAL_INT_ENABLE & interrupt);
--	release_locality(chip, priv->locality, 1);
- }
- EXPORT_SYMBOL_GPL(tpm_tis_remove);
- 
-@@ -686,6 +671,8 @@ static const struct tpm_class_ops tpm_tis = {
- 	.req_complete_mask = TPM_STS_DATA_AVAIL | TPM_STS_VALID,
- 	.req_complete_val = TPM_STS_DATA_AVAIL | TPM_STS_VALID,
- 	.req_canceled = tpm_tis_req_canceled,
-+	.request_locality = request_locality,
-+	.relinquish_locality = release_locality,
- };
- 
- int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
-@@ -728,11 +715,6 @@ int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
- 	intmask &= ~TPM_GLOBAL_INT_ENABLE;
- 	tpm_tis_write32(priv, TPM_INT_ENABLE(priv->locality), intmask);
- 
--	if (request_locality(chip, 0) != 0) {
--		rc = -ENODEV;
--		goto out_err;
--	}
--
- 	rc = tpm2_probe(chip);
- 	if (rc)
- 		goto out_err;
--- 
-2.11.0.258.ge05806da9
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+SW4gdHBtMl9tYXBfdG9fcGhhbmRsZSgpLCBhdm9pZCB0aGUgY2FzZSB3aGVyZSBpIGVxdWFscwpB
+UlJBWV9TSVpFKHNwYWNlLT5jb250ZXh0X3RibCkgYW5kIHdlIHRoZW4gYWNjZXNzIHNwYWNlLT5j
+b250ZXh0X3RibFtpXS4KClRoaXMgZml4ZXMgdGhlIGZvbGxvd2luZyBzbWF0Y2ggZXJyb3I6Cgog
+IGRyaXZlcnMvY2hhci90cG0vdHBtMi1zcGFjZS5jOjIzMiB0cG0yX21hcF90b19waGFuZGxlKCkg
+ZXJyb3I6IGJ1ZmZlciBvdmVyZmxvdyAnc3BhY2UtPmNvbnRleHRfdGJsJyAzIDw9IDMKCkZpeGVz
+OiA1ZjZiNGZiYzEyYzhmYzk3ICgidHBtOiBpbmZyYXN0cnVjdHVyZSBmb3IgVFBNIHNwYWNlcyIp
+ClNpZ25lZC1vZmYtYnk6IFZpbmNlbnQgU3RlaGzDqSA8dmluY2VudC5zdGVobGVAbGFwb3N0ZS5u
+ZXQ+CkNjOiBKYXJra28gU2Fra2luZW4gPGphcmtrby5zYWtraW5lbkBsaW51eC5pbnRlbC5jb20+
+CkNjOiBKYW1lcyBCb3R0b21sZXkgPEphbWVzLkJvdHRvbWxleUBIYW5zZW5QYXJ0bmVyc2hpcC5j
+b20+Ci0tLQoKCkhpLAoKSSBzYXcgdGhhdCBpbiBMaW51eCBuZXh0LTIwMTcwMzIzLgoKQmVzdCBy
+ZWdhcmRzLAoKVmluY2VudC4KCgogZHJpdmVycy9jaGFyL3RwbS90cG0yLXNwYWNlLmMgfCAyICst
+CiAxIGZpbGUgY2hhbmdlZCwgMSBpbnNlcnRpb24oKyksIDEgZGVsZXRpb24oLSkKCmRpZmYgLS1n
+aXQgYS9kcml2ZXJzL2NoYXIvdHBtL3RwbTItc3BhY2UuYyBiL2RyaXZlcnMvY2hhci90cG0vdHBt
+Mi1zcGFjZS5jCmluZGV4IGQzNmQ4MWUwNzA3Ni4uMDA5OTM0MjY5NTE0IDEwMDY0NAotLS0gYS9k
+cml2ZXJzL2NoYXIvdHBtL3RwbTItc3BhY2UuYworKysgYi9kcml2ZXJzL2NoYXIvdHBtL3RwbTIt
+c3BhY2UuYwpAQCAtMjI5LDcgKzIyOSw3IEBAIHN0YXRpYyBib29sIHRwbTJfbWFwX3RvX3BoYW5k
+bGUoc3RydWN0IHRwbV9zcGFjZSAqc3BhY2UsIHZvaWQgKmhhbmRsZSkKIAlpbnQgaTsKIAogCWkg
+PSAweEZGRkZGRiAtICh2aGFuZGxlICYgMHhGRkZGRkYpOwotCWlmIChpID4gQVJSQVlfU0laRShz
+cGFjZS0+Y29udGV4dF90YmwpIHx8ICFzcGFjZS0+Y29udGV4dF90YmxbaV0pCisJaWYgKGkgPj0g
+QVJSQVlfU0laRShzcGFjZS0+Y29udGV4dF90YmwpIHx8ICFzcGFjZS0+Y29udGV4dF90YmxbaV0p
+CiAJCXJldHVybiBmYWxzZTsKIAogCXBoYW5kbGUgPSBzcGFjZS0+Y29udGV4dF90YmxbaV07Ci0t
+IAoyLjExLjAKCgotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KQ2hlY2sgb3V0IHRoZSB2aWJyYW50IHRl
+Y2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29ybGQncyBtb3N0CmVuZ2FnaW5nIHRlY2ggc2l0
+ZXMsIFNsYXNoZG90Lm9yZyEgaHR0cDovL3NkbS5saW5rL3NsYXNoZG90Cl9fX19fX19fX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fCnRwbWRkLWRldmVsIG1haWxpbmcgbGlz
+dAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9saXN0cy5zb3VyY2Vm
+b3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwK
