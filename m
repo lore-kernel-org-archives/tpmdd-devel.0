@@ -1,16 +1,17 @@
-From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH v2 4/7] tpm: infrastructure for TPM spaces
-Date: Wed, 22 Mar 2017 16:09:21 -0400
-Message-ID: <f8d414fa-03f9-2c22-8ddf-497c1d281536@us.ibm.com>
-References: <20170216192529.25467-1-jarkko.sakkinen@linux.intel.com>
-	<20170216192529.25467-5-jarkko.sakkinen@linux.intel.com>
-	<58AC85F2.5000406@linux.vnet.ibm.com>
-	<1487785159.2376.27.camel@HansenPartnership.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm/tpm_crb: fix unused warnings on
+ suspend/resume functions
+Date: Thu, 23 Mar 2017 17:51:17 +0200
+Message-ID: <20170323155117.w6zsewdxc6eeti4b@intel.com>
+References: <20170317015133.2269-1-jeremy.lefaure@lse.epita.fr>
+	<20170321080353.oh2apppp37nchuw7@intel.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B543B122D@hasmsx108.ger.corp.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1487785159.2376.27.camel-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B543B122D-Jy8z56yoSI8MvF1YICWikbfspsVTdybXVpNB7YpNyf8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,38 +20,38 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Cc: =?iso-8859-1?B?Suly6W15?= Lefaure <jeremy.lefaure-tU7rkvAWjlwhT4uAktR2oQ@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "arnd-r2nGTMty4D4@public.gmane.org" <arnd-r2nGTMty4D4@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 2/22/2017 12:39 PM, James Bottomley wrote:
->
-> Right at the moment the kernel use of tpm2 looks like
->
-> acquire chip->tpm_mutex
-> load key
-> process key
-> unload key
-> release chip->tpm_mutex
->
-> While it does this, there's no need for it to have a RM interface
-> because what it does between the acquisition and drop of the mutex
-> can't be seen by or have any effect on userspace (whether it uses the
-> RM or not).  So currently, the question doesn't arise, which is the
-> situation you see.
-
-1 - This appears to depend on the RM not releasing the mutex until all 
-objects are swapped out.  Correct?  Same for sessions?
-
-2 - A startauthsession can cause a regap error.  Does the above depend 
-on the RM doing early regapping so the RM won't see that error?
-
-3 - There's also the problem where the TPM saved session slots 
-(typically 64) are full.  My intuition is that the best solution is for 
-the RM to reserve 3 slots for the kernel.
-
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+T24gVHVlLCBNYXIgMjEsIDIwMTcgYXQgMTA6MDU6MzZQTSArMDAwMCwgV2lua2xlciwgVG9tYXMg
+d3JvdGU6Cj4gPiBPbiBUaHUsIE1hciAxNiwgMjAxNyBhdCAwOTo1MTozM1BNIC0wNDAwLCBKw6ly
+w6lteSBMZWZhdXJlIHdyb3RlOgo+ID4gPiBXaGVuIFBNX1NMRUVQIGlzIGRpc2FibGVkIGNyYl9w
+bV9zdXNwZW5kIGFuZCBjcmJfcG1fcmVzdW1lIGFyZSBub3QKPiA+ID4gdXNlZCBieSBTRVRfU1lT
+VEVNX1NMRUVQX1BNX09QUyBldmVuIGlmIFBNIGlzIGVuYWJsZWQ6Cj4gPiA+Cj4gPiA+IGRydmVy
+cy9jaGFyL3RwbS90cG1fY3JiLmM6NTQwOjEyOiB3YXJuaW5nOiDigJhjcmJfcG1fc3VzcGVuZOKA
+mSBkZWZpbmVkCj4gPiA+IGJ1dCBub3QgdXNlZCBbLVd1bnVzZWQtZnVuY3Rpb25dICBzdGF0aWMg
+aW50IGNyYl9wbV9zdXNwZW5kKHN0cnVjdAo+ID4gPiBkZXZpY2UgKmRldikKPiA+ID4gICAgICAg
+ICAgICAgXgo+ID4gPiBkcml2ZXJzL2NoYXIvdHBtL3RwbV9jcmIuYzo1NTE6MTI6IHdhcm5pbmc6
+IOKAmGNyYl9wbV9yZXN1bWXigJkgZGVmaW5lZAo+ID4gPiBidXQgbm90IHVzZWQgWy1XdW51c2Vk
+LWZ1bmN0aW9uXSAgc3RhdGljIGludCBjcmJfcG1fcmVzdW1lKHN0cnVjdAo+ID4gPiBkZXZpY2Ug
+KmRldikKPiA+ID4gICAgICAgICAgICAgXgo+ID4gPgo+ID4gPiBUaGUgcHJlcHJvY2Vzc29yIGNv
+bmRpdGlvbiBzaG91bGQgYmUgb24gQ09ORklHX1BNX1NMRUVQLCBub3Qgb24KPiA+IENPTkZJR19Q
+TS4KPiA+ID4gSG93ZXZlciwgdGhpcyBwYXRjaCBmaXhlcyB0aGlzIHdhcm5pbmcgYnkgdXNpbmcg
+X19tYXliZV91bnVzZWQgb24KPiA+ID4gZnVuY3Rpb24gdGhhdCBhcmUgaW4gdGhlIHByZXByb2Nl
+c3NvciBjb25kaXRpb24uCj4gPiA+Cj4gPiA+IFNpZ25lZC1vZmYtYnk6IErDqXLDqW15IExlZmF1
+cmUgPGplcmVteS5sZWZhdXJlQGxzZS5lcGl0YS5mcj4KPiA+IAo+ID4gVGhhbmtzLiBQbGVhc2Ug
+aW5jbHVkZSBhbHNvIGxpbnV4LWtlcm5lbEB2Z2VyLmtlcm5lbC5vcmcgaW4gdGhlIGZ1dHVyZS4K
+PiA+IAo+ID4gUmV2aWV3ZWQtYnk6IEphcmtrbyBTYXNra2luZW4gPGphcmtrby5zYWtraW5lbkBs
+aW51eC5pbnRlbC5jb20+Cj4gCj4gV2Ugc2hvdWxkIGdvIHdpdGggQXJuZCdzIHBhdGNoLCB3aGlj
+aCBpcyBhY3R1YWxseSB0aGUgc2FtZSwgIGJ1dCBpdAo+IHdhcyBhbHJlYWR5IHJldmlld2VkIGFu
+ZCBoYXMgYmV0dGVyIGNvbW1pdCBtZXNzYWdlcy4KPiBUaGFua3MKPiBUb21hcwoKWW91IGFyZSBy
+aWdodCBhYm91dCB0aGUgY29tbWl0IG1lc3NhZ2UgYnV0IHdoZXJlIGFyZSB0aGUgUmV2aWV3ZWQt
+YnkKdGFncz8gWzFdCgpbMV0gaHR0cHM6Ly9wYXRjaHdvcmsua2VybmVsLm9yZy9wYXRjaC85NjMz
+NTM3LwoKL0phcmtrbwoKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCkNoZWNrIG91dCB0aGUgdmlicmFu
+dCB0ZWNoIGNvbW11bml0eSBvbiBvbmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAplbmdhZ2luZyB0ZWNo
+IHNpdGVzLCBTbGFzaGRvdC5vcmchIGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdApfX19fX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwp0cG1kZC1kZXZlbCBtYWlsaW5n
+IGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8vbGlzdHMuc291
+cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
