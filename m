@@ -1,121 +1,56 @@
-From: James Morris <jmorris@namei.org>
-Subject: [ANNOUNCE] Linux Security Summit 2017 - CFP
-Date: Fri, 24 Mar 2017 12:26:43 +1100 (AEDT)
-Message-ID: <alpine.LRH.2.20.1703241217250.10825@namei.org>
+From: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+Subject: [PATCH v4 1/2] ACPICA: Update TPM2 ACPI table
+Date: Fri, 24 Mar 2017 04:55:44 -0500
+Message-ID: <1490349345-26910-2-git-send-email-anjiandi@codeaurora.org>
+References: <1490349345-26910-1-git-send-email-anjiandi@codeaurora.org>
 Mime-Version: 1.0
-Content-Type: multipart/mixed; BOUNDARY="1665246916-1864586338-1490318299=:10825"
-Return-path: <kernel-hardening-return-7094-glkh-kernel-hardening=m.gmane.org@lists.openwall.com>
-List-Post: <mailto:kernel-hardening@lists.openwall.com>
-List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
-List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
-List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
-Content-ID: <alpine.LRH.2.20.1703241220400.10825@namei.org>
-To: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
-Cc: lwn@lwn.net, fedora-selinux-list@redhat.com, selinux@tycho.nsa.gov, Linux Security Summit Program Committee <lss-pc@lists.linuxfoundation.org>, ubuntu-hardened@lists.ubuntu.com, netfilter-devel@vger.kernel.org, linux-crypto@vger.kernel.org, Audit-ML <linux-audit@redhat.com>, gentoo-hardened@gentoo.org, keyrings@linux-nfs.org, tpmdd-devel@lists.sourceforge.net, kernel-hardening@lists.openwall.com, oss-security@lists.openwall.com, openxt@googlegroups.com, tee-dev@lists.linaro.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1490349345-26910-1-git-send-email-anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>, rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-  This message is in MIME format.  The first part should be readable text,
-  while the remaining parts are likely unreadable without MIME-aware tools.
+TCG ACPI Specification Family "1.2" and "2.0" Version 1.2
+Revision 8 introduces new start method for ARM SMC.
 
---1665246916-1864586338-1490318299=:10825
-Content-Type: text/plain; CHARSET=ISO-8859-7
-Content-Transfer-Encoding: 8BIT
-Content-ID: <alpine.LRH.2.20.1703241220401.10825@namei.org>
+- Add new start method (type 11) for ARM SMC
+- Add start method specific parameters offset for ARM SMC start method
 
+Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+---
+ include/acpi/actbl2.h | 3 +++
+ 1 file changed, 3 insertions(+)
 
-==============================================================================
-		   ANNOUNCEMENT AND CALL FOR PARTICIPATION
-
-			  LINUX SECURITY SUMMIT 2017
-                         
-			       14-15 September
-			       LOS ANGELES, USA
-==============================================================================
-
-
-DESCRIPTION
-
-  The Linux Security Summit (LSS) is a technical forum for collaboration
-  between Linux developers, researchers, and end users. Its primary aim is to
-  foster community efforts in analyzing and solving Linux security challenges.
-
-  LSS this year will be co-located with the Open Source Summit and the Linux
-  Plumbers Conference.
-
-  The program committee currently seeks proposals for:
-
-    * Refereed Presentations:
-      45 minutes in length, including at least 10 minutes of discussion.
-
-    * Discussion Topics:
-      30 minutes in length.
-
-  Topic areas include, but are not limited to:
-
-    * Kernel self-protection
-    * Access control
-    * Cryptography and key management
-    * Integrity control
-    * Hardware Security
-    * Iot and embedded security
-    * Virtualization and containers
-    * System-specific system hardening
-    * Case studies
-    * Security tools
-    * Security UX
-    * Emerging technologies, threats & techniques 
-
-  Proposals should be submitted via:
-    http://events.linuxfoundation.org/events/linux-security-summit/program/cfp
+diff --git a/include/acpi/actbl2.h b/include/acpi/actbl2.h
+index 7aee9fb..2b4af07 100644
+--- a/include/acpi/actbl2.h
++++ b/include/acpi/actbl2.h
+@@ -1294,6 +1294,9 @@ struct acpi_table_tpm2 {
+ #define ACPI_TPM2_MEMORY_MAPPED                     6
+ #define ACPI_TPM2_COMMAND_BUFFER                    7
+ #define ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD  8
++#define ACPI_TPM2_COMMAND_BUFFER_WITH_SMC          11
++
++#define ACPI_TPM2_START_METHOD_PARAMETER_OFFSET    52
+ 
+ /*******************************************************************************
+  *
+-- 
+Jiandi An
+Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
+Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
 
 
-DATES
-
-  * CFP Close: June 5, 2017
-  * CFP Notifications: June 12, 2017
-  * Schedule Announced: June 19, 2017
-  * Slide Submission: August 31, 2017
-
-
-WHO SHOULD ATTEND
-
-  We're seeking a diverse range of attendees, and welcome participation by
-  people involved in Linux security development, operations, and research.
-
-  The LSS is a unique global event which provides the opportunity to present
-  and discuss your work or research with key Linux security community members
-  and maintainers.  It¢s also useful for those who wish to keep up with the
-  latest in Linux security development, and to provide input to the
-  development process.
-
-
-WEB SITE
-
-  http://events.linuxfoundation.org/events/linux-security-summit
-
-
-TWITTER
-
-  For event updates and announcements, follow:
-
-    https://twitter.com/LinuxSecSummit
-  
-
-PROGRAM COMMITTEE
-
-  The program committee for LSS 2017 is:
-
-    * James Morris, Oracle
-    * Serge Hallyn, Canonical
-    * Paul Moore, Red Hat
-    * Stephen Smalley, NSA
-    * Elena Reshetova, Intel
-    * John Johansen, Canonical
-    * Kees Cook, Google
-    * Casey Schaufler, Intel
-    * Mimi Zohar, IBM
-    * David A. Wheeler, Institute for Defense Analyses
-
-  The program committee may be contacted as a group via email:
-    lss-pc () lists.linuxfoundation.org
---1665246916-1864586338-1490318299=:10825--
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
