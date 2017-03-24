@@ -1,13 +1,12 @@
 From: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
-Subject: [PATCH v4 1/2] ACPICA: Update TPM2 ACPI table
-Date: Fri, 24 Mar 2017 04:55:44 -0500
-Message-ID: <1490349345-26910-2-git-send-email-anjiandi@codeaurora.org>
-References: <1490349345-26910-1-git-send-email-anjiandi@codeaurora.org>
+Subject: [PATCH v4 0/2] tpm/tpm_crb: Enable TPM CRB interface
+	for ARM64
+Date: Fri, 24 Mar 2017 04:55:43 -0500
+Message-ID: <1490349345-26910-1-git-send-email-anjiandi@codeaurora.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1490349345-26910-1-git-send-email-anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,31 +19,26 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 Cc: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>, rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-TCG ACPI Specification Family "1.2" and "2.0" Version 1.2
-Revision 8 introduces new start method for ARM SMC.
+TCG ACPI Specification Family "1.2" and "2.0" Version 1.2 Revision 8
+introduces a new start method (type 11) for ARM64, along with platform
+specific parameters for this new start method.  This new start method
+invokes a Secure Monitor Call to request the firmware to execute or
+cancel a TPM 2.0 command.
 
-- Add new start method (type 11) for ARM SMC
-- Add start method specific parameters offset for ARM SMC start method
+v4 changes:
+Address compile issue in v3
+Rebased to latest tpm_crb driver to the latest changes to 
+control area structure to pick the locality register changes.
 
-Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
----
- include/acpi/actbl2.h | 3 +++
- 1 file changed, 3 insertions(+)
+Jiandi An (2):
+  ACPICA: Update TPM2 ACPI table
+  tpm/tpm_crb: Enable TPM CRB interface for ARM64
 
-diff --git a/include/acpi/actbl2.h b/include/acpi/actbl2.h
-index 7aee9fb..2b4af07 100644
---- a/include/acpi/actbl2.h
-+++ b/include/acpi/actbl2.h
-@@ -1294,6 +1294,9 @@ struct acpi_table_tpm2 {
- #define ACPI_TPM2_MEMORY_MAPPED                     6
- #define ACPI_TPM2_COMMAND_BUFFER                    7
- #define ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD  8
-+#define ACPI_TPM2_COMMAND_BUFFER_WITH_SMC          11
-+
-+#define ACPI_TPM2_START_METHOD_PARAMETER_OFFSET    52
- 
- /*******************************************************************************
-  *
+ drivers/char/tpm/Kconfig   |  2 +-
+ drivers/char/tpm/tpm_crb.c | 67 ++++++++++++++++++++++++++++++++++++++++++++--
+ include/acpi/actbl2.h      |  3 +++
+ 3 files changed, 69 insertions(+), 3 deletions(-)
+
 -- 
 Jiandi An
 Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
