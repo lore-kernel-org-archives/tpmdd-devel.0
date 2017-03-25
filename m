@@ -1,101 +1,53 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 Subject: Re: [PATCH v4] tpm_crb: request and relinquish locality 0
-Date: Sat, 25 Mar 2017 21:50:47 +0200
-Message-ID: <20170325195047.i7ljllr7p7osl4lv@intel.com>
+Date: Sat, 25 Mar 2017 21:52:11 +0200
+Message-ID: <20170325195211.w2gfmodozgwrfxy6@intel.com>
 References: <20170324101032.13496-1-jarkko.sakkinen@iki.fi>
- <20170324101922.mw7vzgesckp26wro@intel.com>
- <87fui17dit.fsf@redhat.com>
+ <87lgru7cqy.fsf@redhat.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <87fui17dit.fsf@redhat.com>
+In-Reply-To: <87lgru7cqy.fsf@redhat.com>
 Sender: owner-linux-security-module@vger.kernel.org
 To: Jerry Snitselaar <jsnitsel@redhat.com>
 Cc: Jarkko Sakkinen <jarkko.sakkinen@iki.fi>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, gang.wei@intel.com, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat, Mar 25, 2017 at 05:21:30AM -0700, Jerry Snitselaar wrote:
+On Fri, Mar 24, 2017 at 11:25:57AM -0700, Jerry Snitselaar wrote:
 > 
-> Jarkko Sakkinen @ 2017-03-24 10:19 GMT:
+> Jarkko Sakkinen @ 2017-03-24 10:10 GMT:
 > 
-> > On Fri, Mar 24, 2017 at 12:10:30PM +0200, Jarkko Sakkinen wrote:
-> >> This commit adds support for requesting and relinquishing locality 0 in
-> >> tpm_crb for the course of command transmission.
-> >> 
-> >> In order to achieve this, two new callbacks are added to struct
-> >> tpm_class_ops:
-> >> 
-> >> - request_locality
-> >> - relinquish_locality
-> >> 
-> >> With CRB interface you first set either requestAccess or relinquish bit
-> >> from TPM_LOC_CTRL_x register and then wait for locAssigned and
-> >> tpmRegValidSts bits to be set in the TPM_LOC_STATE_x register.
-> >> 
-> >> The reason why were are doing this is to make sure that the driver
-> >> will work properly with Intel TXT that uses locality 2. There's no
-> >> explicit guarantee that it would relinquish this locality. In more
-> >> general sense this commit enables tpm_crb to be a well behaving
-> >> citizen in a multi locality environment.
-> >> 
-> >> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-> >> ---
-> >> v2:
-> >> - TPM driver level calllbacks
-> >> v3:
-> >> - Call ops->relinquish_locality only if ops->request_locality has been
-> >>   successful.
-> >> - Do not reserve locality in nested tpm_transmit calls.
-> >> - Check for tpmRegValidSts to make sure that the value in TPM_LOC_STATE_x is
-> >>   stable.
-> >> v4:
-> >> - Removed tpm_tis_core changes. It needs to be done separately. It will be
-> >>   postponed to 4.13.
-> >> - Store locality to struct tpm_chip while active.
-> >>  drivers/char/tpm/tpm-chip.c      |  1 +
-> >>  drivers/char/tpm/tpm-interface.c | 13 +++++++++++++
-> >>  drivers/char/tpm/tpm.h           |  3 +++
-> >>  drivers/char/tpm/tpm_crb.c       | 41 ++++++++++++++++++++++++++++++++++++++++
-> >>  include/linux/tpm.h              |  3 ++-
-> >>  5 files changed, 60 insertions(+), 1 deletion(-)
-> >> 
-> >> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> >> index aade699..a321bd5 100644
-> >> --- a/drivers/char/tpm/tpm-chip.c
-> >> +++ b/drivers/char/tpm/tpm-chip.c
-> >> @@ -231,6 +231,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
-> >>  		goto out;
-> >>  	}
-> >>  
-> >> +	chip->locality = -1;
-> >>  	return chip;
-> >>  
-> >>  out:
-> >> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> >> index 95c6f98..1815666 100644
-> >> --- a/drivers/char/tpm/tpm-interface.c
-> >> +++ b/drivers/char/tpm/tpm-interface.c
-> >> @@ -384,6 +384,7 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
-> >>  	ssize_t len = 0;
-> >>  	u32 count, ordinal;
-> >>  	unsigned long stop;
-> >> +	bool need_locality = chip->locality == -1;
+> > This commit adds support for requesting and relinquishing locality 0 in
+> > tpm_crb for the course of command transmission.
 > >
-> > This must be set *after* taking the mutex. Otherwise, I think this
-> > should be fine now.
+> > In order to achieve this, two new callbacks are added to struct
+> > tpm_class_ops:
 > >
-> > /Jarkko
+> > - request_locality
+> > - relinquish_locality
+> >
+> > With CRB interface you first set either requestAccess or relinquish bit
+> > from TPM_LOC_CTRL_x register and then wait for locAssigned and
+> > tpmRegValidSts bits to be set in the TPM_LOC_STATE_x register.
+> >
+> > The reason why were are doing this is to make sure that the driver
+> > will work properly with Intel TXT that uses locality 2. There's no
+> > explicit guarantee that it would relinquish this locality. In more
+> > general sense this commit enables tpm_crb to be a well behaving
+> > citizen in a multi locality environment.
+> >
+> > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 > 
-> Sorry, I missed this email earlier. Yeah, I ran into this while trying to get the
-> tpm_tis code working with this change tonight. Are you just going to move the
-> assignment to right before the if block for request_locality? I've
-> tested with the assignment moved inside the mutex on a kabylake
-> system.
+> Reviewed-by: Jerry Snitselaar <jsnitsel@redhat.com>
+> Tested-by: Jerry Snitselaar <jsnitsel@redhat.com>
 > 
-> I also tested with a patch for adding support to tpm_tis on a tpm_tis
-> system, but that is a work in progress.
+> Tested on kabylake system that was hitting issues with earlier
+> iteration. Still don't have platform to test it dealing with
+> multi-locality enviroment.
 
-Yes. It's like that now in the locality branch in my tree.
+I believe Jimmy (Gang Wei) has done such testing. Jimmy can you confirm
+and possibly do re-test (there's a locality branch in my tree to ease
+the testing) so that we could land this one?
 
 /Jarkko
