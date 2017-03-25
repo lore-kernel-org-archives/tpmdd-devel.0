@@ -1,93 +1,65 @@
-From: Jerry Snitselaar <jsnitsel@redhat.com>
-Subject: Re: [PATCH v4] tpm_crb: request and relinquish locality 0
-Date: Sat, 25 Mar 2017 05:21:30 -0700
-Message-ID: <87fui17dit.fsf@redhat.com>
-References: <20170324101032.13496-1-jarkko.sakkinen@iki.fi> <20170324101922.mw7vzgesckp26wro@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v4 2/2] tpm/tpm_crb: Enable TPM CRB
+	interface for ARM64
+Date: Sat, 25 Mar 2017 21:15:13 +0200
+Message-ID: <20170325191513.n7sf67jy2yys4yhp@intel.com>
+References: <1490349345-26910-1-git-send-email-anjiandi@codeaurora.org>
+	<1490349345-26910-3-git-send-email-anjiandi@codeaurora.org>
+	<20170324174559.usyjoxnrkedxtrd3@intel.com>
+	<58D58E33.5090305@codeaurora.org>
 Mime-Version: 1.0
-Content-Type: text/plain
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-reply-to: <20170324101922.mw7vzgesckp26wro@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: Jarkko Sakkinen <jarkko.sakkinen@iki.fi>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, gang.wei@intel.com, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <58D58E33.5090305-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+Cc: rafael.j.wysocki-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, robert.moore-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, lv.zheng-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org, shankerd-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org, lenb-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Fri, Mar 24, 2017 at 04:22:59PM -0500, Jiandi An wrote:
+> On 03/24/17 12:45, Jarkko Sakkinen wrote:
+> > On Fri, Mar 24, 2017 at 04:55:45AM -0500, Jiandi An wrote:
+> > > This enables TPM Command Response Buffer interface driver for
+> > > ARM64 and implements an ARM specific TPM CRB start method that
+> > > invokes a Secure Monitor Call (SMC) to request the TrustZone
+> > > Firmware to execute or cancel a TPM 2.0 command.
+> > > 
+> > > In ARM, TrustZone security extensions enable a secure software
+> > > environment with Secure Monitor mode.  A Secure Monitor Call
+> > > (SMC) is used to enter the Secure Monitor mode and perform a
+> > > Secure Monitor service to communicate with TrustZone firmware
+> > > which has control over the TPM hardware.
+> > > 
+> > > Signed-off-by: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+> > 
+> > LGTM
+> > 
+> > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> > 
+> > How this can be tested / do you know anyone who could test your
+> > change? I can test that it doesn't break x86.
+> > 
+> > /Jarkko
+> 
+> Thanks for the review Jarkko.  I'm including Shanker Donthineni
+> (shankerd-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org) that has ARM64 platform that could test
+> on the ARM64 side.
+> 
+> - Jiandi
 
-Jarkko Sakkinen @ 2017-03-24 10:19 GMT:
+That would be great.
 
-> On Fri, Mar 24, 2017 at 12:10:30PM +0200, Jarkko Sakkinen wrote:
->> This commit adds support for requesting and relinquishing locality 0 in
->> tpm_crb for the course of command transmission.
->> 
->> In order to achieve this, two new callbacks are added to struct
->> tpm_class_ops:
->> 
->> - request_locality
->> - relinquish_locality
->> 
->> With CRB interface you first set either requestAccess or relinquish bit
->> from TPM_LOC_CTRL_x register and then wait for locAssigned and
->> tpmRegValidSts bits to be set in the TPM_LOC_STATE_x register.
->> 
->> The reason why were are doing this is to make sure that the driver
->> will work properly with Intel TXT that uses locality 2. There's no
->> explicit guarantee that it would relinquish this locality. In more
->> general sense this commit enables tpm_crb to be a well behaving
->> citizen in a multi locality environment.
->> 
->> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
->> ---
->> v2:
->> - TPM driver level calllbacks
->> v3:
->> - Call ops->relinquish_locality only if ops->request_locality has been
->>   successful.
->> - Do not reserve locality in nested tpm_transmit calls.
->> - Check for tpmRegValidSts to make sure that the value in TPM_LOC_STATE_x is
->>   stable.
->> v4:
->> - Removed tpm_tis_core changes. It needs to be done separately. It will be
->>   postponed to 4.13.
->> - Store locality to struct tpm_chip while active.
->>  drivers/char/tpm/tpm-chip.c      |  1 +
->>  drivers/char/tpm/tpm-interface.c | 13 +++++++++++++
->>  drivers/char/tpm/tpm.h           |  3 +++
->>  drivers/char/tpm/tpm_crb.c       | 41 ++++++++++++++++++++++++++++++++++++++++
->>  include/linux/tpm.h              |  3 ++-
->>  5 files changed, 60 insertions(+), 1 deletion(-)
->> 
->> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
->> index aade699..a321bd5 100644
->> --- a/drivers/char/tpm/tpm-chip.c
->> +++ b/drivers/char/tpm/tpm-chip.c
->> @@ -231,6 +231,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
->>  		goto out;
->>  	}
->>  
->> +	chip->locality = -1;
->>  	return chip;
->>  
->>  out:
->> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
->> index 95c6f98..1815666 100644
->> --- a/drivers/char/tpm/tpm-interface.c
->> +++ b/drivers/char/tpm/tpm-interface.c
->> @@ -384,6 +384,7 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
->>  	ssize_t len = 0;
->>  	u32 count, ordinal;
->>  	unsigned long stop;
->> +	bool need_locality = chip->locality == -1;
->
-> This must be set *after* taking the mutex. Otherwise, I think this
-> should be fine now.
->
-> /Jarkko
+/Jarkko
 
-Sorry, I missed this email earlier. Yeah, I ran into this while trying to get the
-tpm_tis code working with this change tonight. Are you just going to move the
-assignment to right before the if block for request_locality? I've
-tested with the assignment moved inside the mutex on a kabylake
-system.
-
-I also tested with a patch for adding support to tpm_tis on a tpm_tis
-system, but that is a work in progress.
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
