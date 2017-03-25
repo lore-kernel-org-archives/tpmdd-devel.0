@@ -1,53 +1,40 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v4] tpm_crb: request and relinquish locality 0
-Date: Sat, 25 Mar 2017 21:52:11 +0200
-Message-ID: <20170325195211.w2gfmodozgwrfxy6@intel.com>
-References: <20170324101032.13496-1-jarkko.sakkinen@iki.fi>
- <87lgru7cqy.fsf@redhat.com>
+From: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Subject: [RFC PATCH 0/1] tpm_tis: convert to use locality
+	callbacks
+Date: Sat, 25 Mar 2017 13:05:20 -0700
+Message-ID: <20170325200521.19224-1-jsnitsel@redhat.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <87lgru7cqy.fsf@redhat.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jerry Snitselaar <jsnitsel@redhat.com>
-Cc: Jarkko Sakkinen <jarkko.sakkinen@iki.fi>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, gang.wei@intel.com, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Mar 24, 2017 at 11:25:57AM -0700, Jerry Snitselaar wrote:
-> 
-> Jarkko Sakkinen @ 2017-03-24 10:10 GMT:
-> 
-> > This commit adds support for requesting and relinquishing locality 0 in
-> > tpm_crb for the course of command transmission.
-> >
-> > In order to achieve this, two new callbacks are added to struct
-> > tpm_class_ops:
-> >
-> > - request_locality
-> > - relinquish_locality
-> >
-> > With CRB interface you first set either requestAccess or relinquish bit
-> > from TPM_LOC_CTRL_x register and then wait for locAssigned and
-> > tpmRegValidSts bits to be set in the TPM_LOC_STATE_x register.
-> >
-> > The reason why were are doing this is to make sure that the driver
-> > will work properly with Intel TXT that uses locality 2. There's no
-> > explicit guarantee that it would relinquish this locality. In more
-> > general sense this commit enables tpm_crb to be a well behaving
-> > citizen in a multi locality environment.
-> >
-> > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-> 
-> Reviewed-by: Jerry Snitselaar <jsnitsel@redhat.com>
-> Tested-by: Jerry Snitselaar <jsnitsel@redhat.com>
-> 
-> Tested on kabylake system that was hitting issues with earlier
-> iteration. Still don't have platform to test it dealing with
-> multi-locality enviroment.
+This is an attempt to convert tpm_tis over to using the locality
+callbacks added by Jarkko's tpm_crb patch. Requires the patch
+currently on tpmdd/locality which has moved the need_locality
+assignment inside the mutex in tpm_transmit.
 
-I believe Jimmy (Gang Wei) has done such testing. Jimmy can you confirm
-and possibly do re-test (there's a locality branch in my tree to ease
-the testing) so that we could land this one?
+This is pretty much the same as Jarkko's earlier patch (I think),
+with the addition of my changes to probe_itpm and tpm_tis_core_init.
+If this looks good Jarkko, if you want to split it out and have my
+changes go on top of your patch, or fold my changes into your patch
+that is fine.
 
-/Jarkko
+Tested on TPM2.0 based tpm_tis device. Will test on TPM1.2 device
+this afternoon when I dig out the laptop and switch it over to
+the discrete tpm.
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
