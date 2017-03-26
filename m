@@ -1,16 +1,19 @@
 From: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [RFC PATCH 1/1] tpm_tis: convert to using
-	locality callbacks
-Date: Sun, 26 Mar 2017 18:40:27 -0400 (EDT)
-Message-ID: <1536920674.6131725.1490568027655.JavaMail.zimbra@redhat.com>
-References: <20170325200521.19224-1-jsnitsel@redhat.com>
-	<20170325200521.19224-2-jsnitsel@redhat.com>
-	<20170326203628.GA3113@obsidianresearch.com>
+Subject: Re: [PATCH v4] tpm_crb: request and relinquish
+	locality 0
+Date: Sun, 26 Mar 2017 15:42:12 -0700
+Message-ID: <87d1d37j97.fsf@redhat.com>
+References: <20170324101032.13496-1-jarkko.sakkinen@iki.fi>
+	<87lgru7cqy.fsf@redhat.com>
+	<20170325195211.w2gfmodozgwrfxy6@intel.com>
+	<20170326105239.dgohwest2wmwynrd@intel.com>
+	<86502130.6118027.1490546369696.JavaMail.zimbra@redhat.com>
+	<20170326195113.vrcmd2zo4pdoynwd@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170326203628.GA3113-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+In-reply-to: <20170326195113.vrcmd2zo4pdoynwd-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,41 +22,20 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: Jarkko Sakkinen <jarkko.sakkinen-X3B1VOXEql0@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, gang wei <gang.wei-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
 
+Jarkko Sakkinen @ 2017-03-26 19:51 GMT:
 
------ Original Message -----
-> From: "Jason Gunthorpe" <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> To: "Jerry Snitselaar" <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-> Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "Peter Huewe" <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, "Jarkko
-> Sakkinen" <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, "Marcel Selhorst" <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>
-> Sent: Sunday, March 26, 2017 1:36:28 PM
-> Subject: Re: [RFC PATCH 1/1] tpm_tis: convert to using locality callbacks
-> 
-> On Sat, Mar 25, 2017 at 01:05:21PM -0700, Jerry Snitselaar wrote:
-> 
-> > @@ -672,7 +658,7 @@ void tpm_tis_remove(struct tpm_chip *chip)
-> >  		interrupt = 0;
-> >  
-> >  	tpm_tis_write32(priv, reg, ~TPM_GLOBAL_INT_ENABLE & interrupt);
-> > -	release_locality(chip, priv->locality, 1);
-> > +	release_locality(chip, priv->locality);
-> 
-> Why is this done during remove? The tpm core should now keep things so
-> that there is not a requested locality except during command so execution
-> we should not get here with a requested locality..
-> 
-> Jason
-> 
+> WTF, I applied old patch version by mistake. Sorry about that and
+> thanks for spotting that out. Better?
+>
+> /Jarkko
 
-You're right, this call should be dropped. With release_locality always releasing
-now it shouldn't have a locality when going into remove. I'll drop this in v2.
 
-Thanks,
-Jerry
+Looks good now.
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
