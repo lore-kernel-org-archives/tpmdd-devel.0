@@ -1,36 +1,46 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v4] tpm_crb: request and relinquish locality 0
-Date: Mon, 27 Mar 2017 08:17:37 +0300
-Message-ID: <20170327051737.kw4pokq3wlabijit@intel.com>
-References: <20170324101032.13496-1-jarkko.sakkinen@iki.fi>
- <87lgru7cqy.fsf@redhat.com>
- <20170325195211.w2gfmodozgwrfxy6@intel.com>
- <20170326105239.dgohwest2wmwynrd@intel.com>
- <86502130.6118027.1490546369696.JavaMail.zimbra@redhat.com>
- <20170326195113.vrcmd2zo4pdoynwd@intel.com>
- <87d1d37j97.fsf@redhat.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v3 2/7] tpm: validate TPM 2.0 commands
+Date: Mon, 27 Mar 2017 08:25:44 +0300
+Message-ID: <20170327052544.5enxnqvcwfut3hvf@intel.com>
+References: <20170303151912.14752-1-jarkko.sakkinen@linux.intel.com>
+	<20170303151912.14752-3-jarkko.sakkinen@linux.intel.com>
+	<22e8fa0caf8b4386a12cd93ee7170ed5@MUCSE603.infineon.com>
+	<20170317204243.5j376svqeky6bhqk@intel.com>
+	<93c74fb96fe04433ac9c910204539d84@MUCSE603.infineon.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <87d1d37j97.fsf@redhat.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jerry Snitselaar <jsnitsel@redhat.com>
-Cc: gang wei <gang.wei@intel.com>, Jarkko Sakkinen <jarkko.sakkinen@iki.fi>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
+In-Reply-To: <93c74fb96fe04433ac9c910204539d84-nFblLGNE8XKJSz+rYg/bSJowlv4uC7bZ@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org
+Cc: James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Mar 26, 2017 at 03:42:12PM -0700, Jerry Snitselaar wrote:
+On Mon, Mar 20, 2017 at 09:56:17AM +0000, Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org wrote:
+> > I think the most straight-forward way to sort this out would be to limit
+> > validation to the resource manager.
 > 
-> Jarkko Sakkinen @ 2017-03-26 19:51 GMT:
+> Sounds good to me.
 > 
-> > WTF, I applied old patch version by mistake. Sorry about that and
-> > thanks for spotting that out. Better?
-> >
-> > /Jarkko
+> > If I send a fix, would you care to test it?
 > 
+> Sure, will do.
 > 
-> Looks good now.
+> Alexander
 
-Great, thanks.
+I sent the patch. Please check it out.
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
