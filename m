@@ -1,19 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm/tpm_crb: fix unused warnings on
- suspend/resume functions
-Date: Tue, 28 Mar 2017 10:35:10 +0300
-Message-ID: <20170328073510.3cehco3bccn4wwkm@intel.com>
-References: <20170317015133.2269-1-jeremy.lefaure@lse.epita.fr>
-	<20170321080353.oh2apppp37nchuw7@intel.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B543B122D@hasmsx108.ger.corp.intel.com>
-	<20170323155117.w6zsewdxc6eeti4b@intel.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B543C8D91@hasmsx108.ger.corp.intel.com>
+Subject: Re: [PATCH] tpm: do handle area size validation only
+ when TPM space used
+Date: Tue, 28 Mar 2017 13:24:53 +0300
+Message-ID: <20170328102453.hvyc3a4vmrk3lyzu@intel.com>
+References: <20170326210815.21252-1-jarkko.sakkinen@iki.fi>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B543C8D91-Jy8z56yoSI8MvF1YICWikbfspsVTdybXVpNB7YpNyf8@public.gmane.org>
+In-Reply-To: <20170326210815.21252-1-jarkko.sakkinen-X3B1VOXEql0@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,45 +18,62 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Cc: =?iso-8859-1?B?Suly6W15?= Lefaure <jeremy.lefaure-tU7rkvAWjlwhT4uAktR2oQ@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "arnd-r2nGTMty4D4@public.gmane.org" <arnd-r2nGTMty4D4@public.gmane.org>
+To: Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org
+Cc: open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gVHVlLCBNYXIgMjgsIDIwMTcgYXQgMDY6MTU6NTZBTSArMDAwMCwgV2lua2xlciwgVG9tYXMg
-d3JvdGU6Cj4gCj4gCj4gPiAKPiA+IE9uIFR1ZSwgTWFyIDIxLCAyMDE3IGF0IDEwOjA1OjM2UE0g
-KzAwMDAsIFdpbmtsZXIsIFRvbWFzIHdyb3RlOgo+ID4gPiA+IE9uIFRodSwgTWFyIDE2LCAyMDE3
-IGF0IDA5OjUxOjMzUE0gLTA0MDAsIErDqXLDqW15IExlZmF1cmUgd3JvdGU6Cj4gPiA+ID4gPiBX
-aGVuIFBNX1NMRUVQIGlzIGRpc2FibGVkIGNyYl9wbV9zdXNwZW5kIGFuZCBjcmJfcG1fcmVzdW1l
-IGFyZQo+ID4gbm90Cj4gPiA+ID4gPiB1c2VkIGJ5IFNFVF9TWVNURU1fU0xFRVBfUE1fT1BTIGV2
-ZW4gaWYgUE0gaXMgZW5hYmxlZDoKPiA+ID4gPiA+Cj4gPiA+ID4gPiBkcnZlcnMvY2hhci90cG0v
-dHBtX2NyYi5jOjU0MDoxMjogd2FybmluZzog4oCYY3JiX3BtX3N1c3BlbmTigJkKPiA+ID4gPiA+
-IGRlZmluZWQgYnV0IG5vdCB1c2VkIFstV3VudXNlZC1mdW5jdGlvbl0gIHN0YXRpYyBpbnQKPiA+
-ID4gPiA+IGNyYl9wbV9zdXNwZW5kKHN0cnVjdCBkZXZpY2UgKmRldikKPiA+ID4gPiA+ICAgICAg
-ICAgICAgIF4KPiA+ID4gPiA+IGRyaXZlcnMvY2hhci90cG0vdHBtX2NyYi5jOjU1MToxMjogd2Fy
-bmluZzog4oCYY3JiX3BtX3Jlc3VtZeKAmQo+ID4gPiA+ID4gZGVmaW5lZCBidXQgbm90IHVzZWQg
-Wy1XdW51c2VkLWZ1bmN0aW9uXSAgc3RhdGljIGludAo+ID4gPiA+ID4gY3JiX3BtX3Jlc3VtZShz
-dHJ1Y3QgZGV2aWNlICpkZXYpCj4gPiA+ID4gPiAgICAgICAgICAgICBeCj4gPiA+ID4gPgo+ID4g
-PiA+ID4gVGhlIHByZXByb2Nlc3NvciBjb25kaXRpb24gc2hvdWxkIGJlIG9uIENPTkZJR19QTV9T
-TEVFUCwgbm90IG9uCj4gPiA+ID4gQ09ORklHX1BNLgo+ID4gPiA+ID4gSG93ZXZlciwgdGhpcyBw
-YXRjaCBmaXhlcyB0aGlzIHdhcm5pbmcgYnkgdXNpbmcgX19tYXliZV91bnVzZWQgb24KPiA+ID4g
-PiA+IGZ1bmN0aW9uIHRoYXQgYXJlIGluIHRoZSBwcmVwcm9jZXNzb3IgY29uZGl0aW9uLgo+ID4g
-PiA+ID4KPiA+ID4gPiA+IFNpZ25lZC1vZmYtYnk6IErDqXLDqW15IExlZmF1cmUgPGplcmVteS5s
-ZWZhdXJlQGxzZS5lcGl0YS5mcj4KPiA+ID4gPgo+ID4gPiA+IFRoYW5rcy4gUGxlYXNlIGluY2x1
-ZGUgYWxzbyBsaW51eC1rZXJuZWxAdmdlci5rZXJuZWwub3JnIGluIHRoZSBmdXR1cmUuCj4gPiA+
-ID4KPiA+ID4gPiBSZXZpZXdlZC1ieTogSmFya2tvIFNhc2traW5lbiA8amFya2tvLnNha2tpbmVu
-QGxpbnV4LmludGVsLmNvbT4KPiA+ID4KPiA+ID4gV2Ugc2hvdWxkIGdvIHdpdGggQXJuZCdzIHBh
-dGNoLCB3aGljaCBpcyBhY3R1YWxseSB0aGUgc2FtZSwgIGJ1dCBpdAo+ID4gPiB3YXMgYWxyZWFk
-eSByZXZpZXdlZCBhbmQgaGFzIGJldHRlciBjb21taXQgbWVzc2FnZXMuCj4gPiA+IFRoYW5rcwo+
-ID4gPiBUb21hcwo+ID4gCj4gPiBZb3UgYXJlIHJpZ2h0IGFib3V0IHRoZSBjb21taXQgbWVzc2Fn
-ZSBidXQgd2hlcmUgYXJlIHRoZSBSZXZpZXdlZC1ieSB0YWdzPwo+IAo+IFBsZWFzZSBhZGQgbWlu
-ZS4KPiAKPiA+IFsxXQo+ID4gCj4gPiBbMV0gaHR0cHM6Ly9wYXRjaHdvcmsua2VybmVsLm9yZy9w
-YXRjaC85NjMzNTM3Lwo+ID4gCj4gVG9tYXMKCkknbGwga2VlcCB0aGUgZXhpc3RpbmcgcGF0Y2gg
-YXQgdGhpcyBwb2ludCBhcyBJIGRvIG5vdCBoYXZlIHRpbWUgdG8KZ28gdGhyb3VnaCB0ZXN0IGN5
-Y2xlIGZvciBhbm90aGVyIHBhdGNoLiBJJ20gc29ycnkgYnV0IHRoaXMgY2FtZSB0b28KbGF0ZS4K
-Ci9KYXJra28KCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpDaGVjayBvdXQgdGhlIHZpYnJhbnQgdGVj
-aCBjb21tdW5pdHkgb24gb25lIG9mIHRoZSB3b3JsZCdzIG1vc3QKZW5nYWdpbmcgdGVjaCBzaXRl
-cywgU2xhc2hkb3Qub3JnISBodHRwOi8vc2RtLmxpbmsvc2xhc2hkb3QKX19fX19fX19fX19fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0
-CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xpc3RzLnNvdXJjZWZv
-cmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
+So do you need this or not?
+
+/Jarkko
+
+On Mon, Mar 27, 2017 at 12:08:15AM +0300, Jarkko Sakkinen wrote:
+> In order to not cause backwards compatibility issues with
+> /dev/tpm0 disable handle area size validation if tpm_transmit
+> is not called with a TPM space.
+> 
+> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-X3B1VOXEql0@public.gmane.org>
+> ---
+>  drivers/char/tpm/tpm-interface.c | 9 +++++++--
+>  1 file changed, 7 insertions(+), 2 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index bf0c3fa..158c1db 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -328,7 +328,9 @@ unsigned long tpm_calc_ordinal_duration(struct tpm_chip *chip,
+>  }
+>  EXPORT_SYMBOL_GPL(tpm_calc_ordinal_duration);
+>  
+> -static bool tpm_validate_command(struct tpm_chip *chip, const u8 *cmd,
+> +static bool tpm_validate_command(struct tpm_chip *chip,
+> +				 struct tpm_space *space,
+> +				 const u8 *cmd,
+>  				 size_t len)
+>  {
+>  	const struct tpm_input_header *header = (const void *)cmd;
+> @@ -340,6 +342,9 @@ static bool tpm_validate_command(struct tpm_chip *chip, const u8 *cmd,
+>  	if (len < TPM_HEADER_SIZE)
+>  		return false;
+>  
+> +	if (!space)
+> +		return true;
+> +
+>  	if (chip->flags & TPM_CHIP_FLAG_TPM2 && chip->nr_commands) {
+>  		cc = be32_to_cpu(header->ordinal);
+>  
+> @@ -386,7 +391,7 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+>  	unsigned long stop;
+>  	bool need_locality;
+>  
+> -	if (!tpm_validate_command(chip, buf, bufsiz))
+> +	if (!tpm_validate_command(chip, space, buf, bufsiz))
+>  		return -EINVAL;
+>  
+>  	if (bufsiz > TPM_BUFSIZE)
+> -- 
+> 2.9.3
+> 
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
