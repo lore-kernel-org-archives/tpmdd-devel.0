@@ -1,7 +1,7 @@
 From: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
-Subject: [PATCH 1/4] Add log start/length fields to TPM2 table
-Date: Wed, 29 Mar 2017 00:43:23 -0700
-Message-ID: <20170329074323.s6qkb7pk47jqa4q6@petr-dev3.eng.vmware.com>
+Subject: [PATCH 2/4] Read TCG log from TPM2 table
+Date: Wed, 29 Mar 2017 00:43:26 -0700
+Message-ID: <20170329074326.jxeoxtn4tbjjwcl2@petr-dev3.eng.vmware.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
@@ -21,140 +21,110 @@ List-Id: tpmdd-devel@lists.sourceforge.net
 
 From: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
 
-Latest revision of TPM 2.0 ACPI spec adds log start/length
-to the TPM2 table.  Add them to our definition.  As few
-places were using sizeof(TPM2) to make sure required fields
-are present, switch them to use length of table up to and
-including start type field, as that is what they are after.
-
-Also change SMC CRB handling to use TPM2 fields rather than
-offsets + typecasts.
+Latest draft of TPM 2 ACPI specification added TCG log start/length
+to the TPM2 ACPI table.  So Linux kernel can now read it without
+having to get involved with boot loader, same way TPM1/TCPA tables
+work.
 
 Signed-off-by: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
 ---
- drivers/char/tpm/tpm_crb.c | 15 +++------------
- drivers/char/tpm/tpm_tis.c |  2 +-
- include/acpi/actbl2.h      | 30 +++++++++++++++++++++++++-----
- 3 files changed, 29 insertions(+), 18 deletions(-)
+ drivers/char/tpm/tpm_acpi.c | 70 ++++++++++++++++++++++++++++-----------------
+ 1 file changed, 43 insertions(+), 27 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index 72b03c328198..43bec842e013 100644
---- a/drivers/char/tpm/tpm_crb.c
-+++ b/drivers/char/tpm/tpm_crb.c
-@@ -110,14 +110,6 @@ struct crb_priv {
- 	u32 smc_func_id;
- };
+diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
+index 169edf3ce86d..e48b1503220c 100644
+--- a/drivers/char/tpm/tpm_acpi.c
++++ b/drivers/char/tpm/tpm_acpi.c
+@@ -48,46 +48,62 @@ struct acpi_tcpa {
+ /* read binary bios log */
+ int tpm_read_log_acpi(struct tpm_chip *chip)
+ {
+-	struct acpi_tcpa *buff;
+ 	acpi_status status;
+ 	void __iomem *virt;
+ 	u64 len, start;
+ 	struct tpm_bios_log *log;
  
--struct tpm2_crb_smc {
--	u32 interrupt;
--	u8 interrupt_flags;
--	u8 op_flags;
--	u16 reserved2;
--	u32 smc_func_id;
--};
+-	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+-		return -ENODEV;
 -
- /**
-  * crb_go_idle - request tpm crb device to go the idle state
-  *
-@@ -538,7 +530,7 @@ static int crb_acpi_add(struct acpi_device *device)
+-	log = &chip->log;
+-
+ 	/* Unfortuntely ACPI does not associate the event log with a specific
+ 	 * TPM, like PPI. Thus all ACPI TPMs will read the same log.
+ 	 */
+ 	if (!chip->acpi_dev_handle)
+ 		return -ENODEV;
  
- 	status = acpi_get_table(ACPI_SIG_TPM2, 1,
- 				(struct acpi_table_header **) &buf);
--	if (ACPI_FAILURE(status) || buf->header.length < sizeof(*buf)) {
-+	if (ACPI_FAILURE(status) || buf->header.length < ACPI_TPM2_SIZE_WITH_START) {
- 		dev_err(dev, FW_BUG "failed to get TPM2 ACPI table\n");
- 		return -EINVAL;
+-	/* Find TCPA entry in RSDT (ACPI_LOGICAL_ADDRESSING) */
+-	status = acpi_get_table(ACPI_SIG_TCPA, 1,
+-				(struct acpi_table_header **)&buff);
+-
+-	if (ACPI_FAILURE(status))
+-		return -ENODEV;
+-
+-	switch(buff->platform_class) {
+-	case BIOS_SERVER:
+-		len = buff->server.log_max_len;
+-		start = buff->server.log_start_addr;
+-		break;
+-	case BIOS_CLIENT:
+-	default:
+-		len = buff->client.log_max_len;
+-		start = buff->client.log_start_addr;
+-		break;
+-	}
+-	if (!len) {
+-		dev_warn(&chip->dev, "%s: TCPA log area empty\n", __func__);
+-		return -EIO;
++	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
++		struct acpi_table_tpm2 *buff;
++
++		/* Find TPM2 entry in RSDT (ACPI_LOGICAL_ADDRESSING) */
++		status = acpi_get_table(ACPI_SIG_TPM2, 1,
++					(struct acpi_table_header **)&buff);
++
++		if (ACPI_FAILURE(status) || buff->header.length < ACPI_TPM2_SIZE_WITH_LOG)
++			return -ENODEV;
++
++		len = buff->minimum_log_length;
++		start = buff->log_address;
++		if (!len) {
++			dev_warn(&chip->dev, "%s: TPM2 log area empty\n", __func__);
++			return -EIO;
++		}
++	} else {
++		struct acpi_tcpa *buff;
++
++		/* Find TCPA entry in RSDT (ACPI_LOGICAL_ADDRESSING) */
++		status = acpi_get_table(ACPI_SIG_TCPA, 1,
++					(struct acpi_table_header **)&buff);
++
++		if (ACPI_FAILURE(status))
++			return -ENODEV;
++
++		switch(buff->platform_class) {
++		case BIOS_SERVER:
++			len = buff->server.log_max_len;
++			start = buff->server.log_start_addr;
++			break;
++		case BIOS_CLIENT:
++		default:
++			len = buff->client.log_max_len;
++			start = buff->client.log_start_addr;
++			break;
++		}
++		if (!len) {
++			dev_warn(&chip->dev, "%s: TCPA log area empty\n", __func__);
++			return -EIO;
++		}
  	}
-@@ -565,15 +557,14 @@ static int crb_acpi_add(struct acpi_device *device)
- 		priv->flags |= CRB_FL_ACPI_START;
  
- 	if (sm == ACPI_TPM2_COMMAND_BUFFER_WITH_SMC) {
--		if (buf->header.length < (sizeof(*buf) + sizeof(*crb_smc))) {
-+		if (buf->header.length < ACPI_TPM2_SIZE_WITH_SMC) {
- 			dev_err(dev,
- 				FW_BUG "TPM2 ACPI table has wrong size %u for start method type %d\n",
- 				buf->header.length,
- 				ACPI_TPM2_COMMAND_BUFFER_WITH_SMC);
- 			return -EINVAL;
- 		}
--		crb_smc = ACPI_ADD_PTR(struct tpm2_crb_smc, buf,
--				       ACPI_TPM2_START_METHOD_PARAMETER_OFFSET);
-+		crb_smc = &buf->platform_specific_data.smc;
- 		priv->smc_func_id = crb_smc->smc_func_id;
- 		priv->flags |= CRB_FL_CRB_SMC_START;
- 	}
-diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index c7e1384f1b08..f513a116e195 100644
---- a/drivers/char/tpm/tpm_tis.c
-+++ b/drivers/char/tpm/tpm_tis.c
-@@ -257,7 +257,7 @@ static int tpm_tis_acpi_init(struct acpi_device *acpi_dev)
- 
- 	st = acpi_get_table(ACPI_SIG_TPM2, 1,
- 			    (struct acpi_table_header **) &tbl);
--	if (ACPI_FAILURE(st) || tbl->header.length < sizeof(*tbl)) {
-+	if (ACPI_FAILURE(st) || tbl->header.length < ACPI_TPM2_SIZE_WITH_START) {
- 		dev_err(&acpi_dev->dev,
- 			FW_BUG "failed to get TPM2 ACPI table\n");
- 		return -EINVAL;
-diff --git a/include/acpi/actbl2.h b/include/acpi/actbl2.h
-index 2b4af0769a28..645961f998ef 100644
---- a/include/acpi/actbl2.h
-+++ b/include/acpi/actbl2.h
-@@ -1273,20 +1273,42 @@ struct acpi_table_tcpa_server {
-  *        Version 4
-  *
-  * Conforms to "TCG ACPI Specification, Family 1.2 and 2.0",
-- * December 19, 2014
-+ * Version 1.2, Revision 8, February 27, 2017, Committee Draft
-  *
-  ******************************************************************************/
- 
-+struct tpm2_crb_smc {
-+	u32 interrupt;
-+	u8 interrupt_flags;
-+	u8 op_flags;
-+	u16 reserved2;
-+	u32 smc_func_id;
-+};
++	log = &chip->log;
 +
- struct acpi_table_tpm2 {
- 	struct acpi_table_header header;	/* Common ACPI table header */
- 	u16 platform_class;
- 	u16 reserved;
- 	u64 control_address;
- 	u32 start_method;
--
--	/* Platform-specific data follows */
-+	/* End of Version 3 or minimal version 4 table. */
-+        union {
-+		u8 raw[12];
-+		u32 acpi;  /* ACPI start method should have 4 zero bytes here. */
-+		struct tpm2_crb_smc smc;
-+	} platform_specific_data;	/* Added in Level 00 Version 00.37 */
-+	u32 minimum_log_length;		/* Added in Version 1.2 */
-+	u64 log_address;		/* Added in Version 1.2 */
- };
- 
-+/* TPM2 table sizes. */
-+
-+#define ACPI_TPM2_SIZE_WITH_START	offsetofend(struct acpi_table_tpm2, \
-+						    start_method)
-+#define ACPI_TPM2_SIZE_WITH_SMC		offsetofend(struct acpi_table_tpm2, \
-+						    platform_specific_data)
-+#define ACPI_TPM2_SIZE_WITH_LOG		sizeof(struct acpi_table_tpm2)
-+
- /* Values for start_method above */
- 
- #define ACPI_TPM2_NOT_ALLOWED                       0
-@@ -1296,8 +1318,6 @@ struct acpi_table_tpm2 {
- #define ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD  8
- #define ACPI_TPM2_COMMAND_BUFFER_WITH_SMC          11
- 
--#define ACPI_TPM2_START_METHOD_PARAMETER_OFFSET    52
--
- /*******************************************************************************
-  *
-  * UEFI - UEFI Boot optimization Table
+ 	/* malloc EventLog space */
+ 	log->bios_event_log = kmalloc(len, GFP_KERNEL);
+ 	if (!log->bios_event_log)
 -- 
 2.11.0
 
