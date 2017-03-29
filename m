@@ -1,7 +1,7 @@
 From: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
-Subject: [PATCH 2/4] Read TCG log from TPM2 table
-Date: Wed, 29 Mar 2017 00:43:26 -0700
-Message-ID: <20170329074326.jxeoxtn4tbjjwcl2@petr-dev3.eng.vmware.com>
+Subject: [PATCH 3/4] Autodetect TCG event log version
+Date: Wed, 29 Mar 2017 00:43:28 -0700
+Message-ID: <20170329074328.y5rmk5wh3rj5kgcg@petr-dev3.eng.vmware.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
@@ -21,110 +21,113 @@ List-Id: tpmdd-devel@lists.sourceforge.net
 
 From: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
 
-Latest draft of TPM 2 ACPI specification added TCG log start/length
-to the TPM2 ACPI table.  So Linux kernel can now read it without
-having to get involved with boot loader, same way TPM1/TCPA tables
-work.
+Code expects that TPM1 devices use TPM1 version of the log,
+and TPM2 devices use TPM2 version of the log.  While that
+is strongly recommended by the spec, and now required by
+Microsoft certification, there are systems that use TPM2
+chip with SHA-1 only log.
+
+So let's do detection based on first event in the log -
+if it is Spec ID Event03, log is crypto-agile log. otherwise
+it is SHA-1 log, or malformed bunch of bytes.
+
+I'm not entirely sure how this works on PPC64: tpm1_eventlog.c
+uses do_endian_conversion() on all accesses, while tpm2_eventlog.c
+never does conversion.  I'm assuming that it is an ommission
+from tpm2_eventlog.c code.  If PPC64 logs are really big-endian
+for TPM1 while native-endian for TPM2, let me know, and I'll
+modify detection code to handle both native and big endian formats.
 
 Signed-off-by: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
 ---
- drivers/char/tpm/tpm_acpi.c | 70 ++++++++++++++++++++++++++++-----------------
- 1 file changed, 43 insertions(+), 27 deletions(-)
+ drivers/char/tpm/tpm1_eventlog.c | 53 ++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 51 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm_acpi.c b/drivers/char/tpm/tpm_acpi.c
-index 169edf3ce86d..e48b1503220c 100644
---- a/drivers/char/tpm/tpm_acpi.c
-+++ b/drivers/char/tpm/tpm_acpi.c
-@@ -48,46 +48,62 @@ struct acpi_tcpa {
- /* read binary bios log */
- int tpm_read_log_acpi(struct tpm_chip *chip)
- {
--	struct acpi_tcpa *buff;
- 	acpi_status status;
- 	void __iomem *virt;
- 	u64 len, start;
- 	struct tpm_bios_log *log;
+diff --git a/drivers/char/tpm/tpm1_eventlog.c b/drivers/char/tpm/tpm1_eventlog.c
+index 9a8605e500b5..aafcecf19c48 100644
+--- a/drivers/char/tpm/tpm1_eventlog.c
++++ b/drivers/char/tpm/tpm1_eventlog.c
+@@ -375,6 +375,51 @@ static int tpm_read_log(struct tpm_chip *chip)
+ }
  
+ /*
++ * tpm_check_log_version - Check version of the event log.
++ *
++ * Returns 0 if it is TPM1 (SHA1-only) log, 1 if it is TPM2
++ * log.  -EIO if log appears to be malformed.
++ */
++static int tpm_check_log_version(const struct tpm_chip *chip)
++{
++	const struct tcpa_event *event = chip->log.bios_event_log;
++	size_t log_len = chip->log.bios_event_log_end - chip->log.bios_event_log;
++	u32 event_len;
++	const struct tcg_efi_specid_event *specid;
++	u32 num_algs;
++
++	if (log_len < sizeof *event)
++		return -EIO;	/* Too short for anything. */
++	if (do_endian_conversion(event->pcr_index) != 0 ||
++            do_endian_conversion(event->event_type) != NO_ACTION)
++		return 0;	/* Not SpecID.  Must be TPM1 log. */
++	event_len = do_endian_conversion(event->event_size);
++	if (log_len - sizeof *event < event_len)
++		return -EIO;	/* Too short for TPM1 or header event. */
++
++	/*
++	 * Only Spec ID Event03 format is supported for TPM2.
++	 * There was Spec ID Event02 format that did not include
++	 * number of algorithms or digest sizes.  To my knowledge
++	 * there are no systems using that format.
++	 */
++	if (event_len < offsetof(struct tcg_efi_specid_event, digest_sizes))
++		return 0;	/* Too short for SpecID.  Must be TPM1 log. */
++	event_len -= offsetof(struct tcg_efi_specid_event, digest_sizes);
++	specid = (const struct tcg_efi_specid_event *)event->event_data;
++	if (memcmp(specid->signature, "Spec ID Event03", 16))
++		return 0;	/* Not Spec ID Event03, not TPM2. */
++
++	num_algs = do_endian_conversion(specid->num_algs);
++	/* Use division to avoid overflow if num_algs is huge number. */
++	if (event_len / sizeof(struct tcg_efi_specid_event_algs) < num_algs)
++		return -EIO;	/* Too short for digest sizes. */
++
++	/* Looks like TPM2 log. */
++	return 1;
++}
++
++/*
+  * tpm_bios_log_setup() - Read the event log from the firmware
+  * @chip: TPM chip to use.
+  *
+@@ -394,6 +439,10 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+ 	if (rc)
+ 		return rc;
+ 
++	rc = tpm_check_log_version(chip);
++	if (rc < 0)
++		return rc;
++
+ 	cnt = 0;
+ 	chip->bios_dir[cnt] = securityfs_create_dir(name, NULL);
+ 	/* NOTE: securityfs_create_dir can return ENODEV if securityfs is
+@@ -404,7 +453,7 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+ 	cnt++;
+ 
+ 	chip->bin_log_seqops.chip = chip;
 -	if (chip->flags & TPM_CHIP_FLAG_TPM2)
--		return -ENODEV;
--
--	log = &chip->log;
--
- 	/* Unfortuntely ACPI does not associate the event log with a specific
- 	 * TPM, like PPI. Thus all ACPI TPMs will read the same log.
- 	 */
- 	if (!chip->acpi_dev_handle)
- 		return -ENODEV;
++	if (rc != 0)
+ 		chip->bin_log_seqops.seqops =
+ 			&tpm2_binary_b_measurements_seqops;
+ 	else
+@@ -421,7 +470,7 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
+ 		goto err;
+ 	cnt++;
  
--	/* Find TCPA entry in RSDT (ACPI_LOGICAL_ADDRESSING) */
--	status = acpi_get_table(ACPI_SIG_TCPA, 1,
--				(struct acpi_table_header **)&buff);
--
--	if (ACPI_FAILURE(status))
--		return -ENODEV;
--
--	switch(buff->platform_class) {
--	case BIOS_SERVER:
--		len = buff->server.log_max_len;
--		start = buff->server.log_start_addr;
--		break;
--	case BIOS_CLIENT:
--	default:
--		len = buff->client.log_max_len;
--		start = buff->client.log_start_addr;
--		break;
--	}
--	if (!len) {
--		dev_warn(&chip->dev, "%s: TCPA log area empty\n", __func__);
--		return -EIO;
-+	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
-+		struct acpi_table_tpm2 *buff;
-+
-+		/* Find TPM2 entry in RSDT (ACPI_LOGICAL_ADDRESSING) */
-+		status = acpi_get_table(ACPI_SIG_TPM2, 1,
-+					(struct acpi_table_header **)&buff);
-+
-+		if (ACPI_FAILURE(status) || buff->header.length < ACPI_TPM2_SIZE_WITH_LOG)
-+			return -ENODEV;
-+
-+		len = buff->minimum_log_length;
-+		start = buff->log_address;
-+		if (!len) {
-+			dev_warn(&chip->dev, "%s: TPM2 log area empty\n", __func__);
-+			return -EIO;
-+		}
-+	} else {
-+		struct acpi_tcpa *buff;
-+
-+		/* Find TCPA entry in RSDT (ACPI_LOGICAL_ADDRESSING) */
-+		status = acpi_get_table(ACPI_SIG_TCPA, 1,
-+					(struct acpi_table_header **)&buff);
-+
-+		if (ACPI_FAILURE(status))
-+			return -ENODEV;
-+
-+		switch(buff->platform_class) {
-+		case BIOS_SERVER:
-+			len = buff->server.log_max_len;
-+			start = buff->server.log_start_addr;
-+			break;
-+		case BIOS_CLIENT:
-+		default:
-+			len = buff->client.log_max_len;
-+			start = buff->client.log_start_addr;
-+			break;
-+		}
-+		if (!len) {
-+			dev_warn(&chip->dev, "%s: TCPA log area empty\n", __func__);
-+			return -EIO;
-+		}
- 	}
+-	if (!(chip->flags & TPM_CHIP_FLAG_TPM2)) {
++	if (rc == 0) {
  
-+	log = &chip->log;
-+
- 	/* malloc EventLog space */
- 	log->bios_event_log = kmalloc(len, GFP_KERNEL);
- 	if (!log->bios_event_log)
+ 		chip->ascii_log_seqops.chip = chip;
+ 		chip->ascii_log_seqops.seqops =
 -- 
 2.11.0
 
