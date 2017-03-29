@@ -1,8 +1,7 @@
 From: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
-Subject: [PATCH 0/4] Add support for TPM2 log reported via
-	ACPI table
-Date: Wed, 29 Mar 2017 00:43:20 -0700
-Message-ID: <20170329074320.zcbuydd7iydaj3gr@petr-dev3.eng.vmware.com>
+Subject: [PATCH 1/4] Add log start/length fields to TPM2 table
+Date: Wed, 29 Mar 2017 00:43:23 -0700
+Message-ID: <20170329074323.s6qkb7pk47jqa4q6@petr-dev3.eng.vmware.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
@@ -20,73 +19,144 @@ To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi Peter,
+From: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
 
-This series of 4 patches adds support for handling TPM2
-log when it is reported through ACPI TPM2 table, as
-described in latest TPM ACPI draft (Version 1.2, Revision 8,
-from February 27th, 2017).
+Latest revision of TPM 2.0 ACPI spec adds log start/length
+to the TPM2 table.  Add them to our definition.  As few
+places were using sizeof(TPM2) to make sure required fields
+are present, switch them to use length of table up to and
+including start type field, as that is what they are after.
 
-I've tested patch on x86 only - I do not have PPC64 system
-with TPM, and handling of endianness between tpm1_eventlog.c
-and tpm2_eventlog.c seems inconsistent: tpm1_eventlog.c uses
-be32_to_cpu() for all log fields on PPC64, while
-tpm2_eventlog.c uses log uses native endianness.  If it
-is intentional, and PPC64 has TPM1 logs in big endian
-while TPM2 logs in native endianness, then 3rd patch
-needs to be amended.
+Also change SMC CRB handling to use TPM2 fields rather than
+offsets + typecasts.
 
-Four patches split task of improving TPM2 support into following
-subtasks:
+Signed-off-by: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
+---
+ drivers/char/tpm/tpm_crb.c | 15 +++------------
+ drivers/char/tpm/tpm_tis.c |  2 +-
+ include/acpi/actbl2.h      | 30 +++++++++++++++++++++++++-----
+ 3 files changed, 29 insertions(+), 18 deletions(-)
 
-
-1. Add log start/length fields to TPM2 table
-
-This patch adds 1.2 rev 8 structures to TPM2 table, and
-modifies tpm_tis and tpm_crb to use
-offsetofend(tpm2, field_accessed) rather than sizeof(tpm2)
-to verify that TPM2 table is big enough.
-
-
-2. Read TCG log from TPM2 table
-
-This patch modifies tpm_acpi code to read log start/length
-from TPM2 table similar way it does so from TCPA table.
-
-
-3. Autodetect TCG event log version
-
-This patch modifies tpm1_eventlog to make decision whether
-to use TPM1 or TPM2 format based on log content, rather
-than from chip version: on x86 there is dozen of firmwares
-that use TPM1 log with TPM2 chip.
-
-Other part of the change is to validate content of specid
-event to make sure kernel does not crash when faced with
-specid event that claims there is 2^32-1 hashes in the
-event list.
-
-
-4. Improve handling of TPM2 event logs
-
-Current code does not report any error when digest's hash
-is not listed in specid event, or if event reports 2^32-1
-digests (which is BIOS bug), or if event has more than
-3 digests (that is kernel bug).  Instead it will try to
-vmalloc() all available memory when event log is read by
-userspace application.
-
-This patch updates code so that it can handle arbitrary
-number of digests, as long as they are all described
-in specid event, and stops parsing as soon as any malformed
-event is detected.
-
-
-Let me know if there are any improvements I can make to
-this patch series.
-
-Thanks,
-Petr Vandrovec
+diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+index 72b03c328198..43bec842e013 100644
+--- a/drivers/char/tpm/tpm_crb.c
++++ b/drivers/char/tpm/tpm_crb.c
+@@ -110,14 +110,6 @@ struct crb_priv {
+ 	u32 smc_func_id;
+ };
+ 
+-struct tpm2_crb_smc {
+-	u32 interrupt;
+-	u8 interrupt_flags;
+-	u8 op_flags;
+-	u16 reserved2;
+-	u32 smc_func_id;
+-};
+-
+ /**
+  * crb_go_idle - request tpm crb device to go the idle state
+  *
+@@ -538,7 +530,7 @@ static int crb_acpi_add(struct acpi_device *device)
+ 
+ 	status = acpi_get_table(ACPI_SIG_TPM2, 1,
+ 				(struct acpi_table_header **) &buf);
+-	if (ACPI_FAILURE(status) || buf->header.length < sizeof(*buf)) {
++	if (ACPI_FAILURE(status) || buf->header.length < ACPI_TPM2_SIZE_WITH_START) {
+ 		dev_err(dev, FW_BUG "failed to get TPM2 ACPI table\n");
+ 		return -EINVAL;
+ 	}
+@@ -565,15 +557,14 @@ static int crb_acpi_add(struct acpi_device *device)
+ 		priv->flags |= CRB_FL_ACPI_START;
+ 
+ 	if (sm == ACPI_TPM2_COMMAND_BUFFER_WITH_SMC) {
+-		if (buf->header.length < (sizeof(*buf) + sizeof(*crb_smc))) {
++		if (buf->header.length < ACPI_TPM2_SIZE_WITH_SMC) {
+ 			dev_err(dev,
+ 				FW_BUG "TPM2 ACPI table has wrong size %u for start method type %d\n",
+ 				buf->header.length,
+ 				ACPI_TPM2_COMMAND_BUFFER_WITH_SMC);
+ 			return -EINVAL;
+ 		}
+-		crb_smc = ACPI_ADD_PTR(struct tpm2_crb_smc, buf,
+-				       ACPI_TPM2_START_METHOD_PARAMETER_OFFSET);
++		crb_smc = &buf->platform_specific_data.smc;
+ 		priv->smc_func_id = crb_smc->smc_func_id;
+ 		priv->flags |= CRB_FL_CRB_SMC_START;
+ 	}
+diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+index c7e1384f1b08..f513a116e195 100644
+--- a/drivers/char/tpm/tpm_tis.c
++++ b/drivers/char/tpm/tpm_tis.c
+@@ -257,7 +257,7 @@ static int tpm_tis_acpi_init(struct acpi_device *acpi_dev)
+ 
+ 	st = acpi_get_table(ACPI_SIG_TPM2, 1,
+ 			    (struct acpi_table_header **) &tbl);
+-	if (ACPI_FAILURE(st) || tbl->header.length < sizeof(*tbl)) {
++	if (ACPI_FAILURE(st) || tbl->header.length < ACPI_TPM2_SIZE_WITH_START) {
+ 		dev_err(&acpi_dev->dev,
+ 			FW_BUG "failed to get TPM2 ACPI table\n");
+ 		return -EINVAL;
+diff --git a/include/acpi/actbl2.h b/include/acpi/actbl2.h
+index 2b4af0769a28..645961f998ef 100644
+--- a/include/acpi/actbl2.h
++++ b/include/acpi/actbl2.h
+@@ -1273,20 +1273,42 @@ struct acpi_table_tcpa_server {
+  *        Version 4
+  *
+  * Conforms to "TCG ACPI Specification, Family 1.2 and 2.0",
+- * December 19, 2014
++ * Version 1.2, Revision 8, February 27, 2017, Committee Draft
+  *
+  ******************************************************************************/
+ 
++struct tpm2_crb_smc {
++	u32 interrupt;
++	u8 interrupt_flags;
++	u8 op_flags;
++	u16 reserved2;
++	u32 smc_func_id;
++};
++
+ struct acpi_table_tpm2 {
+ 	struct acpi_table_header header;	/* Common ACPI table header */
+ 	u16 platform_class;
+ 	u16 reserved;
+ 	u64 control_address;
+ 	u32 start_method;
+-
+-	/* Platform-specific data follows */
++	/* End of Version 3 or minimal version 4 table. */
++        union {
++		u8 raw[12];
++		u32 acpi;  /* ACPI start method should have 4 zero bytes here. */
++		struct tpm2_crb_smc smc;
++	} platform_specific_data;	/* Added in Level 00 Version 00.37 */
++	u32 minimum_log_length;		/* Added in Version 1.2 */
++	u64 log_address;		/* Added in Version 1.2 */
+ };
+ 
++/* TPM2 table sizes. */
++
++#define ACPI_TPM2_SIZE_WITH_START	offsetofend(struct acpi_table_tpm2, \
++						    start_method)
++#define ACPI_TPM2_SIZE_WITH_SMC		offsetofend(struct acpi_table_tpm2, \
++						    platform_specific_data)
++#define ACPI_TPM2_SIZE_WITH_LOG		sizeof(struct acpi_table_tpm2)
++
+ /* Values for start_method above */
+ 
+ #define ACPI_TPM2_NOT_ALLOWED                       0
+@@ -1296,8 +1318,6 @@ struct acpi_table_tpm2 {
+ #define ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD  8
+ #define ACPI_TPM2_COMMAND_BUFFER_WITH_SMC          11
+ 
+-#define ACPI_TPM2_START_METHOD_PARAMETER_OFFSET    52
+-
+ /*******************************************************************************
+  *
+  * UEFI - UEFI Boot optimization Table
+-- 
+2.11.0
 
 
 ------------------------------------------------------------------------------
