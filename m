@@ -1,7 +1,7 @@
 From: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
-Subject: [PATCH 3/4] Autodetect TCG event log version
-Date: Wed, 29 Mar 2017 00:43:28 -0700
-Message-ID: <20170329074328.y5rmk5wh3rj5kgcg@petr-dev3.eng.vmware.com>
+Subject: [PATCH 4/4] Improve handling of TPM2 event logs
+Date: Wed, 29 Mar 2017 00:43:30 -0700
+Message-ID: <20170329074330.b2rbsbt2zc7o22q7@petr-dev3.eng.vmware.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
@@ -21,113 +21,67 @@ List-Id: tpmdd-devel@lists.sourceforge.net
 
 From: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
 
-Code expects that TPM1 devices use TPM1 version of the log,
-and TPM2 devices use TPM2 version of the log.  While that
-is strongly recommended by the spec, and now required by
-Microsoft certification, there are systems that use TPM2
-chip with SHA-1 only log.
+When TPM2 log has entries with more than 3 digests, or with digests
+not listed in the log header, log gets misparsed, eventually
+leading to kernel complaint that code tried to vmalloc 512MB of
+memory (I have no idea what would happen on bigger system).
 
-So let's do detection based on first event in the log -
-if it is Spec ID Event03, log is crypto-agile log. otherwise
-it is SHA-1 log, or malformed bunch of bytes.
+So code should not parse only first 3 digests: both event header
+and event itself are already in memory, so we can parse any number
+of digests, as long as we do not try to parse whole memory when
+given count of 0xFFFFFFFF.
 
-I'm not entirely sure how this works on PPC64: tpm1_eventlog.c
-uses do_endian_conversion() on all accesses, while tpm2_eventlog.c
-never does conversion.  I'm assuming that it is an ommission
-from tpm2_eventlog.c code.  If PPC64 logs are really big-endian
-for TPM1 while native-endian for TPM2, let me know, and I'll
-modify detection code to handle both native and big endian formats.
+So this change:
+
+* Rejects event entry with more digests than log header describes.
+  Digest types should be unique, and all should be described in
+  log header, so there cannot be more digests in the event than in
+  the header.
+
+* Reject event entry with digest that is not described in the
+  log header.  In theory code could hardcode information about
+  digest IDs already assigned by TCG, but if firmware authors
+  cannot get event log format right, why should anyone believe
+  that they got event log content right.
 
 Signed-off-by: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
 ---
- drivers/char/tpm/tpm1_eventlog.c | 53 ++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 51 insertions(+), 2 deletions(-)
+ drivers/char/tpm/tpm2_eventlog.c | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm1_eventlog.c b/drivers/char/tpm/tpm1_eventlog.c
-index 9a8605e500b5..aafcecf19c48 100644
---- a/drivers/char/tpm/tpm1_eventlog.c
-+++ b/drivers/char/tpm/tpm1_eventlog.c
-@@ -375,6 +375,51 @@ static int tpm_read_log(struct tpm_chip *chip)
- }
+diff --git a/drivers/char/tpm/tpm2_eventlog.c b/drivers/char/tpm/tpm2_eventlog.c
+index 513897cf9c4b..6fe59b75152b 100644
+--- a/drivers/char/tpm/tpm2_eventlog.c
++++ b/drivers/char/tpm/tpm2_eventlog.c
+@@ -56,18 +56,23 @@ static int calc_tpm2_event_size(struct tcg_pcr_event2 *event,
  
- /*
-+ * tpm_check_log_version - Check version of the event log.
-+ *
-+ * Returns 0 if it is TPM1 (SHA1-only) log, 1 if it is TPM2
-+ * log.  -EIO if log appears to be malformed.
-+ */
-+static int tpm_check_log_version(const struct tpm_chip *chip)
-+{
-+	const struct tcpa_event *event = chip->log.bios_event_log;
-+	size_t log_len = chip->log.bios_event_log_end - chip->log.bios_event_log;
-+	u32 event_len;
-+	const struct tcg_efi_specid_event *specid;
-+	u32 num_algs;
-+
-+	if (log_len < sizeof *event)
-+		return -EIO;	/* Too short for anything. */
-+	if (do_endian_conversion(event->pcr_index) != 0 ||
-+            do_endian_conversion(event->event_type) != NO_ACTION)
-+		return 0;	/* Not SpecID.  Must be TPM1 log. */
-+	event_len = do_endian_conversion(event->event_size);
-+	if (log_len - sizeof *event < event_len)
-+		return -EIO;	/* Too short for TPM1 or header event. */
-+
-+	/*
-+	 * Only Spec ID Event03 format is supported for TPM2.
-+	 * There was Spec ID Event02 format that did not include
-+	 * number of algorithms or digest sizes.  To my knowledge
-+	 * there are no systems using that format.
-+	 */
-+	if (event_len < offsetof(struct tcg_efi_specid_event, digest_sizes))
-+		return 0;	/* Too short for SpecID.  Must be TPM1 log. */
-+	event_len -= offsetof(struct tcg_efi_specid_event, digest_sizes);
-+	specid = (const struct tcg_efi_specid_event *)event->event_data;
-+	if (memcmp(specid->signature, "Spec ID Event03", 16))
-+		return 0;	/* Not Spec ID Event03, not TPM2. */
-+
-+	num_algs = do_endian_conversion(specid->num_algs);
-+	/* Use division to avoid overflow if num_algs is huge number. */
-+	if (event_len / sizeof(struct tcg_efi_specid_event_algs) < num_algs)
-+		return -EIO;	/* Too short for digest sizes. */
-+
-+	/* Looks like TPM2 log. */
-+	return 1;
-+}
-+
-+/*
-  * tpm_bios_log_setup() - Read the event log from the firmware
-  * @chip: TPM chip to use.
-  *
-@@ -394,6 +439,10 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
- 	if (rc)
- 		return rc;
+ 	efispecid = (struct tcg_efi_specid_event *)event_header->event;
  
-+	rc = tpm_check_log_version(chip);
-+	if (rc < 0)
-+		return rc;
+-	for (i = 0; (i < event->count) && (i < TPM2_ACTIVE_PCR_BANKS);
+-	     i++) {
++	/* Check if event is malformed. */
++	if (event->count > efispecid->num_algs)
++		return 0;
 +
- 	cnt = 0;
- 	chip->bios_dir[cnt] = securityfs_create_dir(name, NULL);
- 	/* NOTE: securityfs_create_dir can return ENODEV if securityfs is
-@@ -404,7 +453,7 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
- 	cnt++;
++	for (i = 0; i < event->count; i++) {
+ 		halg_size = sizeof(event->digests[i].alg_id);
+ 		memcpy(&halg, marker, halg_size);
+ 		marker = marker + halg_size;
+-		for (j = 0; (j < efispecid->num_algs); j++) {
++		for (j = 0; j < efispecid->num_algs; j++) {
+ 			if (halg == efispecid->digest_sizes[j].alg_id) {
+-				marker = marker +
+-					efispecid->digest_sizes[j].digest_size;
++				marker += efispecid->digest_sizes[j].digest_size;
+ 				break;
+ 			}
+ 		}
++		/* Algorithm without known length. Such event is unparseable. */
++		if (j == efispecid->num_algs)
++			return 0;
+ 	}
  
- 	chip->bin_log_seqops.chip = chip;
--	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-+	if (rc != 0)
- 		chip->bin_log_seqops.seqops =
- 			&tpm2_binary_b_measurements_seqops;
- 	else
-@@ -421,7 +470,7 @@ int tpm_bios_log_setup(struct tpm_chip *chip)
- 		goto err;
- 	cnt++;
- 
--	if (!(chip->flags & TPM_CHIP_FLAG_TPM2)) {
-+	if (rc == 0) {
- 
- 		chip->ascii_log_seqops.chip = chip;
- 		chip->ascii_log_seqops.seqops =
+ 	event_field = (struct tcg_event_field *)marker;
 -- 
 2.11.0
 
