@@ -1,15 +1,14 @@
-From: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH 0/4] Add support for TPM2 log reported via
- ACPI table
-Date: Thu, 30 Mar 2017 01:13:53 -0700
-Message-ID: <58DCBE41.3060507@vmware.com>
-References: <20170329074320.zcbuydd7iydaj3gr@petr-dev3.eng.vmware.com>
-	<58DC8EBF.40700@linux.vnet.ibm.com>
+From: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH 0/4] Extend TPM 2.0 PCR banks each with
+ corresponding digest
+Date: Thu, 30 Mar 2017 14:46:03 +0530
+Message-ID: <58DCCCD3.7010300@linux.vnet.ibm.com>
+References: <20170329102452.32212-1-roberto.sassu@huawei.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <58DC8EBF.40700-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <20170329102452.32212-1-roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,116 +17,59 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Nayna <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Nayna wrote:
->
->
-> On 03/29/2017 01:13 PM, Petr Vandrovec wrote:
->> Hi Peter,
->>
->> This series of 4 patches adds support for handling TPM2
->> log when it is reported through ACPI TPM2 table, as
->> described in latest TPM ACPI draft (Version 1.2, Revision 8,
->> from February 27th, 2017).
->>
->> I've tested patch on x86 only - I do not have PPC64 system
->> with TPM, and handling of endianness between tpm1_eventlog.c
->> and tpm2_eventlog.c seems inconsistent: tpm1_eventlog.c uses
->> be32_to_cpu() for all log fields on PPC64, while
->> tpm2_eventlog.c uses log uses native endianness. If it
->> is intentional, and PPC64 has TPM1 logs in big endian
->
-> Yes, in case of ppc64, the tpm1 code logs are in big endian format.
 
-Thanks.  What about tpm2 logs?  Is first (specid) event in big endian 
-format too, or no?
 
->> while TPM2 logs in native endianness, then 3rd patch
->> needs to be amended.
->>
->> Four patches split task of improving TPM2 support into following
->> subtasks:
->>
->>
->> 1. Add log start/length fields to TPM2 table
->>
->> This patch adds 1.2 rev 8 structures to TPM2 table, and
->> modifies tpm_tis and tpm_crb to use
->> offsetofend(tpm2, field_accessed) rather than sizeof(tpm2)
->> to verify that TPM2 table is big enough.
->>
->>
->> 2. Read TCG log from TPM2 table
->>
->> This patch modifies tpm_acpi code to read log start/length
->> from TPM2 table similar way it does so from TCPA table.
->>
->>
->> 3. Autodetect TCG event log version
->>
->> This patch modifies tpm1_eventlog to make decision whether
->> to use TPM1 or TPM2 format based on log content, rather
->> than from chip version: on x86 there is dozen of firmwares
->> that use TPM1 log with TPM2 chip.
+On 03/29/2017 03:54 PM, Roberto Sassu wrote:
+> tpm_pcr_extend() was originally designed to extend a TPM 1.2 PCR with
+> a SHA1 digest. With TPM 2.0, multiple hash algorithms can be supported,
+> but, at the moment, only one digest can be passed to the function.
 >
-> Do you mean firmware support TPM1 log as only SHA1 log format and not
-> crypto agile log with only SHA1 ?
-
-Yes.  See f.e. 'TPM2 Preboot Event Log' paragraph in 
-https://twobit.us/2016/05/tpm2-uefi-measurements-and-event-log/.
-
-If you think there is no need to support such obscure hardware (it does 
-not support this year's draft of TPM2 ACPI spec as hardware is few years 
-old, so it would matter only if boot loader would pass log address to 
-the kernel, and currently there is no support for this in the kernel), I 
-can move validation of header event to tpm2_eventlog.c, and simply 
-reject any non-specid log with TPM2.
-							Petr
-
-> Thanks & Regards,
-> - Nayna
+> Since TCG mandates that all PCR banks must be extended, commit c1f92b4
+> (tpm: enhance TPM 2.0 PCR extend to support multiple banks) filled
+> the gap by padding the SHA1 digest passed to tpm_pcr_extend(), to extend
+> remaining PCR banks.
 >
->>
->> Other part of the change is to validate content of specid
->> event to make sure kernel does not crash when faced with
->> specid event that claims there is 2^32-1 hashes in the
->> event list.
->>
->>
->> 4. Improve handling of TPM2 event logs
->>
->> Current code does not report any error when digest's hash
->> is not listed in specid event, or if event reports 2^32-1
->> digests (which is BIOS bug), or if event has more than
->> 3 digests (that is kernel bug). Instead it will try to
->> vmalloc() all available memory when event log is read by
->> userspace application.
->>
->> This patch updates code so that it can handle arbitrary
->> number of digests, as long as they are all described
->> in specid event, and stops parsing as soon as any malformed
->> event is detected.
->>
->>
->> Let me know if there are any improvements I can make to
->> this patch series.
->>
->> Thanks,
->> Petr Vandrovec
->>
->>
->> ------------------------------------------------------------------------------
->>
->> Check out the vibrant tech community on one of the world's most
->> engaging tech sites, Slashdot.org! http://sdm.link/slashdot
->> _______________________________________________
->> tpmdd-devel mailing list
->> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
->> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
->>
+> This patch set adds support for providing a digest for each PCR bank.
+>
+> The first patch adds an additional check to tpm2_pcr_extend() to ensure
+> that all digests have been provided (to meet TCG specs).
+>
+> The second patch provides a mechanism for TPM users to convert a TPM
+> algorithm ID to a crypto ID and vice-versa, so that they can calculate
+> the digest of an event data by using the crypto subsystem.
+>
+> The third patch allows TPM users to know which hash algorithms the TPM
+> supports. Since the limit of active banks is fixed (the size of the
+> active_banks array in the tpm_chip structure), the new function
+> tpm_pcr_algorithms() accepts as input a sized array.
+>
+> The fourth patch introduces tpm_pcr_extend_digests(), which accepts
+> as input a sized array of tpm2_digest structures. Each array element
+> contains the algorithm and the digest for a PCR bank.
+
+Why can't we export existing tpm2_pcr_extend() and use that directly ?
+
+Thanks & Regards,
+     - Nayna
+
+
+>
+> Roberto Sassu (4):
+>    tpm: check whether all digests have been provided for TPM 2.0 extend
+>    tpm: introduce tpm2_pcr_algo_to_crypto() and
+>      tpm2_pcr_algo_from_crypto()
+>    tpm: introduce tpm_pcr_algorithms()
+>    tpm: introduce tpm_extend_pcr_digests()
+>
+>   drivers/char/tpm/tpm-interface.c | 121 +++++++++++++++++++++++++++++++++++++++
+>   drivers/char/tpm/tpm.h           |  19 +-----
+>   drivers/char/tpm/tpm2-cmd.c      |  65 +++++++++++----------
+>   include/linux/tpm.h              |  44 ++++++++++++++
+>   4 files changed, 200 insertions(+), 49 deletions(-)
 >
 
 
