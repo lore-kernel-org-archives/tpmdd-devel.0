@@ -1,17 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: TPM resource manager - persistent objects should
- be global
-Date: Fri, 31 Mar 2017 21:28:47 +0300
-Message-ID: <20170331182847.uucylw5p7axucb63@intel.com>
-References: <e89db1e1-7996-3106-c034-e6d4c2c5f887@linux.vnet.ibm.com>
-	<1490812802.5647.4.camel@linux.vnet.ibm.com>
-	<0a9a4380-e7cc-8927-e594-bbf5d9fa60c8@linux.vnet.ibm.com>
+Subject: Re: [PATCH 0/4] Add support for TPM2 log reported via
+	ACPI table
+Date: Fri, 31 Mar 2017 21:39:23 +0300
+Message-ID: <20170331183923.mmtggrj2bcybwajz@intel.com>
+References: <20170329074320.zcbuydd7iydaj3gr@petr-dev3.eng.vmware.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <0a9a4380-e7cc-8927-e594-bbf5d9fa60c8-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <20170329074320.zcbuydd7iydaj3gr-WbvboCQVrrgDIl+Cyo8nDyLysJ1jNyTM@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,87 +18,86 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Ken Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+To: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The late fixes (2) are pushed to my master branch.
+On Wed, Mar 29, 2017 at 12:43:20AM -0700, Petr Vandrovec wrote:
+> Hi Peter,
+> 
+> This series of 4 patches adds support for handling TPM2
+> log when it is reported through ACPI TPM2 table, as
+> described in latest TPM ACPI draft (Version 1.2, Revision 8,
+> from February 27th, 2017).
+> 
+> I've tested patch on x86 only - I do not have PPC64 system
+> with TPM, and handling of endianness between tpm1_eventlog.c
+> and tpm2_eventlog.c seems inconsistent: tpm1_eventlog.c uses
+> be32_to_cpu() for all log fields on PPC64, while
+> tpm2_eventlog.c uses log uses native endianness.  If it
+> is intentional, and PPC64 has TPM1 logs in big endian
+> while TPM2 logs in native endianness, then 3rd patch
+> needs to be amended.
+> 
+> Four patches split task of improving TPM2 support into following
+> subtasks:
+
+This cover letter is a bit chaotic. A cover letter should give an
+understandable description of the what is done. Now you have a 2nd
+version of commit messages here. This looks confusing.
 
 /Jarkko
 
-On Fri, Mar 31, 2017 at 10:57:15AM -0400, Ken Goldman wrote:
-> This patch worked.  Can you merge it with Jarkko's latest?
-> 
-> I can report that my attestation client works unmodified with the 
-> resource manager.  I just had to point it to /dev/tpmrm0.  It's a 
-> Nuvoton TPM, I2C bus, POWER architecture.
-> 
-> It does quite a bit - transient and persistent objects, getcapability,
-> reading NV indexes, policy sessions.  I did the RSA and ECC variants in 
-> parallel, so there should have been a bit of swapping.
-> 
-> On 3/29/2017 2:40 PM, James Bottomley wrote:
-> > On Tue, 2017-03-28 at 17:39 -0400, Ken Goldman wrote:
-> >> I have a persistent object at 81000001.
-> >>
-> >> getcapability through /dev/tpm0 shows it.  The same command through
-> >> /dev/tpmrm0 does not.  This causes further problems in the
-> >> application.
-> >>
-> >> While transient objects are per connection, IMHO persistent objects
-> >> should be global.
-> >>
-> >> ~~
-> >>
-> >> Warning:  I think I'm using the latest TPM device driver from
-> >>
-> >> git://git.infradead.org/users/jjs/linux-tpmdd.git
-> >>
-> >> but I'm new to both git and kernel building, so I could be wrong.  If
-> >> you think the above should work, it could be my error.
-> >
-> > It should work.  It turns out the body mapping code is overzealous and
-> > errors out when it should just pass through.  The same thing happens
-> > with the PCRs as well.
-> >
-> > This should fix it for both.
-> >
-> > James
-> >
-> > ---
-> >
-> > diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2-space.c
-> > index 009934269514..e2e059d8ffec 100644
-> > --- a/drivers/char/tpm/tpm2-space.c
-> > +++ b/drivers/char/tpm/tpm2-space.c
-> > @@ -429,15 +429,11 @@ static int tpm2_map_response_body(struct tpm_chip *chip, u32 cc, u8 *rsp,
-> >  			data->handles[j] = cpu_to_be32(vhandle);
-> >  			j++;
-> >  			break;
-> > -		case TPM2_HT_HMAC_SESSION:
-> > -		case TPM2_HT_POLICY_SESSION:
-> > +
-> > +		default:
-> >  			data->handles[j] = cpu_to_be32(phandle);
-> >  			j++;
-> >  			break;
-> > -		default:
-> > -			dev_err(&chip->dev, "%s: unknown handle 0x%08X\n",
-> > -				__func__, phandle);
-> > -			break;
-> >  		}
-> >
-> >  	}
-> >
 > 
 > 
-> ------------------------------------------------------------------------------
-> Check out the vibrant tech community on one of the world's most
-> engaging tech sites, Slashdot.org! http://sdm.link/slashdot
-> _______________________________________________
-> tpmdd-devel mailing list
-> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+> 1. Add log start/length fields to TPM2 table
+> 
+> This patch adds 1.2 rev 8 structures to TPM2 table, and
+> modifies tpm_tis and tpm_crb to use
+> offsetofend(tpm2, field_accessed) rather than sizeof(tpm2)
+> to verify that TPM2 table is big enough.
+> 
+> 
+> 2. Read TCG log from TPM2 table
+> 
+> This patch modifies tpm_acpi code to read log start/length
+> from TPM2 table similar way it does so from TCPA table.
+> 
+> 
+> 3. Autodetect TCG event log version
+> 
+> This patch modifies tpm1_eventlog to make decision whether
+> to use TPM1 or TPM2 format based on log content, rather
+> than from chip version: on x86 there is dozen of firmwares
+> that use TPM1 log with TPM2 chip.
+> 
+> Other part of the change is to validate content of specid
+> event to make sure kernel does not crash when faced with
+> specid event that claims there is 2^32-1 hashes in the
+> event list.
+> 
+> 
+> 4. Improve handling of TPM2 event logs
+> 
+> Current code does not report any error when digest's hash
+> is not listed in specid event, or if event reports 2^32-1
+> digests (which is BIOS bug), or if event has more than
+> 3 digests (that is kernel bug).  Instead it will try to
+> vmalloc() all available memory when event log is read by
+> userspace application.
+> 
+> This patch updates code so that it can handle arbitrary
+> number of digests, as long as they are all described
+> in specid event, and stops parsing as soon as any malformed
+> event is detected.
+> 
+> 
+> Let me know if there are any improvements I can make to
+> this patch series.
+> 
+> Thanks,
+> Petr Vandrovec
+> 
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
