@@ -1,15 +1,15 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 0/4] Extend TPM 2.0 PCR banks each with
- corresponding digest
-Date: Fri, 31 Mar 2017 11:16:22 +0300
-Message-ID: <20170331081622.krppon6u5podttte@intel.com>
-References: <20170329102452.32212-1-roberto.sassu@huawei.com>
+From: Ken Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH 0/4] Add support for TPM2 log reported via
+ ACPI table
+Date: Fri, 31 Mar 2017 10:43:32 -0400
+Message-ID: <1e3208ff-2565-7d11-6670-1b1e72cf8e5c@linux.vnet.ibm.com>
+References: <20170329074320.zcbuydd7iydaj3gr@petr-dev3.eng.vmware.com>
+	<58DC8EBF.40700@linux.vnet.ibm.com> <58DCBE41.3060507@vmware.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170329102452.32212-1-roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+In-Reply-To: <58DCBE41.3060507-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,66 +18,37 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-I'll look into this after 4.12 PR. Do not expect quick response.
+On 3/30/2017 4:13 AM, Petr Vandrovec wrote:
+> Nayna wrote:
+>>
+>>
+>> On 03/29/2017 01:13 PM, Petr Vandrovec wrote:
+>> [snip]
+>>> tpm2_eventlog.c uses log uses native endianness. If it
+>>> is intentional, and PPC64 has TPM1 logs in big endian
+>>
+>> Yes, in case of ppc64, the tpm1 code logs are in big endian format.
+>
+> Thanks.  What about tpm2 logs?  Is first (specid) event in big endian
+> format too, or no?
 
-/Jarkko
+Formally, according to the TCG specifications, the firmware event log
+is little endian.
 
-On Wed, Mar 29, 2017 at 12:24:48PM +0200, Roberto Sassu wrote:
-> tpm_pcr_extend() was originally designed to extend a TPM 1.2 PCR with
-> a SHA1 digest. With TPM 2.0, multiple hash algorithms can be supported,
-> but, at the moment, only one digest can be passed to the function.
-> 
-> Since TCG mandates that all PCR banks must be extended, commit c1f92b4
-> (tpm: enhance TPM 2.0 PCR extend to support multiple banks) filled
-> the gap by padding the SHA1 digest passed to tpm_pcr_extend(), to extend
-> remaining PCR banks.
-> 
-> This patch set adds support for providing a digest for each PCR bank.
-> 
-> The first patch adds an additional check to tpm2_pcr_extend() to ensure
-> that all digests have been provided (to meet TCG specs).
-> 
-> The second patch provides a mechanism for TPM users to convert a TPM
-> algorithm ID to a crypto ID and vice-versa, so that they can calculate
-> the digest of an event data by using the crypto subsystem.
-> 
-> The third patch allows TPM users to know which hash algorithms the TPM
-> supports. Since the limit of active banks is fixed (the size of the
-> active_banks array in the tpm_chip structure), the new function
-> tpm_pcr_algorithms() accepts as input a sized array.
-> 
-> The fourth patch introduces tpm_pcr_extend_digests(), which accepts
-> as input a sized array of tpm2_digest structures. Each array element
-> contains the algorithm and the digest for a PCR bank.
-> 
-> Roberto Sassu (4):
->   tpm: check whether all digests have been provided for TPM 2.0 extend
->   tpm: introduce tpm2_pcr_algo_to_crypto() and
->     tpm2_pcr_algo_from_crypto()
->   tpm: introduce tpm_pcr_algorithms()
->   tpm: introduce tpm_extend_pcr_digests()
-> 
->  drivers/char/tpm/tpm-interface.c | 121 +++++++++++++++++++++++++++++++++++++++
->  drivers/char/tpm/tpm.h           |  19 +-----
->  drivers/char/tpm/tpm2-cmd.c      |  65 +++++++++++----------
->  include/linux/tpm.h              |  44 ++++++++++++++
->  4 files changed, 200 insertions(+), 49 deletions(-)
-> 
-> -- 
-> 2.9.3
-> 
-> 
-> ------------------------------------------------------------------------------
-> Check out the vibrant tech community on one of the world's most
-> engaging tech sites, Slashdot.org! http://sdm.link/slashdot
-> _______________________________________________
-> tpmdd-devel mailing list
-> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+My opinion (but I may be wrong) ...
+
+It doesn't matter, as long as the platform knows what it did.
+
+When the platform sends the log to the attestation server, it should be
+a consistent format, regardless of the endian'ness of the platform.
+
+In my attestation implementation, I use big endian, because that's what
+the TPM uses. Thus, I reuse all the TPM and TSS marshaling and
+unmarshaling code.
+
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
