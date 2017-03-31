@@ -1,15 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 0/4] Add support for TPM2 log reported via
-	ACPI table
-Date: Fri, 31 Mar 2017 11:15:30 +0300
-Message-ID: <20170331081530.gskmjdlgles3yhx2@intel.com>
-References: <20170329074320.zcbuydd7iydaj3gr@petr-dev3.eng.vmware.com>
+Subject: Re: [PATCH 0/4] Extend TPM 2.0 PCR banks each with
+ corresponding digest
+Date: Fri, 31 Mar 2017 11:16:22 +0300
+Message-ID: <20170331081622.krppon6u5podttte@intel.com>
+References: <20170329102452.32212-1-roberto.sassu@huawei.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170329074320.zcbuydd7iydaj3gr-WbvboCQVrrgDIl+Cyo8nDyLysJ1jNyTM@public.gmane.org>
+In-Reply-To: <20170329102452.32212-1-roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,83 +18,66 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Oh there it was.
+I'll look into this after 4.12 PR. Do not expect quick response.
 
 /Jarkko
 
-On Wed, Mar 29, 2017 at 12:43:20AM -0700, Petr Vandrovec wrote:
-> Hi Peter,
+On Wed, Mar 29, 2017 at 12:24:48PM +0200, Roberto Sassu wrote:
+> tpm_pcr_extend() was originally designed to extend a TPM 1.2 PCR with
+> a SHA1 digest. With TPM 2.0, multiple hash algorithms can be supported,
+> but, at the moment, only one digest can be passed to the function.
 > 
-> This series of 4 patches adds support for handling TPM2
-> log when it is reported through ACPI TPM2 table, as
-> described in latest TPM ACPI draft (Version 1.2, Revision 8,
-> from February 27th, 2017).
+> Since TCG mandates that all PCR banks must be extended, commit c1f92b4
+> (tpm: enhance TPM 2.0 PCR extend to support multiple banks) filled
+> the gap by padding the SHA1 digest passed to tpm_pcr_extend(), to extend
+> remaining PCR banks.
 > 
-> I've tested patch on x86 only - I do not have PPC64 system
-> with TPM, and handling of endianness between tpm1_eventlog.c
-> and tpm2_eventlog.c seems inconsistent: tpm1_eventlog.c uses
-> be32_to_cpu() for all log fields on PPC64, while
-> tpm2_eventlog.c uses log uses native endianness.  If it
-> is intentional, and PPC64 has TPM1 logs in big endian
-> while TPM2 logs in native endianness, then 3rd patch
-> needs to be amended.
+> This patch set adds support for providing a digest for each PCR bank.
 > 
-> Four patches split task of improving TPM2 support into following
-> subtasks:
+> The first patch adds an additional check to tpm2_pcr_extend() to ensure
+> that all digests have been provided (to meet TCG specs).
 > 
+> The second patch provides a mechanism for TPM users to convert a TPM
+> algorithm ID to a crypto ID and vice-versa, so that they can calculate
+> the digest of an event data by using the crypto subsystem.
 > 
-> 1. Add log start/length fields to TPM2 table
+> The third patch allows TPM users to know which hash algorithms the TPM
+> supports. Since the limit of active banks is fixed (the size of the
+> active_banks array in the tpm_chip structure), the new function
+> tpm_pcr_algorithms() accepts as input a sized array.
 > 
-> This patch adds 1.2 rev 8 structures to TPM2 table, and
-> modifies tpm_tis and tpm_crb to use
-> offsetofend(tpm2, field_accessed) rather than sizeof(tpm2)
-> to verify that TPM2 table is big enough.
+> The fourth patch introduces tpm_pcr_extend_digests(), which accepts
+> as input a sized array of tpm2_digest structures. Each array element
+> contains the algorithm and the digest for a PCR bank.
 > 
+> Roberto Sassu (4):
+>   tpm: check whether all digests have been provided for TPM 2.0 extend
+>   tpm: introduce tpm2_pcr_algo_to_crypto() and
+>     tpm2_pcr_algo_from_crypto()
+>   tpm: introduce tpm_pcr_algorithms()
+>   tpm: introduce tpm_extend_pcr_digests()
 > 
-> 2. Read TCG log from TPM2 table
+>  drivers/char/tpm/tpm-interface.c | 121 +++++++++++++++++++++++++++++++++++++++
+>  drivers/char/tpm/tpm.h           |  19 +-----
+>  drivers/char/tpm/tpm2-cmd.c      |  65 +++++++++++----------
+>  include/linux/tpm.h              |  44 ++++++++++++++
+>  4 files changed, 200 insertions(+), 49 deletions(-)
 > 
-> This patch modifies tpm_acpi code to read log start/length
-> from TPM2 table similar way it does so from TCPA table.
-> 
-> 
-> 3. Autodetect TCG event log version
-> 
-> This patch modifies tpm1_eventlog to make decision whether
-> to use TPM1 or TPM2 format based on log content, rather
-> than from chip version: on x86 there is dozen of firmwares
-> that use TPM1 log with TPM2 chip.
-> 
-> Other part of the change is to validate content of specid
-> event to make sure kernel does not crash when faced with
-> specid event that claims there is 2^32-1 hashes in the
-> event list.
+> -- 
+> 2.9.3
 > 
 > 
-> 4. Improve handling of TPM2 event logs
-> 
-> Current code does not report any error when digest's hash
-> is not listed in specid event, or if event reports 2^32-1
-> digests (which is BIOS bug), or if event has more than
-> 3 digests (that is kernel bug).  Instead it will try to
-> vmalloc() all available memory when event log is read by
-> userspace application.
-> 
-> This patch updates code so that it can handle arbitrary
-> number of digests, as long as they are all described
-> in specid event, and stops parsing as soon as any malformed
-> event is detected.
-> 
-> 
-> Let me know if there are any improvements I can make to
-> this patch series.
-> 
-> Thanks,
-> Petr Vandrovec
-> 
+> ------------------------------------------------------------------------------
+> Check out the vibrant tech community on one of the world's most
+> engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+> _______________________________________________
+> tpmdd-devel mailing list
+> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
