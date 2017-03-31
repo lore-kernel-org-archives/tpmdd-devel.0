@@ -1,153 +1,174 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v3] tpm: Apply a sane minimum adapterlimit value for
- retransmission.
-Date: Fri, 31 Mar 2017 11:13:11 +0300
-Message-ID: <20170331081311.cf55bpujvzgopbzw@intel.com>
-References: <20170328152938.14539-1-enric.balletbo@collabora.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH 1/4] Add log start/length fields to TPM2
+	table
+Date: Fri, 31 Mar 2017 11:14:16 +0300
+Message-ID: <20170331081416.x6bgl7wkanki2ydt@intel.com>
+References: <20170329074323.s6qkb7pk47jqa4q6@petr-dev3.eng.vmware.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170328152938.14539-1-enric.balletbo@collabora.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Enric Balletbo i Serra <enric.balletbo@collabora.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, Andrew Lunn <andrew@lunn.ch>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, wsa@the-dreams.de, Bryan Freed <bfreed@chromium.org>
+In-Reply-To: <20170329074323.s6qkb7pk47jqa4q6-WbvboCQVrrgDIl+Cyo8nDyLysJ1jNyTM@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Mar 28, 2017 at 05:29:38PM +0200, Enric Balletbo i Serra wrote:
-> From: Bryan Freed <bfreed@chromium.org>
+On Wed, Mar 29, 2017 at 12:43:23AM -0700, Petr Vandrovec wrote:
+> From: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
 > 
-> When the I2C Infineon part is attached to an I2C adapter that imposes
-> a size limitation, large requests will fail with -EOPNOTSUPP. Retry
-> them with a sane minimum size without re-issuing the 0x05 command
-> as this appears to occasionally put the TPM in a bad state.
+> Latest revision of TPM 2.0 ACPI spec adds log start/length
+> to the TPM2 table.  Add them to our definition.  As few
+> places were using sizeof(TPM2) to make sure required fields
+> are present, switch them to use length of table up to and
+> including start type field, as that is what they are after.
 > 
-> Signed-off-by: Bryan Freed <bfreed@chromium.org>
-> [rework the patch to adapt to the feedback received]
-> Signed-off-by: Enric Balletbo i Serra <enric.balletbo@collabora.com>
-> ---
-> This is a reworked version of the original patch based on the
-> suggestion made by Wolfram Sang to simply fall back to a sane minimum
-> when the maximum fails.
+> Also change SMC CRB handling to use TPM2 fields rather than
+> offsets + typecasts.
 > 
-> Changes since v2:
->  - Do not remove faster transfers when chip is SLB9645 (Peter Huewe)
->  - Remember the adapterlimit length once it fails to not generate extra
->    i2c core messages (suggested by Andrew Lunn)
-> Changes since v1:
->  - Check the correct return value (-EOPNOTSUPP instead of -EINVAL)
->  - Fall back len to I2C_SMBUS_BLOCK_MAX if fails.
-> 
->  drivers/char/tpm/tpm_i2c_infineon.c | 76 +++++++++++++++++++++++++++----------
->  1 file changed, 56 insertions(+), 20 deletions(-)
+> Signed-off-by: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
 
-Looking into this after taking of the request for 4.12.
+Looking into these after 4.12 PR. Where is the cover letter?
+I cannot find it for some reason.
 
 /Jarkko
 
+> ---
+>  drivers/char/tpm/tpm_crb.c | 15 +++------------
+>  drivers/char/tpm/tpm_tis.c |  2 +-
+>  include/acpi/actbl2.h      | 30 +++++++++++++++++++++++++-----
+>  3 files changed, 29 insertions(+), 18 deletions(-)
 > 
-> diff --git a/drivers/char/tpm/tpm_i2c_infineon.c b/drivers/char/tpm/tpm_i2c_infineon.c
-> index 62ee44e..fdefcdb 100644
-> --- a/drivers/char/tpm/tpm_i2c_infineon.c
-> +++ b/drivers/char/tpm/tpm_i2c_infineon.c
-> @@ -70,6 +70,7 @@ struct tpm_inf_dev {
->  	u8 buf[TPM_BUFSIZE + sizeof(u8)]; /* max. buffer size + addr */
->  	struct tpm_chip *chip;
->  	enum i2c_chip_type chip_type;
-> +	unsigned int adapterlimit;
+> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+> index 72b03c328198..43bec842e013 100644
+> --- a/drivers/char/tpm/tpm_crb.c
+> +++ b/drivers/char/tpm/tpm_crb.c
+> @@ -110,14 +110,6 @@ struct crb_priv {
+>  	u32 smc_func_id;
 >  };
 >  
->  static struct tpm_inf_dev tpm_dev;
-> @@ -111,6 +112,7 @@ static int iic_tpm_read(u8 addr, u8 *buffer, size_t len)
+> -struct tpm2_crb_smc {
+> -	u32 interrupt;
+> -	u8 interrupt_flags;
+> -	u8 op_flags;
+> -	u16 reserved2;
+> -	u32 smc_func_id;
+> -};
+> -
+>  /**
+>   * crb_go_idle - request tpm crb device to go the idle state
+>   *
+> @@ -538,7 +530,7 @@ static int crb_acpi_add(struct acpi_device *device)
 >  
->  	int rc = 0;
->  	int count;
-> +	unsigned int msglen = len;
->  
->  	/* Lock the adapter for the duration of the whole sequence. */
->  	if (!tpm_dev.client->adapter->algo->master_xfer)
-> @@ -131,27 +133,61 @@ static int iic_tpm_read(u8 addr, u8 *buffer, size_t len)
->  			usleep_range(SLEEP_DURATION_LOW, SLEEP_DURATION_HI);
->  		}
->  	} else {
-> -		/* slb9635 protocol should work in all cases */
-> -		for (count = 0; count < MAX_COUNT; count++) {
-> -			rc = __i2c_transfer(tpm_dev.client->adapter, &msg1, 1);
-> -			if (rc > 0)
-> -				break;	/* break here to skip sleep */
-> -
-> -			usleep_range(SLEEP_DURATION_LOW, SLEEP_DURATION_HI);
-> -		}
-> -
-> -		if (rc <= 0)
-> -			goto out;
-> -
-> -		/* After the TPM has successfully received the register address
-> -		 * it needs some time, thus we're sleeping here again, before
-> -		 * retrieving the data
-> +		/* Expect to send one command message and one data message, but
-> +		 * support looping over each or both if necessary.
->  		 */
-> -		for (count = 0; count < MAX_COUNT; count++) {
-> -			usleep_range(SLEEP_DURATION_LOW, SLEEP_DURATION_HI);
-> -			rc = __i2c_transfer(tpm_dev.client->adapter, &msg2, 1);
-> -			if (rc > 0)
-> -				break;
-> +		while (len > 0) {
-> +			/* slb9635 protocol should work in all cases */
-> +			for (count = 0; count < MAX_COUNT; count++) {
-> +				rc = __i2c_transfer(tpm_dev.client->adapter,
-> +						    &msg1, 1);
-> +				if (rc > 0)
-> +					break;	/* break here to skip sleep */
-> +
-> +				usleep_range(SLEEP_DURATION_LOW,
-> +					     SLEEP_DURATION_HI);
-> +			}
-> +
-> +			if (rc <= 0)
-> +				goto out;
-> +
-> +			/* After the TPM has successfully received the register
-> +			 * address it needs some time, thus we're sleeping here
-> +			 * again, before retrieving the data
-> +			 */
-> +			for (count = 0; count < MAX_COUNT; count++) {
-> +				if (tpm_dev.adapterlimit) {
-> +					msglen = min_t(unsigned int,
-> +						       tpm_dev.adapterlimit,
-> +						       len);
-> +					msg2.len = msglen;
-> +				}
-> +				usleep_range(SLEEP_DURATION_LOW,
-> +					     SLEEP_DURATION_HI);
-> +				rc = __i2c_transfer(tpm_dev.client->adapter,
-> +						    &msg2, 1);
-> +				if (rc > 0) {
-> +					/* Since len is unsigned, make doubly
-> +					 * sure we do not underflow it.
-> +					 */
-> +					if (msglen > len)
-> +						len = 0;
-> +					else
-> +						len -= msglen;
-> +					msg2.buf += msglen;
-> +					break;
-> +				}
-> +				/* If the I2C adapter rejected the request (e.g
-> +				 * when the quirk read_max_len < len) fall back
-> +				 * to a sane minimum value and try again.
-> +				 */
-> +				if (rc == -EOPNOTSUPP)
-> +					tpm_dev.adapterlimit =
-> +							I2C_SMBUS_BLOCK_MAX;
-> +			}
-> +
-> +			if (rc <= 0)
-> +				goto out;
->  		}
+>  	status = acpi_get_table(ACPI_SIG_TPM2, 1,
+>  				(struct acpi_table_header **) &buf);
+> -	if (ACPI_FAILURE(status) || buf->header.length < sizeof(*buf)) {
+> +	if (ACPI_FAILURE(status) || buf->header.length < ACPI_TPM2_SIZE_WITH_START) {
+>  		dev_err(dev, FW_BUG "failed to get TPM2 ACPI table\n");
+>  		return -EINVAL;
 >  	}
+> @@ -565,15 +557,14 @@ static int crb_acpi_add(struct acpi_device *device)
+>  		priv->flags |= CRB_FL_ACPI_START;
 >  
+>  	if (sm == ACPI_TPM2_COMMAND_BUFFER_WITH_SMC) {
+> -		if (buf->header.length < (sizeof(*buf) + sizeof(*crb_smc))) {
+> +		if (buf->header.length < ACPI_TPM2_SIZE_WITH_SMC) {
+>  			dev_err(dev,
+>  				FW_BUG "TPM2 ACPI table has wrong size %u for start method type %d\n",
+>  				buf->header.length,
+>  				ACPI_TPM2_COMMAND_BUFFER_WITH_SMC);
+>  			return -EINVAL;
+>  		}
+> -		crb_smc = ACPI_ADD_PTR(struct tpm2_crb_smc, buf,
+> -				       ACPI_TPM2_START_METHOD_PARAMETER_OFFSET);
+> +		crb_smc = &buf->platform_specific_data.smc;
+>  		priv->smc_func_id = crb_smc->smc_func_id;
+>  		priv->flags |= CRB_FL_CRB_SMC_START;
+>  	}
+> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+> index c7e1384f1b08..f513a116e195 100644
+> --- a/drivers/char/tpm/tpm_tis.c
+> +++ b/drivers/char/tpm/tpm_tis.c
+> @@ -257,7 +257,7 @@ static int tpm_tis_acpi_init(struct acpi_device *acpi_dev)
+>  
+>  	st = acpi_get_table(ACPI_SIG_TPM2, 1,
+>  			    (struct acpi_table_header **) &tbl);
+> -	if (ACPI_FAILURE(st) || tbl->header.length < sizeof(*tbl)) {
+> +	if (ACPI_FAILURE(st) || tbl->header.length < ACPI_TPM2_SIZE_WITH_START) {
+>  		dev_err(&acpi_dev->dev,
+>  			FW_BUG "failed to get TPM2 ACPI table\n");
+>  		return -EINVAL;
+> diff --git a/include/acpi/actbl2.h b/include/acpi/actbl2.h
+> index 2b4af0769a28..645961f998ef 100644
+> --- a/include/acpi/actbl2.h
+> +++ b/include/acpi/actbl2.h
+> @@ -1273,20 +1273,42 @@ struct acpi_table_tcpa_server {
+>   *        Version 4
+>   *
+>   * Conforms to "TCG ACPI Specification, Family 1.2 and 2.0",
+> - * December 19, 2014
+> + * Version 1.2, Revision 8, February 27, 2017, Committee Draft
+>   *
+>   ******************************************************************************/
+>  
+> +struct tpm2_crb_smc {
+> +	u32 interrupt;
+> +	u8 interrupt_flags;
+> +	u8 op_flags;
+> +	u16 reserved2;
+> +	u32 smc_func_id;
+> +};
+> +
+>  struct acpi_table_tpm2 {
+>  	struct acpi_table_header header;	/* Common ACPI table header */
+>  	u16 platform_class;
+>  	u16 reserved;
+>  	u64 control_address;
+>  	u32 start_method;
+> -
+> -	/* Platform-specific data follows */
+> +	/* End of Version 3 or minimal version 4 table. */
+> +        union {
+> +		u8 raw[12];
+> +		u32 acpi;  /* ACPI start method should have 4 zero bytes here. */
+> +		struct tpm2_crb_smc smc;
+> +	} platform_specific_data;	/* Added in Level 00 Version 00.37 */
+> +	u32 minimum_log_length;		/* Added in Version 1.2 */
+> +	u64 log_address;		/* Added in Version 1.2 */
+>  };
+>  
+> +/* TPM2 table sizes. */
+> +
+> +#define ACPI_TPM2_SIZE_WITH_START	offsetofend(struct acpi_table_tpm2, \
+> +						    start_method)
+> +#define ACPI_TPM2_SIZE_WITH_SMC		offsetofend(struct acpi_table_tpm2, \
+> +						    platform_specific_data)
+> +#define ACPI_TPM2_SIZE_WITH_LOG		sizeof(struct acpi_table_tpm2)
+> +
+>  /* Values for start_method above */
+>  
+>  #define ACPI_TPM2_NOT_ALLOWED                       0
+> @@ -1296,8 +1318,6 @@ struct acpi_table_tpm2 {
+>  #define ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD  8
+>  #define ACPI_TPM2_COMMAND_BUFFER_WITH_SMC          11
+>  
+> -#define ACPI_TPM2_START_METHOD_PARAMETER_OFFSET    52
+> -
+>  /*******************************************************************************
+>   *
+>   * UEFI - UEFI Boot optimization Table
 > -- 
-> 2.9.3
+> 2.11.0
 > 
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
