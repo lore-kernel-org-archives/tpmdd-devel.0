@@ -1,132 +1,65 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [GIT PULL] tpmdd updates for 4.12
-Date: Tue, 4 Apr 2017 18:38:26 +0300
-Message-ID: <20170404153826.hxzphlvzqcesg7rt@intel.com>
+From: Paul Menzel <pmenzel-KUpvgZVWgV9o1qOY/usvUg@public.gmane.org>
+Subject: Regression between Linux 3.16 and 4.8/4.9 on Lenovo
+	X60 with coreboot
+Date: Tue, 4 Apr 2017 18:29:06 +0200
+Message-ID: <31e0ed69-174b-93ce-abf2-66cf08b1594e@molgen.mpg.de>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Transfer-Encoding: 8bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-Sender: owner-linux-security-module@vger.kernel.org
-To: James Morris <jmorris@namei.org>
-Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: Linux Kernel Mailing List <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi James,
-
-Here is the pull request for 4.12.
-
-Major new features have been landed:
-
-1. TPM resource manager. There's a new device called /dev/tpmrm0. When this
-device is opened, a new session is created that is isolated from other users.
-Each user has its own set of volatile objects. There is also a new internal
-structure called struct tpm_space. This structure can be passed to tpm_transmit
-function and have own session to interact with the TPM. This could be
-potentially utilized by other kernel subsystems in the future.
-2. ARM64 for support for tpm_crb.
-3. Support for requesting and relinquishing locality 0 in tpm_crb. TXT uses
-locality 2 so we cannot assume that locality 0 is readily reserved when used
-in combination with TXT.
-4. Comprehensive overhaul to tpm_tis_spi by Peter Huewe.
-
-/Jarkko
-
-The following changes since commit ddb99e118e37f324a4be65a411bb60ae62795cf9:
-
-  security, keys: convert key_user.usage from atomic_t to refcount_t (2017-04-03 10:49:06 +1000)
-
-are available in the git repository at:
-
-  git://git.infradead.org/users/jjs/linux-tpmdd.git tags/tpmdd-next-20170404
-
-for you to fetch changes up to 08eff49d63ca2bf4cd98c4bdc07dc9d07d52f8f5:
-
-  tpm/tpm_crb: Enable TPM CRB interface for ARM64 (2017-04-03 22:46:03 +0300)
-
-----------------------------------------------------------------
-tpmdd updates for Linux 4.12
-
-----------------------------------------------------------------
-Alexander Steffen (1):
-      tpm_tis_core: Choose appropriate timeout for reading burstcount
-
-Andy Shevchenko (1):
-      tpm/st33zp24: Add GPIO ACPI mapping table
-
-Arnd Bergmann (1):
-      tpm: select CONFIG_CRYPTO
-
-Hon Ching \(Vicky\) Lo (1):
-      vTPM: Fix missing NULL check
-
-James Bottomley (3):
-      tpm: split out tpm-dev.c into tpm-dev.c and tpm-common-dev.c
-      tpm: expose spaces via a device link /dev/tpmrm<n>
-      tpm2: add session handle context saving and restoring to the space code
-
-Jarkko Sakkinen (7):
-      tpm_crb: map locality registers
-      tpm_crb: encapsulate crb_wait_for_reg_32
-      tpm: move length validation to tpm_transmit()
-      tpm: export tpm2_flush_context_cmd
-      tpm: validate TPM 2.0 commands
-      tpm: infrastructure for TPM spaces
-      tpm_crb: request and relinquish locality 0
-
-Jason Gunthorpe (1):
-      tpm crb: Work around BIOS's that report the wrong ACPI region size
-
-Jerry Snitselaar (2):
-      tpm_crb: check for bad response size
-      tpm: make check_locality return bool
-
-Jiandi An (2):
-      ACPICA: Update TPM2 ACPI table
-      tpm/tpm_crb: Enable TPM CRB interface for ARM64
-
-Jérémy Lefaure (1):
-      tpm/tpm_crb: fix unused warnings on suspend/resume functions
-
-Nayna Jain (2):
-      tpm: msleep() delays - replace with usleep_range() in i2c nuvoton driver
-      tpm: add sleep only for retry in i2c_nuvoton_write_status()
-
-Peter Huewe (5):
-      tpm_tis_spi: Use single function to transfer data
-      tpm_tis_spi: Abort transfer when too many wait states are signaled
-      tpm_tis_spi: Check correct byte for wait state indicator
-      tpm_tis_spi: Remove limitation of transfers to MAX_SPI_FRAMESIZE bytes
-      tpm_tis_spi: Add small delay after last transfer
-
-Winkler, Tomas (1):
-      tpm/tpm_crb: enter the low power state upon device suspend
-
- drivers/char/tpm/Kconfig             |   3 +-
- drivers/char/tpm/Makefile            |   3 +-
- drivers/char/tpm/st33zp24/i2c.c      |  23 +-
- drivers/char/tpm/st33zp24/spi.c      |  23 +-
- drivers/char/tpm/st33zp24/st33zp24.c |  12 +-
- drivers/char/tpm/tpm-chip.c          |  70 ++++-
- drivers/char/tpm/tpm-dev-common.c    | 148 ++++++++++
- drivers/char/tpm/tpm-dev.c           | 143 +---------
- drivers/char/tpm/tpm-dev.h           |  27 ++
- drivers/char/tpm/tpm-interface.c     | 152 +++++++---
- drivers/char/tpm/tpm-sysfs.c         |   2 +-
- drivers/char/tpm/tpm.h               |  52 +++-
- drivers/char/tpm/tpm2-cmd.c          | 173 ++++++++----
- drivers/char/tpm/tpm2-space.c        | 528 +++++++++++++++++++++++++++++++++++
- drivers/char/tpm/tpm_crb.c           | 280 +++++++++++++++----
- drivers/char/tpm/tpm_i2c_infineon.c  |  12 +-
- drivers/char/tpm/tpm_i2c_nuvoton.c   |  24 +-
- drivers/char/tpm/tpm_ibmvtpm.c       |   8 +-
- drivers/char/tpm/tpm_tis_core.c      |  26 +-
- drivers/char/tpm/tpm_tis_spi.c       | 160 +++++------
- drivers/char/tpm/tpmrm-dev.c         |  65 +++++
- include/acpi/actbl2.h                |   3 +
- include/linux/tpm.h                  |   3 +-
- 23 files changed, 1536 insertions(+), 404 deletions(-)
- create mode 100644 drivers/char/tpm/tpm-dev-common.c
- create mode 100644 drivers/char/tpm/tpm-dev.h
- create mode 100644 drivers/char/tpm/tpm2-space.c
- create mode 100644 drivers/char/tpm/tpmrm-dev.c
+RGVhciBMaW51eCBmb2xrcywKCgpDdXJyZW50bHksIFRQTSBzdXBwb3J0IGlzIGFkZGVkIHRvIHRo
+ZSBjb3JlYm9vdCBwcm9qZWN0IGZvciB0aGUgTGVub3ZvIApYNjAgWzFdLgoKVW5mb3J0dW5hdGVs
+eSwgdGhlcmUgc2VlbXMgdG8gaGF2ZSBiZWVuIGEgcmVncmVzc2lvbiBiZXR3ZWVuIExpbnV4IDMu
+MTYgCmFuZCA0LjggYW5kIDQuOSwgc28gdGhhdCB0aGUgTGludXgga2VybmVsIGRvZXNu4oCZdCBj
+cmVhdGUgdGhlIFRQTSBkZXZpY2UuCgpgYGAKJCBtb3JlIC9wcm9jL3ZlcnNpb24gTGludXggdmVy
+c2lvbiAzLjE2LjAtNC02ODYtcGFlIAooZGViaWFuLWtlcm5lbEBsaXN0cy5kZWJpYW4ub3JnKSAo
+Z2NjIHZlcnNpb24gNC44LjQgKERlYmlhbiA0LjguNC0xKSApIAojMSBTTVAgRGViaWFuIDMuMTYu
+MzktMStkZWI4dTIgKDIwMTctMDMtMDcpCiQgam91cm5hbGN0bCAtayAtbyBjYXQgfCBncmVwIC1p
+IHRwbQp0cG1fdGlzIDAwOjA4OiAxLjIgVFBNIChkZXZpY2UtaWQgMHgzMjAyLCByZXYtaWQgNSkK
+dHBtX3RpcyAwMDowODogSXNzdWluZyBUUE1fU1RBUlRVUApgYGAKClRoZSBkZXZpY2UgYC9kZXYv
+dHBtMGAgaXMgcHJlc2VudC4KCkhlcmUgYXJlIHRoZSByZXN1bHRzIHdpdGggTGludXggNC44LjE1
+LgoKYGBgCmtlcm5lbDogWyAgICAwLjAwMDAwMF0gTGludXggdmVyc2lvbiA0LjguMC0wLmJwby4y
+LTY4Ni1wYWUgCihkZWJpYW4ta2VybmVsQGxpc3RzLmRlYmlhbi5vcmcpIChnY2MgdmVyc2lvbiA0
+LjkuMiAoRGViaWFuIDQuOS4yLTEwKSApIAojMSBTTVAgRGViaWFuIDQuOC4xNS0yfmJwbzgrMiAo
+MjAxNy0wMS0xNykKW+KApl0Ka2VybmVsOiBbICAgMTEuMzAyNTIyXSB0cG0gdHBtMDogdHBtX3Ry
+YW5zbWl0OiB0cG1fc2VuZDogZXJyb3IgLTUKa2VybmVsOiBbICAgMTEuMzAyNTk4XSB0cG1fdGlz
+IDAwOjA4OiBDb3VsZCBub3QgZ2V0IFRQTSB0aW1lb3V0cyBhbmQgCmR1cmF0aW9ucwpgYGAKClJl
+bW92ZSBtb2R1bGUgYW5kIHJ1biBgc3VkbyBtb2Rwcm9iZSB0cG1fdGlzIGl0cG09MSBmb3JjZT0x
+YC4KCmBgYAprZXJuZWw6IFsgICAzNS4wMjQzODZdIHRwbV90aXMgdHBtX3RpczogMS4yIFRQTSAo
+ZGV2aWNlLWlkIDB4MzIwMiwgcmV2LWlkIDUpCmtlcm5lbDogWyAgIDQ5LjE2MDc1Ml0gdHBtX3Rp
+cyAwMDowODogY2FuJ3QgcmVxdWVzdCByZWdpb24gZm9yIHJlc291cmNlIApbbWVtIDB4ZmVkNDAw
+MDAtMHhmZWQ0NGZmZl0Ka2VybmVsOiBbICAgNDkuMTYwODY1XSB0cG1fdGlzOiBwcm9iZSBvZiAw
+MDowOCBmYWlsZWQgd2l0aCBlcnJvciAtMTYKYGBgCgpBbmQgaGVyZSB3aXRoIExpbnV4IDQuOS4x
+My4KCmBgYAprZXJuZWw6IFsgNy44MTM1NDddIHRwbV90aXMgMDA6MDg6IDEuMiBUUE0gKGRldmlj
+ZS1pZCAweDMyMDIsIHJldi1pZCA1KQprZXJuZWw6IFsgNy44OTEwMjZdIHRwbSB0cG0wOiBJc3N1
+aW5nIFRQTV9TVEFSVFVQCmtlcm5lbDogWyA4LjA0Mjc4M10gdHBtIHRwbTA6IFVuYWJsZSB0byBy
+ZWFkIGJ1cnN0Y291bnQKa2VybmVsOiBbIDguMDQyODkzXSB0cG0gdHBtMDogdHBtX3RyYW5zbWl0
+OiB0cG1fc2VuZDogZXJyb3IgLTE2Cmtlcm5lbDogWyA4LjA0MjkwMF0gdHBtX3RpcyAwMDowODog
+Q291bGQgbm90IGdldCBUUE0gdGltZW91dHMgYW5kIGR1cmF0aW9uCmBgYAoKSWYgSSBhbSBub3Qg
+bWlzdGFrZW4sIHRoZSBlcnJvciBjb2RlIDE2IGlzIGZvciB0aGUgbWFjcm8gYEVCVVNZYC4KCkl0
+4oCZZCBiZSBncmVhdCwgaWYgdGhlIFRQTSB3b3VsZCBhbHNvIGJlIGNyZWF0ZWQgaW4gdGhlIG5l
+d2VyIExpbnV4IApLZXJuZWwgdmVyc2lvbnMsIHNvIHRoYXQgRGViaWFuIHVzZXJzIGNhbiB1cGdy
+YWRlIHRvIHRoZSB1cGNvbWluZyBzdGFibGUgCnJlbGVhc2UsIHdoaWNoIHNoaXBzIExpbnV4IDQu
+OS4KClVuZm9ydHVuYXRlbHksIEkgd29u4oCZdCBiZSBhYmxlIHRvIGJpc2VjdCB0aGUgY29tbWl0
+IGludHJvZHVjaW5nIHRoZSAKcmVncmVzc2lvbi4gQ291bGQgeW91IHBsZWFzZSB0ZWxsIG1lIGhv
+dyB0byBkZWJ1Zywgd2h5IHRoZSBidXJzdGNvdW50IApjYW5ub3QgYmUgcmVhZC4KCgpLaW5kIHJl
+Z2FyZHMsCgpQYXVsCgoKWzFdIGh0dHBzOi8vcmV2aWV3LmNvcmVib290Lm9yZy8xMzQxMC8KCi0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLQpDaGVjayBvdXQgdGhlIHZpYnJhbnQgdGVjaCBjb21tdW5pdHkg
+b24gb25lIG9mIHRoZSB3b3JsZCdzIG1vc3QKZW5nYWdpbmcgdGVjaCBzaXRlcywgU2xhc2hkb3Qu
+b3JnISBodHRwOi8vc2RtLmxpbmsvc2xhc2hkb3QKX19fX19fX19fX19fX19fX19fX19fX19fX19f
+X19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0CnRwbWRkLWRldmVs
+QGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0
+cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
