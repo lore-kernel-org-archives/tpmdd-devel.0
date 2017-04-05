@@ -1,16 +1,16 @@
 From: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH 1/4] tpm: check whether all digests have
- been provided for TPM 2.0 extend
-Date: Wed, 5 Apr 2017 14:25:17 +0200
-Message-ID: <e0c01100-df24-6632-fed5-dfe355470ac6@huawei.com>
+Subject: Re: [PATCH 2/4] tpm: introduce
+ tpm2_pcr_algo_to_crypto() and tpm2_pcr_algo_from_crypto()
+Date: Wed, 5 Apr 2017 15:03:16 +0200
+Message-ID: <96aeb2ef-5b0b-7c10-cbf1-7f51aeb902ae@huawei.com>
 References: <20170329102452.32212-1-roberto.sassu@huawei.com>
-	<20170329102452.32212-2-roberto.sassu@huawei.com>
-	<20170405121200.rjbojlwchfw43ted@intel.com>
+	<20170329102452.32212-3-roberto.sassu@huawei.com>
+	<20170405121256.jyyj474dux5cb62m@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170405121200.rjbojlwchfw43ted-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20170405121256.jyyj474dux5cb62m-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -24,34 +24,43 @@ Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-dev
 List-Id: tpmdd-devel@lists.sourceforge.net
 
 On 4/5/2017 2:12 PM, Jarkko Sakkinen wrote:
-> On Wed, Mar 29, 2017 at 12:24:49PM +0200, Roberto Sassu wrote:
->> TCG mandates that all PCR banks must be extended during the same operation.
->> tpm2_pcr_extend() will check whether all digests have been provided.
->>
->> The check is necessary because tpm2_pcr_extend() will be called by a new
->> function, allowing callers to provide a digest for each PCR bank.
->>
->> Signed-off-by: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+> On Wed, Mar 29, 2017 at 12:24:50PM +0200, Roberto Sassu wrote:
+>> Introduce these functions to convert between TPM and crypto algorithm IDs.
 >
-> When can this happen?
+> Why is this needed?
 
-Hi Jarkko
+I'm sorry for the short explanation. I will provide a detailed
+description in the reply of your emails and add the text in
+the next version of the patch set.
 
-I'm extending IMA to calculate the event data digest multiple
-times, for each algorithm selected by the user and supported by
-the TPM.
+Currently, tpm_pcr_extend(), for extending a PCR, accepts as input
+the SHA1 of an event data. Extending PCRs is needed in order to protect
+the integrity of an event log (e.g. the IMA measurements list).
 
-You can have a look at the cover letter of the patch set:
+With TPM 2.0, it is necessary to expose new functions because
+the event data digest can be calculated with multiple algorithms.
 
-https://sourceforge.net/p/linux-ima/mailman/message/35757172/
+TPM 2.0 introduced new challenges that were not present before.
+How users of the TPM:
 
+- know which algorithms the TPM supports?
 
-and at the patch which calls the functions I added to the
-TPM driver interface:
+- can provide multiple digests to the TPM driver interface?
 
-https://sourceforge.net/p/linux-ima/mailman/message/35757195/
+- can calculate the digest of event data, since the TPM driver
+   stores TPM algorithm IDs, which are different from IDs defined
+   by the crypto subsystem?
 
-Thanks
+The patch set I published tries to address these challenges.
+
+Regarding the type of data that should be returned to TPM users,
+the choice I made was to return to TPM users the TPM algorithms IDs
+(instead of IDs defined by the crypto subsystem).
+
+This way, I give to TPM users the flexibility to decide what
+information they provide to consumers of the event log (TPM or
+crypto IDs) and the possibility to calculate the event data
+digest with the crypto subsystem.
 
 Roberto
 
