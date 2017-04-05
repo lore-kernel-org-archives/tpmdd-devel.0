@@ -1,17 +1,14 @@
-From: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH 4/4] tpm: introduce
-	tpm_extend_pcr_digests()
-Date: Wed, 5 Apr 2017 16:36:31 +0200
-Message-ID: <88284005-3a53-1b37-e1f2-bfa88987c989@huawei.com>
-References: <20170329102452.32212-1-roberto.sassu@huawei.com>
-	<20170329102452.32212-5-roberto.sassu@huawei.com>
-	<20170405121416.2rly5pizs2hll56k@intel.com>
-	<259b67e8-216b-ad91-52c3-c4b39a8f3d1c@huawei.com>
+From: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
+Subject: Re: [PATCH 4/4] Improve handling of TPM2 event logs
+Date: Wed, 5 Apr 2017 13:29:29 -0700
+Message-ID: <58E553A9.8010804@vmware.com>
+References: <20170329074330.b2rbsbt2zc7o22q7@petr-dev3.eng.vmware.com>
+	<20170405114650.c2kkkz2th2emalcc@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <259b67e8-216b-ad91-52c3-c4b39a8f3d1c-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+In-Reply-To: <20170405114650.c2kkkz2th2emalcc-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,25 +18,70 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 4/5/2017 3:50 PM, Roberto Sassu wrote:
-> As I mentioned earlier, it is used in this patch:
+Jarkko Sakkinen wrote:
+> On Wed, Mar 29, 2017 at 12:43:30AM -0700, Petr Vandrovec wrote:
+>> From: Petr Vandrovec<petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
+>>
+>> When TPM2 log has entries with more than 3 digests, or with digests
+>> not listed in the log header, log gets misparsed, eventually
+>> leading to kernel complaint that code tried to vmalloc 512MB of
+>> memory (I have no idea what would happen on bigger system).
 >
-> https://sourceforge.net/p/linux-ima/mailman/message/35757195/
+> It would be easier to follow this if you would give a concrete
+> example of such situation. Since you are contributing this, you
+> must must have bumped into this, haven't you?
 
-I have a question. As you can see in the IMA patch, I'm calling
-tpm_is_tpm2() to determine if I should invoke tpm_pcr_extend(),
-for TPM 1.2, or tpm_pcr_extend_digests(), for TPM 2.0.
+Yes.  Our firmware reports TPM2 log with 4 digests (SHA1, SHA256, 
+SHA384, SHA512).  Current code in kernel skips over first 3 digests 
+only, trying to parse 4th digest as event length, coming to conclusion 
+that entry is hundred of megabytes or few gigabytes long, and then 
+failing to vmalloc() that amount of memory.
 
-Should the new function work with TPM 1.2? If a tpm2_digest
-structure with a SHA1 digest is provided, I could call
-tpm_pcr_extend() instead of returning an error.
+You can find parsed textual log at 
+https://drive.google.com/open?id=0B7WL11GSMhrQRDBLWjc3bEZQTEk (192KB), 
+and binary log at 
+https://drive.google.com/open?id=0B7WL11GSMhrQQ1RCMmRmM2paR3c (48KB).
 
-Thanks
+I hit situation with malformed event log on my Dell laptop - after TPM 
+firmware got updated from 1.2 to 2.0, chip & everything is reported as 
+TPM2, except that log stays in TPM1.2 format.
 
-Roberto
+
+>> So code should not parse only first 3 digests: both event header
+>> and event itself are already in memory, so we can parse any number
+>> of digests, as long as we do not try to parse whole memory when
+>> given count of 0xFFFFFFFF.
+>>
+>> So this change:
+>>
+>> * Rejects event entry with more digests than log header describes.
+>>    Digest types should be unique, and all should be described in
+>>    log header, so there cannot be more digests in the event than in
+>>    the header.
+>>
+>> * Reject event entry with digest that is not described in the
+>>    log header.  In theory code could hardcode information about
+>>    digest IDs already assigned by TCG, but if firmware authors
+>>    cannot get event log format right, why should anyone believe
+>>    that they got event log content right.
+>
+>
+> I have to say that I really didn't what this change is doing after
+> reading these. I only undestood what this commit is doing by reading
+> the code change.
+>
+> So we have a constant for banks and you are reading the number of banks
+> from the event to make it more dynamic? Why it requires such a complicated
+> explanation? And what is your short summary trying to say?
+
+My short summary is trying to say that there is no reason to restrict 
+parsing to only 3 digests (static number of banks), as long as we 
+validate that log is logically consistent.
+								Petr
+
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
