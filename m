@@ -1,17 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3] tpm: Apply a sane minimum adapterlimit
- value for retransmission.
-Date: Wed, 5 Apr 2017 16:35:12 +0300
-Message-ID: <20170405133512.pigfzaa7lhpeha76@intel.com>
-References: <20170328152938.14539-1-enric.balletbo@collabora.com>
-	<20170405090327.pssnm3mjcpajpoy6@intel.com>
-	<20170405132431.GA11583@lunn.ch>
+Subject: Re: Regression between Linux 3.16 and 4.8/4.9 on
+ Lenovo X60 with coreboot
+Date: Wed, 5 Apr 2017 16:36:25 +0300
+Message-ID: <20170405133625.xf3yetikgirj7zv6@intel.com>
+References: <c4bfd77e-3fb9-8a9b-28f5-48e6c13beb12@maciej.szmigiero.name>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170405132431.GA11583-g2DYL2Zd6BY@public.gmane.org>
+In-Reply-To: <c4bfd77e-3fb9-8a9b-28f5-48e6c13beb12-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,22 +18,28 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Andrew Lunn <andrew-g2DYL2Zd6BY@public.gmane.org>
-Cc: wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Bryan Freed <bfreed-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: "Maciej S. Szmigiero" <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
+Cc: pmenzel-KUpvgZVWgV9o1qOY/usvUg@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, GNUtoo-n+LsquliYkMdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Apr 05, 2017 at 03:24:31PM +0200, Andrew Lunn wrote:
-> > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> > 
-> > Peter, Andrew, anyone: Tested-by?
+On Wed, Apr 05, 2017 at 01:03:42PM +0200, Maciej S. Szmigiero wrote:
+> Hi Paul,
 > 
-> Sorry, i don't have the hardware. All i can give you is:
+> > tpm tpm0: Unable to read burstcount
+> > tpm tpm0: tpm_transmit: tpm_send: error -16
+> > tpm_tis tpm_tis: Could not get TPM timeouts and durations
 > 
-> Reviewed-by: Andrew Lunn <andrew-g2DYL2Zd6BY@public.gmane.org>
+> This looks like a regression I had on ThinkPad X61S.
 > 
->     Andrew
+> You can try with a patch from the following commit
+> which fixed it for me:
+> https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=1d70fe9d9c3a4c627f9757cbba5d628687b121c1
+> 
+> It is included in mainline kernel 4.10.2.
+> 
+> Maciej
 
-Thank you.
+Paul, Maciej, thank you. Please keep us updated.
 
 /Jarkko
 
