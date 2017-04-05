@@ -1,18 +1,17 @@
 From: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH 2/4] tpm: introduce
- tpm2_pcr_algo_to_crypto() and tpm2_pcr_algo_from_crypto()
-Date: Wed, 5 Apr 2017 16:24:51 +0200
-Message-ID: <0c6b34bf-66d8-0072-7020-262be2206d02@huawei.com>
+Subject: Re: [PATCH 4/4] tpm: introduce
+	tpm_extend_pcr_digests()
+Date: Wed, 5 Apr 2017 16:36:31 +0200
+Message-ID: <88284005-3a53-1b37-e1f2-bfa88987c989@huawei.com>
 References: <20170329102452.32212-1-roberto.sassu@huawei.com>
-	<20170329102452.32212-3-roberto.sassu@huawei.com>
-	<20170405121256.jyyj474dux5cb62m@intel.com>
-	<96aeb2ef-5b0b-7c10-cbf1-7f51aeb902ae@huawei.com>
-	<20170405134316.bnlaqqo2uz5lncau@intel.com>
+	<20170329102452.32212-5-roberto.sassu@huawei.com>
+	<20170405121416.2rly5pizs2hll56k@intel.com>
+	<259b67e8-216b-ad91-52c3-c4b39a8f3d1c@huawei.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170405134316.bnlaqqo2uz5lncau-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <259b67e8-216b-ad91-52c3-c4b39a8f3d1c-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -25,23 +24,20 @@ To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 4/5/2017 3:43 PM, Jarkko Sakkinen wrote:
-> Which one is needed for IMA? I mean for in-kernel API you should not add
-> any extra flexibility. Please implement the patch set with the minimal
-> flexibility in mind. Just enough to get IMA uses cases done and explain
-> in the commit messages your rationale based on requirements of the IMA.
+On 4/5/2017 3:50 PM, Roberto Sassu wrote:
+> As I mentioned earlier, it is used in this patch:
+>
+> https://sourceforge.net/p/linux-ima/mailman/message/35757195/
 
-Currently IMA is using crypto IDs, but if a TPM algorithm
-is not supported by the crypto subsystem, its TPM ID could
-be used to perform the hash operation directly with the TPM.
+I have a question. As you can see in the IMA patch, I'm calling
+tpm_is_tpm2() to determine if I should invoke tpm_pcr_extend(),
+for TPM 1.2, or tpm_pcr_extend_digests(), for TPM 2.0.
 
-I was thinking to send to TPM users crypto IDs. However,
-tpm2_pcr_extend() accepts as input a tpm2_digest structure,
-which includes a TPM ID. To use crypto IDs, TPM users could
-provide concatenated digests in an array of unsigned chars.
-But then, tpm_pcr_extend() would have to extract each digest
-and place it in a tpm2_digest structure, before calling
-tpm2_pcr_extend().
+Should the new function work with TPM 1.2? If a tpm2_digest
+structure with a SHA1 digest is provided, I could call
+tpm_pcr_extend() instead of returning an error.
+
+Thanks
 
 Roberto
 
