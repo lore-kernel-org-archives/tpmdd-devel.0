@@ -1,60 +1,154 @@
-From: Paul Menzel <pmenzel-KUpvgZVWgV9o1qOY/usvUg@public.gmane.org>
-Subject: Re: Regression between Linux 3.16 and 4.8/4.9 on
- Lenovo X60 with coreboot
-Date: Tue, 04 Apr 2017 19:44:24 +0200
-Message-ID: <6cd95003c558c2d5aac6eaaa5cd3e86e@molgen.mpg.de>
-References: <31e0ed69-174b-93ce-abf2-66cf08b1594e@molgen.mpg.de>
-	<20170404171533.GA3255@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v3] tpm: Apply a sane minimum adapterlimit value for
+ retransmission.
+Date: Wed, 5 Apr 2017 12:03:27 +0300
+Message-ID: <20170405090327.pssnm3mjcpajpoy6@intel.com>
+References: <20170328152938.14539-1-enric.balletbo@collabora.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170404171533.GA3255-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Linux Kernel Mailing List <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, Denis 'GNUtoo' Carikli <GNUtoo-n+LsquliYkMdnm+yROfE0A@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20170328152938.14539-1-enric.balletbo@collabora.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Enric Balletbo i Serra <enric.balletbo@collabora.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, Andrew Lunn <andrew@lunn.ch>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, wsa@the-dreams.de, Bryan Freed <bfreed@chromium.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-RGVhciBKYXNvbiwKCgpUaGFuayB5b3UgZm9yIHlvdXIgcmVwbHkuCgoKT24gMjAxNy0wNC0wNCAx
-OToxNSwgSmFzb24gR3VudGhvcnBlIHdyb3RlOgo+IE9uIFR1ZSwgQXByIDA0LCAyMDE3IGF0IDA2
-OjI5OjA2UE0gKzAyMDAsIFBhdWwgTWVuemVsIHdyb3RlOgo+IAo+PiBVbmZvcnR1bmF0ZWx5LCB0
-aGVyZSBzZWVtcyB0byBoYXZlIGJlZW4gYSByZWdyZXNzaW9uIGJldHdlZW4gTGludXggCj4+IDMu
-MTYKPj4gYW5kIDQuOCBhbmQgNC45LCBzbyB0aGF0IHRoZSBMaW51eCBrZXJuZWwgZG9lc27igJl0
-IGNyZWF0ZSB0aGUgVFBNCj4+IGRldmljZS4KPiAKPiBUaGF0IG9sZCBrZXJuZWwgZGlkIG5vdCBj
-aGVjayBlcnJvciBjb2RlcyB3aGVuIHJlYWRpbmcgYnVyc3QgY291bnQsCj4gdGhlIG5ldyBvbmUg
-ZG9lcy4gSXQgaXMgcXVpdGUgcG9zc2libGUgdGhlIG9sZGVyIGtlcm5lbCBpcyBmYWlsaW5nIHRv
-Cj4gcmVhZCBidXJzdCBjb3VudCBhbmQgc3VidGx5IG1hbGZ1bmN0aW9uaW5nLgoKR05VdG9vIGdv
-dCB0aGUgbWVzc2FnZXMgYmVsb3cuIFVuZm9ydHVuYXRlbHksIEkgZG9u4oCZdCBrbm93LCB3aGF0
-IExpbnV4IApLZXJuZWwgdGhhdCBpcy4KCmBgYAp0cG1fdGlzIDAwOjA3OiAxLjIgVFBNIChkZXZp
-Y2UtaWQgMHgzMjAyLCByZXYtaWQgNSkKdHBtIHRwbTA6IEEgVFBNIGVycm9yICgzOCkgb2NjdXJy
-ZWQgYXR0ZW1wdGluZyB0byBkZXRlcm1pbmUgdGhlIHRpbWVvdXRzCnRwbSB0cG0wOiBJc3N1aW5n
-IFRQTV9TVEFSVFVQCnRwbSB0cG0wOiBbSGFyZHdhcmUgRXJyb3JdOiBBZGp1c3RpbmcgcmVwb3J0
-ZWQgdGltZW91dHM6IEEgCjEwMDAwLT4xMDAwMHVzIEIgMTAwMDAtPjEwMDAwdXMgQyAwLT43NTAw
-MDB1cyBEIDAtPjc1MDAwMHVzCmBgYAoKPiBJdCB3b3VsZCBiZSBoZWxwZnVsIGlmIHlvdSBjb3Vs
-ZCBwcm92ZS9kaXNwcm92ZSB0aGlzIHN0YXRlbWVudCBieQo+IGFkZGluZyBzb21lIGRlYnVnZ2lu
-ZyB0byAzLjE2LgoKQ291bGQgeW91IHBsZWFzZSBoZWxwIG1lIHdpdGggdGhhdD8gQ2FuIEkgZW5h
-YmxlIGNlcnRhaW4gb3B0aW9ucyB0byBnZXQgCm1vcmUgZGVidWdnaW5nIGluZm9ybWF0aW9uPwoK
-PiBBcyB0byB3aHkgdGhlIGJ1cnN0IGNvdW50IGNhbm5vdCBiZSByZWFkLi4gSSBkb24ndCBrbm93
-LCBjaGVjayBpZgo+IGluY3JlYXNpbmcgdGhlIHJldHJpZXMgaGVscHMsIGl0IGNvdWxkIGJlIHRo
-aXMgcGFydGljdWxhciBUUE0gaXMgb3V0Cj4gb2Ygc3BlYyBmb3IgdGhlIGNvbGQgc3RhcnR1cCBw
-cm9jZXNzLgoKSG93IGNhbiBJIGluY3JlYXNlIHRoZSByZXRyeSBjb3VudD8KCj4+IFJlbW92ZSBt
-b2R1bGUgYW5kIHJ1biBgc3VkbyBtb2Rwcm9iZSB0cG1fdGlzIGl0cG09MSBmb3JjZT0xYC4KPiAK
-PiBJcyB0aGlzIHJlYWxseSBhbiAnaXRwbSc/IEl0IGRvZXNuJ3QgbG9vayBsaWtlIGl0Li4KClNv
-cnJ5LCBJIGRvbuKAmXQga25vdy4gTGVhdmluZyB0aGF0IG91dCwgZ2l2ZXMgdGhlIHNhbWUgbWVz
-c2FnZXMgdGhvdWdoLgoKYGBgCnRwbSB0cG0wOiBVbmFibGUgdG8gcmVhZCBidXJzdGNvdW50CnRw
-bSB0cG0wOiB0cG1fdHJhbnNtaXQ6IHRwbV9zZW5kOiBlcnJvciAtMTYKdHBtX3RpcyB0cG1fdGlz
-OiBDb3VsZCBub3QgZ2V0IFRQTSB0aW1lb3V0cyBhbmQgZHVyYXRpb25zCmBgYAoKCktpbmQgcmVn
-YXJkcywKClBhdWwgTWVuemVsCgotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KQ2hlY2sgb3V0IHRoZSB2
-aWJyYW50IHRlY2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29ybGQncyBtb3N0CmVuZ2FnaW5n
-IHRlY2ggc2l0ZXMsIFNsYXNoZG90Lm9yZyEgaHR0cDovL3NkbS5saW5rL3NsYXNoZG90Cl9fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fCnRwbWRkLWRldmVsIG1h
-aWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9saXN0
-cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwK
+On Tue, Mar 28, 2017 at 05:29:38PM +0200, Enric Balletbo i Serra wrote:
+> From: Bryan Freed <bfreed@chromium.org>
+> 
+> When the I2C Infineon part is attached to an I2C adapter that imposes
+> a size limitation, large requests will fail with -EOPNOTSUPP. Retry
+> them with a sane minimum size without re-issuing the 0x05 command
+> as this appears to occasionally put the TPM in a bad state.
+> 
+> Signed-off-by: Bryan Freed <bfreed@chromium.org>
+> [rework the patch to adapt to the feedback received]
+> Signed-off-by: Enric Balletbo i Serra <enric.balletbo@collabora.com>
+> ---
+> This is a reworked version of the original patch based on the
+> suggestion made by Wolfram Sang to simply fall back to a sane minimum
+> when the maximum fails.
+> 
+> Changes since v2:
+>  - Do not remove faster transfers when chip is SLB9645 (Peter Huewe)
+>  - Remember the adapterlimit length once it fails to not generate extra
+>    i2c core messages (suggested by Andrew Lunn)
+> Changes since v1:
+>  - Check the correct return value (-EOPNOTSUPP instead of -EINVAL)
+>  - Fall back len to I2C_SMBUS_BLOCK_MAX if fails.
+> 
+>  drivers/char/tpm/tpm_i2c_infineon.c | 76 +++++++++++++++++++++++++++----------
+>  1 file changed, 56 insertions(+), 20 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_i2c_infineon.c b/drivers/char/tpm/tpm_i2c_infineon.c
+> index 62ee44e..fdefcdb 100644
+> --- a/drivers/char/tpm/tpm_i2c_infineon.c
+> +++ b/drivers/char/tpm/tpm_i2c_infineon.c
+> @@ -70,6 +70,7 @@ struct tpm_inf_dev {
+>  	u8 buf[TPM_BUFSIZE + sizeof(u8)]; /* max. buffer size + addr */
+>  	struct tpm_chip *chip;
+>  	enum i2c_chip_type chip_type;
+> +	unsigned int adapterlimit;
+>  };
+>  
+>  static struct tpm_inf_dev tpm_dev;
+> @@ -111,6 +112,7 @@ static int iic_tpm_read(u8 addr, u8 *buffer, size_t len)
+>  
+>  	int rc = 0;
+>  	int count;
+> +	unsigned int msglen = len;
+>  
+>  	/* Lock the adapter for the duration of the whole sequence. */
+>  	if (!tpm_dev.client->adapter->algo->master_xfer)
+> @@ -131,27 +133,61 @@ static int iic_tpm_read(u8 addr, u8 *buffer, size_t len)
+>  			usleep_range(SLEEP_DURATION_LOW, SLEEP_DURATION_HI);
+>  		}
+>  	} else {
+> -		/* slb9635 protocol should work in all cases */
+> -		for (count = 0; count < MAX_COUNT; count++) {
+> -			rc = __i2c_transfer(tpm_dev.client->adapter, &msg1, 1);
+> -			if (rc > 0)
+> -				break;	/* break here to skip sleep */
+> -
+> -			usleep_range(SLEEP_DURATION_LOW, SLEEP_DURATION_HI);
+> -		}
+> -
+> -		if (rc <= 0)
+> -			goto out;
+> -
+> -		/* After the TPM has successfully received the register address
+> -		 * it needs some time, thus we're sleeping here again, before
+> -		 * retrieving the data
+> +		/* Expect to send one command message and one data message, but
+> +		 * support looping over each or both if necessary.
+>  		 */
+> -		for (count = 0; count < MAX_COUNT; count++) {
+> -			usleep_range(SLEEP_DURATION_LOW, SLEEP_DURATION_HI);
+> -			rc = __i2c_transfer(tpm_dev.client->adapter, &msg2, 1);
+> -			if (rc > 0)
+> -				break;
+> +		while (len > 0) {
+> +			/* slb9635 protocol should work in all cases */
+> +			for (count = 0; count < MAX_COUNT; count++) {
+> +				rc = __i2c_transfer(tpm_dev.client->adapter,
+> +						    &msg1, 1);
+> +				if (rc > 0)
+> +					break;	/* break here to skip sleep */
+> +
+> +				usleep_range(SLEEP_DURATION_LOW,
+> +					     SLEEP_DURATION_HI);
+> +			}
+> +
+> +			if (rc <= 0)
+> +				goto out;
+> +
+> +			/* After the TPM has successfully received the register
+> +			 * address it needs some time, thus we're sleeping here
+> +			 * again, before retrieving the data
+> +			 */
+> +			for (count = 0; count < MAX_COUNT; count++) {
+> +				if (tpm_dev.adapterlimit) {
+> +					msglen = min_t(unsigned int,
+> +						       tpm_dev.adapterlimit,
+> +						       len);
+> +					msg2.len = msglen;
+> +				}
+> +				usleep_range(SLEEP_DURATION_LOW,
+> +					     SLEEP_DURATION_HI);
+> +				rc = __i2c_transfer(tpm_dev.client->adapter,
+> +						    &msg2, 1);
+> +				if (rc > 0) {
+> +					/* Since len is unsigned, make doubly
+> +					 * sure we do not underflow it.
+> +					 */
+> +					if (msglen > len)
+> +						len = 0;
+> +					else
+> +						len -= msglen;
+> +					msg2.buf += msglen;
+> +					break;
+> +				}
+> +				/* If the I2C adapter rejected the request (e.g
+> +				 * when the quirk read_max_len < len) fall back
+> +				 * to a sane minimum value and try again.
+> +				 */
+> +				if (rc == -EOPNOTSUPP)
+> +					tpm_dev.adapterlimit =
+> +							I2C_SMBUS_BLOCK_MAX;
+> +			}
+> +
+> +			if (rc <= 0)
+> +				goto out;
+>  		}
+>  	}
+>  
+> -- 
+> 2.9.3
+> 
+
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+
+Peter, Andrew, anyone: Tested-by?
+
+/Jarkko
