@@ -1,16 +1,16 @@
-From: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH 2/4] tpm: introduce
- tpm2_pcr_algo_to_crypto() and tpm2_pcr_algo_from_crypto()
-Date: Wed, 5 Apr 2017 15:03:16 +0200
-Message-ID: <96aeb2ef-5b0b-7c10-cbf1-7f51aeb902ae@huawei.com>
-References: <20170329102452.32212-1-roberto.sassu@huawei.com>
-	<20170329102452.32212-3-roberto.sassu@huawei.com>
-	<20170405121256.jyyj474dux5cb62m@intel.com>
+From: Andrew Lunn <andrew-g2DYL2Zd6BY@public.gmane.org>
+Subject: Re: [PATCH v3] tpm: Apply a sane minimum adapterlimit
+ value for retransmission.
+Date: Wed, 5 Apr 2017 15:24:31 +0200
+Message-ID: <20170405132431.GA11583@lunn.ch>
+References: <20170328152938.14539-1-enric.balletbo@collabora.com>
+	<20170405090327.pssnm3mjcpajpoy6@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170405121256.jyyj474dux5cb62m-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20170405090327.pssnm3mjcpajpoy6-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,49 +20,18 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: wsa-z923LK4zBo2bacvFa/9K2g@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Bryan Freed <bfreed-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 4/5/2017 2:12 PM, Jarkko Sakkinen wrote:
-> On Wed, Mar 29, 2017 at 12:24:50PM +0200, Roberto Sassu wrote:
->> Introduce these functions to convert between TPM and crypto algorithm IDs.
->
-> Why is this needed?
+> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> 
+> Peter, Andrew, anyone: Tested-by?
 
-I'm sorry for the short explanation. I will provide a detailed
-description in the reply of your emails and add the text in
-the next version of the patch set.
+Sorry, i don't have the hardware. All i can give you is:
 
-Currently, tpm_pcr_extend(), for extending a PCR, accepts as input
-the SHA1 of an event data. Extending PCRs is needed in order to protect
-the integrity of an event log (e.g. the IMA measurements list).
+Reviewed-by: Andrew Lunn <andrew-g2DYL2Zd6BY@public.gmane.org>
 
-With TPM 2.0, it is necessary to expose new functions because
-the event data digest can be calculated with multiple algorithms.
-
-TPM 2.0 introduced new challenges that were not present before.
-How users of the TPM:
-
-- know which algorithms the TPM supports?
-
-- can provide multiple digests to the TPM driver interface?
-
-- can calculate the digest of event data, since the TPM driver
-   stores TPM algorithm IDs, which are different from IDs defined
-   by the crypto subsystem?
-
-The patch set I published tries to address these challenges.
-
-Regarding the type of data that should be returned to TPM users,
-the choice I made was to return to TPM users the TPM algorithms IDs
-(instead of IDs defined by the crypto subsystem).
-
-This way, I give to TPM users the flexibility to decide what
-information they provide to consumers of the event log (TPM or
-crypto IDs) and the possibility to calculate the event data
-digest with the crypto subsystem.
-
-Roberto
+    Andrew
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
