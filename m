@@ -1,13 +1,14 @@
-From: James Morris <jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
-Subject: Re: [GIT PULL] tpmdd updates for 4.12
-Date: Thu, 6 Apr 2017 10:31:06 +1000 (AEST)
-Message-ID: <alpine.LRH.2.20.1704061030490.8642@namei.org>
-References: <20170404153826.hxzphlvzqcesg7rt@intel.com>
+From: Paul Menzel <pmenzel-KUpvgZVWgV9o1qOY/usvUg@public.gmane.org>
+Subject: Re: Regression between Linux 3.16 and 4.8/4.9 on
+ Lenovo X60 with coreboot
+Date: Thu, 06 Apr 2017 08:18:33 +0200
+Message-ID: <bf4ca184f43cc7b6ee8069b63558087c@molgen.mpg.de>
+References: <c4bfd77e-3fb9-8a9b-28f5-48e6c13beb12@maciej.szmigiero.name>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170404153826.hxzphlvzqcesg7rt-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <c4bfd77e-3fb9-8a9b-28f5-48e6c13beb12-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -16,41 +17,39 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: "Maciej S. Szmigiero" <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, GNUtoo-n+LsquliYkMdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, 4 Apr 2017, Jarkko Sakkinen wrote:
-
-> Hi James,
-> 
-> Here is the pull request for 4.12.
-> 
-> Major new features have been landed:
-> 
-> 1. TPM resource manager. There's a new device called /dev/tpmrm0. When this
-> device is opened, a new session is created that is isolated from other users.
-> Each user has its own set of volatile objects. There is also a new internal
-> structure called struct tpm_space. This structure can be passed to tpm_transmit
-> function and have own session to interact with the TPM. This could be
-> potentially utilized by other kernel subsystems in the future.
-> 2. ARM64 for support for tpm_crb.
-> 3. Support for requesting and relinquishing locality 0 in tpm_crb. TXT uses
-> locality 2 so we cannot assume that locality 0 is readily reserved when used
-> in combination with TXT.
-> 4. Comprehensive overhaul to tpm_tis_spi by Peter Huewe.
-> 
-
-Thanks for the summary.
-
-Pulled.
-
-
--- 
-James Morris
-<jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+RGVhciBNYWNpZWosCgoKT24gMjAxNy0wNC0wNSAxMzowMywgTWFjaWVqIFMuIFN6bWlnaWVybyB3
+cm90ZToKCj4+IHRwbSB0cG0wOiBVbmFibGUgdG8gcmVhZCBidXJzdGNvdW50Cj4+IHRwbSB0cG0w
+OiB0cG1fdHJhbnNtaXQ6IHRwbV9zZW5kOiBlcnJvciAtMTYKPj4gdHBtX3RpcyB0cG1fdGlzOiBD
+b3VsZCBub3QgZ2V0IFRQTSB0aW1lb3V0cyBhbmQgZHVyYXRpb25zCj4gCj4gVGhpcyBsb29rcyBs
+aWtlIGEgcmVncmVzc2lvbiBJIGhhZCBvbiBUaGlua1BhZCBYNjFTLgo+IAo+IFlvdSBjYW4gdHJ5
+IHdpdGggYSBwYXRjaCBmcm9tIHRoZSBmb2xsb3dpbmcgY29tbWl0Cj4gd2hpY2ggZml4ZWQgaXQg
+Zm9yIG1lOgo+IGh0dHBzOi8vZ2l0Lmtlcm5lbC5vcmcvcHViL3NjbS9saW51eC9rZXJuZWwvZ2l0
+L3RvcnZhbGRzL2xpbnV4LmdpdC9jb21taXQvP2lkPTFkNzBmZTlkOWMzYTRjNjI3Zjk3NTdjYmJh
+NWQ2Mjg2ODdiMTIxYzEKPiAKPiBJdCBpcyBpbmNsdWRlZCBpbiBtYWlubGluZSBrZXJuZWwgNC4x
+MC4yLgoKSW5kZWVkLCB0aGF0IGltcHJvdmVzIHRoZSBzaXR1YXRpb24uIEkgc3RpbGwgbmVlZCB0
+byBwYXNzIGBmb3JjZT0xYCB0byAKdGhlIG1vZHVsZSB0byBnZXQgYC9kZXYvdHBtMGAuIE5vIGlk
+ZWEsIHdoeSBpdOKAmXMgbm90IGluIGluY2x1ZGVkIGluIApMaW51eCA0LjkgeWV0LgoKYGBgCiQg
+bW9yZSAvcHJvYy92ZXJzaW9uCkxpbnV4IHZlcnNpb24gNC4xMS4wLXJjNSsgKHJvb3RAZDQ0ZDAz
+YTE5M2Q2KSAoZ2NjIHZlcnNpb24gNi4zLjAgCjIwMTcwMzIxIChEZWJpYW4gNi4zLjAtMTApICkg
+IzIgU01QIFR1ZSBBcHIgNCAyMTowNzowOCBVVEMgMjAxNwokIGpvdXJuYWxjdGwgLWsgLW8gY2F0
+IHwgZ3JlcCB0cG0KdHBtX3RpcyB0cG1fdGlzOiAxLjIgVFBNIChkZXZpY2UtaWQgMHgzMjAyLCBy
+ZXYtaWQgNSkKdHBtIHRwbTA6IElzc3VpbmcgVFBNX1NUQVJUVVAKdHBtIHRwbTA6IFtIYXJkd2Fy
+ZSBFcnJvcl06IEFkanVzdGluZyByZXBvcnRlZCB0aW1lb3V0czogQSAKMTAwMDAtPjEwMDAwdXMg
+QiAxMDAwMC0+MTAwMDB1cyBDIDAtPjc1MjAwMHVzIEQgMC0+NzUyMDAwdXMKJCBtb3JlIC9zeXMv
+Y2xhc3MvdHBtL3RwbTAvZGV2aWNlL2NhcHMKTWFudWZhY3R1cmVyOiAweDQxNTQ0ZDRjClRDRyB2
+ZXJzaW9uOiAxLjIKRmlybXdhcmUgdmVyc2lvbjogMTEuNQokIHN1ZG8gdHBtX3ZlcnNpb24KVHNw
+aV9Db250ZXh0X0Nvbm5lY3QgZmFpbGVkOiAweDAwMDAzMDExIC0gbGF5ZXI9dHNwLCBjb2RlPTAw
+MTEgKDE3KSwgCkNvbW11bmljYXRpb24gZmFpbHVyZQpgYGAKClNvIGRvIHlvdSBoYXZlIGFuIGlk
+ZWEsIHdoYXQg4oCcQUNQSSByZXF1aXJlbWVudHPigJ0gY2hhbmdlZCBpbiB0aGUgYHRwbWAgCm1v
+ZHVsZSBzaW5jZSBMaW51eCAzLjE2IHRvIGJlIGxvYWRlZCBhdXRvbWF0aWNhbGx5PwoKCktpbmQg
+cmVnYXJkcywKClBhdWwKCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpDaGVjayBvdXQgdGhlIHZpYnJh
+bnQgdGVjaCBjb21tdW5pdHkgb24gb25lIG9mIHRoZSB3b3JsZCdzIG1vc3QKZW5nYWdpbmcgdGVj
+aCBzaXRlcywgU2xhc2hkb3Qub3JnISBodHRwOi8vc2RtLmxpbmsvc2xhc2hkb3QKX19fX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFpbGlu
+ZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xpc3RzLnNv
+dXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
