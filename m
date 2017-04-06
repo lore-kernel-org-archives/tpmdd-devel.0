@@ -1,18 +1,15 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 4/4] tpm: introduce
-	tpm_extend_pcr_digests()
-Date: Thu, 6 Apr 2017 10:51:22 +0300
-Message-ID: <20170406075122.pduy2hpvq3aj4shr@intel.com>
-References: <20170329102452.32212-1-roberto.sassu@huawei.com>
-	<20170329102452.32212-5-roberto.sassu@huawei.com>
-	<20170405121416.2rly5pizs2hll56k@intel.com>
-	<259b67e8-216b-ad91-52c3-c4b39a8f3d1c@huawei.com>
+From: "Maciej S. Szmigiero" <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
+Subject: Re: Regression between Linux 3.16 and 4.8/4.9 on
+ Lenovo X60 with coreboot
+Date: Thu, 6 Apr 2017 13:52:39 +0200
+Message-ID: <4d25364e-8c48-8a19-8aac-e949f39d01d3@maciej.szmigiero.name>
+References: <c4bfd77e-3fb9-8a9b-28f5-48e6c13beb12@maciej.szmigiero.name>
+	<bf4ca184f43cc7b6ee8069b63558087c@molgen.mpg.de>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <259b67e8-216b-ad91-52c3-c4b39a8f3d1c-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+In-Reply-To: <bf4ca184f43cc7b6ee8069b63558087c-KUpvgZVWgV9o1qOY/usvUg@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,42 +18,44 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Paul Menzel <pmenzel-KUpvgZVWgV9o1qOY/usvUg@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, GNUtoo-n+LsquliYkMdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Apr 05, 2017 at 03:50:08PM +0200, Roberto Sassu wrote:
-> On 4/5/2017 2:14 PM, Jarkko Sakkinen wrote:
-> > On Wed, Mar 29, 2017 at 12:24:52PM +0200, Roberto Sassu wrote:
-> > > Allow TPM users to provide a digest for each PCR bank,
-> > > for the extend operation.
-> > > 
-> > > Signed-off-by: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-> > 
-> > Not used for anything. Thus NAK.
-> 
-> As I mentioned earlier, it is used in this patch:
-> 
-> https://sourceforge.net/p/linux-ima/mailman/message/35757195/
-> 
-> 
-> tpm_pcr_algorithms() and tpm2_pcr_algo_to_crypto() are used
-> in this patch:
-> 
-> https://sourceforge.net/p/linux-ima/mailman/message/35757194/
-> 
-> 
-> tpm2_pcr_algo_from_crypto() is used here:
-> 
-> https://sourceforge.net/p/tpmdd/mailman/message/35756304/
-> 
-> Roberto
-
-Please describe these in the next version so that we can with
-reasonable effort evaluate these.
-
-/Jarkko
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+T24gMDQvMDYvMTcgMDg6MTgsIFBhdWwgTWVuemVsIHdyb3RlOgo+IERlYXIgTWFjaWVqLAo+IAo+
+IE9uIDIwMTctMDQtMDUgMTM6MDMsIE1hY2llaiBTLiBTem1pZ2llcm8gd3JvdGU6Cj4gCj4+PiB0
+cG0gdHBtMDogVW5hYmxlIHRvIHJlYWQgYnVyc3Rjb3VudAo+Pj4gdHBtIHRwbTA6IHRwbV90cmFu
+c21pdDogdHBtX3NlbmQ6IGVycm9yIC0xNgo+Pj4gdHBtX3RpcyB0cG1fdGlzOiBDb3VsZCBub3Qg
+Z2V0IFRQTSB0aW1lb3V0cyBhbmQgZHVyYXRpb25zCj4+Cj4+IFRoaXMgbG9va3MgbGlrZSBhIHJl
+Z3Jlc3Npb24gSSBoYWQgb24gVGhpbmtQYWQgWDYxUy4KPj4KPj4gWW91IGNhbiB0cnkgd2l0aCBh
+IHBhdGNoIGZyb20gdGhlIGZvbGxvd2luZyBjb21taXQKPj4gd2hpY2ggZml4ZWQgaXQgZm9yIG1l
+Ogo+PiBodHRwczovL2dpdC5rZXJuZWwub3JnL3B1Yi9zY20vbGludXgva2VybmVsL2dpdC90b3J2
+YWxkcy9saW51eC5naXQvY29tbWl0Lz9pZD0xZDcwZmU5ZDljM2E0YzYyN2Y5NzU3Y2JiYTVkNjI4
+Njg3YjEyMWMxCj4+Cj4+IEl0IGlzIGluY2x1ZGVkIGluIG1haW5saW5lIGtlcm5lbCA0LjEwLjIu
+Cj4gCj4gSW5kZWVkLCB0aGF0IGltcHJvdmVzIHRoZSBzaXR1YXRpb24uIEkgc3RpbGwgbmVlZCB0
+byBwYXNzIGBmb3JjZT0xYCB0byB0aGUgbW9kdWxlIHRvIGdldCBgL2Rldi90cG0wYC4gTm8gaWRl
+YSwgd2h5IGl04oCZcyBub3QgaW4gaW5jbHVkZWQgaW4gTGludXggNC45IHlldC4KPiAKPiBgYGAK
+PiAkIG1vcmUgL3Byb2MvdmVyc2lvbgo+IExpbnV4IHZlcnNpb24gNC4xMS4wLXJjNSsgKHJvb3RA
+ZDQ0ZDAzYTE5M2Q2KSAoZ2NjIHZlcnNpb24gNi4zLjAgMjAxNzAzMjEgKERlYmlhbiA2LjMuMC0x
+MCkgKSAjMiBTTVAgVHVlIEFwciA0IDIxOjA3OjA4IFVUQyAyMDE3Cj4gJCBqb3VybmFsY3RsIC1r
+IC1vIGNhdCB8IGdyZXAgdHBtCj4gdHBtX3RpcyB0cG1fdGlzOiAxLjIgVFBNIChkZXZpY2UtaWQg
+MHgzMjAyLCByZXYtaWQgNSkKPiB0cG0gdHBtMDogSXNzdWluZyBUUE1fU1RBUlRVUAo+IHRwbSB0
+cG0wOiBbSGFyZHdhcmUgRXJyb3JdOiBBZGp1c3RpbmcgcmVwb3J0ZWQgdGltZW91dHM6IEEgMTAw
+MDAtPjEwMDAwdXMgQiAxMDAwMC0+MTAwMDB1cyBDIDAtPjc1MjAwMHVzIEQgMC0+NzUyMDAwdXMK
+PiAkIG1vcmUgL3N5cy9jbGFzcy90cG0vdHBtMC9kZXZpY2UvY2Fwcwo+IE1hbnVmYWN0dXJlcjog
+MHg0MTU0NGQ0Ywo+IFRDRyB2ZXJzaW9uOiAxLjIKPiBGaXJtd2FyZSB2ZXJzaW9uOiAxMS41Cj4g
+JCBzdWRvIHRwbV92ZXJzaW9uCj4gVHNwaV9Db250ZXh0X0Nvbm5lY3QgZmFpbGVkOiAweDAwMDAz
+MDExIC0gbGF5ZXI9dHNwLCBjb2RlPTAwMTEgKDE3KSwgQ29tbXVuaWNhdGlvbiBmYWlsdXJlCj4g
+YGBgCj4gCj4gU28gZG8geW91IGhhdmUgYW4gaWRlYSwgd2hhdCDigJxBQ1BJIHJlcXVpcmVtZW50
+c+KAnSBjaGFuZ2VkIGluIHRoZSBgdHBtYCBtb2R1bGUgc2luY2UgTGludXggMy4xNiB0byBiZSBs
+b2FkZWQgYXV0b21hdGljYWxseT8KClVuZm9ydHVuYXRlbHkgSSBjYW4ndCBoZWxwIGhlcmUgYXMg
+SSBhbSBqdXN0IGEgbm9ybWFsIFRQTSB1c2VyIHdobwpoYXBwZW5lZCB0byBoaXQgYW5kIGZpeCB0
+aGF0IHRpbWVvdXRzIHJlZ3Jlc3Npb24sIGJ1dCBtYXliZSBvdGhlcnMKb24gTUwgd2lsbCBrbm93
+IHNvbWV0aGluZyBtb3JlIGFib3V0IGl0LgoKPiBLaW5kIHJlZ2FyZHMsCj4gCj4gUGF1bAoKQmVz
+dCByZWdhcmRzLApNYWNpZWoKCgotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KQ2hlY2sgb3V0IHRoZSB2
+aWJyYW50IHRlY2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29ybGQncyBtb3N0CmVuZ2FnaW5n
+IHRlY2ggc2l0ZXMsIFNsYXNoZG90Lm9yZyEgaHR0cDovL3NkbS5saW5rL3NsYXNoZG90Cl9fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fCnRwbWRkLWRldmVsIG1h
+aWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9saXN0
+cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwK
