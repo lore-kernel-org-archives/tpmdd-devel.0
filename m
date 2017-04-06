@@ -1,61 +1,55 @@
-From: "Maciej S. Szmigiero" <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
-Subject: Re: Regression between Linux 3.16 and 4.8/4.9 on
- Lenovo X60 with coreboot
-Date: Thu, 6 Apr 2017 13:52:39 +0200
-Message-ID: <4d25364e-8c48-8a19-8aac-e949f39d01d3@maciej.szmigiero.name>
-References: <c4bfd77e-3fb9-8a9b-28f5-48e6c13beb12@maciej.szmigiero.name>
-	<bf4ca184f43cc7b6ee8069b63558087c@molgen.mpg.de>
+From: Nayna <nayna@linux.vnet.ibm.com>
+Subject: Re: [tpmdd-devel] [RFC PATCH] tpm: msleep() delays - replace with
+ usleep_range() in i2c nuvoton driver
+Date: Thu, 6 Apr 2017 20:57:14 +0530
+Message-ID: <58E65E52.8000304@linux.vnet.ibm.com>
+References: <1487893578.3193.155.camel@linux.vnet.ibm.com>
+ <20170224000051.GB19131@obsidianresearch.com>
+ <1487895987.3193.168.camel@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <bf4ca184f43cc7b6ee8069b63558087c-KUpvgZVWgV9o1qOY/usvUg@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Paul Menzel <pmenzel-KUpvgZVWgV9o1qOY/usvUg@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, GNUtoo-n+LsquliYkMdnm+yROfE0A@public.gmane.org
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <1487895987.3193.168.camel@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: tpmdd-devel <tpmdd-devel@lists.sourceforge.net>, Gleixner <tglx@linutronix.de>
+Cc: Mimi Zohar <zohar@linux.vnet.ibm.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Dan Morav <dmorav@nuvoton.com>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, linux-ima-devel <linux-ima-devel@lists.sourceforge.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Thomas@mx0b-001b2d01.pphosted.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gMDQvMDYvMTcgMDg6MTgsIFBhdWwgTWVuemVsIHdyb3RlOgo+IERlYXIgTWFjaWVqLAo+IAo+
-IE9uIDIwMTctMDQtMDUgMTM6MDMsIE1hY2llaiBTLiBTem1pZ2llcm8gd3JvdGU6Cj4gCj4+PiB0
-cG0gdHBtMDogVW5hYmxlIHRvIHJlYWQgYnVyc3Rjb3VudAo+Pj4gdHBtIHRwbTA6IHRwbV90cmFu
-c21pdDogdHBtX3NlbmQ6IGVycm9yIC0xNgo+Pj4gdHBtX3RpcyB0cG1fdGlzOiBDb3VsZCBub3Qg
-Z2V0IFRQTSB0aW1lb3V0cyBhbmQgZHVyYXRpb25zCj4+Cj4+IFRoaXMgbG9va3MgbGlrZSBhIHJl
-Z3Jlc3Npb24gSSBoYWQgb24gVGhpbmtQYWQgWDYxUy4KPj4KPj4gWW91IGNhbiB0cnkgd2l0aCBh
-IHBhdGNoIGZyb20gdGhlIGZvbGxvd2luZyBjb21taXQKPj4gd2hpY2ggZml4ZWQgaXQgZm9yIG1l
-Ogo+PiBodHRwczovL2dpdC5rZXJuZWwub3JnL3B1Yi9zY20vbGludXgva2VybmVsL2dpdC90b3J2
-YWxkcy9saW51eC5naXQvY29tbWl0Lz9pZD0xZDcwZmU5ZDljM2E0YzYyN2Y5NzU3Y2JiYTVkNjI4
-Njg3YjEyMWMxCj4+Cj4+IEl0IGlzIGluY2x1ZGVkIGluIG1haW5saW5lIGtlcm5lbCA0LjEwLjIu
-Cj4gCj4gSW5kZWVkLCB0aGF0IGltcHJvdmVzIHRoZSBzaXR1YXRpb24uIEkgc3RpbGwgbmVlZCB0
-byBwYXNzIGBmb3JjZT0xYCB0byB0aGUgbW9kdWxlIHRvIGdldCBgL2Rldi90cG0wYC4gTm8gaWRl
-YSwgd2h5IGl04oCZcyBub3QgaW4gaW5jbHVkZWQgaW4gTGludXggNC45IHlldC4KPiAKPiBgYGAK
-PiAkIG1vcmUgL3Byb2MvdmVyc2lvbgo+IExpbnV4IHZlcnNpb24gNC4xMS4wLXJjNSsgKHJvb3RA
-ZDQ0ZDAzYTE5M2Q2KSAoZ2NjIHZlcnNpb24gNi4zLjAgMjAxNzAzMjEgKERlYmlhbiA2LjMuMC0x
-MCkgKSAjMiBTTVAgVHVlIEFwciA0IDIxOjA3OjA4IFVUQyAyMDE3Cj4gJCBqb3VybmFsY3RsIC1r
-IC1vIGNhdCB8IGdyZXAgdHBtCj4gdHBtX3RpcyB0cG1fdGlzOiAxLjIgVFBNIChkZXZpY2UtaWQg
-MHgzMjAyLCByZXYtaWQgNSkKPiB0cG0gdHBtMDogSXNzdWluZyBUUE1fU1RBUlRVUAo+IHRwbSB0
-cG0wOiBbSGFyZHdhcmUgRXJyb3JdOiBBZGp1c3RpbmcgcmVwb3J0ZWQgdGltZW91dHM6IEEgMTAw
-MDAtPjEwMDAwdXMgQiAxMDAwMC0+MTAwMDB1cyBDIDAtPjc1MjAwMHVzIEQgMC0+NzUyMDAwdXMK
-PiAkIG1vcmUgL3N5cy9jbGFzcy90cG0vdHBtMC9kZXZpY2UvY2Fwcwo+IE1hbnVmYWN0dXJlcjog
-MHg0MTU0NGQ0Ywo+IFRDRyB2ZXJzaW9uOiAxLjIKPiBGaXJtd2FyZSB2ZXJzaW9uOiAxMS41Cj4g
-JCBzdWRvIHRwbV92ZXJzaW9uCj4gVHNwaV9Db250ZXh0X0Nvbm5lY3QgZmFpbGVkOiAweDAwMDAz
-MDExIC0gbGF5ZXI9dHNwLCBjb2RlPTAwMTEgKDE3KSwgQ29tbXVuaWNhdGlvbiBmYWlsdXJlCj4g
-YGBgCj4gCj4gU28gZG8geW91IGhhdmUgYW4gaWRlYSwgd2hhdCDigJxBQ1BJIHJlcXVpcmVtZW50
-c+KAnSBjaGFuZ2VkIGluIHRoZSBgdHBtYCBtb2R1bGUgc2luY2UgTGludXggMy4xNiB0byBiZSBs
-b2FkZWQgYXV0b21hdGljYWxseT8KClVuZm9ydHVuYXRlbHkgSSBjYW4ndCBoZWxwIGhlcmUgYXMg
-SSBhbSBqdXN0IGEgbm9ybWFsIFRQTSB1c2VyIHdobwpoYXBwZW5lZCB0byBoaXQgYW5kIGZpeCB0
-aGF0IHRpbWVvdXRzIHJlZ3Jlc3Npb24sIGJ1dCBtYXliZSBvdGhlcnMKb24gTUwgd2lsbCBrbm93
-IHNvbWV0aGluZyBtb3JlIGFib3V0IGl0LgoKPiBLaW5kIHJlZ2FyZHMsCj4gCj4gUGF1bAoKQmVz
-dCByZWdhcmRzLApNYWNpZWoKCgotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KQ2hlY2sgb3V0IHRoZSB2
-aWJyYW50IHRlY2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29ybGQncyBtb3N0CmVuZ2FnaW5n
-IHRlY2ggc2l0ZXMsIFNsYXNoZG90Lm9yZyEgaHR0cDovL3NkbS5saW5rL3NsYXNoZG90Cl9fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fCnRwbWRkLWRldmVsIG1h
-aWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9saXN0
-cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwK
+We continued analyzing the msleep() behaviour. I tested running msleep() 
+(without TPM interactions), by writing a kernel module that runs 
+msleep() in a loop for a fixed number of iterations.
+
+Based on these test results, as shown below, the observations are:
+
+1. Non-cascading timers, as introduced by commit 500462a9de65, is 
+working as expected, since all the timers expired well within ring 0.
+2. However, the minimum delay doubled, causing the average delay to 
+increase by ~30%.
+
+CONFIG_HZ = 250:
+
+For 1000 iterations, each of 1 msecs
+=====================================
+
+Kernel/Timer |       msleep          |    usleep_range      |
+
+4.7          | Min: 4.89, Avg: 8     | Min: 1.12 Avg: 1.58  |
+4.10         | Min: 11.9, Avg: 11.19 | Min: 1.31 Avg: 1.36  |
+
+
+For 3000 iterations, each of 1 msecs.
+=====================================
+
+Kernel/Timer |        msleep         |    usleep_range     |
+
+4.7          | Min: 6.55, Avg: 8.02  | Min: 1.05 Avg: 1.53 |
+4.10         | Min: 11.8, Avg: 12.04 | Min: 1.02 Avg: 1.35 |
+
+
+Thomas, can the minimum delay be improved ?
+
+Thanks & Regards,
+- Nayna
+
+
