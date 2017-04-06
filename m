@@ -1,14 +1,16 @@
-From: Paul Menzel <pmenzel-KUpvgZVWgV9o1qOY/usvUg@public.gmane.org>
-Subject: Re: Regression between Linux 3.16 and 4.8/4.9 on
- Lenovo X60 with coreboot
-Date: Thu, 06 Apr 2017 08:18:33 +0200
-Message-ID: <bf4ca184f43cc7b6ee8069b63558087c@molgen.mpg.de>
-References: <c4bfd77e-3fb9-8a9b-28f5-48e6c13beb12@maciej.szmigiero.name>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH 4/4] Improve handling of TPM2 event logs
+Date: Thu, 6 Apr 2017 09:35:34 +0300
+Message-ID: <20170406063534.nw33ck7gek7g4vur@intel.com>
+References: <20170329074330.b2rbsbt2zc7o22q7@petr-dev3.eng.vmware.com>
+	<20170405114650.c2kkkz2th2emalcc@intel.com>
+	<58E553A9.8010804@vmware.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <c4bfd77e-3fb9-8a9b-28f5-48e6c13beb12-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <58E553A9.8010804-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,39 +19,45 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Maciej S. Szmigiero" <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, GNUtoo-n+LsquliYkMdnm+yROfE0A@public.gmane.org
+To: Petr Vandrovec <petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-RGVhciBNYWNpZWosCgoKT24gMjAxNy0wNC0wNSAxMzowMywgTWFjaWVqIFMuIFN6bWlnaWVybyB3
-cm90ZToKCj4+IHRwbSB0cG0wOiBVbmFibGUgdG8gcmVhZCBidXJzdGNvdW50Cj4+IHRwbSB0cG0w
-OiB0cG1fdHJhbnNtaXQ6IHRwbV9zZW5kOiBlcnJvciAtMTYKPj4gdHBtX3RpcyB0cG1fdGlzOiBD
-b3VsZCBub3QgZ2V0IFRQTSB0aW1lb3V0cyBhbmQgZHVyYXRpb25zCj4gCj4gVGhpcyBsb29rcyBs
-aWtlIGEgcmVncmVzc2lvbiBJIGhhZCBvbiBUaGlua1BhZCBYNjFTLgo+IAo+IFlvdSBjYW4gdHJ5
-IHdpdGggYSBwYXRjaCBmcm9tIHRoZSBmb2xsb3dpbmcgY29tbWl0Cj4gd2hpY2ggZml4ZWQgaXQg
-Zm9yIG1lOgo+IGh0dHBzOi8vZ2l0Lmtlcm5lbC5vcmcvcHViL3NjbS9saW51eC9rZXJuZWwvZ2l0
-L3RvcnZhbGRzL2xpbnV4LmdpdC9jb21taXQvP2lkPTFkNzBmZTlkOWMzYTRjNjI3Zjk3NTdjYmJh
-NWQ2Mjg2ODdiMTIxYzEKPiAKPiBJdCBpcyBpbmNsdWRlZCBpbiBtYWlubGluZSBrZXJuZWwgNC4x
-MC4yLgoKSW5kZWVkLCB0aGF0IGltcHJvdmVzIHRoZSBzaXR1YXRpb24uIEkgc3RpbGwgbmVlZCB0
-byBwYXNzIGBmb3JjZT0xYCB0byAKdGhlIG1vZHVsZSB0byBnZXQgYC9kZXYvdHBtMGAuIE5vIGlk
-ZWEsIHdoeSBpdOKAmXMgbm90IGluIGluY2x1ZGVkIGluIApMaW51eCA0LjkgeWV0LgoKYGBgCiQg
-bW9yZSAvcHJvYy92ZXJzaW9uCkxpbnV4IHZlcnNpb24gNC4xMS4wLXJjNSsgKHJvb3RAZDQ0ZDAz
-YTE5M2Q2KSAoZ2NjIHZlcnNpb24gNi4zLjAgCjIwMTcwMzIxIChEZWJpYW4gNi4zLjAtMTApICkg
-IzIgU01QIFR1ZSBBcHIgNCAyMTowNzowOCBVVEMgMjAxNwokIGpvdXJuYWxjdGwgLWsgLW8gY2F0
-IHwgZ3JlcCB0cG0KdHBtX3RpcyB0cG1fdGlzOiAxLjIgVFBNIChkZXZpY2UtaWQgMHgzMjAyLCBy
-ZXYtaWQgNSkKdHBtIHRwbTA6IElzc3VpbmcgVFBNX1NUQVJUVVAKdHBtIHRwbTA6IFtIYXJkd2Fy
-ZSBFcnJvcl06IEFkanVzdGluZyByZXBvcnRlZCB0aW1lb3V0czogQSAKMTAwMDAtPjEwMDAwdXMg
-QiAxMDAwMC0+MTAwMDB1cyBDIDAtPjc1MjAwMHVzIEQgMC0+NzUyMDAwdXMKJCBtb3JlIC9zeXMv
-Y2xhc3MvdHBtL3RwbTAvZGV2aWNlL2NhcHMKTWFudWZhY3R1cmVyOiAweDQxNTQ0ZDRjClRDRyB2
-ZXJzaW9uOiAxLjIKRmlybXdhcmUgdmVyc2lvbjogMTEuNQokIHN1ZG8gdHBtX3ZlcnNpb24KVHNw
-aV9Db250ZXh0X0Nvbm5lY3QgZmFpbGVkOiAweDAwMDAzMDExIC0gbGF5ZXI9dHNwLCBjb2RlPTAw
-MTEgKDE3KSwgCkNvbW11bmljYXRpb24gZmFpbHVyZQpgYGAKClNvIGRvIHlvdSBoYXZlIGFuIGlk
-ZWEsIHdoYXQg4oCcQUNQSSByZXF1aXJlbWVudHPigJ0gY2hhbmdlZCBpbiB0aGUgYHRwbWAgCm1v
-ZHVsZSBzaW5jZSBMaW51eCAzLjE2IHRvIGJlIGxvYWRlZCBhdXRvbWF0aWNhbGx5PwoKCktpbmQg
-cmVnYXJkcywKClBhdWwKCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpDaGVjayBvdXQgdGhlIHZpYnJh
-bnQgdGVjaCBjb21tdW5pdHkgb24gb25lIG9mIHRoZSB3b3JsZCdzIG1vc3QKZW5nYWdpbmcgdGVj
-aCBzaXRlcywgU2xhc2hkb3Qub3JnISBodHRwOi8vc2RtLmxpbmsvc2xhc2hkb3QKX19fX19fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFpbGlu
-ZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xpc3RzLnNv
-dXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
+On Wed, Apr 05, 2017 at 01:29:29PM -0700, Petr Vandrovec wrote:
+> Jarkko Sakkinen wrote:
+> > On Wed, Mar 29, 2017 at 12:43:30AM -0700, Petr Vandrovec wrote:
+> > > From: Petr Vandrovec<petr-pghWNbHTmq7QT0dZR+AlfA@public.gmane.org>
+> > > 
+> > > When TPM2 log has entries with more than 3 digests, or with digests
+> > > not listed in the log header, log gets misparsed, eventually
+> > > leading to kernel complaint that code tried to vmalloc 512MB of
+> > > memory (I have no idea what would happen on bigger system).
+> > 
+> > It would be easier to follow this if you would give a concrete
+> > example of such situation. Since you are contributing this, you
+> > must must have bumped into this, haven't you?
+> 
+> Yes.  Our firmware reports TPM2 log with 4 digests (SHA1, SHA256, SHA384,
+> SHA512).  Current code in kernel skips over first 3 digests only, trying to
+> parse 4th digest as event length, coming to conclusion that entry is hundred
+> of megabytes or few gigabytes long, and then failing to vmalloc() that
+> amount of memory.
+> 
+> You can find parsed textual log at
+> https://drive.google.com/open?id=0B7WL11GSMhrQRDBLWjc3bEZQTEk (192KB), and
+> binary log at https://drive.google.com/open?id=0B7WL11GSMhrQQ1RCMmRmM2paR3c
+> (48KB).
+> 
+> I hit situation with malformed event log on my Dell laptop - after TPM
+> firmware got updated from 1.2 to 2.0, chip & everything is reported as TPM2,
+> except that log stays in TPM1.2 format.
+
+Great thank you. I think I'll merge this already to my master branch
+(not yet the whole series). Thanks a lot for spotting and fixing this
+regression.
+
+/Jarkko 
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
