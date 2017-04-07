@@ -1,22 +1,19 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 4/4] tpm: introduce
-	tpm_extend_pcr_digests()
-Date: Fri, 7 Apr 2017 23:12:13 +0300
-Message-ID: <20170407201213.noyhiii2d2q3jrnk@intel.com>
-References: <20170329102452.32212-1-roberto.sassu@huawei.com>
-	<20170329102452.32212-5-roberto.sassu@huawei.com>
-	<20170405121416.2rly5pizs2hll56k@intel.com>
-	<259b67e8-216b-ad91-52c3-c4b39a8f3d1c@huawei.com>
-	<88284005-3a53-1b37-e1f2-bfa88987c989@huawei.com>
-	<e6444fe7-5726-c763-0fd5-93b1c3ec47f6@huawei.com>
-	<20170407193156.thwubykqqleaszrt@intel.com>
-	<20170407201037.sarb4mjgfj64hfhr@intel.com>
+Subject: Re: Regression between Linux 3.16 and 4.8/4.9 on
+ Lenovo X60 with coreboot
+Date: Fri, 7 Apr 2017 23:13:47 +0300
+Message-ID: <20170407201347.2qcyrdzgg2yikoen@intel.com>
+References: <c4bfd77e-3fb9-8a9b-28f5-48e6c13beb12@maciej.szmigiero.name>
+	<bf4ca184f43cc7b6ee8069b63558087c@molgen.mpg.de>
+	<20170406165557.GD7657@obsidianresearch.com>
+	<3d62bd7d4addc020c2f8e3c2edf3280e@molgen.mpg.de>
+	<20170406191013.GA25011@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170407201037.sarb4mjgfj64hfhr-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20170406191013.GA25011-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -25,70 +22,32 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: Paul Menzel <pmenzel-KUpvgZVWgV9o1qOY/usvUg@public.gmane.org>, "Maciej S. Szmigiero" <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, GNUtoo-n+LsquliYkMdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Apr 07, 2017 at 11:10:37PM +0300, Jarkko Sakkinen wrote:
-> On Fri, Apr 07, 2017 at 10:31:56PM +0300, Jarkko Sakkinen wrote:
-> > On Fri, Apr 07, 2017 at 11:50:49AM +0200, Roberto Sassu wrote:
-> > > On 4/5/2017 4:36 PM, Roberto Sassu wrote:
-> > > > I have a question. As you can see in the IMA patch, I'm calling
-> > > > tpm_is_tpm2() to determine if I should invoke tpm_pcr_extend(),
-> > > > for TPM 1.2, or tpm_pcr_extend_digests(), for TPM 2.0.
-> > > > 
-> > > > Should the new function work with TPM 1.2? If a tpm2_digest
-> > > > structure with a SHA1 digest is provided, I could call
-> > > > tpm_pcr_extend() instead of returning an error.
-> > > 
-> > > Hi Jarkko
-> > > 
-> > > would you have any objection if the new functions work
-> > > regardless of the TPM version?
-> > > 
-> > > Thanks
-> > > 
-> > > Roberto
+On Thu, Apr 06, 2017 at 01:10:13PM -0600, Jason Gunthorpe wrote:
+> On Thu, Apr 06, 2017 at 08:26:22PM +0200, Paul Menzel wrote:
+> > >We added direct ACPI binding to the driver in addition to PNP, so if
+> > >you have an ACPI table it goes down that path and does some additional
+> > >validation of what is in the TPM. The BIOS must provide a
+> > >acpi_dev_resource_memory and a ACPI_SIG_TPM2 for the ACPI entry at a
+> > >minimum.
 > > 
-> > Yes, you should not add multiple functions that do the same thing
-> > essentially. Please rework tpm_pcr_extend instead.
-> > 
-> > And while you are doing it, please also rework it to use tpm_buf
-> > for everything.
-> > 
-> > /Jarkko
+> > Is it correct, that this is added in/for 4.11, so just recently? Testing
+> > with Linux 4.10.8, everything is detected just fine.
 > 
-> Some prework is required before you implement your new things.
+> No, it is quite a bit older.. And it should only go for TPM2, which I
+> don't think you have??
 > 
-> 1. tpm1_pcr_extend() to tpm-interface.c that is called by
-> tpm_pcr_extend() and make it use tpm_buf. (1 commit)
+> Maybe Jarkko has a guess, but sure sounds like something is recently
+> broken in 4.11
 > 
-> 2. There's a race condition bug in the way Nayna has implemented the
-> digest list extension. It takes and releases tpm_mutex multiple times.
-> This bug needs to be fixed before any other changes are justified
-> (1 commit). Please add the Fixes line to the commit message.
-> 
-> For (2) you should probably rename the existing tpm2_pcr_extend() as
-> tpm2_pcr_extend_bank() and change it as a static function. That
-> functio should take tpm_transmit flags as the last parameter. Then
-> implement tpm2_pcr_extend() that does the same thing as is done now
-> inside tpm_pcr_extend(). Call tpm2_pcr_extend_bank() inside that
-> function with TPM_TRANSMIT_UNLOCKED.
-> 
-> You should make this as its own patch set without any of the new
-> additions. Only after these fixes are landed I'm ready to review
-> any new extensions to tpm_pcr_extend().
-> 
-> PS I *purposely* have not read any of the IMA links that you have sent
-> to me. You should be able to explain these changes without requiring
-> such action.
-> 
-> /Jarkko
+> Jason
 
-And there was one big problem in your first patches you did not have the
-RFC tag and still you did not include the kernel mailing list. I won't
-apply or give reviewed-by to any patches that do not linux-kernel and
-for non-trivial changes by defacto also include linux-security-module.
+I'll come back to this. I have to re-read the whole mail thread to
+get back into the context. Lots of multitasking because of release
+and so forth. Sorry for the latency!
 
 /Jarkko
 
