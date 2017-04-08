@@ -1,84 +1,74 @@
-From: Denis 'GNUtoo' Carikli <GNUtoo@no-log.org>
-Subject: Re: [tpmdd-devel] Regression between Linux 3.16 and 4.8/4.9 on
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: Regression between Linux 3.16 and 4.8/4.9 on
  Lenovo X60 with coreboot
-Date: Sat, 8 Apr 2017 12:40:25 +0200
-Message-ID: <20170408123651.76f18ba4@second-laptop.localdomain>
+Date: Sat, 8 Apr 2017 14:25:09 -0600
+Message-ID: <20170408202509.GA26119@obsidianresearch.com>
 References: <c4bfd77e-3fb9-8a9b-28f5-48e6c13beb12@maciej.szmigiero.name>
- <bf4ca184f43cc7b6ee8069b63558087c@molgen.mpg.de>
- <20170406165557.GD7657@obsidianresearch.com>
+	<bf4ca184f43cc7b6ee8069b63558087c@molgen.mpg.de>
+	<20170406165557.GD7657@obsidianresearch.com>
+	<20170408123651.76f18ba4@second-laptop.localdomain>
 Mime-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha256;
- boundary="Sig_/9ffh+Y=5Ev9RYi.f+lMH2Wq"; protocol="application/pgp-signature"
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <20170406165557.GD7657@obsidianresearch.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Paul Menzel <pmenzel@molgen.mpg.de>
-Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20170408123651.76f18ba4-r3nPC/fXJJgy06l1zSILBM/Rnsmy/zvw/z7RTEddyNg@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Denis 'GNUtoo' Carikli <GNUtoo-n+LsquliYkMdnm+yROfE0A@public.gmane.org>
+Cc: Paul Menzel <pmenzel-KUpvgZVWgV9o1qOY/usvUg@public.gmane.org>, "Maciej S. Szmigiero" <mail-APzI5cXaD1zVlRWJc41N0YvC60bnQu0Y@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
---Sig_/9ffh+Y=5Ev9RYi.f+lMH2Wq
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: quoted-printable
+On Sat, Apr 08, 2017 at 12:40:25PM +0200, Denis 'GNUtoo' Carikli wrote:
 
-Hi Paul,
+> I am working on it[1]. This commit has not been merged and is a work in
+> progress. It is however available in coreboot's gerrit.
 
-On Thu, 6 Apr 2017 10:55:57 -0600
-Jason Gunthorpe <jgunthorpe@obsidianresearch.com> wrote:
+How did this work on any kernels if there was no PNP or ACPI entry?
 
-> We added direct ACPI binding to the driver in addition to PNP, so if
-> you have an ACPI table it goes down that path and does some additional
-> validation of what is in the TPM. The BIOS must provide a
-> acpi_dev_resource_memory and a ACPI_SIG_TPM2 for the ACPI entry at a
-> minimum.
+FWIW, I wonder if coreboot is missing the code for wait_startup
+in drivers/char/tpm/tpm_tis_core.c. If you don't do that step then
+the DID/VID might not read properly.
 
-I am working on it[1]. This commit has not been merged and is a work in
-progress. It is however available in coreboot's gerrit.
+> So far with it and a recent kernel and the patch mentioned above:
+> - The linux driver finds the TPM automatically and doesn't require
+>   force=1
+> - The driver however still require itpm=1 to fully work: without it the
+>   tpm is found, but I wasn't able to read the PCRs.
 
-So far with it and a recent kernel and the patch mentioned above:
-- The linux driver finds the TPM automatically and doesn't require
-  force=3D1
-- The driver however still require itpm=3D1 to fully work: without it the
-  tpm is found, but I wasn't able to read the PCRs.
+Unless it is an actual broken intel TPM you should never use
+itpm=1. Juding by the log messages, it certainly is not.
 
-Since I use a rolling release distribution, the kenrel version I use
-tend to change quite fast, I can re-test if needed.
+Intel mode breaks the driver and removes certain error detection, eg
+it may erronously succeed.
 
-I need to improve the following in my patch:
-- The IDs readings obviously need to be fixed.
-- I want to make it work without itpm=3D1 if possible. I'll test with
-  INTC0102 as it is in the driver in the is_itpm function, and it was
-  also suggested to me by someone on IRC.
+It is more likely that the failure to read PCRs reflects reality and
+itpm=1 just supresses that error detection.
 
-I also still need to investigate more why the itpm workaround is needed.
-Does the TPM shipped in such laptops respect the specifications?
-Is the wiring bad?
+The TPM may need to be setup (eg cleared, EK generated, p/vflags setup
+etc, etc) before it will support PCRs.
 
-References:
------------
-[1]https://review.coreboot.org/cgit/coreboot.git/commit/?id=3D060cf4e0f50f7=
-65f85e3ecedd836eed85d1571fe
+Usually the BIOS would do these steps when the TPM is first enabled,
+you probably need to do them in userspace instead.
 
-Denis.
+WARNING: Failure to provision the TPM properly before first use
+could leave it in 'factory test' mode, which basically means it
+doesn't work properly at all.
 
---Sig_/9ffh+Y=5Ev9RYi.f+lMH2Wq
-Content-Type: application/pgp-signature
-Content-Description: OpenPGP digital signature
+> - I want to make it work without itpm=1 if possible. I'll test with
+>   INTC0102 as it is in the driver in the is_itpm function, and it was
+>   also suggested to me by someone on IRC.
 
------BEGIN PGP SIGNATURE-----
+Don't do this unless it is actually that TPM.
 
-iQIzBAEBCAAdFiEEJRL8OiBX7u2q5IcffCVtd8XgZkUFAljovhoACgkQfCVtd8Xg
-ZkWsDA/+KrXFe2WjD5ibqtN5hNwTl2VGUy6b9LFLNgyPbJpY8uftZmGK+E1T0+PI
-UjKcxuTnYz9FRuymoUQYS9AxhzI7ftKr8Sw+wWBnzC+au3dNFEWjIMy/NsgtoWnp
-zS/GRRlDpreavuAc0CioNcmqeYMlHLoXMRc5OHG4yzZ2xIp4ny2QGM0oTPsTndC1
-HYJv0chev22bNuSyG3kfAcyoALLMqlqOiuVI53D9st4iuBwtoxZp7AMnIZexgdxW
-DPQRwc+DPicMhcxHmffb7N3FzkSjw0K0I5KGYhrdZ3zPNwHPJNrT34lbIaSlKFn6
-lZ6wHlpNO4UHgNQe0XoR50q3TddR8lsHmoCdNVFLAG+H1MnPOt8f7uD7Wqz5ms7I
-sqS4Ct8AK57NB+aRsq5I0XxCfk2eS4WgTxGNIaE+NAYXrMyaef5m0M2Q2tzLXrFm
-1zO7Q8uRk30TagMaDLJy0pLyPebC6eh9FnmsmsErxB4YyvTvxtNIP4fszBnFwlJ6
-XNRa8GS1TfR2U79VtFK4cdThO6fsd+TBBrfnesg0oJ7Pn2zLOglV3gTDX+/Z1YzZ
-9OUHICQyQUA0i4ce8kSlhQ1V68Kf8QL/E0jOs0oi76qvc9tl9GyfRpwS0ThkUb3z
-yV4nUHJmQ0Dl0qjYQINR3VeNwwz/UMhqsMGFoSEexbkHcpV9whw=
-=JEc4
------END PGP SIGNATURE-----
+Jason
 
---Sig_/9ffh+Y=5Ev9RYi.f+lMH2Wq--
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
