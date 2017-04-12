@@ -1,143 +1,64 @@
-From: "Moore, Robert" <robert.moore@intel.com>
-Subject: RE: [Regression Linux 4.11] TPM module not loaded anymore  (was:
- Regression between Linux 3.16 and 4.8/4.9 on Lenovo X60 with coreboot)
-Date: Wed, 12 Apr 2017 15:54:26 +0000
-Message-ID: <94F2FBAB4432B54E8AACC7DFDE6C92E37E59259A@ORSMSX110.amr.corp.intel.com>
-References: <c4bfd77e-3fb9-8a9b-28f5-48e6c13beb12@maciej.szmigiero.name>
- <bf4ca184f43cc7b6ee8069b63558087c@molgen.mpg.de>
- <20170406165557.GD7657@obsidianresearch.com>
- <3d62bd7d4addc020c2f8e3c2edf3280e@molgen.mpg.de>
- <20170406191013.GA25011@obsidianresearch.com>
- <20170407201347.2qcyrdzgg2yikoen@intel.com>
- <cd01f99b4297a5fc8f11e0998ab06d7e@molgen.mpg.de>
- <1491759283.1152.12.camel@molgen.mpg.de>
- <20170411225757.yoi2puygipigucjh@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH 4/4] tpm: introduce
+	tpm_extend_pcr_digests()
+Date: Wed, 12 Apr 2017 22:44:15 +0300
+Message-ID: <20170412194415.wkfxdjpvgegih6ar@intel.com>
+References: <20170329102452.32212-1-roberto.sassu@huawei.com>
+	<20170329102452.32212-5-roberto.sassu@huawei.com>
+	<20170405121416.2rly5pizs2hll56k@intel.com>
+	<259b67e8-216b-ad91-52c3-c4b39a8f3d1c@huawei.com>
+	<88284005-3a53-1b37-e1f2-bfa88987c989@huawei.com>
+	<e6444fe7-5726-c763-0fd5-93b1c3ec47f6@huawei.com>
+	<20170407193156.thwubykqqleaszrt@intel.com>
+	<5be4713f-d34b-f73f-15a4-7a215aeb7ee8@huawei.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Content-Language: en-US
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Paul Menzel <pmenzel@molgen.mpg.de>
-Cc: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Arthur Heymans <arthur@aheymans.xyz>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "GNUtoo@no-log.org" <GNUtoo@no-log.org>, "Zheng, Lv" <lv.zheng@intel.com>, "Wysocki, Rafael J" <rafael.j.wysocki@intel.com>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <5be4713f-d34b-f73f-15a4-7a215aeb7ee8-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-QW5kIHByb2JhYmx5IHRoZSBkbWVzZyBpZiBlcnJvciBtZXNzYWdlcyBhcHBlYXIgaW4gdGhlcmUu
-DQoNCg0KPiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBNb29yZSwgUm9iZXJ0
-DQo+IFNlbnQ6IFdlZG5lc2RheSwgQXByaWwgMTIsIDIwMTcgODo1MyBBTQ0KPiBUbzogJ0phcmtr
-byBTYWtraW5lbicgPGphcmtrby5zYWtraW5lbkBsaW51eC5pbnRlbC5jb20+OyBQYXVsIE1lbnpl
-bA0KPiA8cG1lbnplbEBtb2xnZW4ubXBnLmRlPg0KPiBDYzogTWFjaWVqIFMuIFN6bWlnaWVybyA8
-bWFpbEBtYWNpZWouc3ptaWdpZXJvLm5hbWU+OyBsaW51eC0NCj4ga2VybmVsQHZnZXIua2VybmVs
-Lm9yZzsgQXJ0aHVyIEhleW1hbnMgPGFydGh1ckBhaGV5bWFucy54eXo+OyB0cG1kZC0NCj4gZGV2
-ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0OyBHTlV0b29Abm8tbG9nLm9yZzsgWmhlbmcsIEx2DQo+
-IDxsdi56aGVuZ0BpbnRlbC5jb20+OyBXeXNvY2tpLCBSYWZhZWwgSiA8cmFmYWVsLmoud3lzb2Nr
-aUBpbnRlbC5jb20+DQo+IFN1YmplY3Q6IFJFOiBbUmVncmVzc2lvbiBMaW51eCA0LjExXSBUUE0g
-bW9kdWxlIG5vdCBsb2FkZWQgYW55bW9yZSAod2FzOg0KPiBSZWdyZXNzaW9uIGJldHdlZW4gTGlu
-dXggMy4xNiBhbmQgNC44LzQuOSBvbiBMZW5vdm8gWDYwIHdpdGggY29yZWJvb3QpDQo+IA0KPiBQ
-bGVhc2UgcG9zdCB0aGUgYWNwaWR1bXAgZm9yIHRoaXMgbWFjaGluZSBzbyB3ZSBjYW4gYW5hbHl6
-ZSB0aGUgYWN0dWFsDQo+IEFNTCBieXRlIGNvZGUuDQo+IFRoYW5rcy4NCj4gDQo+IA0KPiA+IC0t
-LS0tT3JpZ2luYWwgTWVzc2FnZS0tLS0tDQo+ID4gRnJvbTogSmFya2tvIFNha2tpbmVuIFttYWls
-dG86amFya2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbV0NCj4gPiBTZW50OiBUdWVzZGF5LCBB
-cHJpbCAxMSwgMjAxNyAzOjU4IFBNDQo+ID4gVG86IFBhdWwgTWVuemVsIDxwbWVuemVsQG1vbGdl
-bi5tcGcuZGU+DQo+ID4gQ2M6IE1vb3JlLCBSb2JlcnQgPHJvYmVydC5tb29yZUBpbnRlbC5jb20+
-OyBNYWNpZWogUy4gU3ptaWdpZXJvDQo+ID4gPG1haWxAbWFjaWVqLnN6bWlnaWVyby5uYW1lPjsg
-bGludXgta2VybmVsQHZnZXIua2VybmVsLm9yZzsgQXJ0aHVyDQo+ID4gSGV5bWFucyA8YXJ0aHVy
-QGFoZXltYW5zLnh5ej47IHRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldDsNCj4gPiBH
-TlV0b29Abm8tbG9nLm9yZzsgWmhlbmcsIEx2IDxsdi56aGVuZ0BpbnRlbC5jb20+OyBXeXNvY2tp
-LCBSYWZhZWwgSg0KPiA+IDxyYWZhZWwuai53eXNvY2tpQGludGVsLmNvbT4NCj4gPiBTdWJqZWN0
-OiBSZTogW1JlZ3Jlc3Npb24gTGludXggNC4xMV0gVFBNIG1vZHVsZSBub3QgbG9hZGVkIGFueW1v
-cmUNCj4gKHdhczoNCj4gPiBSZWdyZXNzaW9uIGJldHdlZW4gTGludXggMy4xNiBhbmQgNC44LzQu
-OSBvbiBMZW5vdm8gWDYwIHdpdGggY29yZWJvb3QpDQo+ID4NCj4gPiBPbiBTdW4sIEFwciAwOSwg
-MjAxNyBhdCAwNzozNDo0M1BNICswMjAwLCBQYXVsIE1lbnplbCB3cm90ZToNCj4gPiA+IERlYXIg
-TGludXggZm9sa3MsDQo+ID4gPg0KPiA+ID4NCj4gPiA+IEl0IHR1cm5zIG91dCB0aGF0IHN0cmlj
-dGVyIGNoZWNrcyBpbiB0aGUgQUNQSSBzdWJzeXN0ZW0sIGludHJvZHVjZWQNCj4gPiA+IGluIGNv
-bW1pdCA1NzcwN2E5YTc3IChBQ1BJQ0E6IFJlc291cmNlczogTm90IGEgdmFsaWQgcmVzb3VyY2Ug
-aWYNCj4gPiA+IGJ1ZmZlciBsZW5ndGggdG9vIGxvbmcpIFsxXSwgY2F1c2UgdGhlIFRQTSBtb2R1
-bGUgbm90IHRvIGJlIGxvYWRlZA0KPiA+ID4gYW55bW9yZSBvbiB0aGUgTGVub3ZvIFg2MCB3aXRo
-IGNvcmVib290IFsyXS4NCj4gPiA+DQo+ID4gPiBBbSBGcmVpdGFnLCBkZW4gMDcuMDQuMjAxNywg
-MjI6NTggKzAyMDAgc2NocmllYiBQYXVsIE1lbnplbDoNCj4gPiA+ID4gT24gMjAxNy0wNC0wNyAy
-MjoxMywgSmFya2tvIFNha2tpbmVuIHdyb3RlOg0KPiA+ID4gPiA+IE9uIFRodSwgQXByIDA2LCAy
-MDE3IGF0IDAxOjEwOjEzUE0gLTA2MDAsIEphc29uIEd1bnRob3JwZSB3cm90ZToNCj4gPiA+ID4g
-Pj4gT24gVGh1LCBBcHIgMDYsIDIwMTcgYXQgMDg6MjY6MjJQTSArMDIwMCwgUGF1bCBNZW56ZWwg
-d3JvdGU6DQo+ID4gPiA+ID4+ID4gPldlIGFkZGVkIGRpcmVjdCBBQ1BJIGJpbmRpbmcgdG8gdGhl
-IGRyaXZlciBpbiBhZGRpdGlvbiB0bw0KPiA+ID4gPiA+PiA+ID5QTlAsIHNvIGlmIHlvdSBoYXZl
-IGFuIEFDUEkgdGFibGUgaXQgZ29lcyBkb3duIHRoYXQgcGF0aCBhbmQNCj4gPiA+ID4gPj4gPiA+
-ZG9lcyBzb21lIGFkZGl0aW9uYWwgdmFsaWRhdGlvbiBvZiB3aGF0IGlzIGluIHRoZSBUUE0uIFRo
-ZQ0KPiA+ID4gPiA+PiA+ID5CSU9TIG11c3QgcHJvdmlkZSBhIGFjcGlfZGV2X3Jlc291cmNlX21l
-bW9yeSBhbmQgYQ0KPiA+ID4gPiA+PiA+ID5BQ1BJX1NJR19UUE0yIGZvciB0aGUgQUNQSSBlbnRy
-eSBhdCBhIG1pbmltdW0uDQo+ID4gPiA+ID4+ID4NCj4gPiA+ID4gPj4gPiBJcyBpdCBjb3JyZWN0
-LCB0aGF0IHRoaXMgaXMgYWRkZWQgaW4vZm9yIDQuMTEsIHNvIGp1c3QNCj4gPiA+ID4gPj4gPiBy
-ZWNlbnRseT8gVGVzdGluZyB3aXRoIExpbnV4IDQuMTAuOCwgZXZlcnl0aGluZyBpcyBkZXRlY3Rl
-ZA0KPiA+IGp1c3QgZmluZS4NCj4gPiA+ID4gPj4NCj4gPiA+ID4gPj4gTm8sIGl0IGlzIHF1aXRl
-IGEgYml0IG9sZGVyLi4gQW5kIGl0IHNob3VsZCBvbmx5IGdvIGZvciBUUE0yLA0KPiA+ID4gPiA+
-PiB3aGljaCBJIGRvbid0IHRoaW5rIHlvdSBoYXZlPz8NCj4gPiA+ID4gPj4NCj4gPiA+ID4gPj4g
-TWF5YmUgSmFya2tvIGhhcyBhIGd1ZXNzLCBidXQgc3VyZSBzb3VuZHMgbGlrZSBzb21ldGhpbmcg
-aXMNCj4gPiA+ID4gPj4gcmVjZW50bHkgYnJva2VuIGluIDQuMTENCj4gPiA+ID4gPg0KPiA+ID4g
-PiA+IEknbGwgY29tZSBiYWNrIHRvIHRoaXMuIEkgaGF2ZSB0byByZS1yZWFkIHRoZSB3aG9sZSBt
-YWlsIHRocmVhZA0KPiA+ID4gPiA+IHRvIGdldCBiYWNrIGludG8gdGhlIGNvbnRleHQuIExvdHMg
-b2YgbXVsdGl0YXNraW5nIGJlY2F1c2Ugb2YNCj4gPiA+ID4gPiByZWxlYXNlIGFuZCBzbyBmb3J0
-aC4gU29ycnkgZm9yIHRoZSBsYXRlbmN5IQ0KPiA+ID4gPg0KPiA+ID4gPiBJIHN0YXJ0ZWQgYmlz
-ZWN0aW5nIHRoaXMgaXNzdWUuIFRoaXMgaXMgdGhlIGN1cnJlbnQgc3RhdGUuDQo+ID4gPg0KPiA+
-ID4gW+KApl0NCj4gPiA+DQo+ID4gPiBIZXJlIGFyZSB0aGUgcmVzdWx0cy4NCj4gPiA+DQo+ID4g
-PiBgYGANCj4gPiA+IGdpdCBiaXNlY3QgbG9nDQo+ID4gPiAjIGJhZDogWzdhNzcxY2VhYzc3MWQw
-MDlmNzIwM2M0MGIyNTZiMDYwOGQ3ZWEyZjhdIE1lcmdlIHRhZw0KPiA+ID4gJ2RtLTQuMTEtY2hh
-bmdlcycgb2YNCj4gPiA+IGdpdDovL2dpdC5rZXJuZWwub3JnL3B1Yi9zY20vbGludXgva2VybmVs
-L2dpdC9kZXZpY2UtbWFwcGVyL2xpbnV4LWRtDQo+ID4gPiAjIGdvb2Q6IFtjNDcwYWJkNGZkZTQw
-ZWE2YTA4NDZhMmJlYWI2NDJhNTc4YzBiOGNkXSBMaW51eCA0LjEwIGdpdA0KPiA+ID4gYmlzZWN0
-IHN0YXJ0ICdIRUFEJyAndjQuMTAnDQo+ID4gPiAjIGdvb2Q6IFtiM2RlNWFkNjg4ZjBmNTI0NTdl
-NzM3NjdmOTVhNjQwYWI0MTU4ZDBkXSBNZXJnZSB0YWcNCj4gPiA+ICdyZWdtYXAtdjQuMTEnIG9m
-DQo+ID4gPiBnaXQ6Ly9naXQua2VybmVsLm9yZy9wdWIvc2NtL2xpbnV4L2tlcm5lbC9naXQvYnJv
-b25pZS9yZWdtYXANCj4gPiA+IGdpdCBiaXNlY3QgZ29vZCBiM2RlNWFkNjg4ZjBmNTI0NTdlNzM3
-NjdmOTVhNjQwYWI0MTU4ZDBkDQo+ID4gPiAjIGJhZDogW2ZkNGE2MWUwOGFhNzlmMmI3ODM1YjI1
-YzZmOTRmMjdiZDJkNjU5OTBdIHNjaGVkL2NvcmU6IEZpeA0KPiA+ID4gYnVpbGQgcGFyYXZpcnQg
-YnVpbGQgb24gYXJtIGFuZCBhcm02NCBnaXQgYmlzZWN0IGJhZA0KPiA+ID4gZmQ0YTYxZTA4YWE3
-OWYyYjc4MzViMjVjNmY5NGYyN2JkMmQ2NTk5MA0KPiA+ID4gIyBnb29kOiBbN2FhN2Q2MDgxMTJi
-YWY2M2EwYjEyNzg5NTVmOTYxOTQyNzM3MzgwN10gTWVyZ2UgdGFnDQo+ID4gPiAnbGVkc19mb3Jf
-NC4xMScgb2YNCj4gPiA+IGdpdDovL2dpdC5rZXJuZWwub3JnL3B1Yi9zY20vbGludXgva2VybmVs
-L2dpdC9qLmFuYXN6ZXdza2kvbGludXgtbGVkDQo+ID4gPiBzIGdpdCBiaXNlY3QgZ29vZCA3YWE3
-ZDYwODExMmJhZjYzYTBiMTI3ODk1NWY5NjE5NDI3MzczODA3DQo+ID4gPiAjIGdvb2Q6IFswMmMz
-ZGUxMTA1MjI4ZTM2NzMyMGU3ZmRlZmZiZjUxMTkwNGYzOThjXSBNZXJnZSB0YWcNCj4gPiA+ICdw
-bS00LjExLXJjMScgb2YNCj4gPiA+IGdpdDovL2dpdC5rZXJuZWwub3JnL3B1Yi9zY20vbGludXgv
-a2VybmVsL2dpdC9yYWZhZWwvbGludXgtcG0NCj4gPiA+IGdpdCBiaXNlY3QgZ29vZCAwMmMzZGUx
-MTA1MjI4ZTM2NzMyMGU3ZmRlZmZiZjUxMTkwNGYzOThjDQo+ID4gPiAjIGJhZDogWzZjMjQzMzdm
-MjIxMTVkNjY5ZTI0Y2U5OTA4NDJkYWI2NjczNzFiNGRdIE1lcmdlIHRhZw0KPiA+ID4gJ2ZzY3J5
-cHQtZm9yLWxpbnVzJyBvZg0KPiA+ID4gZ2l0Oi8vZ2l0Lmtlcm5lbC5vcmcvcHViL3NjbS9saW51
-eC9rZXJuZWwvZ2l0L3R5dHNvL2ZzY3J5cHQNCj4gPiA+IGdpdCBiaXNlY3QgYmFkIDZjMjQzMzdm
-MjIxMTVkNjY5ZTI0Y2U5OTA4NDJkYWI2NjczNzFiNGQNCj4gPiA+ICMgYmFkOiBbYTc0ZDFjYWZj
-MjJlMTAwYTliNTljNTA5NDNjYTA5YzM3ZTAzZGNlOF0gTWVyZ2UgYnJhbmNoZXMNCj4gPiAnYWNw
-aS1idXMnLCAnYWNwaS1zbGVlcCcgYW5kICdhY3BpLXByb2Nlc3NvcicNCj4gPiA+IGdpdCBiaXNl
-Y3QgYmFkIGE3NGQxY2FmYzIyZTEwMGE5YjU5YzUwOTQzY2EwOWMzN2UwM2RjZTgNCj4gPiA+ICMg
-YmFkOiBbY2U4N2UwOWRkODhjNjFmOTA4ODc2OGE3NzA4ODI4NDIzNTQ5NzI1Y10gQUNQSUNBOiBQ
-YXJzZXI6DQo+ID4gPiBBbGxvdyBtZXRob2QgaW52b2NhdGlvbnMgYXMgdGFyZ2V0IG9wZXJhbmRz
-IGdpdCBiaXNlY3QgYmFkDQo+ID4gPiBjZTg3ZTA5ZGQ4OGM2MWY5MDg4NzY4YTc3MDg4Mjg0MjM1
-NDk3MjVjDQo+ID4gPiAjIGdvb2Q6IFswZmM1ZThmNGU0YjMzZGRmYTFkMWQ2NzNmY2Q0MjBkNmUx
-M2ViMDc2XSBBQ1BJQ0E6IEhhcmR3YXJlOg0KPiA+ID4gQWRkIHNsZWVwIHJlZ2lzdGVyIGhvb2tz
-IGdpdCBiaXNlY3QgZ29vZA0KPiA+ID4gMGZjNWU4ZjRlNGIzM2RkZmExZDFkNjczZmNkNDIwZDZl
-MTNlYjA3Ng0KPiA+ID4gIyBnb29kOiBbYTY1NGI4Y2E2ZDI4NzM2OTk1ZGU3NjdiYTYyZTgwMWZk
-ODA2YTNiMl0gQUNQSUNBOg0KPiA+ID4gRGlzYXNzZW1ibGVyOiBBZGQgU3dpdGNoL0Nhc2UgZGlz
-YXNzZW1ibHkgc3VwcG9ydCBnaXQgYmlzZWN0IGdvb2QNCj4gPiA+IGE2NTRiOGNhNmQyODczNjk5
-NWRlNzY3YmE2MmU4MDFmZDgwNmEzYjINCj4gPiA+ICMgYmFkOiBbNTc3MDdhOWE3NzgwZmFiNDI2
-YjhhZTliNGM3YjY1YjkxMmE3NDhiM10gQUNQSUNBOiBSZXNvdXJjZXM6DQo+ID4gPiBOb3QgYSB2
-YWxpZCByZXNvdXJjZSBpZiBidWZmZXIgbGVuZ3RoIHRvbyBsb25nIGdpdCBiaXNlY3QgYmFkDQo+
-ID4gPiA1NzcwN2E5YTc3ODBmYWI0MjZiOGFlOWI0YzdiNjViOTEyYTc0OGIzDQo+ID4gPiAjIGdv
-b2Q6IFs3MjI1ZDA0NjdjNTllNTU1NjZkZjM5NmQ2ZWNkNWJhZjI2ZWYzZDliXSBBQ1BJQ0E6DQo+
-IFV0aWxpdGllczoNCj4gPiA+IFVwZGF0ZSBkZWJ1ZyBvdXRwdXQgZ2l0IGJpc2VjdCBnb29kDQo+
-ID4gPiA3MjI1ZDA0NjdjNTllNTU1NjZkZjM5NmQ2ZWNkNWJhZjI2ZWYzZDliDQo+ID4gPiAjIGZp
-cnN0IGJhZCBjb21taXQ6IFs1NzcwN2E5YTc3ODBmYWI0MjZiOGFlOWI0YzdiNjViOTEyYTc0OGIz
-XQ0KPiBBQ1BJQ0E6DQo+ID4gPiBSZXNvdXJjZXM6IE5vdCBhIHZhbGlkIHJlc291cmNlIGlmIGJ1
-ZmZlciBsZW5ndGggdG9vIGxvbmcgYGBgDQo+ID4gPg0KPiA+ID4gSSBzdWdnZXN0LCB0aGF0IGp1
-c3QgYSB3YXJuaW5nIGlzIHByaW50ZWQgaW4gdGhpcyBjYXNlLCBvciB0aGF0IGFuDQo+ID4gPiBv
-cHRpb24gaXMgYWRkZWQgdG8gZW5hYmxlIHNvbWUga2luZCBvZiDigJxzdHJpY3QgbW9kZeKAnSBv
-ciBhIHF1aXJrDQo+IHRhYmxlLg0KPiA+ID4NCj4gPiA+IFBsZWFzZSBmaW5kIHRoZSBkZWNvbXBp
-bGVkIERTRFQgYXR0YWNoZWQuIFRoZSBjb2RlIHRvIGdlbmVyYXRlIHRoZQ0KPiA+ID4gQVNMIGNv
-cmVib290IGNvZGUgaXMgYXZhaWxhYmxlIFszXS4NCj4gPiA+DQo+ID4gPiBQbGVhc2UgdGVsbCBt
-ZSwgd2hhdCBpbmZvcm1hdGlvbiB5b3UgbmVlZC4NCj4gPiA+DQo+ID4gPg0KPiA+ID4gS2luZCBy
-ZWdhcmRzLA0KPiA+ID4NCj4gPiA+IFBhdWwNCj4gPiA+DQo+ID4gPg0KPiA+ID4gWzFdDQo+ID4g
-PiBodHRwczovL2dpdC5rZXJuZWwub3JnL3B1Yi9zY20vbGludXgva2VybmVsL2dpdC90b3J2YWxk
-cy9saW51eC5naXQvYw0KPiA+ID4gb20NCj4gPiA+IG1pdC8/aWQ9NTc3MDdhOWE3NzggWzJdIGh0
-dHBzOi8vcmV2aWV3LmNvcmVib290Lm9yZy8xMzQxMC8NCj4gPiA+IFszXQ0KPiA+ID4gaHR0cHM6
-Ly9yZXZpZXcuY29yZWJvb3Qub3JnL2NnaXQvY29yZWJvb3QuZ2l0L3RyZWUvc3JjL2RyaXZlcnMv
-cGM4MC8NCj4gPiA+IHRwDQo+ID4gPiBtL3RwbS5jDQo+ID4NCj4gPiBIaSwNCj4gPg0KPiA+IFRo
-YW5rIHlvdSBmb3IgYmlzZWN0aW5nIHRoZSBpc3N1ZS4gSXQgd291bGQgaGF2ZSBiZWVuIGhhcmQg
-dG8gYWNoaWV2ZQ0KPiA+IHRoaXMgd2l0aG91dCB0aGUgaGFyZHdhcmUuIERvIHlvdSB3YW50IHRv
-IGNyZWF0ZSBhIHBhdGNoIGZvciBBQ1BJQ0E/DQo+ID4NCj4gPiAvSmFya2tvDQo=
+On Mon, Apr 10, 2017 at 01:46:40PM +0200, Roberto Sassu wrote:
+> On 4/7/2017 9:31 PM, Jarkko Sakkinen wrote:
+> > > would you have any objection if the new functions work
+> > > regardless of the TPM version?
+> > 
+> > Yes, you should not add multiple functions that do the same thing
+> > essentially. Please rework tpm_pcr_extend instead.
+> 
+> This means that callers of tpm_pcr_extend() (pcrlock()
+> in security/keys/trusted.c) should be modified too,
+> as the parameters will change.
+
+Yes. You need to do that.
+
+> Also, tpm2_algorithms and tpm2_digest, the new arguments of
+> tpm_pcr_extend(), should be renamed to tpm_*, since
+> that function will be used regardless of the TPM version.
+
+Please do not rename enum tpm2_algorithm as those are the actual TPM 2.0
+algorithm identifiers.
+ 
+> tpm_buf_init() should be modified, to be used for TPM 1.2 commands.
+> tag and ordinal should be written to the buffer in little endian.
+
+This is not true. They are in big-endian byte order.
+
+> Roberto
+
+/Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
