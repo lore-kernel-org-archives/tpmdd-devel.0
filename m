@@ -1,27 +1,47 @@
 From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: [PATCH 0/3]  Extend the vTPM proxy driver to pass locality to emulator
-Date: Mon, 17 Apr 2017 11:19:28 -0400
-Message-ID: <1492442371-30252-1-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH 2/3] tpm: vtpm_proxy: Implement request_locality
+Date: Mon, 17 Apr 2017 11:19:30 -0400
+Message-ID: <1492442371-30252-3-git-send-email-stefanb@linux.vnet.ibm.com>
+References: <1492442371-30252-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <1492442371-30252-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Sender: owner-linux-security-module@vger.kernel.org
 To: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
 Cc: jgunthorpe@obsidianresearch.com, Stefan Berger <stefanb@linux.vnet.ibm.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The purpose of this series of patches is to enable the passing of the locality
-a command is executing in to a TPM emulator. To enable this we introduce a new
-flag for the device creation ioctl that requests that the locality be prepended
-to every command.
+Implement the request_locality function. Accept all localties assuming
+that the emulator handling the localities will check for a valid locality.
 
-Stefan Berger (3):
-  tpm: vtpm_proxy: Add ioctl to get supported flags
-  tpm: vtpm_proxy: Implement request_locality
-  tpm: vtpm_proxy: Add ioctl to request locality prepended to command
+Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+---
+ drivers/char/tpm/tpm_vtpm_proxy.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
 
- drivers/char/tpm/tpm_vtpm_proxy.c | 54 ++++++++++++++++++++++++++++++++++++---
- include/uapi/linux/vtpm_proxy.h   | 15 ++++++++++-
- 2 files changed, 64 insertions(+), 5 deletions(-)
-
+diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
+index be0a268..bf59426 100644
+--- a/drivers/char/tpm/tpm_vtpm_proxy.c
++++ b/drivers/char/tpm/tpm_vtpm_proxy.c
+@@ -371,6 +371,11 @@ static bool vtpm_proxy_tpm_req_canceled(struct tpm_chip  *chip, u8 status)
+ 	return ret;
+ }
+ 
++static int vtpm_proxy_request_locality(struct tpm_chip *chip, int locality)
++{
++	return locality;
++}
++
+ static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
+ 	.flags = TPM_OPS_AUTO_STARTUP,
+ 	.recv = vtpm_proxy_tpm_op_recv,
+@@ -380,6 +385,7 @@ static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
+ 	.req_complete_mask = VTPM_PROXY_REQ_COMPLETE_FLAG,
+ 	.req_complete_val = VTPM_PROXY_REQ_COMPLETE_FLAG,
+ 	.req_canceled = vtpm_proxy_tpm_req_canceled,
++	.request_locality = vtpm_proxy_request_locality,
+ };
+ 
+ /*
 -- 
 2.4.3
 
