@@ -1,55 +1,69 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH 2/3] tpm: vtpm_proxy: Implement request_locality
-Date: Wed, 19 Apr 2017 18:35:21 +0300
-Message-ID: <20170419153521.t4lrf76snh5n6tgy@intel.com>
-References: <1492442371-30252-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1492442371-30252-3-git-send-email-stefanb@linux.vnet.ibm.com>
- <20170418164748.GB7181@obsidianresearch.com>
- <4df6f613-7276-7a3a-4e3d-07657f815030@linux.vnet.ibm.com>
+From: Greg KH <greg@kroah.com>
+Subject: Re: [tpmdd-devel] [backport v4.9] tpm_tis: use default timeout value
+ if chip reports it as zero
+Date: Wed, 19 Apr 2017 17:38:07 +0200
+Message-ID: <20170419153807.GB10969@kroah.com>
+References: <20170415152622.14451-1-user@jsakkine-mobl1>
+ <20170415205032.GA17774@kroah.com>
+ <79399e000218504619c21ce6729c8334@molgen.mpg.de>
+ <20170419152908.vq55so4mtqyp6sc7@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Return-path: <stable-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <4df6f613-7276-7a3a-4e3d-07657f815030@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
+In-Reply-To: <20170419152908.vq55so4mtqyp6sc7@intel.com>
+Sender: stable-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: Paul Menzel <pmenzel@molgen.mpg.de>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>, stable@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Apr 18, 2017 at 06:41:28PM -0400, Stefan Berger wrote:
-> On 04/18/2017 12:47 PM, Jason Gunthorpe wrote:
-> > On Mon, Apr 17, 2017 at 11:19:30AM -0400, Stefan Berger wrote:
-> > > Implement the request_locality function. Accept all localties assuming
-> > > that the emulator handling the localities will check for a valid locality.
+On Wed, Apr 19, 2017 at 06:29:08PM +0300, Jarkko Sakkinen wrote:
+> On Sun, Apr 16, 2017 at 09:14:29PM +0200, Paul Menzel wrote:
+> > Dear Greg,
+> > 
+> > 
+> > On 2017-04-15 22:50, Greg KH wrote:
+> > > On Sat, Apr 15, 2017 at 06:26:22PM +0300, Jarkko Sakkinen wrote:
+> > > > From: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>
+> > > > 
+> > > > Since commit 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for
+> > > > TPM access") Atmel 3203 TPM on ThinkPad X61S (TPM firmware version
+> > > > 13.9)
+> > > > no longer works.  The initialization proceeds fine until we get and
+> > > > start using chip-reported timeouts - and the chip reports C and D
+> > > > timeouts of zero.
+> > > > 
+> > > > It turns out that until commit 8e54caf407b98e ("tpm: Provide a generic
+> > > > means to override the chip returned timeouts") we had actually let
+> > > > default timeout values remain in this case, so let's bring back this
+> > > > behavior to make chips like Atmel 3203 work again.
+> > > > 
+> > > > Use a common code that was introduced by that commit so a warning is
+> > > > printed in this case and /sys/class/tpm/tpm*/timeouts correctly says
+> > > > the
+> > > > timeouts aren't chip-original.
+> > > > 
+> > > > Fixes: 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM
+> > > > access")
+> > > > Cc: stable@vger.kernel.org
+> > > > Signed-off-by: Maciej S. Szmigiero <mail@maciej.szmigiero.name>
+> > > > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> > > > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 > > > 
-> > > Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
-> > >   drivers/char/tpm/tpm_vtpm_proxy.c | 6 ++++++
-> > >   1 file changed, 6 insertions(+)
-> > > 
-> > > diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
-> > > index be0a268..bf59426 100644
-> > > +++ b/drivers/char/tpm/tpm_vtpm_proxy.c
-> > > @@ -371,6 +371,11 @@ static bool vtpm_proxy_tpm_req_canceled(struct tpm_chip  *chip, u8 status)
-> > >   	return ret;
-> > >   }
-> > > +static int vtpm_proxy_request_locality(struct tpm_chip *chip, int locality)
-> > > +{
-> > > +	return locality;
-> > > +}
-> > I thought we had agreed to make this function pass/fail?
+> > > What is the git commit id for this patch in Linus's tree?
+> > 
+> > The git commit hash is 1d70fe9d9c3a4c627f9757cbba5d628687b121c1.
+> > 
+> > 
+> > Kind regards,
+> > 
+> > Paul
 > 
-> 
-> What do you mean? The TIS driver for example returns the locality if
-> accepted, a negative error code otherwise. In the case of the vtpm proxy I
-> would let the emulator handle the locality on the level of TPM error codes
-> (TPM_BAD_LOCALITY for TPM1.2 or TPM_RC_LOCALITY for TPM 2).
-> 
->   Stefan
+> Do you want me to revise the backport? Thanks.
 
-Jason,
+I can't take it as-is, so yes, if you want it applied, it needs to be
+fixed :)
 
-I tried to make "lowest common denominator" change for 4.12 just to
-get work started and issue in tpm_crb sorted out. We can revisit this
-for 4.13.
+thanks,
 
-/Jarkko
+greg k-h
