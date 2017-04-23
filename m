@@ -1,80 +1,54 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH 3/3] tpm: vtpm_proxy: Add ioctl to request
- locality prepended to command
-Date: Sun, 23 Apr 2017 15:18:06 +0300
-Message-ID: <20170423121806.olcfmnhrettyjqus@intel.com>
-References: <1492442371-30252-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1492442371-30252-4-git-send-email-stefanb@linux.vnet.ibm.com>
- <10c67f88-35cc-be0e-9acf-e85c9e94d790@linux.vnet.ibm.com>
+From: Paul Menzel <pmenzel-KUpvgZVWgV9o1qOY/usvUg@public.gmane.org>
+Subject: What does error code 38 mean?
+Date: Sun, 23 Apr 2017 21:57:08 +0200
+Message-ID: <2af06f5df9ade221ce09048cf60f57de@molgen.mpg.de>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <10c67f88-35cc-be0e-9acf-e85c9e94d790@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Apr 20, 2017 at 07:58:58AM -0400, Stefan Berger wrote:
-> On 04/17/2017 11:19 AM, Stefan Berger wrote:
-> > Add an ioctl to request that the locality be prepended to every TPM
-> > command.
-> >
-> > Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
-> > ---
-> >   drivers/char/tpm/tpm_vtpm_proxy.c | 16 ++++++++++++----
-> >   include/uapi/linux/vtpm_proxy.h   |  4 +++-
-> >   2 files changed, 15 insertions(+), 5 deletions(-)
-> >
-> > diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
-> > index bf59426..5f34973 100644
-> > --- a/drivers/char/tpm/tpm_vtpm_proxy.c
-> > +++ b/drivers/char/tpm/tpm_vtpm_proxy.c
-> > @@ -52,7 +52,8 @@ struct proxy_dev {
-> >   };
-> >
-> >   /* all supported flags */
-> > -#define VTPM_PROXY_FLAGS_ALL  (VTPM_PROXY_FLAG_TPM2)
-> > +#define VTPM_PROXY_FLAGS_ALL  (VTPM_PROXY_FLAG_TPM2 | \
-> > +			       VTPM_PROXY_FLAG_PREPEND_LOCALITY)
-> >
-> >   static struct workqueue_struct *workqueue;
-> >
-> > @@ -77,8 +78,9 @@ static ssize_t vtpm_proxy_fops_read(struct file *filp, char __user *buf,
-> >   				    size_t count, loff_t *off)
-> >   {
-> >   	struct proxy_dev *proxy_dev = filp->private_data;
-> > -	size_t len;
-> > -	int sig, rc;
-> > +	size_t len, offset = 0;
-> > +	int sig, rc = 0;
-> > +	uint8_t locality;
-> >
-> >   	sig = wait_event_interruptible(proxy_dev->wq,
-> >   		proxy_dev->req_len != 0 ||
-> > @@ -102,7 +104,13 @@ static ssize_t vtpm_proxy_fops_read(struct file *filp, char __user *buf,
-> >   		return -EIO;
-> >   	}
-> >
-> > -	rc = copy_to_user(buf, proxy_dev->buffer, len);
-> > +	if (proxy_dev->flags & VTPM_PROXY_FLAG_PREPEND_LOCALITY) {
-> > +		locality = proxy_dev->chip->locality;
-> > +		offset = sizeof(locality);
-> > +		rc = copy_to_user(buf, &locality, offset);
-> > +	}
-> > +	if (!rc)
-> > +		rc = copy_to_user(&buf[offset], proxy_dev->buffer, len);
-> >   	memset(proxy_dev->buffer, 0, len);
-> >   	proxy_dev->req_len = 0;
-> 
-> There 'return' statement of this function needs to say 'return len + 
-> offset'. So I'll resubmit a V2 for that.
-> 
-> Apart from that, any comments?
-> 
->     Stefan
-
-Will give a proper look next week.
-
-/Jarkko
+RGVhciBMaW51eCBmb2xrcywKCgpPbiByZXN1bWUsIExpbnV4IDQuMTEtcmM3IGxvZ3MgdGhlIG1l
+c3NhZ2VzIGJlbG93LgoKYGBgClvigKZdCkFwciAyMyAyMTo0MjowNSBsZW5vdm94NjB0IGtlcm5l
+bDogcGNpZWhwIDAwMDA6MDA6MWMuMDpwY2llMDA0OiBUaW1lb3V0IApvbiBob3RwbHVnIGNvbW1h
+bmQgMHgxMDM4IChpc3N1ZWQgMTA5NTI4IG1zZWMgYWdvKQpBcHIgMjMgMjE6NDI6MDUgbGVub3Zv
+eDYwdCBrZXJuZWw6IHRwbSB0cG0wOiBBIFRQTSBlcnJvciAoMzgpIG9jY3VycmVkIApjb250aW51
+ZSBzZWxmdGVzdApBcHIgMjMgMjE6NDI6MDUgbGVub3ZveDYwdCBrZXJuZWw6IHBjaWVocCAwMDAw
+OjAwOjFjLjA6cGNpZTAwNDogRGV2aWNlIAowMDAwOjAxOjAwLjAgYWxyZWFkeSBleGlzdHMgYXQg
+MDAwMDowMTowMCwgY2Fubm90IGhvdC1hZGQKQXByIDIzIDIxOjQyOjA1IGxlbm92b3g2MHQga2Vy
+bmVsOiBwY2llaHAgMDAwMDowMDoxYy4wOnBjaWUwMDQ6IENhbm5vdCAKYWRkIGRldmljZSBhdCAw
+MDAwOjAxOjAwCkFwciAyMyAyMTo0MjowNSBsZW5vdm94NjB0IGtlcm5lbDogYXRhMS4wMDogY29u
+ZmlndXJlZCBmb3IgVURNQS8zMwpBcHIgMjMgMjE6NDI6MDUgbGVub3ZveDYwdCBrZXJuZWw6IHBj
+aWVocCAwMDAwOjAwOjFjLjA6cGNpZTAwNDogRGV2aWNlIAowMDAwOjAxOjAwLjAgYWxyZWFkeSBl
+eGlzdHMgYXQgMDAwMDowMTowMCwgY2Fubm90IGhvdC1hZGQKQXByIDIzIDIxOjQyOjA1IGxlbm92
+b3g2MHQga2VybmVsOiBwY2llaHAgMDAwMDowMDoxYy4wOnBjaWUwMDQ6IENhbm5vdCAKYWRkIGRl
+dmljZSBhdCAwMDAwOjAxOjAwCkFwciAyMyAyMTo0MjowNSBsZW5vdm94NjB0IGtlcm5lbDogcGNp
+ZXBvcnQgMDAwMDowMDoxYy4wOiBTeXN0ZW0gd2FrZXVwIApkaXNhYmxlZCBieSBBQ1BJCkFwciAy
+MyAyMTo0MjowNSBsZW5vdm94NjB0IGtlcm5lbDogZTEwMDBlIDAwMDA6MDE6MDAuMDogRGlzYWJs
+aW5nIEFTUE0gCkwwcyBMMQpBcHIgMjMgMjE6NDI6MDUgbGVub3ZveDYwdCBrZXJuZWw6IHVzYiA1
+LTY6IHJlc2V0IGhpZ2gtc3BlZWQgVVNCIGRldmljZSAKbnVtYmVyIDIgdXNpbmcgZWhjaS1wY2kK
+QXByIDIzIDIxOjQyOjA1IGxlbm92b3g2MHQga2VybmVsOiBhdGEzOiBTQVRBIGxpbmsgdXAgMS41
+IEdicHMgKFNTdGF0dXMgCjExMyBTQ29udHJvbCAzMDApCkFwciAyMyAyMTo0MjowNSBsZW5vdm94
+NjB0IGtlcm5lbDogUE06IHJlc3VtZSBvZiBkZXZpY2VzIGNvbXBsZXRlIGFmdGVyIAo0OTkuODIx
+IG1zZWNzCkFwciAyMyAyMTo0MjowNSBsZW5vdm94NjB0IGtlcm5lbDogUE06IEZpbmlzaGluZyB3
+YWtldXAuCkFwciAyMyAyMTo0MjowNSBsZW5vdm94NjB0IGtlcm5lbDogUmVzdGFydGluZyB0YXNr
+cyAuLi4gZG9uZS4KQXByIDIzIDIxOjQyOjA1IGxlbm92b3g2MHQga2VybmVsOiB2aWRlbyBMTlhW
+SURFTzowMDogUmVzdG9yaW5nIApiYWNrbGlnaHQgc3RhdGUKW+KApl0KYGBgCgpXaGF0IGRvZXMg
+ZXJyb3IgY29kZSAzOCBtZWFuIGluIGB0cG0gdHBtMDogQSBUUE0gZXJyb3IgKDM4KSBvY2N1cnJl
+ZCAKY29udGludWUgc2VsZnRlc3RgPwoKCktpbmQgcmVnYXJkcywKClBhdWwKCi0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLQpDaGVjayBvdXQgdGhlIHZpYnJhbnQgdGVjaCBjb21tdW5pdHkgb24gb25lIG9m
+IHRoZSB3b3JsZCdzIG1vc3QKZW5nYWdpbmcgdGVjaCBzaXRlcywgU2xhc2hkb3Qub3JnISBodHRw
+Oi8vc2RtLmxpbmsvc2xhc2hkb3QKX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
+X19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNv
+dXJjZWZvcmdlLm5ldApodHRwczovL2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5m
+by90cG1kZC1kZXZlbAo=
