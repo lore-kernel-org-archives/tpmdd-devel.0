@@ -1,10 +1,9 @@
-From: Paul Menzel <pmenzel-KUpvgZVWgV9o1qOY/usvUg@public.gmane.org>
-Subject: What does error code 38 mean?
-Date: Sun, 23 Apr 2017 21:57:08 +0200
-Message-ID: <2af06f5df9ade221ce09048cf60f57de@molgen.mpg.de>
+From: "Peter Huewe" <PeterHuewe-Mmb7MZpHnFY@public.gmane.org>
+Subject: Re: What does error code 38 mean?
+Date: Mon, 24 Apr 2017 03:32:37 +0200
+Message-ID: <trinity-decde0f7-fedc-4dc2-b8e0-87a910625951-1492997557494@msvc-mesg-gmx108>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: multipart/mixed; boundary="===============3300211270295851350=="
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
@@ -14,41 +13,36 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Paul Menzel <pmenzel-KUpvgZVWgV9o1qOY/usvUg@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-RGVhciBMaW51eCBmb2xrcywKCgpPbiByZXN1bWUsIExpbnV4IDQuMTEtcmM3IGxvZ3MgdGhlIG1l
-c3NhZ2VzIGJlbG93LgoKYGBgClvigKZdCkFwciAyMyAyMTo0MjowNSBsZW5vdm94NjB0IGtlcm5l
-bDogcGNpZWhwIDAwMDA6MDA6MWMuMDpwY2llMDA0OiBUaW1lb3V0IApvbiBob3RwbHVnIGNvbW1h
-bmQgMHgxMDM4IChpc3N1ZWQgMTA5NTI4IG1zZWMgYWdvKQpBcHIgMjMgMjE6NDI6MDUgbGVub3Zv
-eDYwdCBrZXJuZWw6IHRwbSB0cG0wOiBBIFRQTSBlcnJvciAoMzgpIG9jY3VycmVkIApjb250aW51
-ZSBzZWxmdGVzdApBcHIgMjMgMjE6NDI6MDUgbGVub3ZveDYwdCBrZXJuZWw6IHBjaWVocCAwMDAw
-OjAwOjFjLjA6cGNpZTAwNDogRGV2aWNlIAowMDAwOjAxOjAwLjAgYWxyZWFkeSBleGlzdHMgYXQg
-MDAwMDowMTowMCwgY2Fubm90IGhvdC1hZGQKQXByIDIzIDIxOjQyOjA1IGxlbm92b3g2MHQga2Vy
-bmVsOiBwY2llaHAgMDAwMDowMDoxYy4wOnBjaWUwMDQ6IENhbm5vdCAKYWRkIGRldmljZSBhdCAw
-MDAwOjAxOjAwCkFwciAyMyAyMTo0MjowNSBsZW5vdm94NjB0IGtlcm5lbDogYXRhMS4wMDogY29u
-ZmlndXJlZCBmb3IgVURNQS8zMwpBcHIgMjMgMjE6NDI6MDUgbGVub3ZveDYwdCBrZXJuZWw6IHBj
-aWVocCAwMDAwOjAwOjFjLjA6cGNpZTAwNDogRGV2aWNlIAowMDAwOjAxOjAwLjAgYWxyZWFkeSBl
-eGlzdHMgYXQgMDAwMDowMTowMCwgY2Fubm90IGhvdC1hZGQKQXByIDIzIDIxOjQyOjA1IGxlbm92
-b3g2MHQga2VybmVsOiBwY2llaHAgMDAwMDowMDoxYy4wOnBjaWUwMDQ6IENhbm5vdCAKYWRkIGRl
-dmljZSBhdCAwMDAwOjAxOjAwCkFwciAyMyAyMTo0MjowNSBsZW5vdm94NjB0IGtlcm5lbDogcGNp
-ZXBvcnQgMDAwMDowMDoxYy4wOiBTeXN0ZW0gd2FrZXVwIApkaXNhYmxlZCBieSBBQ1BJCkFwciAy
-MyAyMTo0MjowNSBsZW5vdm94NjB0IGtlcm5lbDogZTEwMDBlIDAwMDA6MDE6MDAuMDogRGlzYWJs
-aW5nIEFTUE0gCkwwcyBMMQpBcHIgMjMgMjE6NDI6MDUgbGVub3ZveDYwdCBrZXJuZWw6IHVzYiA1
-LTY6IHJlc2V0IGhpZ2gtc3BlZWQgVVNCIGRldmljZSAKbnVtYmVyIDIgdXNpbmcgZWhjaS1wY2kK
-QXByIDIzIDIxOjQyOjA1IGxlbm92b3g2MHQga2VybmVsOiBhdGEzOiBTQVRBIGxpbmsgdXAgMS41
-IEdicHMgKFNTdGF0dXMgCjExMyBTQ29udHJvbCAzMDApCkFwciAyMyAyMTo0MjowNSBsZW5vdm94
-NjB0IGtlcm5lbDogUE06IHJlc3VtZSBvZiBkZXZpY2VzIGNvbXBsZXRlIGFmdGVyIAo0OTkuODIx
-IG1zZWNzCkFwciAyMyAyMTo0MjowNSBsZW5vdm94NjB0IGtlcm5lbDogUE06IEZpbmlzaGluZyB3
-YWtldXAuCkFwciAyMyAyMTo0MjowNSBsZW5vdm94NjB0IGtlcm5lbDogUmVzdGFydGluZyB0YXNr
-cyAuLi4gZG9uZS4KQXByIDIzIDIxOjQyOjA1IGxlbm92b3g2MHQga2VybmVsOiB2aWRlbyBMTlhW
-SURFTzowMDogUmVzdG9yaW5nIApiYWNrbGlnaHQgc3RhdGUKW+KApl0KYGBgCgpXaGF0IGRvZXMg
-ZXJyb3IgY29kZSAzOCBtZWFuIGluIGB0cG0gdHBtMDogQSBUUE0gZXJyb3IgKDM4KSBvY2N1cnJl
-ZCAKY29udGludWUgc2VsZnRlc3RgPwoKCktpbmQgcmVnYXJkcywKClBhdWwKCi0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLQpDaGVjayBvdXQgdGhlIHZpYnJhbnQgdGVjaCBjb21tdW5pdHkgb24gb25lIG9m
-IHRoZSB3b3JsZCdzIG1vc3QKZW5nYWdpbmcgdGVjaCBzaXRlcywgU2xhc2hkb3Qub3JnISBodHRw
-Oi8vc2RtLmxpbmsvc2xhc2hkb3QKX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNv
-dXJjZWZvcmdlLm5ldApodHRwczovL2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5m
-by90cG1kZC1kZXZlbAo=
+--===============3300211270295851350==
+Content-Type: text/html; charset=UTF-8
+
+<html><head/><body>38=0x26= invalid post init, which means tpm did not receive tpm_startup command after reset.<br>
+<br>
+-- <br>
+Diese Nachricht wurde von meinem Android Mobiltelefon mit GMX Mail gesendet.</body></html>
+
+
+--===============3300211270295851350==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+--===============3300211270295851350==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
+
+_______________________________________________
+tpmdd-devel mailing list
+tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+
+--===============3300211270295851350==--
