@@ -1,45 +1,56 @@
-From: Paul Menzel <pmenzel-KUpvgZVWgV9o1qOY/usvUg@public.gmane.org>
-Subject: Re: What does error code 38 mean?
-Date: Mon, 24 Apr 2017 16:50:22 +0200
-Message-ID: <0603ee8e-ce81-9a46-4bb3-5fe4d7bda463@molgen.mpg.de>
-References: <trinity-decde0f7-fedc-4dc2-b8e0-87a910625951-1492997557494@msvc-mesg-gmx108>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: [GIT PULL] tpmdd fixes for 4.12
+Date: Tue, 25 Apr 2017 00:37:10 +0300
+Message-ID: <20170424213710.qrc5za4tigjdqspi@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <trinity-decde0f7-fedc-4dc2-b8e0-87a910625951-1492997557494@msvc-mesg-gmx108>
-Content-Language: en-US
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <PeterHuewe-Mmb7MZpHnFY@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: Patrick Rudolph <siro-afHDD34IFkZrovVCs/uTlw@public.gmane.org>, Arthur Heymans <arthur-ohM3iTZxzbjrDilwLfPoKQ@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Disposition: inline
+Sender: owner-linux-security-module@vger.kernel.org
+To: James Morris <jmorris@namei.org>
+Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Dear Peter, dear TPM folks,
+Hi
 
+Here are fixes for the 4.12 release. In addition there is an update to
+the tpm_tis driver to use common callbacks for requesting and
+relinquishing locality as they were with locality support for tpm_crb.
+Now the logic flow for both driver is driven in tpm_transmit().
 
-On 04/24/17 03:32, Peter Huewe wrote:
+/Jarkko
 
->> x60t kernel: tpm tpm0: A TPM error (38) occurred continue selftest
->
-> 38=0x26= invalid post init, which means tpm did not receive tpm_startup command
-> after reset.
+The following changes since commit f65cc104c498ad820efb13e3a24fe36af872f17a:
 
-Thank you for the quick reply. As this is during resume, could you 
-please point me to documentation, what is expected for resume from the 
-firmware?
+  Merge branch 'next' of git://git.kernel.org/pub/scm/linux/kernel/git/zohar/linux-integrity into next (2017-04-19 22:00:15 +1000)
 
+are available in the git repository at:
 
-Kind regards,
+  git://git.infradead.org/users/jjs/linux-tpmdd.git tags/tpmdd-next-20170425
 
-Paul
+for you to fetch changes up to 8979b02aaf1d6de8d52cc143aa4da961ed32e5a2:
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+  tpm: Fix reference count to main device (2017-04-25 00:27:18 +0300)
+
+----------------------------------------------------------------
+tpmdd fixes for Linux 4.12
+
+----------------------------------------------------------------
+Jarkko Sakkinen (1):
+      tpm_crb: remove a cruft constant
+
+Jerry Snitselaar (1):
+      tpm_tis: convert to using locality callbacks
+
+Petr Vandrovec (1):
+      tpm: fix handling of the TPM 2.0 event logs
+
+Stefan Berger (1):
+      tpm: Fix reference count to main device
+
+ drivers/char/tpm/tpm-chip.c      |  5 +++--
+ drivers/char/tpm/tpm2_eventlog.c | 14 ++++++++++----
+ drivers/char/tpm/tpm_crb.c       |  3 +--
+ drivers/char/tpm/tpm_tis_core.c  | 34 ++++++++--------------------------
+ include/acpi/actbl2.h            |  2 --
+ 5 files changed, 22 insertions(+), 36 deletions(-)
