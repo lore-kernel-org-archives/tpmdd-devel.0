@@ -1,39 +1,30 @@
-From: Matthew Garrett <mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>
-Subject: Re: tpm microconf for LPC?
-Date: Mon, 24 Apr 2017 22:21:49 +0100
-Message-ID: <20170424212149.GA3051@srcf.ucam.org>
-References: <87h92i6rc1.fsf@redhat.com>
+From: James Morris <jmorris@namei.org>
+Subject: Re: [GIT PULL] tpmdd fixes for 4.12
+Date: Tue, 25 Apr 2017 10:04:20 +1000 (AEST)
+Message-ID: <alpine.LRH.2.20.1704251004100.8213@namei.org>
+References: <20170424213710.qrc5za4tigjdqspi@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <87h92i6rc1.fsf-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-Cc: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, tpmdd-devel <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=US-ASCII
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170424213710.qrc5za4tigjdqspi@intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Mar 24, 2017 at 07:08:30PM -0700, Jerry Snitselaar wrote:
-> 
-> Since the call for microconferences went out, do people think another
-> microconf would be useful this year?
+On Tue, 25 Apr 2017, Jarkko Sakkinen wrote:
 
-I'd be strongly in favour of that, and I'm happy to help chair one again 
-if people feel things went well last time. I could do with at least one 
-person to volunteer to co-chair in that case just in case disaster 
-strikes - anyone up for that?
+> Hi
+> 
+> Here are fixes for the 4.12 release. In addition there is an update to
+> the tpm_tis driver to use common callbacks for requesting and
+> relinquishing locality as they were with locality support for tpm_crb.
+> Now the logic flow for both driver is driven in tpm_transmit().
+> 
+
+pulled, thanks!
 
 -- 
-Matthew Garrett | mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org
+James Morris
+<jmorris@namei.org>
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
