@@ -1,15 +1,12 @@
-From: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: Re: What does error code 38 mean? -> hex vs. decimal
-Date: Wed, 26 Apr 2017 16:57:07 -0400
-Message-ID: <odr1is$s8a$1@blaine.gmane.org>
-References: <trinity-decde0f7-fedc-4dc2-b8e0-87a910625951-1492997557494@msvc-mesg-gmx108>
-	<odqn2s$72s$1@blaine.gmane.org>
-	<20170426191808.kkvbg4iynbwysu6k@rhwork>
+From: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Subject: [PATCH] tpm: print tpm error code in hex for TPM2.0
+	devices
+Date: Wed, 26 Apr 2017 15:39:54 -0700
+Message-ID: <20170426223954.18365-1-jsnitsel@redhat.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170426191808.kkvbg4iynbwysu6k@rhwork>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,41 +16,46 @@ List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 4/26/2017 3:18 PM, Jerry Snitselaar wrote:
->
-> Maybe the following?
->
->
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index bd2128e0b56c..e6e60f9f428c 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -453,9 +453,14 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *buf,
->                 return -EFAULT;
->
->         err = be32_to_cpu(header->return_code);
-> -       if (err != 0 && desc)
-> -               dev_err(&chip->dev, "A TPM error (%d) occurred %s\n", err,
-> -                       desc);
-> +       if (err != 0 && desc) {
-> +               if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> +                       dev_err(&chip->dev, "A TPM error (0x%x) occurred %s\n", err,
-> +                               desc);
-> +               else
-> +                       dev_err(&chip->dev, "A TPM error (%d) occurred %s\n", err,
-> +                               desc);
-> +       }
->         if (err)
->                 return err;
->
+For easier decoding, output the error code returned
+from the tpm device in hex when the device is TPM2.0.
 
-I think that's a good idea.
+Cc: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+Cc: Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>
+Cc: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Reported-by: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Signed-off-by: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+---
+ drivers/char/tpm/tpm-interface.c | 11 ++++++++---
+ 1 file changed, 8 insertions(+), 3 deletions(-)
 
-I have a utility that parses the fields out of the TPM 2.0 error codes 
-and prints the text.  It expects hex values, as does the specification.
-
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index bd2128e0b56c..b6c67eef9ae7 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -453,9 +453,14 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *buf,
+ 		return -EFAULT;
+ 
+ 	err = be32_to_cpu(header->return_code);
+-	if (err != 0 && desc)
+-		dev_err(&chip->dev, "A TPM error (%d) occurred %s\n", err,
+-			desc);
++	if (err != 0 && desc) {
++		if (chip->flags & TPM_CHIP_FLAG_TPM2)
++			dev_err(&chip->dev, "A TPM 2.0 error (0x%x) occurred %s\n",
++				err, desc);
++		else
++			dev_err(&chip->dev, "A TPM error (%d) occurred %s\n",
++				err, desc);
++	}
+ 	if (err)
+ 		return err;
+ 
+-- 
+2.13.0.rc0.45.ge2cb6ab84
 
 
 ------------------------------------------------------------------------------
