@@ -1,30 +1,60 @@
-From: James Morris <jmorris@namei.org>
-Subject: Re: [GIT PULL] tpmdd fixes for 4.12
-Date: Tue, 25 Apr 2017 10:04:20 +1000 (AEST)
-Message-ID: <alpine.LRH.2.20.1704251004100.8213@namei.org>
-References: <20170424213710.qrc5za4tigjdqspi@intel.com>
+From: Georges Savoundararadj <gsavoundararadj-svHpOmPGTvqcqzYg7KEe8g@public.gmane.org>
+Subject: About the SLB9670 TPM 2.0 driver status
+Date: Tue, 25 Apr 2017 19:12:25 -0700
+Message-ID: <e7ee0491-3f29-5578-7cc4-af9c0a73dcb3@witekio.us>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170424213710.qrc5za4tigjdqspi@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: peter.huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, 25 Apr 2017, Jarkko Sakkinen wrote:
+Hello,
 
-> Hi
-> 
-> Here are fixes for the 4.12 release. In addition there is an update to
-> the tpm_tis driver to use common callbacks for requesting and
-> relinquishing locality as they were with locality support for tpm_crb.
-> Now the logic flow for both driver is driven in tpm_transmit().
-> 
+I am working with on Infineon SLB9670 TPM 2.0 on SPI.
 
-pulled, thanks!
+How well is this chip supported in the mainline kernel?
 
--- 
-James Morris
-<jmorris@namei.org>
+I am currently using the linux-socfpga kernel (version 4.8.0; branch 
+socfpga-4.8) [1]
+on which I applied the following patches from patchwork:
 
+aacabbe0d5ec tpm_tis_spi: Add small delay after last transfer [2]
+a4a011be786f tpm_tis_spi: Remove limitation of transfers to 
+MAX_SPI_FRAMESIZE bytes [3]
+840157e08b2f tpm_tis_spi: Check correct byte for wait state indicator [4]
+10cb31aec536 tpm_tis_spi: Abort transfer when too many wait states are 
+signaled [5]
+3ad7d9172a8c tpm_tis_spi: Use single function to transfer data [6]
+4a809ec34a0f tpm_tis_core: Choose appropriate timeout for reading 
+burstcount [7]
+
+With these patches, I can read the Vendor ID properly.
+But, the driver initialization fails in the tpm2_probe function.
+
+Did I miss an important patch?
+
+Regards,
+
+Georges
+
+[1] https://github.com/altera-opensource/linux-socfpga/tree/socfpga-4.8
+[2] https://patchwork.kernel.org/patch/9600213/
+[3] https://patchwork.kernel.org/patch/9600209/
+[4] https://patchwork.kernel.org/patch/9600207/
+[5] https://patchwork.kernel.org/patch/9600211/
+[6] https://patchwork.kernel.org/patch/9600203/
+[7] https://patchwork.kernel.org/patch/9682259/
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
