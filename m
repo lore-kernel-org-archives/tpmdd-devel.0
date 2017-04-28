@@ -1,91 +1,47 @@
-From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: [PATCH v2 3/3] tpm: vtpm_proxy: Add ioctl to request locality prepended to command
-Date: Fri, 28 Apr 2017 09:02:18 -0400
-Message-ID: <1493384538-27883-4-git-send-email-stefanb@linux.vnet.ibm.com>
-References: <1493384538-27883-1-git-send-email-stefanb@linux.vnet.ibm.com>
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <1493384538-27883-1-git-send-email-stefanb@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jarkko.sakkinen@linux.intel.com
-Cc: jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org, Stefan Berger <stefanb@linux.vnet.ibm.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH] tpm_tis: Issue a TPM2_Shutdown for TPM2
+	devices.
+Date: Fri, 28 Apr 2017 09:27:48 -0600
+Message-ID: <20170428152748.GA32017@obsidianresearch.com>
+References: <20170427182659.403-1-joshz@google.com>
+	<20170428121226.7xnpfbxcjszrnz5d@intel.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20170428121226.7xnpfbxcjszrnz5d-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, rafael-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Add an ioctl to request that the locality be prepended to every TPM
-command.
+On Fri, Apr 28, 2017 at 03:12:26PM +0300, Jarkko Sakkinen wrote:
 
-Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
----
- drivers/char/tpm/tpm_vtpm_proxy.c | 18 +++++++++++++-----
- include/uapi/linux/vtpm_proxy.h   |  4 +++-
- 2 files changed, 16 insertions(+), 6 deletions(-)
+> I guess we have a problem in tis such that some of the devices in some
+> environments are not available through ACPI. There's also of_match_table
+> but I'm wondering if ACPI and OF would cover everything we are using
+> pnp_driver for.
 
-diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
-index 48b9818..6c90e02 100644
---- a/drivers/char/tpm/tpm_vtpm_proxy.c
-+++ b/drivers/char/tpm/tpm_vtpm_proxy.c
-@@ -52,7 +52,8 @@ struct proxy_dev {
- };
- 
- /* all supported flags */
--#define VTPM_PROXY_FLAGS_ALL  (VTPM_PROXY_FLAG_TPM2)
-+#define VTPM_PROXY_FLAGS_ALL  (VTPM_PROXY_FLAG_TPM2 | \
-+			       VTPM_PROXY_FLAG_PREPEND_LOCALITY)
- 
- static struct workqueue_struct *workqueue;
- 
-@@ -77,8 +78,9 @@ static ssize_t vtpm_proxy_fops_read(struct file *filp, char __user *buf,
- 				    size_t count, loff_t *off)
- {
- 	struct proxy_dev *proxy_dev = filp->private_data;
--	size_t len;
--	int sig, rc;
-+	size_t len, offset = 0;
-+	int sig, rc = 0;
-+	uint8_t locality;
- 
- 	sig = wait_event_interruptible(proxy_dev->wq,
- 		proxy_dev->req_len != 0 ||
-@@ -102,7 +104,13 @@ static ssize_t vtpm_proxy_fops_read(struct file *filp, char __user *buf,
- 		return -EIO;
- 	}
- 
--	rc = copy_to_user(buf, proxy_dev->buffer, len);
-+	if (proxy_dev->flags & VTPM_PROXY_FLAG_PREPEND_LOCALITY) {
-+		locality = proxy_dev->chip->locality;
-+		offset = sizeof(locality);
-+		rc = copy_to_user(buf, &locality, offset);
-+	}
-+	if (!rc)
-+		rc = copy_to_user(&buf[offset], proxy_dev->buffer, len);
- 	memset(proxy_dev->buffer, 0, len);
- 	proxy_dev->req_len = 0;
- 
-@@ -114,7 +122,7 @@ static ssize_t vtpm_proxy_fops_read(struct file *filp, char __user *buf,
- 	if (rc)
- 		return -EFAULT;
- 
--	return len;
-+	return offset + len;
- }
- 
- /**
-diff --git a/include/uapi/linux/vtpm_proxy.h b/include/uapi/linux/vtpm_proxy.h
-index 83e64e7..512a29e 100644
---- a/include/uapi/linux/vtpm_proxy.h
-+++ b/include/uapi/linux/vtpm_proxy.h
-@@ -22,9 +22,11 @@
- /**
-  * enum vtpm_proxy_flags - flags for the proxy TPM
-  * @VTPM_PROXY_FLAG_TPM2:	the proxy TPM uses TPM 2.0 protocol
-+ * @VTPM_PROXY_PREPEND_LOCALITY:locality byte prepended on each command
-  */
- enum vtpm_proxy_flags {
--	VTPM_PROXY_FLAG_TPM2	= 1,
-+	VTPM_PROXY_FLAG_TPM2			= 1,
-+	VTPM_PROXY_FLAG_PREPEND_LOCALITY	= 2,
- };
- 
- /**
--- 
-2.4.3
+How do you recover the acpi handle like pnp_acpi_device does from a
+platform_device?
 
+If you know how to do that then we should use acpi_match_table and
+merge the platform and acpi devices..
+
+Does the acpi_match_table encompass all of the pnp subsystem as well,
+or do we still need to have pnp_driver to handle legacy pre-acpi PNP
+systems?
+
+Jason
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
