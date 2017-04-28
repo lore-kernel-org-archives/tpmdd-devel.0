@@ -1,67 +1,32 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm_tis: Issue a TPM2_Shutdown for TPM2
-	devices.
-Date: Fri, 28 Apr 2017 15:24:59 +0300
-Message-ID: <20170428122459.wzsvt742eyh5wxnp@intel.com>
-References: <20170427182659.403-1-joshz@google.com>
-	<20170427204912.GA26330@obsidianresearch.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170427204912.GA26330-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+From: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v2 0/3]  Extend the vTPM proxy driver to pass locality to emulator
+Date: Fri, 28 Apr 2017 09:02:15 -0400
+Message-ID: <1493384538-27883-1-git-send-email-stefanb@linux.vnet.ibm.com>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Sender: owner-linux-security-module@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jarkko.sakkinen@linux.intel.com
+Cc: jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org, Stefan Berger <stefanb@linux.vnet.ibm.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Apr 27, 2017 at 02:49:12PM -0600, Jason Gunthorpe wrote:
-> On Thu, Apr 27, 2017 at 11:26:59AM -0700, Josh Zimmerman wrote:
-> > If a TPM2 loses power without a TPM2_Shutdown command being issued, it
-> > may lose some state that has yet to be persisted to NVRam, and will
-> > increment the DA counter (meaning that after too many disorderly
-> > reboots, the TPM will lock the user out).
-> > 
-> > This is a variant of https://patchwork.kernel.org/patch/9516631/.
-> 
-> This has all the same problems of that patch, just now adds the code
-> to tis driver as well..
-> 
-> There is not much reason to accept this and reject the above patch.
-> 
-> > It differs in that:
-> >   * It only changes behavior on TPM2 devices, to avoid invoking the
-> >   unbounded-waiting sysfs codepath that was discussed on that patch.
-> 
-> Hum. If that is a sensible work around for now then lets just do that
-> at the core code level please.
-> 
-> If you do this, then tpm_sysfs_add_device really needs a comment
-> warning that tpm2 can not have sysfs until the problems are fixed with
-> shutdown.
-> 
-> >   * It modifies tpm_tis rather than tpm_i2c_infineon, so that it can
-> >   change behavior for all TPM2 devices.
-> 
-> There are many drivers that support TPM2 beyond tpm_tis, this just
-> fixes a few tis drivers, re-enforcing my point in the original patch
-> that this stuff has no buisness being in the low level drivers and
-> should be in core code.
-> 
-> Jason
+The purpose of this series of patches is to enable the passing of the locality
+a command is executing in to a TPM emulator. To enable this we introduce a new
+flag for the device creation ioctl that requests that the locality be prepended
+to every command. For applications to check which flags the driver supports, we
+add a new ioctl that returns a bitmask of supported flags.
 
-Let me note that this does not even cover all of the tpm_tis.
+v1->v2:
+  - fixed return value from function in patch 3/3
 
-/Jarkko
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+Stefan Berger (3):
+  tpm: vtpm_proxy: Add ioctl to get supported flags
+  tpm: vtpm_proxy: Implement request_locality
+  tpm: vtpm_proxy: Add ioctl to request locality prepended to command
+
+ drivers/char/tpm/tpm_vtpm_proxy.c | 53 +++++++++++++++++++++++++++++++++++----
+ include/uapi/linux/vtpm_proxy.h   | 15 ++++++++++-
+ 2 files changed, 62 insertions(+), 6 deletions(-)
+
+-- 
+2.4.3
+
