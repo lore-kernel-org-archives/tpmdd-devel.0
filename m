@@ -1,17 +1,17 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: print tpm error code in hex for
-	TPM2.0 devices
-Date: Sat, 29 Apr 2017 14:17:38 +0300
-Message-ID: <20170429111738.vpjm3bxabiaa6y56@intel.com>
-References: <20170426223954.18365-1-jsnitsel@redhat.com>
-	<20170428120149.jjxwbp6nmthk4y3q@intel.com>
-	<20170428171809.qtyb7naoezf7ern3@rhwork>
+Subject: Re: [PATCH] tpm_tis: Issue a TPM2_Shutdown for TPM2
+	devices.
+Date: Sat, 29 Apr 2017 14:40:13 +0300
+Message-ID: <20170429114013.67xwbv6xozarcieq@intel.com>
+References: <20170427182659.403-1-joshz@google.com>
+	<20170428121226.7xnpfbxcjszrnz5d@intel.com>
+	<20170428152748.GA32017@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170428171809.qtyb7naoezf7ern3@rhwork>
+In-Reply-To: <20170428152748.GA32017-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,81 +20,35 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, rafael-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Apr 28, 2017 at 10:18:09AM -0700, Jerry Snitselaar wrote:
-> On Fri Apr 28 17, Jarkko Sakkinen wrote:
-> > On Wed, Apr 26, 2017 at 03:39:54PM -0700, Jerry Snitselaar wrote:
-> > > For easier decoding, output the error code returned
-> > > from the tpm device in hex when the device is TPM2.0.
-> > > 
-> > > Cc: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> > > Cc: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-> > > Cc: Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>
-> > > Cc: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> > > Reported-by: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-> > > Signed-off-by: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-> > > ---
-> > >  drivers/char/tpm/tpm-interface.c | 11 ++++++++---
-> > >  1 file changed, 8 insertions(+), 3 deletions(-)
-> > > 
-> > > diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> > > index bd2128e0b56c..b6c67eef9ae7 100644
-> > > --- a/drivers/char/tpm/tpm-interface.c
-> > > +++ b/drivers/char/tpm/tpm-interface.c
-> > > @@ -453,9 +453,14 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *buf,
-> > >  		return -EFAULT;
-> > > 
-> > >  	err = be32_to_cpu(header->return_code);
-> > > -	if (err != 0 && desc)
-> > > -		dev_err(&chip->dev, "A TPM error (%d) occurred %s\n", err,
-> > > -			desc);
-> > > +	if (err != 0 && desc) {
-> > > +		if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> > > +			dev_err(&chip->dev, "A TPM 2.0 error (0x%x) occurred %s\n",
-> > > +				err, desc);
-> > > +		else
-> > > +			dev_err(&chip->dev, "A TPM error (%d) occurred %s\n",
-> > > +				err, desc);
-> > > +	}
-> > 
-> > Is there a reason for not to apply this also to TPM 1.2?
-> > 
-> > /Jarkko
-> > 
+On Fri, Apr 28, 2017 at 09:27:48AM -0600, Jason Gunthorpe wrote:
+> On Fri, Apr 28, 2017 at 03:12:26PM +0300, Jarkko Sakkinen wrote:
 > 
-> The 2.0 spec lists the response codes in hex, while the 1.2 spec lists them
-> in decimal. Maybe something like the following instead?
+> > I guess we have a problem in tis such that some of the devices in some
+> > environments are not available through ACPI. There's also of_match_table
+> > but I'm wondering if ACPI and OF would cover everything we are using
+> > pnp_driver for.
+> 
+> How do you recover the acpi handle like pnp_acpi_device does from a
+> platform_device?
+> 
+> If you know how to do that then we should use acpi_match_table and
+> merge the platform and acpi devices..
+> 
+> Does the acpi_match_table encompass all of the pnp subsystem as well,
+> or do we still need to have pnp_driver to handle legacy pre-acpi PNP
+> systems?
+> 
+> Jason
 
-Ah. Well, I thinkthe original patch is fine then. 
+AFAIK with ACPI_COMPANION as in 
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+http://lxr.free-electrons.com/source/net/rfkill/rfkill-gpio.c
 
 /Jarkko
-
-> 
-> index 158c1db83f05..1f433d56f53c 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -526,8 +526,8 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, struct tpm_space *space,
-> 
->        err = be32_to_cpu(header->return_code);
->        if (err != 0 && desc)
-> -               dev_err(&chip->dev, "A TPM error (%d) occurred %s\n", err,
-> -                       desc);
-> +               dev_err(&chip->dev, "A TPM error (%d (0x%x)) occurred %s\n", err,
-> +                       err, desc);
->        if (err)
->                return err;
-> 
-> 
-> > >  	if (err)
-> > >  		return err;
-> > > 
-> > > --
-> > > 2.13.0.rc0.45.ge2cb6ab84
-> > > 
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
