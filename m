@@ -1,177 +1,108 @@
-From: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-Subject: [PATCH 2/3] tpm: move ordinals definition to
-	include/linux/tpm_command.h
-Date: Tue, 2 May 2017 14:31:50 +0200
-Message-ID: <20170502123151.24354-3-roberto.sassu@huawei.com>
+From: Roberto Sassu <roberto.sassu@huawei.com>
+Subject: [PATCH 3/3] tpm: move TPM 1.2 code of tpm_pcr_extend() to tpm1_pcr_extend()
+Date: Tue, 2 May 2017 14:31:51 +0200
+Message-ID: <20170502123151.24354-4-roberto.sassu@huawei.com>
 References: <20170502123151.24354-1-roberto.sassu@huawei.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170502123151.24354-1-roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Content-Type: text/plain
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170502123151.24354-1-roberto.sassu@huawei.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net
+Cc: linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Roberto Sassu <roberto.sassu@huawei.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Move definition from tpm-interface.c to tpm_command.h, so that there is
-no duplication. Also convert the ordinals in the tpm_input_header
-declarations.
+In preparation of the modifications to tpm_pcr_extend(), which will
+allow callers to supply a digest for each PCR bank of a TPM 2.0,
+the TPM 1.2 specific code has been moved to tpm1_pcr_extend().
 
-With the previous and this patch it will now be possible to convert TPM 1.2
-functions to use tpm_buf_init(), which expect CPU native value for the
-tag and ordinal arguments.
+tpm1_pcr_extend() uses tpm_buf_init() to prepare the command buffer,
+which offers protection against buffer overflow. It is called by
+tpm_pcr_extend() and tpm_pm_suspend().
 
-Signed-off-by: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
 ---
- drivers/char/tpm/tpm-interface.c | 19 ++++++-------------
- drivers/char/tpm/tpm-sysfs.c     |  3 +--
- include/linux/tpm_command.h      |  7 +++++++
- 3 files changed, 14 insertions(+), 15 deletions(-)
+ drivers/char/tpm/tpm-interface.c | 46 +++++++++++++++++++++-------------------
+ 1 file changed, 24 insertions(+), 22 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 48f5dff..5c2c032 100644
+index 5c2c032..9059f67 100644
 --- a/drivers/char/tpm/tpm-interface.c
 +++ b/drivers/char/tpm/tpm-interface.c
-@@ -469,13 +469,11 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *buf,
- #define TPM_DIGEST_SIZE 20
- #define TPM_RET_CODE_IDX 6
- #define TPM_INTERNAL_RESULT_SIZE 200
--#define TPM_ORD_GET_CAP cpu_to_be32(101)
--#define TPM_ORD_GET_RANDOM cpu_to_be32(70)
+@@ -763,11 +763,25 @@ EXPORT_SYMBOL_GPL(tpm_pcr_read);
  
- static const struct tpm_input_header tpm_getcap_header = {
- 	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
- 	.length = cpu_to_be32(22),
--	.ordinal = TPM_ORD_GET_CAP
-+	.ordinal = cpu_to_be32(TPM_ORD_GET_CAP)
- };
- 
- ssize_t tpm_getcap(struct tpm_chip *chip, u32 subcap_id, cap_t *cap,
-@@ -510,14 +508,13 @@ ssize_t tpm_getcap(struct tpm_chip *chip, u32 subcap_id, cap_t *cap,
- }
- EXPORT_SYMBOL_GPL(tpm_getcap);
- 
--#define TPM_ORD_STARTUP cpu_to_be32(153)
- #define TPM_ST_CLEAR cpu_to_be16(1)
- #define TPM_ST_STATE cpu_to_be16(2)
- #define TPM_ST_DEACTIVATED cpu_to_be16(3)
- static const struct tpm_input_header tpm_startup_header = {
- 	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
- 	.length = cpu_to_be32(12),
--	.ordinal = TPM_ORD_STARTUP
-+	.ordinal = cpu_to_be32(TPM_ORD_STARTUP)
- };
- 
- static int tpm_startup(struct tpm_chip *chip, __be16 startup_type)
-@@ -661,7 +658,6 @@ int tpm_get_timeouts(struct tpm_chip *chip)
- }
- EXPORT_SYMBOL_GPL(tpm_get_timeouts);
- 
--#define TPM_ORD_CONTINUE_SELFTEST 83
- #define CONTINUE_SELFTEST_RESULT_SIZE 10
- 
- static const struct tpm_input_header continue_selftest_header = {
-@@ -688,13 +684,12 @@ static int tpm_continue_selftest(struct tpm_chip *chip)
- 	return rc;
- }
- 
--#define TPM_ORDINAL_PCRREAD cpu_to_be32(21)
- #define READ_PCR_RESULT_SIZE 30
- #define READ_PCR_RESULT_BODY_SIZE 20
- static const struct tpm_input_header pcrread_header = {
- 	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
- 	.length = cpu_to_be32(14),
--	.ordinal = TPM_ORDINAL_PCRREAD
-+	.ordinal = cpu_to_be32(TPM_ORD_PCRREAD)
- };
- 
- int tpm_pcr_read_dev(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
-@@ -766,13 +761,12 @@ int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf)
- }
- EXPORT_SYMBOL_GPL(tpm_pcr_read);
- 
--#define TPM_ORD_PCR_EXTEND cpu_to_be32(20)
  #define EXTEND_PCR_RESULT_SIZE 34
  #define EXTEND_PCR_RESULT_BODY_SIZE 20
- static const struct tpm_input_header pcrextend_header = {
- 	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
- 	.length = cpu_to_be32(34),
--	.ordinal = TPM_ORD_PCR_EXTEND
-+	.ordinal = cpu_to_be32(TPM_ORD_PCREXTEND)
- };
+-static const struct tpm_input_header pcrextend_header = {
+-	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+-	.length = cpu_to_be32(34),
+-	.ordinal = cpu_to_be32(TPM_ORD_PCREXTEND)
+-};
++
++static int tpm1_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash,
++			   char *log_msg)
++{
++	struct tpm_buf buf;
++	int rc;
++
++	rc = tpm_buf_init(&buf, TPM_TAG_RQU_COMMAND, TPM_ORD_PCREXTEND);
++	if (rc)
++		return rc;
++
++	tpm_buf_append_u32(&buf, pcr_idx);
++	tpm_buf_append(&buf, hash, TPM_DIGEST_SIZE);
++
++	rc = tpm_transmit_cmd(chip, buf.data, EXTEND_PCR_RESULT_SIZE,
++			      EXTEND_PCR_RESULT_BODY_SIZE, 0, log_msg);
++	tpm_buf_destroy(&buf);
++	return rc;
++}
  
  /**
-@@ -988,13 +982,12 @@ int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
+  * tpm_pcr_extend - extend pcr value with hash
+@@ -781,7 +795,6 @@ static const struct tpm_input_header pcrextend_header = {
+  */
+ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
+ {
+-	struct tpm_cmd_t cmd;
+ 	int rc;
+ 	struct tpm_chip *chip;
+ 	struct tpm2_digest digest_list[ARRAY_SIZE(chip->active_banks)];
+@@ -807,13 +820,8 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
+ 		return rc;
+ 	}
+ 
+-	cmd.header.in = pcrextend_header;
+-	cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(pcr_idx);
+-	memcpy(cmd.params.pcrextend_in.hash, hash, TPM_DIGEST_SIZE);
+-	rc = tpm_transmit_cmd(chip, &cmd, EXTEND_PCR_RESULT_SIZE,
+-			      EXTEND_PCR_RESULT_BODY_SIZE, 0,
+-			      "attempting extend a PCR value");
+-
++	rc = tpm1_pcr_extend(chip, pcr_idx, hash,
++			     "attempting extend a PCR value");
+ 	tpm_put_ops(chip);
+ 	return rc;
  }
- EXPORT_SYMBOL_GPL(wait_for_tpm_stat);
+@@ -1011,15 +1019,9 @@ int tpm_pm_suspend(struct device *dev)
+ 	}
  
--#define TPM_ORD_SAVESTATE cpu_to_be32(152)
- #define SAVESTATE_RESULT_SIZE 10
+ 	/* for buggy tpm, flush pcrs with extend to selected dummy */
+-	if (tpm_suspend_pcr) {
+-		cmd.header.in = pcrextend_header;
+-		cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(tpm_suspend_pcr);
+-		memcpy(cmd.params.pcrextend_in.hash, dummy_hash,
+-		       TPM_DIGEST_SIZE);
+-		rc = tpm_transmit_cmd(chip, &cmd, EXTEND_PCR_RESULT_SIZE,
+-				     EXTEND_PCR_RESULT_BODY_SIZE, 0,
+-				      "extending dummy pcr before suspend");
+-	}
++	if (tpm_suspend_pcr)
++		rc = tpm1_pcr_extend(chip, tpm_suspend_pcr, dummy_hash,
++				     "extending dummy pcr before suspend");
  
- static const struct tpm_input_header savestate_header = {
- 	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
- 	.length = cpu_to_be32(10),
--	.ordinal = TPM_ORD_SAVESTATE
-+	.ordinal = cpu_to_be32(TPM_ORD_SAVESTATE)
- };
- 
- /*
-@@ -1079,7 +1072,7 @@ EXPORT_SYMBOL_GPL(tpm_pm_resume);
- static const struct tpm_input_header tpm_getrandom_header = {
- 	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
- 	.length = cpu_to_be32(14),
--	.ordinal = TPM_ORD_GET_RANDOM
-+	.ordinal = cpu_to_be32(TPM_ORD_GETRANDOM)
- };
- 
- /**
-diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
-index 69a0741..413ac2c 100644
---- a/drivers/char/tpm/tpm-sysfs.c
-+++ b/drivers/char/tpm/tpm-sysfs.c
-@@ -23,11 +23,10 @@
- 
- #define READ_PUBEK_RESULT_SIZE 314
- #define READ_PUBEK_RESULT_MIN_BODY_SIZE (28 + 256)
--#define TPM_ORD_READPUBEK cpu_to_be32(124)
- static const struct tpm_input_header tpm_readpubek_header = {
- 	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
- 	.length = cpu_to_be32(30),
--	.ordinal = TPM_ORD_READPUBEK
-+	.ordinal = cpu_to_be32(TPM_ORD_READPUBEK)
- };
- static ssize_t pubek_show(struct device *dev, struct device_attribute *attr,
- 			  char *buf)
-diff --git a/include/linux/tpm_command.h b/include/linux/tpm_command.h
-index 727512e..0fe58d8 100644
---- a/include/linux/tpm_command.h
-+++ b/include/linux/tpm_command.h
-@@ -20,6 +20,13 @@
- #define TPM_ORD_OIAP                    10
- #define TPM_ORD_SEAL                    23
- #define TPM_ORD_UNSEAL                  24
-+#define TPM_ORD_GET_CAP                101
-+#define TPM_ORD_STARTUP                153
-+#define TPM_ORD_CONTINUE_SELFTEST       83
-+#define TPM_ORD_PCRREAD                 21
-+#define TPM_ORD_PCREXTEND               20
-+#define TPM_ORD_SAVESTATE              152
-+#define TPM_ORD_READPUBEK              124
- 
- /* Other constants */
- #define SRKHANDLE                       0x40000000
+ 	/* now do the actual savestate */
+ 	for (try = 0; try < TPM_RETRY; try++) {
 -- 
 2.9.3
 
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
