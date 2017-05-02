@@ -1,75 +1,46 @@
-From: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH] tpm_tis: Issue a TPM2_Shutdown for TPM2
- devices.
-Date: Sat, 29 Apr 2017 08:30:41 -0700
-Message-ID: <20170429153041.wb2tggovx2z6rjqt@rhwork>
-References: <20170427182659.403-1-joshz@google.com>
-	<20170428121226.7xnpfbxcjszrnz5d@intel.com>
-	<20170428152748.GA32017@obsidianresearch.com>
-	<20170429114013.67xwbv6xozarcieq@intel.com>
-Reply-To: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+From: Roberto Sassu <roberto.sassu@huawei.com>
+Subject: [PATCH 0/3] tpm_pcr_extend() code split
+Date: Tue, 2 May 2017 14:31:48 +0200
+Message-ID: <20170502123151.24354-1-roberto.sassu@huawei.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170429114013.67xwbv6xozarcieq-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, rafael-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
+Content-Type: text/plain
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net
+Cc: linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Roberto Sassu <roberto.sassu@huawei.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat Apr 29 17, Jarkko Sakkinen wrote:
->On Fri, Apr 28, 2017 at 09:27:48AM -0600, Jason Gunthorpe wrote:
->> On Fri, Apr 28, 2017 at 03:12:26PM +0300, Jarkko Sakkinen wrote:
->>
->> > I guess we have a problem in tis such that some of the devices in some
->> > environments are not available through ACPI. There's also of_match_table
->> > but I'm wondering if ACPI and OF would cover everything we are using
->> > pnp_driver for.
->>
->> How do you recover the acpi handle like pnp_acpi_device does from a
->> platform_device?
->>
->> If you know how to do that then we should use acpi_match_table and
->> merge the platform and acpi devices..
->>
->> Does the acpi_match_table encompass all of the pnp subsystem as well,
->> or do we still need to have pnp_driver to handle legacy pre-acpi PNP
->> systems?
->>
->> Jason
->
->AFAIK with ACPI_COMPANION as in
->
->http://lxr.free-electrons.com/source/net/rfkill/rfkill-gpio.c
->
->/Jarkko
+This patch set moves TPM 1.2 specific code to a new function called
+tpm1_pcr_extend(). The purpose of splitting is to isolate TPM 2.0 code,
+so that it can be more easily modified to handle multiple digests.
 
-What about ACPI_HANDLE like is done in thie bit of sdhci_acpi_probe()?
+With TPM 2.0, a Platform Configuration Register (PCR) could have multiple
+values, stored in locations called banks. Each bank stores the values
+of PCRs extended with the same hash algorithm.
 
-  static int sdhci_acpi_probe(struct platform_device *pdev)
-  {
-          struct device *dev = &pdev->dev;
-          acpi_handle handle = ACPI_HANDLE(dev);
+Currently, the TPM kernel driver does not take advantage of stronger
+algorithms because PCRs are always extended with a SHA1 digest, padded
+with zeros to match the length of the input for the hash algorithm
+being used. Shortly after these patches, a new patch set will be provided
+to allow callers of tpm_pcr_extend() to pass a digest for each algorithm
+supported by the TPM.
 
+In this patch set, TPM 1.2 specific code will prepare the command buffer
+with tpm_buf_init() which, in respect to the previous method, offers
+protection against buffer overflow. Moreover, CPU native to big-endian
+conversion has been removed from tags and ordinals definition, as it is
+already done by tpm_buf_init().
 
->
->------------------------------------------------------------------------------
->Check out the vibrant tech community on one of the world's most
->engaging tech sites, Slashdot.org! http://sdm.link/slashdot
->_______________________________________________
->tpmdd-devel mailing list
->tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
->https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+Roberto Sassu (3):
+  tpm: use CPU native value for TPM_TAG_RQU_COMMAND
+  tpm: move ordinals definition to include/linux/tpm_command.h
+  tpm: move TPM 1.2 code of tpm_pcr_extend() to tpm1_pcr_extend()
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+ drivers/char/tpm/tpm-interface.c | 76 +++++++++++++++++++---------------------
+ drivers/char/tpm/tpm-sysfs.c     |  6 ++--
+ drivers/char/tpm/tpm.h           |  2 --
+ include/linux/tpm_command.h      |  7 ++++
+ 4 files changed, 46 insertions(+), 45 deletions(-)
+
+-- 
+2.9.3
