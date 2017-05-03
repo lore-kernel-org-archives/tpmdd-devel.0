@@ -1,50 +1,56 @@
-From: James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: tpm microconf for LPC?
-Date: Wed, 03 May 2017 07:40:34 -0700
-Message-ID: <1493822434.2460.13.camel@linux.vnet.ibm.com>
-References: <87h92i6rc1.fsf@redhat.com> <20170424212149.GA3051@srcf.ucam.org>
-	<20170502221738.tspgvkvgq4mnubzj@rhwork>
+From: Roberto Sassu <roberto.sassu@huawei.com>
+Subject: [PATCH v2 0/3] tpm_pcr_extend() code split
+Date: Wed, 3 May 2017 18:19:08 +0200
+Message-ID: <20170503161911.17606-1-roberto.sassu@huawei.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170502221738.tspgvkvgq4mnubzj@rhwork>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, Matthew Garrett <mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>
-Cc: tpmdd-devel <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Content-Type: text/plain
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Sender: owner-linux-security-module@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net
+Cc: linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Roberto Sassu <roberto.sassu@huawei.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, 2017-05-02 at 15:17 -0700, Jerry Snitselaar wrote:
-> On Mon Apr 24 17, Matthew Garrett wrote:
-> > On Fri, Mar 24, 2017 at 07:08:30PM -0700, Jerry Snitselaar wrote:
-> > > 
-> > > Since the call for microconferences went out, do people think 
-> > > another microconf would be useful this year?
-> > 
-> > I'd be strongly in favour of that, and I'm happy to help chair one 
-> > again if people feel things went well last time. I could do with at 
-> > least one person to volunteer to co-chair in that case just in case 
-> > disaster strikes - anyone up for that?
-> > 
-> I'd be willing to help. Does this [1] cover what is involved?
-> 
-> [1]: https://www.linuxplumbersconf.org/2017/responsibilities-of-a-wor
-> king-session-leader/
+This patch set moves TPM 1.2 specific code to a new function called
+tpm1_pcr_extend(). The purpose of splitting is to isolate TPM 2.0 code,
+so that it can be more easily modified to handle multiple digests.
 
-Yes, that's what you have to do.  I'm happy to help out as well, but
-since I'm overall Plumbers Program Chair, it would look better (well
-less cliquey) if you have a co-chair who isn't me.
+With TPM 2.0, a Platform Configuration Register (PCR) could have multiple
+values, stored in locations called banks. Each bank stores the values
+of PCRs extended with the same hash algorithm.
 
-James
+Currently, the TPM kernel driver does not take advantage of stronger
+algorithms because PCRs are always extended with a SHA1 digest, padded
+with zeros to match the length of the input for the hash algorithm
+being used. Shortly after these patches, a new patch set will be provided
+to allow callers of tpm_pcr_extend() to pass a digest for each algorithm
+supported by the TPM.
 
+In this patch set, TPM 1.2 specific code will prepare the command buffer
+with tpm_buf_init() which, in respect to the previous method, offers
+protection against buffer overflow. Moreover, CPU native to big-endian
+conversion has been removed from tags and ordinals definitions, as it is
+already done by tpm_buf_init().
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+Changelog:
+
+v2
+- restored TPM_TAG_RQU_COMMAND definition in drivers/char/tpm/tpm.h
+- removed endianness conversion in TPM_TAG_RQU_COMMAND definition
+- removed '#include <linux/tpm_command.h>' in tpm-interface.c
+  and tpm-sysfs.c
+- restored TPM_ORD_ definitions in tpm-interface.c and tpm-sysfs.c
+
+Roberto Sassu (3):
+  tpm: move endianness conversion of TPM_TAG_RQU_COMMAND to
+    tpm_input_header
+  tpm: move endianness conversion of ordinals to tpm_input_header
+  tpm: move TPM 1.2 code of tpm_pcr_extend() to tpm1_pcr_extend()
+
+ drivers/char/tpm/tpm-interface.c | 79 ++++++++++++++++++++++------------------
+ drivers/char/tpm/tpm-sysfs.c     |  6 +--
+ drivers/char/tpm/tpm.h           |  2 +-
+ 3 files changed, 47 insertions(+), 40 deletions(-)
+
+-- 
+2.9.3
+
