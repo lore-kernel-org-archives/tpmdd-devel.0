@@ -1,103 +1,315 @@
-From: Roberto Sassu <roberto.sassu@huawei.com>
-Subject: [PATCH v2 3/3] tpm: move TPM 1.2 code of tpm_pcr_extend() to tpm1_pcr_extend()
-Date: Wed, 3 May 2017 18:19:11 +0200
-Message-ID: <20170503161911.17606-4-roberto.sassu@huawei.com>
-References: <20170503161911.17606-1-roberto.sassu@huawei.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: [PATCH] tpm_ts: Consolidate the platform and acpi
+	probe flow
+Date: Wed, 3 May 2017 10:48:57 -0600
+Message-ID: <20170503164857.GA20369@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170503161911.17606-1-roberto.sassu@huawei.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Roberto Sassu <roberto.sassu@huawei.com>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, rafael-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-In preparation of the modifications to tpm_pcr_extend(), which will
-allow callers to supply a digest for each PCR bank of a TPM 2.0,
-the TPM 1.2 specific code has been moved to tpm1_pcr_extend().
+Now that the platform device was merged for OF support we can use the
+platform device to match ACPI devices as well and run everything
+through tpm_tis_init.
 
-tpm1_pcr_extend() uses tpm_buf_init() to prepare the command buffer,
-which offers protection against buffer overflow. It is called by
-tpm_pcr_extend() and tpm_pm_suspend().
+pnp_acpi_device is replaced with ACPI_COMPANION, and ACPI_HANDLE is
+pushed further down.
 
-Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
+platform_get_resource is used instead of acpi_dev_get_resources.
+
+The itpm global module parameter is no longer changed during itpm
+detection, instead the phy specific bit is set directly.
+
+Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 ---
- drivers/char/tpm/tpm-interface.c | 41 +++++++++++++++++++++++-----------------
- 1 file changed, 24 insertions(+), 17 deletions(-)
+ drivers/char/tpm/tpm_tis.c | 167 +++++++++++++++------------------------------
+ 1 file changed, 54 insertions(+), 113 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index a8351dd..0277b99 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -774,6 +774,25 @@ static const struct tpm_input_header pcrextend_header = {
- 	.ordinal = cpu_to_be32(TPM_ORD_PCR_EXTEND)
+Jarkko,
+
+As discussed, here is a patch that combines the ACPI and platform
+drivers into one.
+
+I do not have ACPI hardware so this is only compile tested, perhaps
+you are able to test it, particularly with a CRB device would be
+intersting to check that the acpi_match_device/etc transformation is
+working properly.
+
+diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+index c7e1384f1b0802..ddad56a4a958f1 100644
+--- a/drivers/char/tpm/tpm_tis.c
++++ b/drivers/char/tpm/tpm_tis.c
+@@ -80,6 +80,8 @@ static int has_hid(struct acpi_device *dev, const char *hid)
+ 
+ static inline int is_itpm(struct acpi_device *dev)
+ {
++	if (!dev)
++		return 0;
+ 	return has_hid(dev, "INTC0102");
+ }
+ #else
+@@ -89,6 +91,47 @@ static inline int is_itpm(struct acpi_device *dev)
+ }
+ #endif
+ 
++#if defined(CONFIG_ACPI)
++#define DEVICE_IS_TPM2 1
++
++static const struct acpi_device_id tpm_acpi_tbl[] = {
++	{"MSFT0101", DEVICE_IS_TPM2},
++	{},
++};
++MODULE_DEVICE_TABLE(acpi, tpm_acpi_tbl);
++
++static int check_acpi_tpm2(struct device *dev)
++{
++	const struct acpi_device_id *aid = acpi_match_device(tpm_acpi_tbl, dev);
++	struct acpi_table_tpm2 *tbl;
++	acpi_status st;
++
++	if (!aid || aid->driver_data != DEVICE_IS_TPM2)
++		return 0;
++
++	/* If the ACPI TPM2 signature is matched then a global ACPI_SIG_TPM2
++	 * table is mandatory
++	 */
++	st =
++	    acpi_get_table(ACPI_SIG_TPM2, 1, (struct acpi_table_header **)&tbl);
++	if (ACPI_FAILURE(st) || tbl->header.length < sizeof(*tbl)) {
++		dev_err(dev, FW_BUG "failed to get TPM2 ACPI table\n");
++		return -EINVAL;
++	}
++
++	/* The tpm2_crb driver handles this device */
++	if (tbl->start_method != ACPI_TPM2_MEMORY_MAPPED)
++		return -ENODEV;
++
++	return 0;
++}
++#else
++static int check_acpi_tpm2(struct acpi_device *dev)
++{
++	return 0;
++}
++#endif
++
+ static int tpm_tcg_read_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
+ 			      u8 *result)
+ {
+@@ -141,11 +184,15 @@ static const struct tpm_tis_phy_ops tpm_tcg = {
+ 	.write32 = tpm_tcg_write32,
  };
  
-+static int tpm1_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash,
-+			   char *log_msg)
-+{
-+	struct tpm_buf buf;
+-static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+-			acpi_handle acpi_dev_handle)
++static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info)
+ {
+ 	struct tpm_tis_tcg_phy *phy;
+ 	int irq = -1;
 +	int rc;
 +
-+	rc = tpm_buf_init(&buf, TPM_TAG_RQU_COMMAND, TPM_ORD_PCR_EXTEND);
++	rc = check_acpi_tpm2(dev);
 +	if (rc)
 +		return rc;
-+
-+	tpm_buf_append_u32(&buf, pcr_idx);
-+	tpm_buf_append(&buf, hash, TPM_DIGEST_SIZE);
-+
-+	rc = tpm_transmit_cmd(chip, buf.data, EXTEND_PCR_RESULT_SIZE,
-+			      EXTEND_PCR_RESULT_BODY_SIZE, 0, log_msg);
-+	tpm_buf_destroy(&buf);
-+	return rc;
-+}
-+
- /**
-  * tpm_pcr_extend - extend pcr value with hash
-  * @chip_num:	tpm idx # or AN&
-@@ -786,7 +805,6 @@ static const struct tpm_input_header pcrextend_header = {
-  */
- int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
- {
--	struct tpm_cmd_t cmd;
- 	int rc;
- 	struct tpm_chip *chip;
- 	struct tpm2_digest digest_list[ARRAY_SIZE(chip->active_banks)];
-@@ -812,13 +830,8 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
- 		return rc;
- 	}
  
--	cmd.header.in = pcrextend_header;
--	cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(pcr_idx);
--	memcpy(cmd.params.pcrextend_in.hash, hash, TPM_DIGEST_SIZE);
--	rc = tpm_transmit_cmd(chip, &cmd, EXTEND_PCR_RESULT_SIZE,
--			      EXTEND_PCR_RESULT_BODY_SIZE, 0,
--			      "attempting extend a PCR value");
--
-+	rc = tpm1_pcr_extend(chip, pcr_idx, hash,
-+			     "attempting extend a PCR value");
- 	tpm_put_ops(chip);
- 	return rc;
+ 	phy = devm_kzalloc(dev, sizeof(struct tpm_tis_tcg_phy), GFP_KERNEL);
+ 	if (phy == NULL)
+@@ -158,11 +205,11 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info,
+ 	if (interrupts)
+ 		irq = tpm_info->irq;
+ 
+-	if (itpm)
++	if (itpm || is_itpm(ACPI_COMPANION(dev)))
+ 		phy->priv.flags |= TPM_TIS_ITPM_WORKAROUND;
+ 
+ 	return tpm_tis_core_init(dev, &phy->priv, irq, &tpm_tcg,
+-				 acpi_dev_handle);
++				 ACPI_HANDLE(dev));
  }
-@@ -1017,15 +1030,9 @@ int tpm_pm_suspend(struct device *dev)
+ 
+ static SIMPLE_DEV_PM_OPS(tpm_tis_pm, tpm_pm_suspend, tpm_tis_resume);
+@@ -171,7 +218,6 @@ static int tpm_tis_pnp_init(struct pnp_dev *pnp_dev,
+ 			    const struct pnp_device_id *pnp_id)
+ {
+ 	struct tpm_info tpm_info = {};
+-	acpi_handle acpi_dev_handle = NULL;
+ 	struct resource *res;
+ 
+ 	res = pnp_get_resource(pnp_dev, IORESOURCE_MEM, 0);
+@@ -184,14 +230,7 @@ static int tpm_tis_pnp_init(struct pnp_dev *pnp_dev,
+ 	else
+ 		tpm_info.irq = -1;
+ 
+-	if (pnp_acpi_device(pnp_dev)) {
+-		if (is_itpm(pnp_acpi_device(pnp_dev)))
+-			itpm = true;
+-
+-		acpi_dev_handle = ACPI_HANDLE(&pnp_dev->dev);
+-	}
+-
+-	return tpm_tis_init(&pnp_dev->dev, &tpm_info, acpi_dev_handle);
++	return tpm_tis_init(&pnp_dev->dev, &tpm_info);
+ }
+ 
+ static struct pnp_device_id tpm_pnp_tbl[] = {
+@@ -231,93 +270,6 @@ module_param_string(hid, tpm_pnp_tbl[TIS_HID_USR_IDX].id,
+ 		    sizeof(tpm_pnp_tbl[TIS_HID_USR_IDX].id), 0444);
+ MODULE_PARM_DESC(hid, "Set additional specific HID for this driver to probe");
+ 
+-#ifdef CONFIG_ACPI
+-static int tpm_check_resource(struct acpi_resource *ares, void *data)
+-{
+-	struct tpm_info *tpm_info = (struct tpm_info *) data;
+-	struct resource res;
+-
+-	if (acpi_dev_resource_interrupt(ares, 0, &res))
+-		tpm_info->irq = res.start;
+-	else if (acpi_dev_resource_memory(ares, &res)) {
+-		tpm_info->res = res;
+-		tpm_info->res.name = NULL;
+-	}
+-
+-	return 1;
+-}
+-
+-static int tpm_tis_acpi_init(struct acpi_device *acpi_dev)
+-{
+-	struct acpi_table_tpm2 *tbl;
+-	acpi_status st;
+-	struct list_head resources;
+-	struct tpm_info tpm_info = {};
+-	int ret;
+-
+-	st = acpi_get_table(ACPI_SIG_TPM2, 1,
+-			    (struct acpi_table_header **) &tbl);
+-	if (ACPI_FAILURE(st) || tbl->header.length < sizeof(*tbl)) {
+-		dev_err(&acpi_dev->dev,
+-			FW_BUG "failed to get TPM2 ACPI table\n");
+-		return -EINVAL;
+-	}
+-
+-	if (tbl->start_method != ACPI_TPM2_MEMORY_MAPPED)
+-		return -ENODEV;
+-
+-	INIT_LIST_HEAD(&resources);
+-	tpm_info.irq = -1;
+-	ret = acpi_dev_get_resources(acpi_dev, &resources, tpm_check_resource,
+-				     &tpm_info);
+-	if (ret < 0)
+-		return ret;
+-
+-	acpi_dev_free_resource_list(&resources);
+-
+-	if (resource_type(&tpm_info.res) != IORESOURCE_MEM) {
+-		dev_err(&acpi_dev->dev,
+-			FW_BUG "TPM2 ACPI table does not define a memory resource\n");
+-		return -EINVAL;
+-	}
+-
+-	if (is_itpm(acpi_dev))
+-		itpm = true;
+-
+-	return tpm_tis_init(&acpi_dev->dev, &tpm_info, acpi_dev->handle);
+-}
+-
+-static int tpm_tis_acpi_remove(struct acpi_device *dev)
+-{
+-	struct tpm_chip *chip = dev_get_drvdata(&dev->dev);
+-
+-	tpm_chip_unregister(chip);
+-	tpm_tis_remove(chip);
+-
+-	return 0;
+-}
+-
+-static struct acpi_device_id tpm_acpi_tbl[] = {
+-	{"MSFT0101", 0},	/* TPM 2.0 */
+-	/* Add new here */
+-	{"", 0},		/* User Specified */
+-	{"", 0}			/* Terminator */
+-};
+-MODULE_DEVICE_TABLE(acpi, tpm_acpi_tbl);
+-
+-static struct acpi_driver tis_acpi_driver = {
+-	.name = "tpm_tis",
+-	.ids = tpm_acpi_tbl,
+-	.ops = {
+-		.add = tpm_tis_acpi_init,
+-		.remove = tpm_tis_acpi_remove,
+-	},
+-	.drv = {
+-		.pm = &tpm_tis_pm,
+-	},
+-};
+-#endif
+-
+ static struct platform_device *force_pdev;
+ 
+ static int tpm_tis_plat_probe(struct platform_device *pdev)
+@@ -343,7 +295,7 @@ static int tpm_tis_plat_probe(struct platform_device *pdev)
+ 			tpm_info.irq = 0;
  	}
  
- 	/* for buggy tpm, flush pcrs with extend to selected dummy */
--	if (tpm_suspend_pcr) {
--		cmd.header.in = pcrextend_header;
--		cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(tpm_suspend_pcr);
--		memcpy(cmd.params.pcrextend_in.hash, dummy_hash,
--		       TPM_DIGEST_SIZE);
--		rc = tpm_transmit_cmd(chip, &cmd, EXTEND_PCR_RESULT_SIZE,
--				     EXTEND_PCR_RESULT_BODY_SIZE, 0,
--				      "extending dummy pcr before suspend");
--	}
-+	if (tpm_suspend_pcr)
-+		rc = tpm1_pcr_extend(chip, tpm_suspend_pcr, dummy_hash,
-+				     "extending dummy pcr before suspend");
+-	return tpm_tis_init(&pdev->dev, &tpm_info, NULL);
++	return tpm_tis_init(&pdev->dev, &tpm_info);
+ }
  
- 	/* now do the actual savestate */
- 	for (try = 0; try < TPM_RETRY; try++) {
+ static int tpm_tis_plat_remove(struct platform_device *pdev)
+@@ -371,6 +323,7 @@ static struct platform_driver tis_drv = {
+ 		.name		= "tpm_tis",
+ 		.pm		= &tpm_tis_pm,
+ 		.of_match_table = of_match_ptr(tis_of_platform_match),
++		.acpi_match_table = ACPI_PTR(tpm_acpi_tbl),
+ 	},
+ };
+ 
+@@ -413,11 +366,6 @@ static int __init init_tis(void)
+ 	if (rc)
+ 		goto err_platform;
+ 
+-#ifdef CONFIG_ACPI
+-	rc = acpi_bus_register_driver(&tis_acpi_driver);
+-	if (rc)
+-		goto err_acpi;
+-#endif
+ 
+ 	if (IS_ENABLED(CONFIG_PNP)) {
+ 		rc = pnp_register_driver(&tis_pnp_driver);
+@@ -428,10 +376,6 @@ static int __init init_tis(void)
+ 	return 0;
+ 
+ err_pnp:
+-#ifdef CONFIG_ACPI
+-	acpi_bus_unregister_driver(&tis_acpi_driver);
+-err_acpi:
+-#endif
+ 	platform_driver_unregister(&tis_drv);
+ err_platform:
+ 	if (force_pdev)
+@@ -443,9 +387,6 @@ static int __init init_tis(void)
+ static void __exit cleanup_tis(void)
+ {
+ 	pnp_unregister_driver(&tis_pnp_driver);
+-#ifdef CONFIG_ACPI
+-	acpi_bus_unregister_driver(&tis_acpi_driver);
+-#endif
+ 	platform_driver_unregister(&tis_drv);
+ 
+ 	if (force_pdev)
 -- 
-2.9.3
+2.7.4
 
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
