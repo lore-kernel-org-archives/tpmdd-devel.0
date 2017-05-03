@@ -1,56 +1,135 @@
 From: Roberto Sassu <roberto.sassu@huawei.com>
-Subject: [PATCH v2 0/3] tpm_pcr_extend() code split
-Date: Wed, 3 May 2017 18:19:08 +0200
-Message-ID: <20170503161911.17606-1-roberto.sassu@huawei.com>
+Subject: [PATCH v2 1/3] tpm: move endianness conversion of TPM_TAG_RQU_COMMAND to tpm_input_header
+Date: Wed, 3 May 2017 18:19:09 +0200
+Message-ID: <20170503161911.17606-2-roberto.sassu@huawei.com>
+References: <20170503161911.17606-1-roberto.sassu@huawei.com>
 Mime-Version: 1.0
 Content-Type: text/plain
 Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170503161911.17606-1-roberto.sassu@huawei.com>
 Sender: owner-linux-security-module@vger.kernel.org
 To: tpmdd-devel@lists.sourceforge.net
 Cc: linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Roberto Sassu <roberto.sassu@huawei.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This patch set moves TPM 1.2 specific code to a new function called
-tpm1_pcr_extend(). The purpose of splitting is to isolate TPM 2.0 code,
-so that it can be more easily modified to handle multiple digests.
+In the long term, TPM 1.2 functions in the driver interface will be
+modified to use tpm_buf_init().
 
-With TPM 2.0, a Platform Configuration Register (PCR) could have multiple
-values, stored in locations called banks. Each bank stores the values
-of PCRs extended with the same hash algorithm.
+However, tag and ordinals cannot be passed directly to tpm_buf_init(),
+because this function performs CPU native to big-endian conversion of these
+arguments. Since TPM_TAG_RQU_COMMAND and TPM_ORD_ are already converted,
+passing them to the function will undo the previous conversion.
 
-Currently, the TPM kernel driver does not take advantage of stronger
-algorithms because PCRs are always extended with a SHA1 digest, padded
-with zeros to match the length of the input for the hash algorithm
-being used. Shortly after these patches, a new patch set will be provided
-to allow callers of tpm_pcr_extend() to pass a digest for each algorithm
-supported by the TPM.
+This patch moves the conversion of TPM_TAG_RQU_COMMAND from the tpm.h
+header file in the driver directory to the tpm_input_header declarations
+in the driver interface and tpm-sysfs.c.
 
-In this patch set, TPM 1.2 specific code will prepare the command buffer
-with tpm_buf_init() which, in respect to the previous method, offers
-protection against buffer overflow. Moreover, CPU native to big-endian
-conversion has been removed from tags and ordinals definitions, as it is
-already done by tpm_buf_init().
-
-Changelog:
-
+Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
+---
 v2
 - restored TPM_TAG_RQU_COMMAND definition in drivers/char/tpm/tpm.h
 - removed endianness conversion in TPM_TAG_RQU_COMMAND definition
 - removed '#include <linux/tpm_command.h>' in tpm-interface.c
   and tpm-sysfs.c
-- restored TPM_ORD_ definitions in tpm-interface.c and tpm-sysfs.c
 
-Roberto Sassu (3):
-  tpm: move endianness conversion of TPM_TAG_RQU_COMMAND to
-    tpm_input_header
-  tpm: move endianness conversion of ordinals to tpm_input_header
-  tpm: move TPM 1.2 code of tpm_pcr_extend() to tpm1_pcr_extend()
-
- drivers/char/tpm/tpm-interface.c | 79 ++++++++++++++++++++++------------------
- drivers/char/tpm/tpm-sysfs.c     |  6 +--
+ drivers/char/tpm/tpm-interface.c | 14 +++++++-------
+ drivers/char/tpm/tpm-sysfs.c     |  2 +-
  drivers/char/tpm/tpm.h           |  2 +-
- 3 files changed, 47 insertions(+), 40 deletions(-)
+ 3 files changed, 9 insertions(+), 9 deletions(-)
 
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index bd2128e..a6bc0ba 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -472,7 +472,7 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *buf,
+ #define TPM_ORD_GET_RANDOM cpu_to_be32(70)
+ 
+ static const struct tpm_input_header tpm_getcap_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
++	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+ 	.length = cpu_to_be32(22),
+ 	.ordinal = TPM_ORD_GET_CAP
+ };
+@@ -514,7 +514,7 @@ EXPORT_SYMBOL_GPL(tpm_getcap);
+ #define TPM_ST_STATE cpu_to_be16(2)
+ #define TPM_ST_DEACTIVATED cpu_to_be16(3)
+ static const struct tpm_input_header tpm_startup_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
++	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+ 	.length = cpu_to_be32(12),
+ 	.ordinal = TPM_ORD_STARTUP
+ };
+@@ -664,7 +664,7 @@ EXPORT_SYMBOL_GPL(tpm_get_timeouts);
+ #define CONTINUE_SELFTEST_RESULT_SIZE 10
+ 
+ static const struct tpm_input_header continue_selftest_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
++	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+ 	.length = cpu_to_be32(10),
+ 	.ordinal = cpu_to_be32(TPM_ORD_CONTINUE_SELFTEST),
+ };
+@@ -691,7 +691,7 @@ static int tpm_continue_selftest(struct tpm_chip *chip)
+ #define READ_PCR_RESULT_SIZE 30
+ #define READ_PCR_RESULT_BODY_SIZE 20
+ static const struct tpm_input_header pcrread_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
++	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+ 	.length = cpu_to_be32(14),
+ 	.ordinal = TPM_ORDINAL_PCRREAD
+ };
+@@ -769,7 +769,7 @@ EXPORT_SYMBOL_GPL(tpm_pcr_read);
+ #define EXTEND_PCR_RESULT_SIZE 34
+ #define EXTEND_PCR_RESULT_BODY_SIZE 20
+ static const struct tpm_input_header pcrextend_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
++	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+ 	.length = cpu_to_be32(34),
+ 	.ordinal = TPM_ORD_PCR_EXTEND
+ };
+@@ -991,7 +991,7 @@ EXPORT_SYMBOL_GPL(wait_for_tpm_stat);
+ #define SAVESTATE_RESULT_SIZE 10
+ 
+ static const struct tpm_input_header savestate_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
++	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+ 	.length = cpu_to_be32(10),
+ 	.ordinal = TPM_ORD_SAVESTATE
+ };
+@@ -1076,7 +1076,7 @@ EXPORT_SYMBOL_GPL(tpm_pm_resume);
+ 
+ #define TPM_GETRANDOM_RESULT_SIZE	18
+ static const struct tpm_input_header tpm_getrandom_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
++	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+ 	.length = cpu_to_be32(14),
+ 	.ordinal = TPM_ORD_GET_RANDOM
+ };
+diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+index 2f596d7..a078b4d 100644
+--- a/drivers/char/tpm/tpm-sysfs.c
++++ b/drivers/char/tpm/tpm-sysfs.c
+@@ -24,7 +24,7 @@
+ #define READ_PUBEK_RESULT_MIN_BODY_SIZE (28 + 256)
+ #define TPM_ORD_READPUBEK cpu_to_be32(124)
+ static const struct tpm_input_header tpm_readpubek_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
++	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+ 	.length = cpu_to_be32(30),
+ 	.ordinal = TPM_ORD_READPUBEK
+ };
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 4937b56..7d6a606 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -215,7 +215,7 @@ struct tpm_output_header {
+ 	__be32	return_code;
+ } __packed;
+ 
+-#define TPM_TAG_RQU_COMMAND cpu_to_be16(193)
++#define TPM_TAG_RQU_COMMAND 193
+ 
+ struct	stclear_flags_t {
+ 	__be16	tag;
 -- 
 2.9.3
 
