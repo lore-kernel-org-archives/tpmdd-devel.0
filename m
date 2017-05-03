@@ -1,143 +1,187 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v4.9 backport] tpm_tis: use default timeout value if chip
- reports it as zero
-Date: Wed, 3 May 2017 15:50:52 +0300
-Message-ID: <20170503125052.kmw6dltfb5h65ega@intel.com>
-References: <b46b8748-ec13-6f22-5168-228101d121d9@maciej.szmigiero.name>
+From: Roberto Sassu <roberto.sassu@huawei.com>
+Subject: Re: [tpmdd-devel] [PATCH 2/3] tpm: move ordinals definition to
+ include/linux/tpm_command.h
+Date: Wed, 3 May 2017 16:27:20 +0200
+Message-ID: <273058a8-1be6-3eaf-1260-b34ac2613306@huawei.com>
+References: <20170502123151.24354-1-roberto.sassu@huawei.com>
+ <20170502123151.24354-3-roberto.sassu@huawei.com>
+ <20170503124817.nqckvzuajsf2q5zd@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <stable-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <b46b8748-ec13-6f22-5168-228101d121d9@maciej.szmigiero.name>
-Sender: stable-owner@vger.kernel.org
-To: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>
-Cc: stable@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+Content-Type: text/plain; charset="windows-1252"; format=flowed
+Content-Transfer-Encoding: 7bit
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170503124817.nqckvzuajsf2q5zd@intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, May 03, 2017 at 12:34:08AM +0200, Maciej S. Szmigiero wrote:
-> commit 1d70fe9d9c3a4c627f9757cbba5d628687b121c1 upstream.
-> 
-> Since commit 1107d065fdf1 ("tpm_tis: Introduce intermediate layer for TPM
-> access") Atmel 3203 TPM on ThinkPad X61S (TPM firmware version 13.9) no
-> longer works.
-> The initialization proceeds fine until we get and start using chip-reported
-> timeouts - and the chip reports C and D timeouts of zero.
-> 
-> It turns out that until commit 8e54caf407b98e ("tpm: Provide a generic
-> means to override the chip returned timeouts") we had actually let default
-> timeout values remain in this case, so let's bring back this behavior to
-> make chips like Atmel 3203 work again.
-> 
-> Use a common code that was introduced by that commit so a warning is
-> printed in this case and /sys/class/tpm/tpm*/timeouts correctly says the
-> timeouts aren't chip-original.
-> 
-> This is a backport for 4.9 kernel version of the original commit, with
-> renaming of "TPM_TIS_ITPM_POSSIBLE" flag removed since it was only a
-> cosmetic change and not a part of the real bug fix.
-> 
-> Signed-off-by: Maciej S. Szmigiero <mail@maciej.szmigiero.name>
-> Cc: <stable@vger.kernel.org> # 4.9.x
+On 5/3/2017 2:48 PM, Jarkko Sakkinen wrote:
+> ORD ought not be used outside of drivers/char/tpm. TPM 1.2 trusted
+> keys does use this header but it should be eventually moved to
+> drivers/char/tpm (not done because of other stuff at this point).
 
-Thanks for doing this and sorry for messing things up, not one,
-but *two* times.
+Ok. Then, I just move the ordinal conversion to the tpm_input_header
+declaration.
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Probably, the Reviewed-by in your previous email was for patch 1/3.
 
-/Jarkko
+Thanks
 
-> ---
->  drivers/char/tpm/tpm-interface.c | 53 ++++++++++++++++++++++++----------------
->  1 file changed, 32 insertions(+), 21 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index 3a9149cf0110..d0ac2d56520f 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -489,8 +489,7 @@ static int tpm_startup(struct tpm_chip *chip, __be16 startup_type)
->  int tpm_get_timeouts(struct tpm_chip *chip)
->  {
->  	struct tpm_cmd_t tpm_cmd;
-> -	unsigned long new_timeout[4];
-> -	unsigned long old_timeout[4];
-> +	unsigned long timeout_old[4], timeout_chip[4], timeout_eff[4];
->  	struct duration_t *duration_cap;
->  	ssize_t rc;
->  
-> @@ -542,11 +541,15 @@ int tpm_get_timeouts(struct tpm_chip *chip)
->  	    != sizeof(tpm_cmd.header.out) + sizeof(u32) + 4 * sizeof(u32))
->  		return -EINVAL;
->  
-> -	old_timeout[0] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.a);
-> -	old_timeout[1] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.b);
-> -	old_timeout[2] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.c);
-> -	old_timeout[3] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.d);
-> -	memcpy(new_timeout, old_timeout, sizeof(new_timeout));
-> +	timeout_old[0] = jiffies_to_usecs(chip->timeout_a);
-> +	timeout_old[1] = jiffies_to_usecs(chip->timeout_b);
-> +	timeout_old[2] = jiffies_to_usecs(chip->timeout_c);
-> +	timeout_old[3] = jiffies_to_usecs(chip->timeout_d);
-> +	timeout_chip[0] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.a);
-> +	timeout_chip[1] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.b);
-> +	timeout_chip[2] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.c);
-> +	timeout_chip[3] = be32_to_cpu(tpm_cmd.params.getcap_out.cap.timeout.d);
-> +	memcpy(timeout_eff, timeout_chip, sizeof(timeout_eff));
->  
->  	/*
->  	 * Provide ability for vendor overrides of timeout values in case
-> @@ -554,16 +557,24 @@ int tpm_get_timeouts(struct tpm_chip *chip)
->  	 */
->  	if (chip->ops->update_timeouts != NULL)
->  		chip->timeout_adjusted =
-> -			chip->ops->update_timeouts(chip, new_timeout);
-> +			chip->ops->update_timeouts(chip, timeout_eff);
->  
->  	if (!chip->timeout_adjusted) {
-> -		/* Don't overwrite default if value is 0 */
-> -		if (new_timeout[0] != 0 && new_timeout[0] < 1000) {
-> -			int i;
-> +		/* Restore default if chip reported 0 */
-> +		int i;
->  
-> +		for (i = 0; i < ARRAY_SIZE(timeout_eff); i++) {
-> +			if (timeout_eff[i])
-> +				continue;
-> +
-> +			timeout_eff[i] = timeout_old[i];
-> +			chip->timeout_adjusted = true;
-> +		}
-> +
-> +		if (timeout_eff[0] != 0 && timeout_eff[0] < 1000) {
->  			/* timeouts in msec rather usec */
-> -			for (i = 0; i != ARRAY_SIZE(new_timeout); i++)
-> -				new_timeout[i] *= 1000;
-> +			for (i = 0; i != ARRAY_SIZE(timeout_eff); i++)
-> +				timeout_eff[i] *= 1000;
->  			chip->timeout_adjusted = true;
->  		}
->  	}
-> @@ -572,16 +583,16 @@ int tpm_get_timeouts(struct tpm_chip *chip)
->  	if (chip->timeout_adjusted) {
->  		dev_info(&chip->dev,
->  			 HW_ERR "Adjusting reported timeouts: A %lu->%luus B %lu->%luus C %lu->%luus D %lu->%luus\n",
-> -			 old_timeout[0], new_timeout[0],
-> -			 old_timeout[1], new_timeout[1],
-> -			 old_timeout[2], new_timeout[2],
-> -			 old_timeout[3], new_timeout[3]);
-> +			 timeout_chip[0], timeout_eff[0],
-> +			 timeout_chip[1], timeout_eff[1],
-> +			 timeout_chip[2], timeout_eff[2],
-> +			 timeout_chip[3], timeout_eff[3]);
->  	}
->  
-> -	chip->timeout_a = usecs_to_jiffies(new_timeout[0]);
-> -	chip->timeout_b = usecs_to_jiffies(new_timeout[1]);
-> -	chip->timeout_c = usecs_to_jiffies(new_timeout[2]);
-> -	chip->timeout_d = usecs_to_jiffies(new_timeout[3]);
-> +	chip->timeout_a = usecs_to_jiffies(timeout_eff[0]);
-> +	chip->timeout_b = usecs_to_jiffies(timeout_eff[1]);
-> +	chip->timeout_c = usecs_to_jiffies(timeout_eff[2]);
-> +	chip->timeout_d = usecs_to_jiffies(timeout_eff[3]);
->  
->  duration:
->  	tpm_cmd.header.in = tpm_getcap_header;
+Roberto
+
+
+>
+> /Jarkko
+>
+>>
+>> Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
+>> ---
+>>  drivers/char/tpm/tpm-interface.c | 19 ++++++-------------
+>>  drivers/char/tpm/tpm-sysfs.c     |  3 +--
+>>  include/linux/tpm_command.h      |  7 +++++++
+>>  3 files changed, 14 insertions(+), 15 deletions(-)
+>>
+>> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+>> index 48f5dff..5c2c032 100644
+>> --- a/drivers/char/tpm/tpm-interface.c
+>> +++ b/drivers/char/tpm/tpm-interface.c
+>> @@ -469,13 +469,11 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *buf,
+>>  #define TPM_DIGEST_SIZE 20
+>>  #define TPM_RET_CODE_IDX 6
+>>  #define TPM_INTERNAL_RESULT_SIZE 200
+>> -#define TPM_ORD_GET_CAP cpu_to_be32(101)
+>> -#define TPM_ORD_GET_RANDOM cpu_to_be32(70)
+>>
+>>  static const struct tpm_input_header tpm_getcap_header = {
+>>  	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+>>  	.length = cpu_to_be32(22),
+>> -	.ordinal = TPM_ORD_GET_CAP
+>> +	.ordinal = cpu_to_be32(TPM_ORD_GET_CAP)
+>>  };
+>>
+>>  ssize_t tpm_getcap(struct tpm_chip *chip, u32 subcap_id, cap_t *cap,
+>> @@ -510,14 +508,13 @@ ssize_t tpm_getcap(struct tpm_chip *chip, u32 subcap_id, cap_t *cap,
+>>  }
+>>  EXPORT_SYMBOL_GPL(tpm_getcap);
+>>
+>> -#define TPM_ORD_STARTUP cpu_to_be32(153)
+>>  #define TPM_ST_CLEAR cpu_to_be16(1)
+>>  #define TPM_ST_STATE cpu_to_be16(2)
+>>  #define TPM_ST_DEACTIVATED cpu_to_be16(3)
+>>  static const struct tpm_input_header tpm_startup_header = {
+>>  	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+>>  	.length = cpu_to_be32(12),
+>> -	.ordinal = TPM_ORD_STARTUP
+>> +	.ordinal = cpu_to_be32(TPM_ORD_STARTUP)
+>>  };
+>>
+>>  static int tpm_startup(struct tpm_chip *chip, __be16 startup_type)
+>> @@ -661,7 +658,6 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+>>  }
+>>  EXPORT_SYMBOL_GPL(tpm_get_timeouts);
+>>
+>> -#define TPM_ORD_CONTINUE_SELFTEST 83
+>>  #define CONTINUE_SELFTEST_RESULT_SIZE 10
+>>
+>>  static const struct tpm_input_header continue_selftest_header = {
+>> @@ -688,13 +684,12 @@ static int tpm_continue_selftest(struct tpm_chip *chip)
+>>  	return rc;
+>>  }
+>>
+>> -#define TPM_ORDINAL_PCRREAD cpu_to_be32(21)
+>>  #define READ_PCR_RESULT_SIZE 30
+>>  #define READ_PCR_RESULT_BODY_SIZE 20
+>>  static const struct tpm_input_header pcrread_header = {
+>>  	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+>>  	.length = cpu_to_be32(14),
+>> -	.ordinal = TPM_ORDINAL_PCRREAD
+>> +	.ordinal = cpu_to_be32(TPM_ORD_PCRREAD)
+>>  };
+>>
+>>  int tpm_pcr_read_dev(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
+>> @@ -766,13 +761,12 @@ int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf)
+>>  }
+>>  EXPORT_SYMBOL_GPL(tpm_pcr_read);
+>>
+>> -#define TPM_ORD_PCR_EXTEND cpu_to_be32(20)
+>>  #define EXTEND_PCR_RESULT_SIZE 34
+>>  #define EXTEND_PCR_RESULT_BODY_SIZE 20
+>>  static const struct tpm_input_header pcrextend_header = {
+>>  	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+>>  	.length = cpu_to_be32(34),
+>> -	.ordinal = TPM_ORD_PCR_EXTEND
+>> +	.ordinal = cpu_to_be32(TPM_ORD_PCREXTEND)
+>>  };
+>>
+>>  /**
+>> @@ -988,13 +982,12 @@ int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
+>>  }
+>>  EXPORT_SYMBOL_GPL(wait_for_tpm_stat);
+>>
+>> -#define TPM_ORD_SAVESTATE cpu_to_be32(152)
+>>  #define SAVESTATE_RESULT_SIZE 10
+>>
+>>  static const struct tpm_input_header savestate_header = {
+>>  	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+>>  	.length = cpu_to_be32(10),
+>> -	.ordinal = TPM_ORD_SAVESTATE
+>> +	.ordinal = cpu_to_be32(TPM_ORD_SAVESTATE)
+>>  };
+>>
+>>  /*
+>> @@ -1079,7 +1072,7 @@ EXPORT_SYMBOL_GPL(tpm_pm_resume);
+>>  static const struct tpm_input_header tpm_getrandom_header = {
+>>  	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+>>  	.length = cpu_to_be32(14),
+>> -	.ordinal = TPM_ORD_GET_RANDOM
+>> +	.ordinal = cpu_to_be32(TPM_ORD_GETRANDOM)
+>>  };
+>>
+>>  /**
+>> diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+>> index 69a0741..413ac2c 100644
+>> --- a/drivers/char/tpm/tpm-sysfs.c
+>> +++ b/drivers/char/tpm/tpm-sysfs.c
+>> @@ -23,11 +23,10 @@
+>>
+>>  #define READ_PUBEK_RESULT_SIZE 314
+>>  #define READ_PUBEK_RESULT_MIN_BODY_SIZE (28 + 256)
+>> -#define TPM_ORD_READPUBEK cpu_to_be32(124)
+>>  static const struct tpm_input_header tpm_readpubek_header = {
+>>  	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
+>>  	.length = cpu_to_be32(30),
+>> -	.ordinal = TPM_ORD_READPUBEK
+>> +	.ordinal = cpu_to_be32(TPM_ORD_READPUBEK)
+>>  };
+>>  static ssize_t pubek_show(struct device *dev, struct device_attribute *attr,
+>>  			  char *buf)
+>> diff --git a/include/linux/tpm_command.h b/include/linux/tpm_command.h
+>> index 727512e..0fe58d8 100644
+>> --- a/include/linux/tpm_command.h
+>> +++ b/include/linux/tpm_command.h
+>> @@ -20,6 +20,13 @@
+>>  #define TPM_ORD_OIAP                    10
+>>  #define TPM_ORD_SEAL                    23
+>>  #define TPM_ORD_UNSEAL                  24
+>> +#define TPM_ORD_GET_CAP                101
+>> +#define TPM_ORD_STARTUP                153
+>> +#define TPM_ORD_CONTINUE_SELFTEST       83
+>> +#define TPM_ORD_PCRREAD                 21
+>> +#define TPM_ORD_PCREXTEND               20
+>> +#define TPM_ORD_SAVESTATE              152
+>> +#define TPM_ORD_READPUBEK              124
+>>
+>>  /* Other constants */
+>>  #define SRKHANDLE                       0x40000000
+>> --
+>> 2.9.3
+>>
+>>
+>> ------------------------------------------------------------------------------
+>> Check out the vibrant tech community on one of the world's most
+>> engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+>> _______________________________________________
+>> tpmdd-devel mailing list
+>> tpmdd-devel@lists.sourceforge.net
+>> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
