@@ -1,16 +1,14 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v3 1/3] tpm: vtpm_proxy: Implement new
- ioctl to get supported flags
-Date: Thu, 4 May 2017 09:34:16 -0600
-Message-ID: <20170504153416.GA15930@obsidianresearch.com>
-References: <1493909787-1848-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<1493909787-1848-2-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v2 1/3] tpm_tis: Fix IRQ autoprobing when
+	using platform_device
+Date: Thu,  4 May 2017 09:53:23 -0600
+Message-ID: <1493913205-18276-2-git-send-email-jgunthorpe@obsidianresearch.com>
+References: <1493913205-18276-1-git-send-email-jgunthorpe@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1493909787-1848-2-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1493913205-18276-1-git-send-email-jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,26 +17,39 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, May 04, 2017 at 10:56:25AM -0400, Stefan Berger wrote:
-> Implement VTPM_PROXY_IOC_GET_SUPT_FLAGS ioctl to get the bitmask
-> of flags that the vtpm_proxy driver supports in the
-> VTPM_PROXY_IOC_NEW_DEV ioctl. This helps user space in deciding
-> which flags to set in that ioctl.
+The test was backwards, triggering IRQ autoprobing if the firmware
+did not specify an IRQ, instead of triggering it only when the
+module force parameter was specified.
 
-you might be better off just having a VTPM_PROXY_IO_ENABLE_FEATURE
-.feature = LOCALITY
+Since autoprobing is not enabled on !x86 and the platform device is
+currently only used on !x86, or with force, this has gone unnoticed.
 
-If that fails then the feature is not supported, no real need for the
-query in that case.
+Fixes: 00194826e6be ("tpm_tis: Clean up the force=1 module parameter")
+Tested-by: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+---
+ drivers/char/tpm/tpm_tis.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-Not sure about Jarkko's point on request/release locality.. Is there a
-scenario where the emulator should fail the request locality?
+diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+index c7e1384f1b0802..56ce2bb1916693 100644
+--- a/drivers/char/tpm/tpm_tis.c
++++ b/drivers/char/tpm/tpm_tis.c
+@@ -336,7 +336,7 @@ static int tpm_tis_plat_probe(struct platform_device *pdev)
+ 	if (res) {
+ 		tpm_info.irq = res->start;
+ 	} else {
+-		if (pdev == force_pdev)
++		if (pdev != force_pdev)
+ 			tpm_info.irq = -1;
+ 		else
+ 			/* When forcing auto probe the IRQ */
+-- 
+2.7.4
 
-Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
