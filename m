@@ -1,194 +1,49 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH 2/3] tpm: move ordinals definition to
- include/linux/tpm_command.h
-Date: Thu, 4 May 2017 11:09:46 +0300
-Message-ID: <20170504080946.ld37xgrhe3opccor@intel.com>
-References: <20170502123151.24354-1-roberto.sassu@huawei.com>
- <20170502123151.24354-3-roberto.sassu@huawei.com>
- <20170503124817.nqckvzuajsf2q5zd@intel.com>
- <273058a8-1be6-3eaf-1260-b34ac2613306@huawei.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v2 3/3] tpm: vtpm_proxy: Add ioctl to
+ request locality prepended to command
+Date: Thu, 4 May 2017 12:17:38 +0300
+Message-ID: <20170504091738.rxl77hjzf6vnpuda@intel.com>
+References: <1493384538-27883-1-git-send-email-stefanb@linux.vnet.ibm.com>
+	<1493384538-27883-4-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20170503223747.zefh76m4youqlgje@intel.com>
+	<40cd7d48-f6d1-39f4-99a3-916c7cdbb636@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <273058a8-1be6-3eaf-1260-b34ac2613306@huawei.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Roberto Sassu <roberto.sassu@huawei.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+In-Reply-To: <40cd7d48-f6d1-39f4-99a3-916c7cdbb636-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, May 03, 2017 at 04:27:20PM +0200, Roberto Sassu wrote:
-> On 5/3/2017 2:48 PM, Jarkko Sakkinen wrote:
-> > ORD ought not be used outside of drivers/char/tpm. TPM 1.2 trusted
-> > keys does use this header but it should be eventually moved to
-> > drivers/char/tpm (not done because of other stuff at this point).
+On Wed, May 03, 2017 at 07:40:48PM -0400, Stefan Berger wrote:
+> On 05/03/2017 06:37 PM, Jarkko Sakkinen wrote:
+> > On Fri, Apr 28, 2017 at 09:02:18AM -0400, Stefan Berger wrote:
+> > > Add an ioctl to request that the locality be prepended to every TPM
+> > > command.
+> > Don't really understand this change. Why locality is prenpended?
 > 
-> Ok. Then, I just move the ordinal conversion to the tpm_input_header
-> declaration.
-> 
-> Probably, the Reviewed-by in your previous email was for patch 1/3.
+> Commands can be executed under locality 0-3 and for some commands it is
+> important to know which locality a user may have chosen. How else should we
+> convey that locality to the TPM emulator ?
 
-Yes, it was!
+Why this is not in the commit message?
 
-> Thanks
-> 
-> Roberto
+More scalable way to do this would be to have a set of vtpm proxy
+commands. There could be a command for requesting and releasing
+locality. That would be more clean.
 
 /Jarkko
 
-> 
-> 
-> > 
-> > /Jarkko
-> > 
-> > > 
-> > > Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
-> > > ---
-> > >  drivers/char/tpm/tpm-interface.c | 19 ++++++-------------
-> > >  drivers/char/tpm/tpm-sysfs.c     |  3 +--
-> > >  include/linux/tpm_command.h      |  7 +++++++
-> > >  3 files changed, 14 insertions(+), 15 deletions(-)
-> > > 
-> > > diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> > > index 48f5dff..5c2c032 100644
-> > > --- a/drivers/char/tpm/tpm-interface.c
-> > > +++ b/drivers/char/tpm/tpm-interface.c
-> > > @@ -469,13 +469,11 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, const void *buf,
-> > >  #define TPM_DIGEST_SIZE 20
-> > >  #define TPM_RET_CODE_IDX 6
-> > >  #define TPM_INTERNAL_RESULT_SIZE 200
-> > > -#define TPM_ORD_GET_CAP cpu_to_be32(101)
-> > > -#define TPM_ORD_GET_RANDOM cpu_to_be32(70)
-> > > 
-> > >  static const struct tpm_input_header tpm_getcap_header = {
-> > >  	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
-> > >  	.length = cpu_to_be32(22),
-> > > -	.ordinal = TPM_ORD_GET_CAP
-> > > +	.ordinal = cpu_to_be32(TPM_ORD_GET_CAP)
-> > >  };
-> > > 
-> > >  ssize_t tpm_getcap(struct tpm_chip *chip, u32 subcap_id, cap_t *cap,
-> > > @@ -510,14 +508,13 @@ ssize_t tpm_getcap(struct tpm_chip *chip, u32 subcap_id, cap_t *cap,
-> > >  }
-> > >  EXPORT_SYMBOL_GPL(tpm_getcap);
-> > > 
-> > > -#define TPM_ORD_STARTUP cpu_to_be32(153)
-> > >  #define TPM_ST_CLEAR cpu_to_be16(1)
-> > >  #define TPM_ST_STATE cpu_to_be16(2)
-> > >  #define TPM_ST_DEACTIVATED cpu_to_be16(3)
-> > >  static const struct tpm_input_header tpm_startup_header = {
-> > >  	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
-> > >  	.length = cpu_to_be32(12),
-> > > -	.ordinal = TPM_ORD_STARTUP
-> > > +	.ordinal = cpu_to_be32(TPM_ORD_STARTUP)
-> > >  };
-> > > 
-> > >  static int tpm_startup(struct tpm_chip *chip, __be16 startup_type)
-> > > @@ -661,7 +658,6 @@ int tpm_get_timeouts(struct tpm_chip *chip)
-> > >  }
-> > >  EXPORT_SYMBOL_GPL(tpm_get_timeouts);
-> > > 
-> > > -#define TPM_ORD_CONTINUE_SELFTEST 83
-> > >  #define CONTINUE_SELFTEST_RESULT_SIZE 10
-> > > 
-> > >  static const struct tpm_input_header continue_selftest_header = {
-> > > @@ -688,13 +684,12 @@ static int tpm_continue_selftest(struct tpm_chip *chip)
-> > >  	return rc;
-> > >  }
-> > > 
-> > > -#define TPM_ORDINAL_PCRREAD cpu_to_be32(21)
-> > >  #define READ_PCR_RESULT_SIZE 30
-> > >  #define READ_PCR_RESULT_BODY_SIZE 20
-> > >  static const struct tpm_input_header pcrread_header = {
-> > >  	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
-> > >  	.length = cpu_to_be32(14),
-> > > -	.ordinal = TPM_ORDINAL_PCRREAD
-> > > +	.ordinal = cpu_to_be32(TPM_ORD_PCRREAD)
-> > >  };
-> > > 
-> > >  int tpm_pcr_read_dev(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
-> > > @@ -766,13 +761,12 @@ int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf)
-> > >  }
-> > >  EXPORT_SYMBOL_GPL(tpm_pcr_read);
-> > > 
-> > > -#define TPM_ORD_PCR_EXTEND cpu_to_be32(20)
-> > >  #define EXTEND_PCR_RESULT_SIZE 34
-> > >  #define EXTEND_PCR_RESULT_BODY_SIZE 20
-> > >  static const struct tpm_input_header pcrextend_header = {
-> > >  	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
-> > >  	.length = cpu_to_be32(34),
-> > > -	.ordinal = TPM_ORD_PCR_EXTEND
-> > > +	.ordinal = cpu_to_be32(TPM_ORD_PCREXTEND)
-> > >  };
-> > > 
-> > >  /**
-> > > @@ -988,13 +982,12 @@ int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
-> > >  }
-> > >  EXPORT_SYMBOL_GPL(wait_for_tpm_stat);
-> > > 
-> > > -#define TPM_ORD_SAVESTATE cpu_to_be32(152)
-> > >  #define SAVESTATE_RESULT_SIZE 10
-> > > 
-> > >  static const struct tpm_input_header savestate_header = {
-> > >  	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
-> > >  	.length = cpu_to_be32(10),
-> > > -	.ordinal = TPM_ORD_SAVESTATE
-> > > +	.ordinal = cpu_to_be32(TPM_ORD_SAVESTATE)
-> > >  };
-> > > 
-> > >  /*
-> > > @@ -1079,7 +1072,7 @@ EXPORT_SYMBOL_GPL(tpm_pm_resume);
-> > >  static const struct tpm_input_header tpm_getrandom_header = {
-> > >  	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
-> > >  	.length = cpu_to_be32(14),
-> > > -	.ordinal = TPM_ORD_GET_RANDOM
-> > > +	.ordinal = cpu_to_be32(TPM_ORD_GETRANDOM)
-> > >  };
-> > > 
-> > >  /**
-> > > diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
-> > > index 69a0741..413ac2c 100644
-> > > --- a/drivers/char/tpm/tpm-sysfs.c
-> > > +++ b/drivers/char/tpm/tpm-sysfs.c
-> > > @@ -23,11 +23,10 @@
-> > > 
-> > >  #define READ_PUBEK_RESULT_SIZE 314
-> > >  #define READ_PUBEK_RESULT_MIN_BODY_SIZE (28 + 256)
-> > > -#define TPM_ORD_READPUBEK cpu_to_be32(124)
-> > >  static const struct tpm_input_header tpm_readpubek_header = {
-> > >  	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
-> > >  	.length = cpu_to_be32(30),
-> > > -	.ordinal = TPM_ORD_READPUBEK
-> > > +	.ordinal = cpu_to_be32(TPM_ORD_READPUBEK)
-> > >  };
-> > >  static ssize_t pubek_show(struct device *dev, struct device_attribute *attr,
-> > >  			  char *buf)
-> > > diff --git a/include/linux/tpm_command.h b/include/linux/tpm_command.h
-> > > index 727512e..0fe58d8 100644
-> > > --- a/include/linux/tpm_command.h
-> > > +++ b/include/linux/tpm_command.h
-> > > @@ -20,6 +20,13 @@
-> > >  #define TPM_ORD_OIAP                    10
-> > >  #define TPM_ORD_SEAL                    23
-> > >  #define TPM_ORD_UNSEAL                  24
-> > > +#define TPM_ORD_GET_CAP                101
-> > > +#define TPM_ORD_STARTUP                153
-> > > +#define TPM_ORD_CONTINUE_SELFTEST       83
-> > > +#define TPM_ORD_PCRREAD                 21
-> > > +#define TPM_ORD_PCREXTEND               20
-> > > +#define TPM_ORD_SAVESTATE              152
-> > > +#define TPM_ORD_READPUBEK              124
-> > > 
-> > >  /* Other constants */
-> > >  #define SRKHANDLE                       0x40000000
-> > > --
-> > > 2.9.3
-> > > 
-> > > 
-> > > ------------------------------------------------------------------------------
-> > > Check out the vibrant tech community on one of the world's most
-> > > engaging tech sites, Slashdot.org! http://sdm.link/slashdot
-> > > _______________________________________________
-> > > tpmdd-devel mailing list
-> > > tpmdd-devel@lists.sourceforge.net
-> > > https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
