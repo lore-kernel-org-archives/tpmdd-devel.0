@@ -1,18 +1,17 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 3/3] tpm: vtpm_proxy: Add ioctl to
- request locality prepended to command
-Date: Thu, 4 May 2017 12:17:38 +0300
-Message-ID: <20170504091738.rxl77hjzf6vnpuda@intel.com>
+Subject: Re: [PATCH v2 0/3] Extend the vTPM proxy driver to
+ pass locality to emulator
+Date: Thu, 4 May 2017 12:18:27 +0300
+Message-ID: <20170504091827.6yzmttjf2kxeen4l@intel.com>
 References: <1493384538-27883-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<1493384538-27883-4-git-send-email-stefanb@linux.vnet.ibm.com>
-	<20170503223747.zefh76m4youqlgje@intel.com>
-	<40cd7d48-f6d1-39f4-99a3-916c7cdbb636@linux.vnet.ibm.com>
+	<20170503223849.qcoc6xqncbyi6jwj@intel.com>
+	<72bacff5-5213-b114-ebf4-6e3fe7284bdc@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <40cd7d48-f6d1-39f4-99a3-916c7cdbb636-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <72bacff5-5213-b114-ebf4-6e3fe7284bdc-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -25,22 +24,22 @@ To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, May 03, 2017 at 07:40:48PM -0400, Stefan Berger wrote:
-> On 05/03/2017 06:37 PM, Jarkko Sakkinen wrote:
-> > On Fri, Apr 28, 2017 at 09:02:18AM -0400, Stefan Berger wrote:
-> > > Add an ioctl to request that the locality be prepended to every TPM
-> > > command.
-> > Don't really understand this change. Why locality is prenpended?
+On Wed, May 03, 2017 at 07:42:06PM -0400, Stefan Berger wrote:
+> On 05/03/2017 06:38 PM, Jarkko Sakkinen wrote:
+> > On Fri, Apr 28, 2017 at 09:02:15AM -0400, Stefan Berger wrote:
+> > > The purpose of this series of patches is to enable the passing of the locality
+> > > a command is executing in to a TPM emulator. To enable this we introduce a new
+> > > flag for the device creation ioctl that requests that the locality be prepended
+> > > to every command. For applications to check which flags the driver supports, we
+> > > add a new ioctl that returns a bitmask of supported flags.
+> > This is a weird change proposal as you could use tpm_vtpm_proxy for
+> > other than some TPM emulator.
 > 
-> Commands can be executed under locality 0-3 and for some commands it is
-> important to know which locality a user may have chosen. How else should we
-> convey that locality to the TPM emulator ?
+> I think in most cases the recipient of the TPM commands from the vtpm_proxy
+> driver will be a TPM emulator. What do you have in mind?
 
-Why this is not in the commit message?
-
-More scalable way to do this would be to have a set of vtpm proxy
-commands. There could be a command for requesting and releasing
-locality. That would be more clean.
+Like using Intel SGX to implement TPM in ring-3. I've thought
+vtpm_tpm_proxy as generic proxy that you can also use for emulators.
 
 /Jarkko
 
