@@ -1,42 +1,103 @@
-From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: Re: [PATCH v2 3/3] tpm: vtpm_proxy: Add ioctl to request locality
- prepended to command
-Date: Thu, 4 May 2017 07:14:27 -0400
-Message-ID: <e8408f9b-d53d-5af0-3678-e851d78ba99e@linux.vnet.ibm.com>
-References: <1493384538-27883-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1493384538-27883-4-git-send-email-stefanb@linux.vnet.ibm.com>
- <20170503223747.zefh76m4youqlgje@intel.com>
- <40cd7d48-f6d1-39f4-99a3-916c7cdbb636@linux.vnet.ibm.com>
- <20170504091738.rxl77hjzf6vnpuda@intel.com>
+From: Roberto Sassu <roberto.sassu@huawei.com>
+Subject: [PATCH v2, RESEND 3/3] tpm: move TPM 1.2 code of tpm_pcr_extend() to tpm1_pcr_extend()
+Date: Thu, 4 May 2017 13:16:47 +0200
+Message-ID: <20170504111647.9384-1-roberto.sassu@huawei.com>
+References: <20170503161911.17606-1-roberto.sassu@huawei.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain
 Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170504091738.rxl77hjzf6vnpuda@intel.com>
+In-Reply-To: <20170503161911.17606-1-roberto.sassu@huawei.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net
+Cc: linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Roberto Sassu <roberto.sassu@huawei.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 05/04/2017 05:17 AM, Jarkko Sakkinen wrote:
-> On Wed, May 03, 2017 at 07:40:48PM -0400, Stefan Berger wrote:
->> On 05/03/2017 06:37 PM, Jarkko Sakkinen wrote:
->>> On Fri, Apr 28, 2017 at 09:02:18AM -0400, Stefan Berger wrote:
->>>> Add an ioctl to request that the locality be prepended to every TPM
->>>> command.
->>> Don't really understand this change. Why locality is prenpended?
->> Commands can be executed under locality 0-3 and for some commands it is
->> important to know which locality a user may have chosen. How else should we
->> convey that locality to the TPM emulator ?
-> Why this is not in the commit message?
->
-> More scalable way to do this would be to have a set of vtpm proxy
-> commands. There could be a command for requesting and releasing
-> locality. That would be more clean.
+In preparation of the modifications to tpm_pcr_extend(), which will
+allow callers to supply a digest for each PCR bank of a TPM 2.0,
+the TPM 1.2 specific code has been moved to tpm1_pcr_extend().
 
-I would think that if someone wanted to use locality it's the client 
-using /dev/tpm(rm)0 calling an ioctl or so and the vtpm proxy then 
-merely passing that locality to the backend (TPM emulator). I suppose 
-the intention is to support something like that following the addition 
-of the new functions request_locality and release_locality?
+tpm1_pcr_extend() uses tpm_buf_init() to prepare the command buffer,
+which offers protection against buffer overflow. It is called by
+tpm_pcr_extend() and tpm_pm_suspend().
+
+Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
+---
+ drivers/char/tpm/tpm-interface.c | 41 +++++++++++++++++++++++-----------------
+ 1 file changed, 24 insertions(+), 17 deletions(-)
+
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index 7966d8d..4ed08ab 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -847,6 +847,25 @@ static const struct tpm_input_header pcrextend_header = {
+ 	.ordinal = cpu_to_be32(TPM_ORD_PCR_EXTEND)
+ };
+ 
++static int tpm1_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash,
++			   char *log_msg)
++{
++	struct tpm_buf buf;
++	int rc;
++
++	rc = tpm_buf_init(&buf, TPM_TAG_RQU_COMMAND, TPM_ORD_PCR_EXTEND);
++	if (rc)
++		return rc;
++
++	tpm_buf_append_u32(&buf, pcr_idx);
++	tpm_buf_append(&buf, hash, TPM_DIGEST_SIZE);
++
++	rc = tpm_transmit_cmd(chip, NULL, buf.data, EXTEND_PCR_RESULT_SIZE,
++			      EXTEND_PCR_RESULT_BODY_SIZE, 0, log_msg);
++	tpm_buf_destroy(&buf);
++	return rc;
++}
++
+ /**
+  * tpm_pcr_extend - extend pcr value with hash
+  * @chip_num:	tpm idx # or AN&
+@@ -859,7 +878,6 @@ static const struct tpm_input_header pcrextend_header = {
+  */
+ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
+ {
+-	struct tpm_cmd_t cmd;
+ 	int rc;
+ 	struct tpm_chip *chip;
+ 	struct tpm2_digest digest_list[ARRAY_SIZE(chip->active_banks)];
+@@ -885,13 +903,8 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
+ 		return rc;
+ 	}
+ 
+-	cmd.header.in = pcrextend_header;
+-	cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(pcr_idx);
+-	memcpy(cmd.params.pcrextend_in.hash, hash, TPM_DIGEST_SIZE);
+-	rc = tpm_transmit_cmd(chip, NULL, &cmd, EXTEND_PCR_RESULT_SIZE,
+-			      EXTEND_PCR_RESULT_BODY_SIZE, 0,
+-			      "attempting extend a PCR value");
+-
++	rc = tpm1_pcr_extend(chip, pcr_idx, hash,
++			     "attempting extend a PCR value");
+ 	tpm_put_ops(chip);
+ 	return rc;
+ }
+@@ -1090,15 +1103,9 @@ int tpm_pm_suspend(struct device *dev)
+ 	}
+ 
+ 	/* for buggy tpm, flush pcrs with extend to selected dummy */
+-	if (tpm_suspend_pcr) {
+-		cmd.header.in = pcrextend_header;
+-		cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(tpm_suspend_pcr);
+-		memcpy(cmd.params.pcrextend_in.hash, dummy_hash,
+-		       TPM_DIGEST_SIZE);
+-		rc = tpm_transmit_cmd(chip, NULL, &cmd, EXTEND_PCR_RESULT_SIZE,
+-				      EXTEND_PCR_RESULT_BODY_SIZE, 0,
+-				      "extending dummy pcr before suspend");
+-	}
++	if (tpm_suspend_pcr)
++		rc = tpm1_pcr_extend(chip, tpm_suspend_pcr, dummy_hash,
++				     "extending dummy pcr before suspend");
+ 
+ 	/* now do the actual savestate */
+ 	for (try = 0; try < TPM_RETRY; try++) {
+-- 
+2.9.3
 
