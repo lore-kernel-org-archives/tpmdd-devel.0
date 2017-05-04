@@ -1,13 +1,11 @@
 From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: [PATCH v2 2/3] tpm_tis: Use platform_get_irq
-Date: Thu,  4 May 2017 09:53:24 -0600
-Message-ID: <1493913205-18276-3-git-send-email-jgunthorpe@obsidianresearch.com>
-References: <1493913205-18276-1-git-send-email-jgunthorpe@obsidianresearch.com>
+Subject: [PATCH v2 0/3] Merge tpm_tis ACPI and platform drivers
+Date: Thu,  4 May 2017 09:53:22 -0600
+Message-ID: <1493913205-18276-1-git-send-email-jgunthorpe@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1493913205-18276-1-git-send-email-jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,33 +17,21 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Replace the open coded IORESOURCE_IRQ with platform_get_irq, which
-supports more cases.
+As suggested by Jarkko.
 
-Fixes: 00194826e6be ("tpm_tis: Clean up the force=1 module parameter")
-Tested-by: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
----
- drivers/char/tpm/tpm_tis.c | 6 ++----
- 1 file changed, 2 insertions(+), 4 deletions(-)
+The two precursor patches might want to go to -stable.
 
-diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index 56ce2bb1916693..1807b284326b88 100644
---- a/drivers/char/tpm/tpm_tis.c
-+++ b/drivers/char/tpm/tpm_tis.c
-@@ -332,10 +332,8 @@ static int tpm_tis_plat_probe(struct platform_device *pdev)
- 	}
- 	tpm_info.res = *res;
- 
--	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
--	if (res) {
--		tpm_info.irq = res->start;
--	} else {
-+	tpm_info.irq = platform_get_irq(pdev, 0);
-+	if (tpm_info.irq <= 0) {
- 		if (pdev != force_pdev)
- 			tpm_info.irq = -1;
- 		else
+Jerry says it worked on his system, but we still to see results from things
+like crb systems/etc.
+
+Jason Gunthorpe (3):
+  tpm_tis: Fix IRQ autoprobing when using platform_device
+  tpm_tis: Use platform_get_irq
+  tpm_tis: Consolidate the platform and acpi probe flow
+
+ drivers/char/tpm/tpm_tis.c | 175 +++++++++++++++------------------------------
+ 1 file changed, 57 insertions(+), 118 deletions(-)
+
 -- 
 2.7.4
 
