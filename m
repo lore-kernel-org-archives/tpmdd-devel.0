@@ -1,103 +1,53 @@
-From: Roberto Sassu <roberto.sassu@huawei.com>
-Subject: [PATCH v2, RESEND 3/3] tpm: move TPM 1.2 code of tpm_pcr_extend() to tpm1_pcr_extend()
-Date: Thu, 4 May 2017 13:16:47 +0200
-Message-ID: <20170504111647.9384-1-roberto.sassu@huawei.com>
-References: <20170503161911.17606-1-roberto.sassu@huawei.com>
+From: Heikki Krogerus <heikki.krogerus@linux.intel.com>
+Subject: Re: [PATCH v1] ACPI: Switch to use generic UUID API
+Date: Thu, 4 May 2017 15:14:46 +0300
+Message-ID: <20170504121446.GA26032@kuha.fi.intel.com>
+References: <20170504092151.88646-1-andriy.shevchenko@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170503161911.17606-1-roberto.sassu@huawei.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Roberto Sassu <roberto.sassu@huawei.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <intel-gfx-bounces@lists.freedesktop.org>
+Content-Disposition: inline
+In-Reply-To: <20170504092151.88646-1-andriy.shevchenko@linux.intel.com>
+List-Unsubscribe: <https://lists.freedesktop.org/mailman/options/intel-gfx>,
+ <mailto:intel-gfx-request@lists.freedesktop.org?subject=unsubscribe>
+List-Archive: <https://lists.freedesktop.org/archives/intel-gfx>
+List-Post: <mailto:intel-gfx@lists.freedesktop.org>
+List-Help: <mailto:intel-gfx-request@lists.freedesktop.org?subject=help>
+List-Subscribe: <https://lists.freedesktop.org/mailman/listinfo/intel-gfx>,
+ <mailto:intel-gfx-request@lists.freedesktop.org?subject=subscribe>
+Errors-To: intel-gfx-bounces@lists.freedesktop.org
+Sender: "Intel-gfx" <intel-gfx-bounces@lists.freedesktop.org>
+To: Andy Shevchenko <andriy.shevchenko@linux.intel.com>
+Cc: alsa-devel@alsa-project.org, Liam Girdwood <lgirdwood@gmail.com>, linux-pci@vger.kernel.org, Amir Goldstein <amir73il@gmail.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Adrian Hunter <adrian.hunter@intel.com>, Benjamin Tissoires <benjamin.tissoires@redhat.com>, Joerg Roedel <joro@8bytes.org>, linux-acpi@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, Ben Skeggs <bskeggs@redhat.com>, nouveau@lists.freedesktop.org, linux-mmc@vger.kernel.org, Zhang Rui <rui.zhang@intel.com>, Borislav Petkov <bp@suse.de>, Yisen Zhuang <yisen.zhuang@huawei.com>, Mathias Nyman <mathias.nyman@intel.com>, intel-gfx@lists.freedesktop.org, linux-input@vger.kernel.org, Mark Brown <broonie@kernel.org>, Bjorn Helgaas <bhelgaas@google.com>, Dan Williams <dan.j.williams@intel.com>, Mika Westerberg <mika.westerberg@linux.intel.com>, Felipe Balbi <balbi@kernel.org>, netdev@vger.kernel.or
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-In preparation of the modifications to tpm_pcr_extend(), which will
-allow callers to supply a digest for each PCR bank of a TPM 2.0,
-the TPM 1.2 specific code has been moved to tpm1_pcr_extend().
-
-tpm1_pcr_extend() uses tpm_buf_init() to prepare the command buffer,
-which offers protection against buffer overflow. It is called by
-tpm_pcr_extend() and tpm_pm_suspend().
-
-Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
----
- drivers/char/tpm/tpm-interface.c | 41 +++++++++++++++++++++++-----------------
- 1 file changed, 24 insertions(+), 17 deletions(-)
-
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 7966d8d..4ed08ab 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -847,6 +847,25 @@ static const struct tpm_input_header pcrextend_header = {
- 	.ordinal = cpu_to_be32(TPM_ORD_PCR_EXTEND)
- };
- 
-+static int tpm1_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash,
-+			   char *log_msg)
-+{
-+	struct tpm_buf buf;
-+	int rc;
-+
-+	rc = tpm_buf_init(&buf, TPM_TAG_RQU_COMMAND, TPM_ORD_PCR_EXTEND);
-+	if (rc)
-+		return rc;
-+
-+	tpm_buf_append_u32(&buf, pcr_idx);
-+	tpm_buf_append(&buf, hash, TPM_DIGEST_SIZE);
-+
-+	rc = tpm_transmit_cmd(chip, NULL, buf.data, EXTEND_PCR_RESULT_SIZE,
-+			      EXTEND_PCR_RESULT_BODY_SIZE, 0, log_msg);
-+	tpm_buf_destroy(&buf);
-+	return rc;
-+}
-+
- /**
-  * tpm_pcr_extend - extend pcr value with hash
-  * @chip_num:	tpm idx # or AN&
-@@ -859,7 +878,6 @@ static const struct tpm_input_header pcrextend_header = {
-  */
- int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
- {
--	struct tpm_cmd_t cmd;
- 	int rc;
- 	struct tpm_chip *chip;
- 	struct tpm2_digest digest_list[ARRAY_SIZE(chip->active_banks)];
-@@ -885,13 +903,8 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
- 		return rc;
- 	}
- 
--	cmd.header.in = pcrextend_header;
--	cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(pcr_idx);
--	memcpy(cmd.params.pcrextend_in.hash, hash, TPM_DIGEST_SIZE);
--	rc = tpm_transmit_cmd(chip, NULL, &cmd, EXTEND_PCR_RESULT_SIZE,
--			      EXTEND_PCR_RESULT_BODY_SIZE, 0,
--			      "attempting extend a PCR value");
--
-+	rc = tpm1_pcr_extend(chip, pcr_idx, hash,
-+			     "attempting extend a PCR value");
- 	tpm_put_ops(chip);
- 	return rc;
- }
-@@ -1090,15 +1103,9 @@ int tpm_pm_suspend(struct device *dev)
- 	}
- 
- 	/* for buggy tpm, flush pcrs with extend to selected dummy */
--	if (tpm_suspend_pcr) {
--		cmd.header.in = pcrextend_header;
--		cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(tpm_suspend_pcr);
--		memcpy(cmd.params.pcrextend_in.hash, dummy_hash,
--		       TPM_DIGEST_SIZE);
--		rc = tpm_transmit_cmd(chip, NULL, &cmd, EXTEND_PCR_RESULT_SIZE,
--				      EXTEND_PCR_RESULT_BODY_SIZE, 0,
--				      "extending dummy pcr before suspend");
--	}
-+	if (tpm_suspend_pcr)
-+		rc = tpm1_pcr_extend(chip, tpm_suspend_pcr, dummy_hash,
-+				     "extending dummy pcr before suspend");
- 
- 	/* now do the actual savestate */
- 	for (try = 0; try < TPM_RETRY; try++) {
--- 
-2.9.3
-
+T24gVGh1LCBNYXkgMDQsIDIwMTcgYXQgMTI6MjE6NTFQTSArMDMwMCwgQW5keSBTaGV2Y2hlbmtv
+IHdyb3RlOgo+IGFjcGlfZXZhbHVhdGVfZHNtKCkgYW5kIGZyaWVuZHMgdGFrZSBhIHBvaW50ZXIg
+dG8gYSByYXcgYnVmZmVyIG9mIDE2Cj4gYnl0ZXMuIEluc3RlYWQgd2UgY29udmVydCB0aGVtIHRv
+IHVzZSB1dWlkX2xlIHR5cGUuIEF0IHRoZSBzYW1lIHRpbWUgd2UKPiBjb252ZXJ0IGN1cnJlbnQg
+dXNlcnMuCj4gCj4gYWNwaV9zdHJfdG9fdXVpZCgpIGJlY29tZXMgdXNlbGVzcyBhZnRlciB0aGUg
+Y29udmVyc2lvbiBhbmQgaXQncyBzYWZlIHRvCj4gZ2V0IHJpZCBvZiBpdC4KPiAKPiBUaGUgY29u
+dmVyc2lvbiBmaXhlcyBhIHBvdGVudGlhbCBidWcgaW4gaW50MzQweF90aGVybWFsIGFzIHdlbGwg
+c2luY2UKPiB3ZSBoYXZlIHRvIHVzZSBtZW1jbXAoKSBvbiBiaW5hcnkgZGF0YS4KPiAKPiBDYzog
+UmFmYWVsIEouIFd5c29ja2kgPHJqd0Byand5c29ja2kubmV0Pgo+IENjOiBNaWthIFdlc3RlcmJl
+cmcgPG1pa2Eud2VzdGVyYmVyZ0BsaW51eC5pbnRlbC5jb20+Cj4gQ2M6IEJvcmlzbGF2IFBldGtv
+diA8YnBAc3VzZS5kZT4KPiBDYzogRGFuIFdpbGxpYW1zIDxkYW4uai53aWxsaWFtc0BpbnRlbC5j
+b20+Cj4gQ2M6IEFtaXIgR29sZHN0ZWluIDxhbWlyNzNpbEBnbWFpbC5jb20+Cj4gQ2M6IEphcmtr
+byBTYWtraW5lbiA8amFya2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbT4KPiBDYzogSmFuaSBO
+aWt1bGEgPGphbmkubmlrdWxhQGxpbnV4LmludGVsLmNvbT4KPiBDYzogQmVuIFNrZWdncyA8YnNr
+ZWdnc0ByZWRoYXQuY29tPgo+IENjOiBCZW5qYW1pbiBUaXNzb2lyZXMgPGJlbmphbWluLnRpc3Nv
+aXJlc0ByZWRoYXQuY29tPgo+IENjOiBKb2VyZyBSb2VkZWwgPGpvcm9AOGJ5dGVzLm9yZz4KPiBD
+YzogQWRyaWFuIEh1bnRlciA8YWRyaWFuLmh1bnRlckBpbnRlbC5jb20+Cj4gQ2M6IFlpc2VuIFpo
+dWFuZyA8eWlzZW4uemh1YW5nQGh1YXdlaS5jb20+Cj4gQ2M6IEJqb3JuIEhlbGdhYXMgPGJoZWxn
+YWFzQGdvb2dsZS5jb20+Cj4gQ2M6IFpoYW5nIFJ1aSA8cnVpLnpoYW5nQGludGVsLmNvbT4KPiBD
+YzogRmVsaXBlIEJhbGJpIDxiYWxiaUBrZXJuZWwub3JnPgo+IENjOiBNYXRoaWFzIE55bWFuIDxt
+YXRoaWFzLm55bWFuQGludGVsLmNvbT4KPiBDYzogSGVpa2tpIEtyb2dlcnVzIDxoZWlra2kua3Jv
+Z2VydXNAbGludXguaW50ZWwuY29tPgo+IENjOiBMaWFtIEdpcmR3b29kIDxsZ2lyZHdvb2RAZ21h
+aWwuY29tPgo+IENjOiBNYXJrIEJyb3duIDxicm9vbmllQGtlcm5lbC5vcmc+Cj4gU2lnbmVkLW9m
+Zi1ieTogQW5keSBTaGV2Y2hlbmtvIDxhbmRyaXkuc2hldmNoZW5rb0BsaW51eC5pbnRlbC5jb20+
+CgpPSyBieSBtZSwgRldJVzoKClJldmlld2VkLWJ5OiBIZWlra2kgS3JvZ2VydXMgPGhlaWtraS5r
+cm9nZXJ1c0BsaW51eC5pbnRlbC5jb20+CgoKVGhhbmtzLAoKLS0gCmhlaWtraQpfX19fX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwpJbnRlbC1nZnggbWFpbGluZyBs
+aXN0CkludGVsLWdmeEBsaXN0cy5mcmVlZGVza3RvcC5vcmcKaHR0cHM6Ly9saXN0cy5mcmVlZGVz
+a3RvcC5vcmcvbWFpbG1hbi9saXN0aW5mby9pbnRlbC1nZngK
