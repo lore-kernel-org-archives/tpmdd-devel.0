@@ -1,8 +1,8 @@
 From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v3 1/3] tpm: vtpm_proxy: Implement new ioctl
-	to get supported flags
-Date: Thu,  4 May 2017 10:56:25 -0400
-Message-ID: <1493909787-1848-2-git-send-email-stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v3 2/3] tpm: vtpm_proxy: Implement
+	request_locality function.
+Date: Thu,  4 May 2017 10:56:26 -0400
+Message-ID: <1493909787-1848-3-git-send-email-stefanb@linux.vnet.ibm.com>
 References: <1493909787-1848-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,86 +21,40 @@ To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-securit
 Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Implement VTPM_PROXY_IOC_GET_SUPT_FLAGS ioctl to get the bitmask
-of flags that the vtpm_proxy driver supports in the
-VTPM_PROXY_IOC_NEW_DEV ioctl. This helps user space in deciding
-which flags to set in that ioctl.
+Implement the request_locality function. Accept all localities assuming
+that the recipient (TPM emulator) handling TPM commands with prepended
+locality modifier will check for a valid locality and return a TPM error
+in case the locality is invalid.
 
 Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 ---
- drivers/char/tpm/tpm_vtpm_proxy.c | 29 +++++++++++++++++++++++++++++
- include/uapi/linux/vtpm_proxy.h   | 11 +++++++++++
- 2 files changed, 40 insertions(+)
+ drivers/char/tpm/tpm_vtpm_proxy.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
 
 diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
-index 751059d..fb4d207 100644
+index fb4d207..48b9818 100644
 --- a/drivers/char/tpm/tpm_vtpm_proxy.c
 +++ b/drivers/char/tpm/tpm_vtpm_proxy.c
-@@ -592,6 +592,33 @@ static long vtpmx_ioc_new_dev(struct file *file, unsigned int ioctl,
- 	return 0;
+@@ -371,6 +371,11 @@ static bool vtpm_proxy_tpm_req_canceled(struct tpm_chip  *chip, u8 status)
+ 	return ret;
  }
  
-+/**
-+ * vtpmx_ioc_get_supt_flags - handler for the %VTPM_PROXY_IOC_GET_SUPT_FLAGS
-+ *                            ioctl
-+ * @file:	/dev/vtpmx
-+ * @ioctl:	the ioctl number
-+ * @arg:	pointer to the struct vtpmx_proxy_get_supt_flags
-+ *
-+ * Return the bitfield of supported flags
-+ */
-+static long vtpmx_ioc_get_supt_flags(struct file *file, unsigned int ioctl,
-+				     unsigned long arg)
++static int vtpm_proxy_request_locality(struct tpm_chip *chip, int locality)
 +{
-+	void __user *argp = (void __user *)arg;
-+	struct vtpm_proxy_supt_flags __user *vtpm_supt_flags_p = argp;
-+	struct vtpm_proxy_supt_flags flags = {
-+		.flags = VTPM_PROXY_FLAGS_ALL,
-+	};
-+
-+	if (!capable(CAP_SYS_ADMIN))
-+		return -EPERM;
-+
-+	if (copy_to_user(vtpm_supt_flags_p, &flags, sizeof(flags)))
-+		return -EFAULT;
-+
-+	return 0;
++	return locality;
 +}
 +
- /*
-  * vtpmx_fops_ioctl: ioctl on /dev/vtpmx
-  *
-@@ -604,6 +631,8 @@ static long vtpmx_fops_ioctl(struct file *f, unsigned int ioctl,
- 	switch (ioctl) {
- 	case VTPM_PROXY_IOC_NEW_DEV:
- 		return vtpmx_ioc_new_dev(f, ioctl, arg);
-+	case VTPM_PROXY_IOC_GET_SUPT_FLAGS:
-+		return vtpmx_ioc_get_supt_flags(f, ioctl, arg);
- 	default:
- 		return -ENOIOCTLCMD;
- 	}
-diff --git a/include/uapi/linux/vtpm_proxy.h b/include/uapi/linux/vtpm_proxy.h
-index a69e991..83e64e7 100644
---- a/include/uapi/linux/vtpm_proxy.h
-+++ b/include/uapi/linux/vtpm_proxy.h
-@@ -44,6 +44,17 @@ struct vtpm_proxy_new_dev {
- 	__u32 minor;         /* output */
+ static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
+ 	.flags = TPM_OPS_AUTO_STARTUP,
+ 	.recv = vtpm_proxy_tpm_op_recv,
+@@ -380,6 +385,7 @@ static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
+ 	.req_complete_mask = VTPM_PROXY_REQ_COMPLETE_FLAG,
+ 	.req_complete_val = VTPM_PROXY_REQ_COMPLETE_FLAG,
+ 	.req_canceled = vtpm_proxy_tpm_req_canceled,
++	.request_locality = vtpm_proxy_request_locality,
  };
  
-+/**
-+ * struct vtpm_proxy_supt_flags - parameter structure for the
-+ *                                %VTPM_PROXY_IOC_GET_SUPT_FLAGS ioctl
-+ * @flags: flags supported by the vtpm proxy driver
-+ */
-+struct vtpm_proxy_supt_flags {
-+	__u32 flags;         /* output */
-+};
-+
- #define VTPM_PROXY_IOC_NEW_DEV	_IOWR(0xa1, 0x00, struct vtpm_proxy_new_dev)
-+#define VTPM_PROXY_IOC_GET_SUPT_FLAGS \
-+				_IOR(0xa1, 0x01, struct vtpm_proxy_supt_flags)
- 
- #endif /* _UAPI_LINUX_VTPM_PROXY_H */
+ /*
 -- 
 2.4.3
 
