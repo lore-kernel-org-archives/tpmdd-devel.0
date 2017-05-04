@@ -1,66 +1,48 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v2 0/3] tpm_pcr_extend() code split
-Date: Thu, 4 May 2017 20:37:21 +0300
-Message-ID: <20170504173721.fey3ubz427katwgu@intel.com>
-References: <20170503161911.17606-1-roberto.sassu@huawei.com>
- <20170504092447.mhlmwwvvecb4kdq6@intel.com>
+Subject: Re: [PATCH v2 3/3] tpm: vtpm_proxy: Add ioctl to request locality
+ prepended to command
+Date: Thu, 4 May 2017 21:40:07 +0300
+Message-ID: <20170504184007.46efvqyqwxjkzwuq@intel.com>
+References: <1493384538-27883-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <1493384538-27883-4-git-send-email-stefanb@linux.vnet.ibm.com>
+ <20170503223747.zefh76m4youqlgje@intel.com>
+ <40cd7d48-f6d1-39f4-99a3-916c7cdbb636@linux.vnet.ibm.com>
+ <20170504091738.rxl77hjzf6vnpuda@intel.com>
+ <e8408f9b-d53d-5af0-3678-e851d78ba99e@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170504092447.mhlmwwvvecb4kdq6@intel.com>
+In-Reply-To: <e8408f9b-d53d-5af0-3678-e851d78ba99e@linux.vnet.ibm.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: Roberto Sassu <roberto.sassu@huawei.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+To: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, May 04, 2017 at 12:24:47PM +0300, Jarkko Sakkinen wrote:
-> On Wed, May 03, 2017 at 06:19:08PM +0200, Roberto Sassu wrote:
-> > This patch set moves TPM 1.2 specific code to a new function called
-> > tpm1_pcr_extend(). The purpose of splitting is to isolate TPM 2.0 code,
-> > so that it can be more easily modified to handle multiple digests.
+On Thu, May 04, 2017 at 07:14:27AM -0400, Stefan Berger wrote:
+> On 05/04/2017 05:17 AM, Jarkko Sakkinen wrote:
+> > On Wed, May 03, 2017 at 07:40:48PM -0400, Stefan Berger wrote:
+> > > On 05/03/2017 06:37 PM, Jarkko Sakkinen wrote:
+> > > > On Fri, Apr 28, 2017 at 09:02:18AM -0400, Stefan Berger wrote:
+> > > > > Add an ioctl to request that the locality be prepended to every TPM
+> > > > > command.
+> > > > Don't really understand this change. Why locality is prenpended?
+> > > Commands can be executed under locality 0-3 and for some commands it is
+> > > important to know which locality a user may have chosen. How else should we
+> > > convey that locality to the TPM emulator ?
+> > Why this is not in the commit message?
 > > 
-> > With TPM 2.0, a Platform Configuration Register (PCR) could have multiple
-> > values, stored in locations called banks. Each bank stores the values
-> > of PCRs extended with the same hash algorithm.
-> > 
-> > Currently, the TPM kernel driver does not take advantage of stronger
-> > algorithms because PCRs are always extended with a SHA1 digest, padded
-> > with zeros to match the length of the input for the hash algorithm
-> > being used. Shortly after these patches, a new patch set will be provided
-> > to allow callers of tpm_pcr_extend() to pass a digest for each algorithm
-> > supported by the TPM.
-> > 
-> > In this patch set, TPM 1.2 specific code will prepare the command buffer
-> > with tpm_buf_init() which, in respect to the previous method, offers
-> > protection against buffer overflow. Moreover, CPU native to big-endian
-> > conversion has been removed from tags and ordinals definitions, as it is
-> > already done by tpm_buf_init().
-> > 
-> > Changelog:
-> > 
-> > v2
-> > - restored TPM_TAG_RQU_COMMAND definition in drivers/char/tpm/tpm.h
-> > - removed endianness conversion in TPM_TAG_RQU_COMMAND definition
-> > - removed '#include <linux/tpm_command.h>' in tpm-interface.c
-> >   and tpm-sysfs.c
-> > - restored TPM_ORD_ definitions in tpm-interface.c and tpm-sysfs.c
-> > 
-> > Roberto Sassu (3):
-> >   tpm: move endianness conversion of TPM_TAG_RQU_COMMAND to
-> >     tpm_input_header
-> >   tpm: move endianness conversion of ordinals to tpm_input_header
-> >   tpm: move TPM 1.2 code of tpm_pcr_extend() to tpm1_pcr_extend()
-> > 
-> >  drivers/char/tpm/tpm-interface.c | 79 ++++++++++++++++++++++------------------
-> >  drivers/char/tpm/tpm-sysfs.c     |  6 +--
-> >  drivers/char/tpm/tpm.h           |  2 +-
-> >  3 files changed, 47 insertions(+), 40 deletions(-)
+> > More scalable way to do this would be to have a set of vtpm proxy
+> > commands. There could be a command for requesting and releasing
+> > locality. That would be more clean.
 > 
-> Thanks for good quality patches! I'll test these but with quick skim
-> no complains whatsoever :-)
+> I would think that if someone wanted to use locality it's the client using
+> /dev/tpm(rm)0 calling an ioctl or so and the vtpm proxy then merely passing
+> that locality to the backend (TPM emulator). I suppose the intention is to
+> support something like that following the addition of the new functions
+> request_locality and release_locality?
 
-1/3 and 2/3 are now applied to master and next (which will be pulled to
-linux-next).
+What if we later on want to pass something else than locality to the
+backend? How that will work out?
 
 /Jarkko
