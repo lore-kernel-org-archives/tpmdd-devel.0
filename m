@@ -1,53 +1,33 @@
-From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: Re: [PATCH v2 0/3] Extend the vTPM proxy driver to pass locality to
- emulator
-Date: Wed, 3 May 2017 19:42:06 -0400
-Message-ID: <72bacff5-5213-b114-ebf4-6e3fe7284bdc@linux.vnet.ibm.com>
-References: <1493384538-27883-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <20170503223849.qcoc6xqncbyi6jwj@intel.com>
+From: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Subject: Re: [PATCH] tpm_ts: Consolidate the platform and acpi
+	probe flow
+Date: Wed, 3 May 2017 23:00:00 -0700
+Message-ID: <20170504060000.m7t7wwxdos6indgv@rhwork>
+References: <20170503164857.GA20369@obsidianresearch.com>
+	<20170503210159.ook77o4myjebl4xr@rhwork>
+	<20170503212605.GA26863@obsidianresearch.com>
+Reply-To: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <20170503223849.qcoc6xqncbyi6jwj@intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20170503212605.GA26863-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, rafael-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 05/03/2017 06:38 PM, Jarkko Sakkinen wrote:
-> On Fri, Apr 28, 2017 at 09:02:15AM -0400, Stefan Berger wrote:
->> The purpose of this series of patches is to enable the passing of the locality
->> a command is executing in to a TPM emulator. To enable this we introduce a new
->> flag for the device creation ioctl that requests that the locality be prepended
->> to every command. For applications to check which flags the driver supports, we
->> add a new ioctl that returns a bitmask of supported flags.
-> This is a weird change proposal as you could use tpm_vtpm_proxy for
-> other than some TPM emulator.
+Yes, that works. I am seeing tpm_info.irq is -1 both before
+and after the patches.
 
-I think in most cases the recipient of the TPM commands from the 
-vtpm_proxy driver will be a TPM emulator. What do you have in mind?
-
->
->> v1->v2:
->>    - fixed return value from function in patch 3/3
->>
->>
->> Stefan Berger (3):
->>    tpm: vtpm_proxy: Add ioctl to get supported flags
->>    tpm: vtpm_proxy: Implement request_locality
->>    tpm: vtpm_proxy: Add ioctl to request locality prepended to command
->>
->>   drivers/char/tpm/tpm_vtpm_proxy.c | 53 +++++++++++++++++++++++++++++++++++----
->>   include/uapi/linux/vtpm_proxy.h   | 15 ++++++++++-
->>   2 files changed, 62 insertions(+), 6 deletions(-)
->>
->> -- 
->> 2.4.3
->>
-> /Jarkko
-> --
-> To unsubscribe from this list: send the line "unsubscribe linux-security-module" in
-> the body of a message to majordomo@vger.kernel.org
-> More majordomo info at  http://vger.kernel.org/majordomo-info.html
->
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
