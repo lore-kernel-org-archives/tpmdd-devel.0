@@ -1,63 +1,71 @@
-From: Christoph Hellwig <hch-jcswGhMUV9g@public.gmane.org>
+From: Andy Shevchenko <andriy.shevchenko@linux.intel.com>
 Subject: Re: [PATCH v1] ACPI: Switch to use generic UUID API
-Date: Fri, 5 May 2017 09:30:35 +0200
-Message-ID: <20170505073035.GA3112@lst.de>
+Date: Fri, 05 May 2017 12:24:25 +0300
+Message-ID: <1493976265.30052.21.camel@linux.intel.com>
 References: <20170504092151.88646-1-andriy.shevchenko@linux.intel.com>
-	<CAPcyv4jzD0MEBRNTwTokVzgdDWas682ArUjRAGT1hp=QRE8Pjg@mail.gmail.com>
-	<CAOQ4uxjha8_2_HwgdgBN=G-vNytAW5Gk155E9z8OWyFiGNEZVw@mail.gmail.com>
+ <CAPcyv4jzD0MEBRNTwTokVzgdDWas682ArUjRAGT1hp=QRE8Pjg@mail.gmail.com>
+ <CAOQ4uxjha8_2_HwgdgBN=G-vNytAW5Gk155E9z8OWyFiGNEZVw@mail.gmail.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <iommu-bounces-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <CAOQ4uxjha8_2_HwgdgBN=G-vNytAW5Gk155E9z8OWyFiGNEZVw-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
-List-Unsubscribe: <https://lists.linuxfoundation.org/mailman/options/iommu>,
-	<mailto:iommu-request-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://lists.linuxfoundation.org/pipermail/iommu/>
-List-Post: <mailto:iommu-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org>
-List-Help: <mailto:iommu-request-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.linuxfoundation.org/mailman/listinfo/iommu>,
-	<mailto:iommu-request-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org?subject=subscribe>
-Sender: iommu-bounces-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org
-Errors-To: iommu-bounces-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org
-To: Amir Goldstein <amir73il-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Cc: alsa-devel-K7yf7f+aM1XWsZ/bQMPhNw@public.gmane.org, Heikki Krogerus <heikki.krogerus-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Liam Girdwood <lgirdwood-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, linux-pci-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Adrian Hunter <adrian.hunter-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, Benjamin Tissoires <benjamin.tissoires-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, Christoph Hellwig <hch-jcswGhMUV9g@public.gmane.org>, Linux ACPI <linux-acpi-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Ben Skeggs <bskeggs-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, nouveau-PD4FTy7X32lNgt0PjOBp9y5qC8QIuHrW@public.gmane.org, linux-mmc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Zhang Rui <rui.zhang-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, Borislav Petkov <bp-l3A5Bk7waGM@public.gmane.org>, Yisen Zhuang <yisen.zhuang-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>, Mathias Nyman <mathias.nyman-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, intel-gfx-PD4FTy7X32lNgt0PjOBp9y5qC8QIuHrW@public.gmane.org, linux-input-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Jani Nikula <jani.nikula-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Mark Brown <broonie-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Bjorn Helgaas <bhelgaas-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>, Dan Williams <dan.j.williams-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, Andy Shevchenko <andriy.shevchenk>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <intel-gfx-bounces@lists.freedesktop.org>
+In-Reply-To: <CAOQ4uxjha8_2_HwgdgBN=G-vNytAW5Gk155E9z8OWyFiGNEZVw@mail.gmail.com>
+List-Unsubscribe: <https://lists.freedesktop.org/mailman/options/intel-gfx>,
+ <mailto:intel-gfx-request@lists.freedesktop.org?subject=unsubscribe>
+List-Archive: <https://lists.freedesktop.org/archives/intel-gfx>
+List-Post: <mailto:intel-gfx@lists.freedesktop.org>
+List-Help: <mailto:intel-gfx-request@lists.freedesktop.org?subject=help>
+List-Subscribe: <https://lists.freedesktop.org/mailman/listinfo/intel-gfx>,
+ <mailto:intel-gfx-request@lists.freedesktop.org?subject=subscribe>
+Errors-To: intel-gfx-bounces@lists.freedesktop.org
+Sender: "Intel-gfx" <intel-gfx-bounces@lists.freedesktop.org>
+To: Amir Goldstein <amir73il@gmail.com>, Dan Williams <dan.j.williams@intel.com>
+Cc: alsa-devel@alsa-project.org, Heikki Krogerus <heikki.krogerus@linux.intel.com>, Liam Girdwood <lgirdwood@gmail.com>, linux-pci@vger.kernel.org, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Adrian Hunter <adrian.hunter@intel.com>, Benjamin Tissoires <benjamin.tissoires@redhat.com>, Christoph Hellwig <hch@lst.de>, Joerg Roedel <joro@8bytes.org>, Linux ACPI <linux-acpi@vger.kernel.org>, tpmdd-devel@lists.sourceforge.net, Ben Skeggs <bskeggs@redhat.com>, nouveau@lists.freedesktop.org, linux-mmc@vger.kernel.org, Zhang Rui <rui.zhang@intel.com>, Borislav Petkov <bp@suse.de>, Yisen Zhuang <yisen.zhuang@huawei.com>, Mathias Nyman <mathias.nyman@intel.com>, intel-gfx@lists.freedesktop.org, linux-input@vger.kernel.org, Mark Brown <broonie@kernel.org>, Bjorn Helgaas <bhelgaas@google.com>, Mika Westerberg <mika.westerberg@linux.intel.com>, Felipe Balbi <balbi@kernel.org>, Ne
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, May 05, 2017 at 10:06:06AM +0300, Amir Goldstein wrote:
-> I much rather that you sort out uuid helpers in a way that will
-> satisfy the filesystem
-> needs (just provide the helpers don't need to convert filesystems code).
-
-Yeah.
-
-> IMO, you should acknowledge that the common use case for filesystems is
-> to handle an opaque char[16] which most likely holds a uuid_be and you
-> should provide 'neutral' helpers to satisfy this use case.
-> 
-> The simplest would be to typedef uuid_t to struct uuid_be and to name 'neutral'
-> helpers' uuid_cmp/uuid_copy(uuid_t *, uuid_t *), similar to my proposal.
-
-It's not jut neutral, it's the right thing to to.  The Apollo / DCE
-uuids (later also specified in RFC 4122) are big endian, so we should
-use the name there.
-
-> Christoph also suggested a similar treatment to typedef guid_t to
-> struct uuid_le.
-
-Exactly.  The whole idea of "little endian UUIDs" comes from the
-Wintel world, and if you look at the relevant specs they are almost
-exclusively referred to as GUIDs.
-
-The magic XFS and AFS types for specific interpretations of one of
-the RFC4122 formats don't really help, but I'll just send a patch
-to kill them off for XFS ASAP to at least get that out, and we
-probably should revert at least
-
-"afs: Move UUID struct to linux/uuid.h"
-
-That moved the AFS mess to common code as a start, and then
-also clean up the way we generate random UUIDs, where we currently
-have le helper, a be helper and then also generate_random_uuid
-just to confuse the heck out of people.  With no description of
-either of them.
+T24gRnJpLCAyMDE3LTA1LTA1IGF0IDEwOjA2ICswMzAwLCBBbWlyIEdvbGRzdGVpbiB3cm90ZToK
+PiBPbiBGcmksIE1heSA1LCAyMDE3IGF0IDk6MjAgQU0sIERhbiBXaWxsaWFtcyA8ZGFuLmoud2ls
+bGlhbXNAaW50ZWwuY29tCj4gPiB3cm90ZToKPiA+IE9uIFRodSwgTWF5IDQsIDIwMTcgYXQgMjoy
+MSBBTSwgQW5keSBTaGV2Y2hlbmtvCj4gPiA8YW5kcml5LnNoZXZjaGVua29AbGludXguaW50ZWwu
+Y29tPiB3cm90ZToKCgo+ID4gPiDCoMKgwqDCoMKgwqDCoMKgZm9yIChpID0gMDsgaSA8IE5GSVRf
+VVVJRF9NQVg7IGkrKykKPiA+ID4gLcKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoGlmICht
+ZW1jbXAodG9fbmZpdF91dWlkKGkpLCBzcGEtPnJhbmdlX2d1aWQsIDE2KQo+ID4gPiA9PSAwKQo+
+ID4gPiArwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgaWYgKCF1dWlkX2xlX2NtcF9wcCh0
+b19uZml0X3V1aWQoaSksICh1dWlkX2xlCj4gPiA+ICopc3BhLT5yYW5nZV9ndWlkKSkKPiA+IAo+
+ID4gV2hhdCBpcyBfY21wX3BwPyBXaHkgbm90IF9jb21wYXJlPwoKRGFuLCBpdCdzIGEgdHlwby4g
+SW4gdGhpcyBwYXRjaCBpdCBzaG91bGQgYmUganVzdCAuLi5fY21wKCksIHdoaWNoIGlzCmFscmVh
+ZHkgYSBwYXJ0IG9mIEFQSS4KCj4gPiAKPiAKPiBJIHNlY29uZCB0aGF0Lgo+IAo+IEFuZHksCgpB
+bWlyLCBqdXN0IHRvIGJlIGNsZWFyLiBUaGlzIHBhdGNoIGNhbiBiZSBhcHBsaWVkIHdpdGhvdXQg
+YW55IGFkZG9ucyB0bwphbiBleGlzdGluZyBBUEkuIEFib3ZlIGlzIGp1c3QgYSB0eXBvIGR1ZSB0
+byByZWJhc2UgaW4gbXkgdHJlZS4gSSB3aWxsCnJlcGxhY2UgaXQgdG8ganVzdCB1dWlkX2xlX2Nt
+cCgpLgoKPiBJIG11Y2ggcmF0aGVyIHRoYXQgeW91IHNvcnQgb3V0IHV1aWQgaGVscGVycyBpbiBh
+IHdheSB0aGF0IHdpbGwKPiBzYXRpc2Z5IHRoZSBmaWxlc3lzdGVtCj4gbmVlZHMgKGp1c3QgcHJv
+dmlkZSB0aGUgaGVscGVycyBkb24ndCBuZWVkIHRvIGNvbnZlcnQgZmlsZXN5c3RlbXMKPiBjb2Rl
+KS4KCj4gVGhlIG9ubHkgcmVhc29uIEkgdG9vayBhIHN3aW5nIGF0IGhvaXN0aW5nIHRoZSB4ZnMg
+dXVpZCBoZWxwZXJzIGlzCj4gYmVjYXVzZSBpdCBkaWRuJ3QKPiBzZWVtIGxpa2UgeW91ciBwcm9w
+b3NhbCB3YXMgZ29pbmcgdG8gYmUgcG9zdGVkIHNvb24gb3Igd2Fzbid0IGdvaW5nIHRvCj4gc2F0
+aXNmeQo+IHRoZSBmaWxlc3lzdGVtcyB1c2UgY2FzZS4KCj4gCj4gTXkgb3BpbmlvbiBub3csIGlz
+IHRoYXQgeW91ciBzdWdnZXN0aW9uIGlzIHByb2JhYmx5IG11Y2ggY2xvc2VyIHRvIHRoZQo+IHJl
+YWwgZGVhbAo+IHRoYW4gbWluZS4KPiAKPiBJTU8sIHlvdSBzaG91bGQgYWNrbm93bGVkZ2UgdGhh
+dCB0aGUgY29tbW9uIHVzZSBjYXNlIGZvciBmaWxlc3lzdGVtcwo+IGlzCj4gdG8gaGFuZGxlIGFu
+IG9wYXF1ZSBjaGFyWzE2XSB3aGljaCBtb3N0IGxpa2VseSBob2xkcyBhIHV1aWRfYmUgYW5kIHlv
+dQo+IHNob3VsZCBwcm92aWRlICduZXV0cmFsJyBoZWxwZXJzIHRvIHNhdGlzZnkgdGhpcyB1c2Ug
+Y2FzZS4KPiAKPiBUaGUgc2ltcGxlc3Qgd291bGQgYmUgdG8gdHlwZWRlZiB1dWlkX3QgdG8gc3Ry
+dWN0IHV1aWRfYmUgYW5kIHRvIG5hbWUKPiAnbmV1dHJhbCcKPiBoZWxwZXJzJyB1dWlkX2NtcC91
+dWlkX2NvcHkodXVpZF90ICosIHV1aWRfdCAqKSwgc2ltaWxhciB0byBteQo+IHByb3Bvc2FsLgoK
+PiBJIHRoaW5rIHdpdGggdGhpcyBzZW1hbnRpYyBjaGFuZ2UsIG91ciBwcm9wb3NhbHMgY2FuIHJl
+YWNoIGNvbW1vbgo+IGdyb3VuZHMKPiBhbmQgc2F0aXNmeSBhIHdpZGVyIGdyb3VwIG9mIHVzZXJz
+IChpLmUuIGZpbGVzeXN0ZW0gZGV2ZWxvcGVycykuCj4gCj4gQ2hyaXN0b3BoIGFsc28gc3VnZ2Vz
+dGVkIGEgc2ltaWxhciB0cmVhdG1lbnQgdG8gdHlwZWRlZiBndWlkX3QgdG8KPiBzdHJ1Y3QgdXVp
+ZF9sZS4KPiBJIGRvbid0IGtub3cgdGhlIHVzZSBjYXNlcyBlbm91Z2ggdG8gY29tbWVudCBvbiB0
+aGF0LgoKV2UgbWF5IGdvIHRoaXMgd2F5LiBCdXQgSSB3b3VsZG4ndCBwcmV2ZW50IGN1cnJlbnQg
+dXNlcnMgb2YgdXVpZF9sZSB0bwpjb250aW51ZSB1c2luZyBpdCB3aXRob3V0IGNvbnZlcnNpb24g
+KGl0IG1heSBiZSBkb25lIGNhc2UgYnkgY2FzZSBhZnRlcgp3ZSBzZXR0bGUgYW4gQVBJKQoKU28s
+IHN1bW1hcml6ZSB3aGF0IENocmlzdG9waCBzYWlkIGl0IHdpbGwgbG9vayBsaWtlCgp0eXBlZGVm
+IHV1aWRfYmUgdXVpZF90Owp0eXBlZGVmIHV1aWRfbGUgZ3VpZF90Cgp1dWlkX2NtcCgpIC8gdXVp
+ZF9jb3B5KCkgLyB1dWlkX3RvX2JpbigpIC8gZXRjCmd1aWRfY21wKCkgLyBndWlkX2NvcHkoKSAv
+IGd1aWRfdG9fYmluKCkgLyBldGMKCkNvcnJlY3Q/IENocmlzdG9waD8KCi0tIApBbmR5IFNoZXZj
+aGVua28gPGFuZHJpeS5zaGV2Y2hlbmtvQGxpbnV4LmludGVsLmNvbT4KSW50ZWwgRmlubGFuZCBP
+eQpfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwpJbnRlbC1n
+ZnggbWFpbGluZyBsaXN0CkludGVsLWdmeEBsaXN0cy5mcmVlZGVza3RvcC5vcmcKaHR0cHM6Ly9s
+aXN0cy5mcmVlZGVza3RvcC5vcmcvbWFpbG1hbi9saXN0aW5mby9pbnRlbC1nZngK
