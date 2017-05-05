@@ -1,7 +1,7 @@
 From: Roberto Sassu <roberto.sassu@huawei.com>
-Subject: [PATCH v2 2/5] tpm: introduce tpm_pcr_algo_to_crypto() and tpm_pcr_algo_from_crypto()
-Date: Fri, 5 May 2017 16:21:49 +0200
-Message-ID: <20170505142152.29795-3-roberto.sassu@huawei.com>
+Subject: [PATCH v2 3/5] tpm: pass multiple digests to tpm_pcr_extend()
+Date: Fri, 5 May 2017 16:21:50 +0200
+Message-ID: <20170505142152.29795-4-roberto.sassu@huawei.com>
 References: <20170505142152.29795-1-roberto.sassu@huawei.com>
 Mime-Version: 1.0
 Content-Type: text/plain
@@ -12,202 +12,206 @@ To: tpmdd-devel@lists.sourceforge.net
 Cc: linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org, Roberto Sassu <roberto.sassu@huawei.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-tpm_pcr_algorithms() returns to its callers the IDs of the hash algorithms
-supported by the TPM. This patch introduces tpm_pcr_algo_to_crypto(),
-so that the callers can use the crypto subsystem to calculate the digest
-to be passed to tpm_pcr_extend().
+The tpm_pcr_extend() definition has been modified to take an array of
+tpm2_digest structures, and the size of the array as arguments.
 
-tpm_pcr_algo_from_crypto(), implemented for completeness, is instead used
-by tpm2_seal_trusted() to perform the opposite conversion.
+The function now checks if callers provided a digests for each active
+PCR bank (or a SHA1 digest for TPM 1.2), to follow the recomendation from
+the TCG specifications. See commit c1f92b4b04ad ("tpm: enhance TPM 2.0
+PCR extend to support multiple banks"). All banks should be extended
+because unused banks could be used by an attacker to hide the true
+integrity status of the platform.
+
+The only allowed exception to the rule above is to pass a SHA1 digest.
+It has been introduced to maintain compatibility with applications that
+expect to interact with a TPM 1.2, and provide only a SHA1 digest.
+In this case, the behavior of tpm_pcr_extend() is unchanged and
+remaining PCR banks are extended with that digest, padded with zeros.
 
 Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
 ---
 v2
 
-- fixed return values of tpm2_pcr_algo_to_crypto() and
-  tpm2_pcr_algo_from_crypto() if TPM support is disabled in the kernel
+- tpm_pcr_extend() arguments checked by tpm_pcr_check_input()
+- modified parameters of tpm_pcr_extend()
 
- drivers/char/tpm/tpm-interface.c | 51 ++++++++++++++++++++++++++++++++++++++++
- drivers/char/tpm/tpm2-cmd.c      | 42 +++++++++------------------------
- include/linux/tpm.h              | 13 ++++++++++
- 3 files changed, 75 insertions(+), 31 deletions(-)
+ drivers/char/tpm/tpm-interface.c | 76 +++++++++++++++++++++++++++++++++++++---
+ drivers/char/tpm/tpm.h           |  6 ----
+ include/linux/tpm.h              | 11 ++++--
+ 3 files changed, 80 insertions(+), 13 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index b90de3d..aac703e 100644
+index aac703e..4b08b02 100644
 --- a/drivers/char/tpm/tpm-interface.c
 +++ b/drivers/char/tpm/tpm-interface.c
-@@ -956,6 +956,57 @@ int tpm_pcr_algorithms(u32 chip_num, int count,
+@@ -867,6 +867,55 @@ static int tpm1_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash,
  }
- EXPORT_SYMBOL_GPL(tpm_pcr_algorithms);
  
-+struct tpm2_hash {
-+	unsigned int crypto_id;
-+	unsigned int tpm_id;
-+};
-+
-+static struct tpm2_hash tpm2_hash_map[] = {
-+	{HASH_ALGO_SHA1, TPM2_ALG_SHA1},
-+	{HASH_ALGO_SHA256, TPM2_ALG_SHA256},
-+	{HASH_ALGO_SHA384, TPM2_ALG_SHA384},
-+	{HASH_ALGO_SHA512, TPM2_ALG_SHA512},
-+	{HASH_ALGO_SM3_256, TPM2_ALG_SM3_256},
-+};
-+
-+/**
-+ * tpm_pcr_algo_to_crypto() - convert from TPM ID to crypto ID
-+ * @tpm_id:	TPM ID
-+ *
-+ * Return: crypto ID
-+ */
-+enum hash_algo tpm_pcr_algo_to_crypto(enum tpm2_algorithms tpm_id)
-+{
-+	int i;
-+
-+	for (i = 0; i < ARRAY_SIZE(tpm2_hash_map); i++) {
-+		if (tpm_id == tpm2_hash_map[i].tpm_id)
-+			return tpm2_hash_map[i].crypto_id;
-+	}
-+
-+	return HASH_ALGO__LAST;
-+}
-+EXPORT_SYMBOL_GPL(tpm_pcr_algo_to_crypto);
-+
-+/**
-+ * tpm_pcr_algo_from_crypto() - convert from crypto ID to TPM ID
-+ * @crypto_id:	crypto ID
-+ *
-+ * Return: TPM ID
-+ */
-+enum tpm2_algorithms tpm_pcr_algo_from_crypto(enum hash_algo crypto_id)
-+{
-+	int i;
-+
-+	for (i = 0; i < ARRAY_SIZE(tpm2_hash_map); i++) {
-+		if (crypto_id == tpm2_hash_map[i].crypto_id)
-+			return tpm2_hash_map[i].tpm_id;
-+	}
-+
-+	return TPM2_ALG_ERROR;
-+}
-+EXPORT_SYMBOL_GPL(tpm_pcr_algo_from_crypto);
-+
  /**
-  * tpm_do_selftest - have the TPM continue its selftest and wait until it
-  *                   can receive further commands
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 3ee6883..828a688 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -92,19 +92,6 @@ struct tpm2_cmd {
- 	union tpm2_cmd_params	params;
++ * tpm_pcr_check_input - check digests argument
++ *
++ * Return values:
++ *       1: input correct
++ *       0: fill digests with SHA1 digest padded with zeros
++ * -EINVAL: input incorrect
++ */
++static int tpm_pcr_check_input(struct tpm_chip *chip, int count,
++			       struct tpm2_digest *digests)
++{
++	bool sha1_only;
++	int found = 0, not_found = 0;
++	int i, j;
++
++	if (count <= 0 || digests == NULL)
++		return -EINVAL;
++
++	sha1_only = (count == 1 && digests[0].alg_id == TPM2_ALG_SHA1);
++
++	if (!(chip->flags & TPM_CHIP_FLAG_TPM2))
++		return sha1_only ? 1 : -EINVAL;
++
++	if (sha1_only)
++		return 0;
++
++	for (i = 0; i < ARRAY_SIZE(chip->active_banks) &&
++	     chip->active_banks[i] != TPM2_ALG_ERROR; i++) {
++		for (j = 0; j < count; j++) {
++			if (digests[j].alg_id == chip->active_banks[i]) {
++				found++;
++				break;
++			}
++		}
++
++		if (j == count) {
++			dev_dbg(&chip->dev, "%s: missing algorithm 0x%X\n",
++				__func__, chip->active_banks[i]);
++			not_found++;
++		}
++	}
++
++	if (not_found == 0 && found != count)
++		dev_dbg(&chip->dev,
++			"%s: duplicate or unsupported algorithm\n", __func__);
++
++	return (not_found == 0 && found == count) ? 1 : -EINVAL;
++}
++
++/**
+  * tpm_pcr_extend - extend pcr value with hash
+  * @chip_num:	tpm idx # or AN&
+  * @pcr_idx:	pcr idx to extend
+@@ -876,29 +925,46 @@ static int tpm1_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash,
+  * isn't, protect against the chip disappearing, by incrementing
+  * the module usage count.
+  */
+-int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
++int tpm_pcr_extend(u32 chip_num, int pcr_idx, int count,
++		   struct tpm2_digest *digests)
+ {
+ 	int rc;
+ 	struct tpm_chip *chip;
+ 	struct tpm2_digest digest_list[ARRAY_SIZE(chip->active_banks)];
+-	u32 count = 0;
++	struct tpm2_digest *digests_ptr = digests;
++	u32 filled_count = 0;
++	u8 *hash;
+ 	int i;
+ 
+ 	chip = tpm_chip_find_get(chip_num);
+ 	if (chip == NULL)
+ 		return -ENODEV;
+ 
+-	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
++	rc = tpm_pcr_check_input(chip, count, digests);
++	if (rc < 0) {
++		dev_dbg(&chip->dev, "%s: invalid arguments\n", __func__);
++		tpm_put_ops(chip);
++		return rc;
++	}
++
++	hash = digests[0].digest;
++
++	if (!rc) {
+ 		memset(digest_list, 0, sizeof(digest_list));
+ 
+ 		for (i = 0; i < ARRAY_SIZE(chip->active_banks) &&
+ 			    chip->active_banks[i] != TPM2_ALG_ERROR; i++) {
+ 			digest_list[i].alg_id = chip->active_banks[i];
+ 			memcpy(digest_list[i].digest, hash, TPM_DIGEST_SIZE);
+-			count++;
++			filled_count++;
+ 		}
+ 
+-		rc = tpm2_pcr_extend(chip, pcr_idx, count, digest_list);
++		digests_ptr = digest_list;
++		count = filled_count;
++	}
++
++	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
++		rc = tpm2_pcr_extend(chip, pcr_idx, count, digests_ptr);
+ 		tpm_put_ops(chip);
+ 		return rc;
+ 	}
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index b22bc25..6d775c4 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -34,7 +34,6 @@
+ #include <linux/acpi.h>
+ #include <linux/cdev.h>
+ #include <linux/highmem.h>
+-#include <crypto/hash_info.h>
+ 
+ enum tpm_const {
+ 	TPM_MINOR = 224,	/* officially assigned */
+@@ -405,11 +404,6 @@ struct tpm_cmd_t {
+ 	tpm_cmd_params	params;
  } __packed;
  
--struct tpm2_hash {
--	unsigned int crypto_id;
--	unsigned int tpm_id;
--};
+-struct tpm2_digest {
+-	u16 alg_id;
+-	u8 digest[SHA512_DIGEST_SIZE];
+-} __packed;
 -
--static struct tpm2_hash tpm2_hash_map[] = {
--	{HASH_ALGO_SHA1, TPM2_ALG_SHA1},
--	{HASH_ALGO_SHA256, TPM2_ALG_SHA256},
--	{HASH_ALGO_SHA384, TPM2_ALG_SHA384},
--	{HASH_ALGO_SHA512, TPM2_ALG_SHA512},
--	{HASH_ALGO_SM3_256, TPM2_ALG_SM3_256},
--};
--
- /*
-  * Array with one entry per ordinal defining the maximum amount
-  * of time the chip could take to return the result. The values
-@@ -301,7 +288,6 @@ int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
- 	struct tpm2_null_auth_area auth_area;
- 	int rc;
- 	int i;
--	int j;
- 
- 	if (count > ARRAY_SIZE(chip->active_banks))
- 		return -EINVAL;
-@@ -323,14 +309,15 @@ int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
- 	tpm_buf_append_u32(&buf, count);
- 
- 	for (i = 0; i < count; i++) {
--		for (j = 0; j < ARRAY_SIZE(tpm2_hash_map); j++) {
--			if (digests[i].alg_id != tpm2_hash_map[j].tpm_id)
--				continue;
--			tpm_buf_append_u16(&buf, digests[i].alg_id);
--			tpm_buf_append(&buf, (const unsigned char
--					      *)&digests[i].digest,
--			       hash_digest_size[tpm2_hash_map[j].crypto_id]);
--		}
-+		enum tpm2_algorithms tpm_id = digests[i].alg_id;
-+		enum hash_algo crypto_id = tpm_pcr_algo_to_crypto(tpm_id);
-+
-+		if (crypto_id == HASH_ALGO__LAST)
-+			continue;
-+
-+		tpm_buf_append_u16(&buf, digests[i].alg_id);
-+		tpm_buf_append(&buf, (const unsigned char *)&digests[i].digest,
-+			       hash_digest_size[crypto_id]);
- 	}
- 
- 	rc = tpm_transmit_cmd(chip, NULL, buf.data, PAGE_SIZE, 0, 0,
-@@ -493,17 +480,10 @@ int tpm2_seal_trusted(struct tpm_chip *chip,
- 	unsigned int blob_len;
- 	struct tpm_buf buf;
- 	u32 hash, rlength;
--	int i;
- 	int rc;
- 
--	for (i = 0; i < ARRAY_SIZE(tpm2_hash_map); i++) {
--		if (options->hash == tpm2_hash_map[i].crypto_id) {
--			hash = tpm2_hash_map[i].tpm_id;
--			break;
--		}
--	}
--
--	if (i == ARRAY_SIZE(tpm2_hash_map))
-+	hash = tpm_pcr_algo_from_crypto(options->hash);
-+	if (hash == TPM2_ALG_ERROR)
- 		return -EINVAL;
- 
- 	rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS, TPM2_CC_CREATE);
+ /* A string buffer type for constructing TPM commands. This is based on the
+  * ideas of string buffer code in security/keys/trusted.h but is heap based
+  * in order to keep the stack usage minimal.
 diff --git a/include/linux/tpm.h b/include/linux/tpm.h
-index b0d0061..9ecd12c 100644
+index 9ecd12c..5c5a600 100644
 --- a/include/linux/tpm.h
 +++ b/include/linux/tpm.h
-@@ -22,6 +22,8 @@
- #ifndef __LINUX_TPM_H__
- #define __LINUX_TPM_H__
+@@ -36,6 +36,11 @@ struct tpm_chip;
+ struct trusted_key_payload;
+ struct trusted_key_options;
  
-+#include <crypto/hash_info.h>
++struct tpm2_digest {
++	u16 alg_id;
++	u8 digest[SHA512_DIGEST_SIZE];
++} __packed;
 +
- #define TPM_DIGEST_SIZE 20	/* Max TPM v1.2 PCR size */
- #define TPM_ACTIVE_BANKS_MAX 7	/* Max num of active banks for TPM 2.0 */
+ enum TPM_OPS_FLAGS {
+ 	TPM_OPS_AUTO_STARTUP = BIT(0),
+ };
+@@ -70,7 +75,8 @@ struct tpm_class_ops {
  
-@@ -71,6 +73,8 @@ extern int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf);
- extern int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash);
+ extern int tpm_is_tpm2(u32 chip_num);
+ extern int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf);
+-extern int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash);
++extern int tpm_pcr_extend(u32 chip_num, int pcr_idx, int count,
++			  struct tpm2_digest *digests);
  extern int tpm_pcr_algorithms(u32 chip_num, int count,
  			      enum tpm2_algorithms *algorithms);
-+extern enum hash_algo tpm_pcr_algo_to_crypto(enum tpm2_algorithms tpm_id);
-+extern enum tpm2_algorithms tpm_pcr_algo_from_crypto(enum hash_algo crypto_id);
- extern int tpm_send(u32 chip_num, void *cmd, size_t buflen);
- extern int tpm_get_random(u32 chip_num, u8 *data, size_t max);
- extern int tpm_seal_trusted(u32 chip_num,
-@@ -95,6 +99,15 @@ static inline int tpm_pcr_algorithms(u32 chip_num, int count,
- {
+ extern enum hash_algo tpm_pcr_algo_to_crypto(enum tpm2_algorithms tpm_id);
+@@ -91,7 +97,8 @@ static inline int tpm_is_tpm2(u32 chip_num)
+ static inline int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf) {
  	return -ENODEV;
  }
-+static inline enum hash_algo tpm_pcr_algo_to_crypto(enum tpm2_algorithms tpm_id)
-+{
-+	return HASH_ALGO__LAST;
-+}
-+static inline enum tpm2_algorithms tpm_pcr_algo_from_crypto(
-+						enum hash_algo crypto_id)
-+{
-+	return TPM2_ALG_ERROR;
-+}
- static inline int tpm_send(u32 chip_num, void *cmd, size_t buflen) {
+-static inline int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash) {
++static inline int tpm_pcr_extend(u32 chip_num, int pcr_idx, int count,
++				 struct tpm2_digest *digests) {
  	return -ENODEV;
  }
+ static inline int tpm_pcr_algorithms(u32 chip_num, int count,
 -- 
 2.9.3
 
