@@ -1,69 +1,59 @@
-From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH] tpm_tis: Issue a TPM2_Shutdown for TPM2
-	devices.
-Date: Mon, 8 May 2017 11:32:34 -0700
-Message-ID: <CAHSjozD1-Sa5=7_i5G5ZnnjbzGj5ng6yBjx9mhMff7sP36iR7w@mail.gmail.com>
-References: <20170428152748.GA32017@obsidianresearch.com>
-	<CAHSjozC=1GgKazv5m19X6Oe321+mkMUFCfFBQ=_c7kPQ-WESDA@mail.gmail.com>
-	<20170428184325.GA15327@obsidianresearch.com>
-	<CAHSjozDRHbuHD6dPfTGMnF4j66hPV-_WiD22y5WRpawPFMQmfQ@mail.gmail.com>
-	<20170428213905.GA19326@obsidianresearch.com>
-	<CAJZ5v0iFkLfmeQgZyQDoKF42=RQw6q_GdK3fLgwdC9_mDbJKjg@mail.gmail.com>
-	<20170428221648.GA25935@obsidianresearch.com>
-	<CAHSjozCROVK=ca8tO+zNC+JD3a0+hQ-54AE7jGndrrs2nG1O1A@mail.gmail.com>
-	<20170505224629.GA15229@obsidianresearch.com>
-	<CAHSjozCaWoQuQiWJ59_UyXnrnq=eh4sucLGgJ=0me6A0NHYsBA@mail.gmail.com>
-	<20170508182415.GA32332@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v2 3/3] tpm: vtpm_proxy: Add ioctl to request locality
+ prepended to command
+Date: Tue, 9 May 2017 02:43:28 +0300
+Message-ID: <20170508234328.iydmoverh5z4nwco@intel.com>
+References: <1493384538-27883-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <1493384538-27883-4-git-send-email-stefanb@linux.vnet.ibm.com>
+ <20170503223747.zefh76m4youqlgje@intel.com>
+ <40cd7d48-f6d1-39f4-99a3-916c7cdbb636@linux.vnet.ibm.com>
+ <20170504091738.rxl77hjzf6vnpuda@intel.com>
+ <e8408f9b-d53d-5af0-3678-e851d78ba99e@linux.vnet.ibm.com>
+ <20170504184007.46efvqyqwxjkzwuq@intel.com>
+ <daa25807-53cd-1abd-d2fa-57e01e37da9f@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170508182415.GA32332-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, "Rafael J. Wysocki" <rafael-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <daa25807-53cd-1abd-d2fa-57e01e37da9f@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, LSM List <linux-security-module@vger.kernel.org>, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Ah, yes, right. Too early on Monday still :)
-Josh
+On Thu, May 04, 2017 at 04:03:18PM -0400, Stefan Berger wrote:
+> On 05/04/2017 02:40 PM, Jarkko Sakkinen wrote:
+> > On Thu, May 04, 2017 at 07:14:27AM -0400, Stefan Berger wrote:
+> > > On 05/04/2017 05:17 AM, Jarkko Sakkinen wrote:
+> > > > On Wed, May 03, 2017 at 07:40:48PM -0400, Stefan Berger wrote:
+> > > > > On 05/03/2017 06:37 PM, Jarkko Sakkinen wrote:
+> > > > > > On Fri, Apr 28, 2017 at 09:02:18AM -0400, Stefan Berger wrote:
+> > > > > > > Add an ioctl to request that the locality be prepended to every TPM
+> > > > > > > command.
+> > > > > > Don't really understand this change. Why locality is prenpended?
+> > > > > Commands can be executed under locality 0-3 and for some commands it is
+> > > > > important to know which locality a user may have chosen. How else should we
+> > > > > convey that locality to the TPM emulator ?
+> > > > Why this is not in the commit message?
+> > > > 
+> > > > More scalable way to do this would be to have a set of vtpm proxy
+> > > > commands. There could be a command for requesting and releasing
+> > > > locality. That would be more clean.
+> > > I would think that if someone wanted to use locality it's the client using
+> > > /dev/tpm(rm)0 calling an ioctl or so and the vtpm proxy then merely passing
+> > > that locality to the backend (TPM emulator). I suppose the intention is to
+> > > support something like that following the addition of the new functions
+> > > request_locality and release_locality?
+> > What if we later on want to pass something else than locality to the
+> > backend? How that will work out?
+> 
+> 'push' more data in front. 'pop' off by recipient. We could wrap the command
+> in some form.
+> 
+>     Stefan
 
+I would find having a set of special commands cleaner. Prepending sounds
+like a quick hack to me, not really something that should exist in the
+mainline.
 
-On Mon, May 8, 2017 at 11:24 AM, Jason Gunthorpe
-<jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote:
-> On Mon, May 08, 2017 at 11:16:56AM -0700, Josh Zimmerman wrote:
->> Hm, according to include/linux/pm.h,
->>
->>     * It is allowed to unregister devices while the above callbacks are being
->>     * executed.  However, a callback routine MUST NOT try to
->> unregister the device
->>     * it was called for, although it may unregister children of that device (for
->>     * example, if it detects that a child was unplugged while the system was
->>     * asleep).
->>
->> So, it seems if we want to add shutdown to class->pm, we'll need to do
->> the refactoring for sysfs now to avoid the implicit lock in order to
->> safely NULL out chip->ops. (Otherwise, I believe we'd need to
->> unregister.)\\
->>
->> I'll start work on that, but I wanted to send this email first to
->> double-check that my understanding was correct and I wasn't missing an
->> easier path.
->
-> Like I said, if you guard shutdown with a 'if TPM2' then the sysfs
-> case cannot occur..
->
-> It eventually needs to be fixed for TPM1, but a TPM2 only first step
-> would be OK too.
->
-> Jason
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+/Jarkko
