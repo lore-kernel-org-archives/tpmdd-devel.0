@@ -1,59 +1,63 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v2 3/3] tpm: vtpm_proxy: Add ioctl to request locality
- prepended to command
-Date: Tue, 9 May 2017 02:43:28 +0300
-Message-ID: <20170508234328.iydmoverh5z4nwco@intel.com>
-References: <1493384538-27883-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1493384538-27883-4-git-send-email-stefanb@linux.vnet.ibm.com>
- <20170503223747.zefh76m4youqlgje@intel.com>
- <40cd7d48-f6d1-39f4-99a3-916c7cdbb636@linux.vnet.ibm.com>
- <20170504091738.rxl77hjzf6vnpuda@intel.com>
- <e8408f9b-d53d-5af0-3678-e851d78ba99e@linux.vnet.ibm.com>
- <20170504184007.46efvqyqwxjkzwuq@intel.com>
- <daa25807-53cd-1abd-d2fa-57e01e37da9f@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v2 1/3] tpm_tis: Fix IRQ autoprobing when
+ using platform_device
+Date: Tue, 9 May 2017 02:45:02 +0300
+Message-ID: <20170508234502.2fhj5edbcubdalb5@intel.com>
+References: <1493913205-18276-1-git-send-email-jgunthorpe@obsidianresearch.com>
+	<1493913205-18276-2-git-send-email-jgunthorpe@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <daa25807-53cd-1abd-d2fa-57e01e37da9f@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, LSM List <linux-security-module@vger.kernel.org>, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
+In-Reply-To: <1493913205-18276-2-git-send-email-jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, May 04, 2017 at 04:03:18PM -0400, Stefan Berger wrote:
-> On 05/04/2017 02:40 PM, Jarkko Sakkinen wrote:
-> > On Thu, May 04, 2017 at 07:14:27AM -0400, Stefan Berger wrote:
-> > > On 05/04/2017 05:17 AM, Jarkko Sakkinen wrote:
-> > > > On Wed, May 03, 2017 at 07:40:48PM -0400, Stefan Berger wrote:
-> > > > > On 05/03/2017 06:37 PM, Jarkko Sakkinen wrote:
-> > > > > > On Fri, Apr 28, 2017 at 09:02:18AM -0400, Stefan Berger wrote:
-> > > > > > > Add an ioctl to request that the locality be prepended to every TPM
-> > > > > > > command.
-> > > > > > Don't really understand this change. Why locality is prenpended?
-> > > > > Commands can be executed under locality 0-3 and for some commands it is
-> > > > > important to know which locality a user may have chosen. How else should we
-> > > > > convey that locality to the TPM emulator ?
-> > > > Why this is not in the commit message?
-> > > > 
-> > > > More scalable way to do this would be to have a set of vtpm proxy
-> > > > commands. There could be a command for requesting and releasing
-> > > > locality. That would be more clean.
-> > > I would think that if someone wanted to use locality it's the client using
-> > > /dev/tpm(rm)0 calling an ioctl or so and the vtpm proxy then merely passing
-> > > that locality to the backend (TPM emulator). I suppose the intention is to
-> > > support something like that following the addition of the new functions
-> > > request_locality and release_locality?
-> > What if we later on want to pass something else than locality to the
-> > backend? How that will work out?
+On Thu, May 04, 2017 at 09:53:23AM -0600, Jason Gunthorpe wrote:
+> The test was backwards, triggering IRQ autoprobing if the firmware
+> did not specify an IRQ, instead of triggering it only when the
+> module force parameter was specified.
 > 
-> 'push' more data in front. 'pop' off by recipient. We could wrap the command
-> in some form.
+> Since autoprobing is not enabled on !x86 and the platform device is
+> currently only used on !x86, or with force, this has gone unnoticed.
 > 
->     Stefan
+> Fixes: 00194826e6be ("tpm_tis: Clean up the force=1 module parameter")
+> Tested-by: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+> Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 
-I would find having a set of special commands cleaner. Prepending sounds
-like a quick hack to me, not really something that should exist in the
-mainline.
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
-/Jarkko
+> ---
+>  drivers/char/tpm/tpm_tis.c | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+> index c7e1384f1b0802..56ce2bb1916693 100644
+> --- a/drivers/char/tpm/tpm_tis.c
+> +++ b/drivers/char/tpm/tpm_tis.c
+> @@ -336,7 +336,7 @@ static int tpm_tis_plat_probe(struct platform_device *pdev)
+>  	if (res) {
+>  		tpm_info.irq = res->start;
+>  	} else {
+> -		if (pdev == force_pdev)
+> +		if (pdev != force_pdev)
+>  			tpm_info.irq = -1;
+>  		else
+>  			/* When forcing auto probe the IRQ */
+> -- 
+> 2.7.4
+> 
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
