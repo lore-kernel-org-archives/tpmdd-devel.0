@@ -1,7 +1,7 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH v2 2/3] tpm_tis: Use platform_get_irq
-Date: Tue, 9 May 2017 02:45:39 +0300
-Message-ID: <20170508234539.qnhf6p7fwxxcb5ul@intel.com>
+Date: Tue, 9 May 2017 02:49:27 +0300
+Message-ID: <20170508234927.o76fbzmu5nwmojcf@intel.com>
 References: <1493913205-18276-1-git-send-email-jgunthorpe@obsidianresearch.com>
 	<1493913205-18276-3-git-send-email-jgunthorpe@obsidianresearch.com>
 Mime-Version: 1.0
