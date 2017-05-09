@@ -1,17 +1,18 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 3/3] tpm_tis: Consolidate the platform
- and acpi probe flow
-Date: Tue, 9 May 2017 17:04:25 +0300
-Message-ID: <20170509140425.zr5hrxpjiytp6hpd@intel.com>
+Subject: Re: [PATCH v2 0/3] Merge tpm_tis ACPI and platform
+	drivers
+Date: Tue, 9 May 2017 17:07:29 +0300
+Message-ID: <20170509140729.si3j6dmcv4pwgbei@intel.com>
 References: <1493913205-18276-1-git-send-email-jgunthorpe@obsidianresearch.com>
-	<1493913205-18276-4-git-send-email-jgunthorpe@obsidianresearch.com>
-	<20170508235033.qcq6my5dvpyvwrwx@intel.com>
+	<20170505064520.ef542rqeirrmpmqu@rhwork>
+	<20170508235219.2zczjmnujaenw2sv@intel.com>
+	<20170509002751.6tlbn6m25crxgsr6@rhwork>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170508235033.qcq6my5dvpyvwrwx-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20170509002751.6tlbn6m25crxgsr6@rhwork>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,30 +21,45 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+To: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, May 09, 2017 at 02:50:33AM +0300, Jarkko Sakkinen wrote:
-> On Thu, May 04, 2017 at 09:53:25AM -0600, Jason Gunthorpe wrote:
-> > Now that the platform device was merged for OF support we can use the
-> > platform device to match ACPI devices as well and run everything
-> > through tpm_tis_init.
+On Mon, May 08, 2017 at 05:27:51PM -0700, Jerry Snitselaar wrote:
+> On Tue May 09 17, Jarkko Sakkinen wrote:
+> > On Thu, May 04, 2017 at 11:45:20PM -0700, Jerry Snitselaar wrote:
+> > > On Thu May 04 17, Jason Gunthorpe wrote:
+> > > > As suggested by Jarkko.
+> > > >
+> > > > The two precursor patches might want to go to -stable.
+> > > >
+> > > > Jerry says it worked on his system, but we still to see results from things
+> > > > like crb systems/etc.
+> > > >
+> > > > Jason Gunthorpe (3):
+> > > >  tpm_tis: Fix IRQ autoprobing when using platform_device
+> > > >  tpm_tis: Use platform_get_irq
+> > > >  tpm_tis: Consolidate the platform and acpi probe flow
+> > > >
+> > > > drivers/char/tpm/tpm_tis.c | 175 +++++++++++++++------------------------------
+> > > > 1 file changed, 57 insertions(+), 118 deletions(-)
+> > > >
+> > > > --
+> > > > 2.7.4
+> > > >
+> > > 
+> > > I also tested on a crb device, and verified that check_acpi_tpm2 was detecting it.
+> > > 
+> > > Reviewed-by: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
 > > 
-> > pnp_acpi_device is replaced with ACPI_COMPANION, and ACPI_HANDLE is
-> > pushed further down.
+> > You tested with TPM2 chips only, right? If this is the case, I'll test
+> > with TPM 1.2.
 > > 
-> > platform_get_resource is used instead of acpi_dev_get_resources.
-> > 
-> > The itpm global module parameter is no longer changed during itpm
-> > detection, instead the phy specific bit is set directly.
-> > 
-> > Tested-by: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-> > Signed-off-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> > /Jarkko
 > 
-> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> Yes, I've only tested TPM2 devices so far.
 
-Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Great, I tested with TPM 1.2 today. I'm ready to apply these patches.
 
 /Jarkko
 
