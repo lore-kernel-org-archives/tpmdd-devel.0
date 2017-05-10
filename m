@@ -1,47 +1,79 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm: fix byte order related arithmetic inconsistency in
- tpm_getcap()
-Date: Wed, 10 May 2017 15:34:58 +0300
-Message-ID: <20170510123458.fh3ef3c55y2wiu35@intel.com>
-References: <20170507175002.9558-1-jarkko.sakkinen@linux.intel.com>
- <20170509141353.klo7lilef4qiqfoc@intel.com>
- <20170509151308.GA13586@obsidianresearch.com>
+Subject: Re: [PATCH v2 3/3] tpm: vtpm_proxy: Add ioctl to request locality
+ prepended to command
+Date: Wed, 10 May 2017 15:47:45 +0300
+Message-ID: <20170510124745.lmqvonrkjmjes7ep@intel.com>
+References: <1493384538-27883-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <1493384538-27883-4-git-send-email-stefanb@linux.vnet.ibm.com>
+ <20170503223747.zefh76m4youqlgje@intel.com>
+ <40cd7d48-f6d1-39f4-99a3-916c7cdbb636@linux.vnet.ibm.com>
+ <20170504091738.rxl77hjzf6vnpuda@intel.com>
+ <e8408f9b-d53d-5af0-3678-e851d78ba99e@linux.vnet.ibm.com>
+ <20170504184007.46efvqyqwxjkzwuq@intel.com>
+ <daa25807-53cd-1abd-d2fa-57e01e37da9f@linux.vnet.ibm.com>
+ <20170508234328.iydmoverh5z4nwco@intel.com>
+ <c4bf7270-1243-bf14-7da8-95d2691ce445@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170509151308.GA13586@obsidianresearch.com>
+In-Reply-To: <c4bf7270-1243-bf14-7da8-95d2691ce445@linux.vnet.ibm.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, open list <linux-kernel@vger.kernel.org>
+To: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, LSM List <linux-security-module@vger.kernel.org>, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, May 09, 2017 at 09:13:08AM -0600, Jason Gunthorpe wrote:
-> On Tue, May 09, 2017 at 05:13:53PM +0300, Jarkko Sakkinen wrote:
-> > On Sun, May 07, 2017 at 08:50:02PM +0300, Jarkko Sakkinen wrote:
-> > > You should not do arithmetic with __be32 or __le32 types because
-> > > sometimes it results incorrect results. Calculations must be done only
-> > > with integers that are in in the CPU byte order. This commit migrates
-> > > tpm_getcap() to struct tpm_buf in order to sort out these issues.
+On Tue, May 09, 2017 at 11:49:05AM -0400, Stefan Berger wrote:
+> On 05/08/2017 07:43 PM, Jarkko Sakkinen wrote:
+> > On Thu, May 04, 2017 at 04:03:18PM -0400, Stefan Berger wrote:
+> > > On 05/04/2017 02:40 PM, Jarkko Sakkinen wrote:
+> > > > On Thu, May 04, 2017 at 07:14:27AM -0400, Stefan Berger wrote:
+> > > > > On 05/04/2017 05:17 AM, Jarkko Sakkinen wrote:
+> > > > > > On Wed, May 03, 2017 at 07:40:48PM -0400, Stefan Berger wrote:
+> > > > > > > On 05/03/2017 06:37 PM, Jarkko Sakkinen wrote:
+> > > > > > > > On Fri, Apr 28, 2017 at 09:02:18AM -0400, Stefan Berger wrote:
+> > > > > > > > > Add an ioctl to request that the locality be prepended to every TPM
+> > > > > > > > > command.
+> > > > > > > > Don't really understand this change. Why locality is prenpended?
+> > > > > > > Commands can be executed under locality 0-3 and for some commands it is
+> > > > > > > important to know which locality a user may have chosen. How else should we
+> > > > > > > convey that locality to the TPM emulator ?
+> > > > > > Why this is not in the commit message?
+> > > > > > 
+> > > > > > More scalable way to do this would be to have a set of vtpm proxy
+> > > > > > commands. There could be a command for requesting and releasing
+> > > > > > locality. That would be more clean.
+> > > > > I would think that if someone wanted to use locality it's the client using
+> > > > > /dev/tpm(rm)0 calling an ioctl or so and the vtpm proxy then merely passing
+> > > > > that locality to the backend (TPM emulator). I suppose the intention is to
+> > > > > support something like that following the addition of the new functions
+> > > > > request_locality and release_locality?
+> > > > What if we later on want to pass something else than locality to the
+> > > > backend? How that will work out?
+> > > 'push' more data in front. 'pop' off by recipient. We could wrap the command
+> > > in some form.
 > > > 
-> > > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-> > > Now this should work as Robertos patches move byte order conversion
-> > > where it should be. Sadly I'm out of reach to my Dell E6400 laptop
-> > > that I use for TPM 1.2 testing.
-> > >  drivers/char/tpm/tpm-interface.c | 30 ++++++++++++++++--------------
-> > >  drivers/char/tpm/tpm.h           | 13 -------------
-> > >  2 files changed, 16 insertions(+), 27 deletions(-)
-> > 
-> > I've now tested this with TPM 1.2. Any complains?
+> > >      Stefan
+> > I would find having a set of special commands cleaner. Prepending sounds
+> > like a quick hack to me, not really something that should exist in the
+> > mainline.
 > 
-> Seems reasonable, but which linke had the problematic arithmetic?
+> Along the lines of this here?
 > 
-> Jason
+> uint32_2 command
+> uint32_2 totlength
+> uint8_t locality
+> uint8_t buffer[]  <- the actual TPM command
+> 
+> 
+> With a command code like VTPM_PROXY_CMD_TPM_CMD = 1.
+> 
+>    Stefan
 
-Arithmetic should work but it's not a good practice to do additions,
-substractions or multiplications in any other byte order than the CPU
-byte order.
+That would break binary compability.
 
-sparse also complains about this.
+I would suggest allocating CC's backwards starting from 0xFFFFFFFF for
+these control messages and send them in regular TPM command layout. A
+bit similar idea as we have in the RM.
 
 /Jarkko
