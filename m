@@ -1,35 +1,37 @@
-From: Luc Van Oostenryck <luc.vanoostenryck@gmail.com>
-Subject: Re: [PATCH] tpm: fix byte order related arithmetic inconsistency in tpm_getcap()
-Date: Thu, 11 May 2017 01:41:15 +0200
-Message-ID: <CAExDi1RODELLA+N4_5JS3LcDa5DN4q_imYwhw4hd4BHq1GFRBw@mail.gmail.com>
-References: <20170507175002.9558-1-jarkko.sakkinen@linux.intel.com>
- <20170509141353.klo7lilef4qiqfoc@intel.com> <20170509151308.GA13586@obsidianresearch.com>
- <20170510123458.fh3ef3c55y2wiu35@intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
+From: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v4 0/2]  Extend the vTPM proxy driver to pass locality
+Date: Wed, 10 May 2017 19:54:20 -0400
+Message-ID: <1494460462-29022-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170510123458.fh3ef3c55y2wiu35@intel.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, open list <linux-kernel@vger.kernel.org>
+To: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jarkko.sakkinen@linux.intel.com
+Cc: jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org, Stefan Berger <stefanb@linux.vnet.ibm.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, May 10, 2017 at 2:34 PM, Jarkko Sakkinen
-<jarkko.sakkinen@linux.intel.com> wrote:
+The purpose of this series of patches is to enable the passing of the locality
+a command is executing in to a recipient, i.e., TPM emulator. To enable this we
+introduce vendor-specific TPM commands for TPM 1.2 and TPM 2 that the driver
+sends to the TPM emulator.
 
-> Arithmetic should work but it's not a good practice to do additions,
-> substractions or multiplications in any other byte order than the CPU
-> byte order.
->
-> sparse also complains about this.
->
-> /Jarkko
+v3->v4:
+  - addressed Jarkko's comments: largely a rewrite of the patches
 
-Arithmetic should work?
-let's try with 0x0080:
-in native order: 0x0080 + 0x0080 = 0x0100
-in reverse order: 0x8000 + 0x8000 = 0x0000 != swap16(0x0100)
+v2->v3:
+  - addressed Jarkko's comments
 
-Or do I misunderstand what you mean by "arithmetic should work"?
+v1->v2:
+  - fixed return value from function in patch 3/3
 
--- Luc Van Oostenryck
+Stefan Berger (2):
+  tpm: Refactor tpm_transmit pulling out tpm_transfer function
+  tpm: vtpm_proxy: Implement request_locality function.
+
+ drivers/char/tpm/tpm-interface.c  | 121 +++++++++++++++++++++++---------------
+ drivers/char/tpm/tpm.h            |   1 +
+ drivers/char/tpm/tpm_vtpm_proxy.c |  34 +++++++++++
+ include/uapi/linux/vtpm_proxy.h   |   5 ++
+ 4 files changed, 113 insertions(+), 48 deletions(-)
+
+-- 
+2.4.3
+
