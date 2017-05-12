@@ -1,192 +1,81 @@
-From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: Re: [PATCH v4 1/2] tpm: Refactor tpm_transmit pulling out
- tpm_transfer function
-Date: Fri, 12 May 2017 09:30:36 -0400
-Message-ID: <1fd5572e-f816-9cc4-40f4-d8ac18aaacdb@linux.vnet.ibm.com>
-References: <1494460462-29022-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1494460462-29022-2-git-send-email-stefanb@linux.vnet.ibm.com>
+From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Subject: [PATCH] Add "shutdown" to "struct class".
+Date: Fri, 12 May 2017 16:32:03 -0700
+Message-ID: <20170512233203.23659-1-joshz@google.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <1494460462-29022-2-git-send-email-stefanb@linux.vnet.ibm.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jarkko.sakkinen@linux.intel.com
-Cc: jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 05/10/2017 07:54 PM, Stefan Berger wrote:
-> Refactor tpm_transmit and pull out code sending the command
-> and receiving the response and put this into tpm_transfer.
->
-> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
-> ---
->   drivers/char/tpm/tpm-interface.c | 121 +++++++++++++++++++++++----------------
->   1 file changed, 73 insertions(+), 48 deletions(-)
->
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index 158c1db..263b6d1 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -370,67 +370,29 @@ static bool tpm_validate_command(struct tpm_chip *chip,
->   }
->
->   /**
-> - * tmp_transmit - Internal kernel interface to transmit TPM commands.
-> + * tmp_transfer - Send a TPM command to the TPM and receive response
->    *
->    * @chip: TPM chip to use
->    * @buf: TPM command buffer
-> + * @count: size of the TPM command
->    * @bufsiz: length of the TPM command buffer
-> - * @flags: tpm transmit flags - bitmap
->    *
->    * Return:
-> - *     0 when the operation is successful.
-> + *     >0 when the operation is successful; returns response length
->    *     A negative number for system errors (errno).
->    */
-> -ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
-> -		     u8 *buf, size_t bufsiz, unsigned int flags)
-> +ssize_t tpm_transfer(struct tpm_chip *chip, u8 *buf, u32 count, size_t bufsiz)
->   {
-> -	struct tpm_output_header *header = (void *)buf;
->   	int rc;
-> +	struct tpm_output_header *header = (void *)buf;
-> +	u32 ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
->   	ssize_t len = 0;
-> -	u32 count, ordinal;
->   	unsigned long stop;
-> -	bool need_locality;
-> -
-> -	if (!tpm_validate_command(chip, space, buf, bufsiz))
-> -		return -EINVAL;
-> -
-> -	if (bufsiz > TPM_BUFSIZE)
-> -		bufsiz = TPM_BUFSIZE;
-> -
-> -	count = be32_to_cpu(*((__be32 *) (buf + 2)));
-> -	ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
-> -	if (count == 0)
-> -		return -ENODATA;
-> -	if (count > bufsiz) {
-> -		dev_err(&chip->dev,
-> -			"invalid count value %x %zx\n", count, bufsiz);
-> -		return -E2BIG;
-> -	}
-> -
-> -	if (!(flags & TPM_TRANSMIT_UNLOCKED))
-> -		mutex_lock(&chip->tpm_mutex);
-> -
-> -	if (chip->dev.parent)
-> -		pm_runtime_get_sync(chip->dev.parent);
-> -
-> -	/* Store the decision as chip->locality will be changed. */
-> -	need_locality = chip->locality == -1;
-> -
-> -	if (need_locality && chip->ops->request_locality)  {
-> -		rc = chip->ops->request_locality(chip, 0);
-> -		if (rc < 0)
-> -			goto out_no_locality;
-> -		chip->locality = rc;
-> -	}
-> -
-> -	rc = tpm2_prepare_space(chip, space, ordinal, buf);
-> -	if (rc)
-> -		goto out;
->
->   	rc = chip->ops->send(chip, (u8 *) buf, count);
->   	if (rc < 0) {
->   		dev_err(&chip->dev,
-> -			"tpm_transmit: tpm_send: error %d\n", rc);
-> +			"tpm_transfer: tpm_send: error %d\n", rc);
->   		goto out;
->   	}
->
-> @@ -467,18 +429,81 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
-missing here: rc = 0;
+The TPM class has some common shutdown code that must be executed for
+all drivers. This adds some needed functionality for that.
 
->   	if (len < 0) {
->   		rc = len;
->   		dev_err(&chip->dev,
-> -			"tpm_transmit: tpm_recv: error %d\n", rc);
-> +			"tpm_transfer: tpm_recv: error %d\n", rc);
->   		goto out;
->   	} else if (len < TPM_HEADER_SIZE) {
->   		rc = -EFAULT;
->   		goto out;
->   	}
->
-> -	if (len != be32_to_cpu(header->length)) {
-> +	if (len != be32_to_cpu(header->length))
->   		rc = -EFAULT;
-> -		goto out;
-> +
-> +out:
-> +	return rc ? rc : len;
-> +}
-> +EXPORT_SYMBOL_GPL(tpm_transfer);
-> +
-> +/**
-> + * tmp_transmit - Internal kernel interface to transmit TPM commands.
-> + *
-> + * @chip: TPM chip to use
-> + * @buf: TPM command buffer
-> + * @bufsiz: length of the TPM command buffer
-> + * @flags: tpm transmit flags - bitmap
-> + *
-> + * Return:
-> + *     0 when the operation is successful.
-> + *     A negative number for system errors (errno).
-> + */
-> +ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
-> +		     u8 *buf, size_t bufsiz, unsigned int flags)
-> +{
-> +	int rc;
-> +	ssize_t len = 0;
-> +	u32 count, ordinal;
-> +	bool need_locality;
-> +
-> +	if (!tpm_validate_command(chip, space, buf, bufsiz))
-> +		return -EINVAL;
-> +
-> +	if (bufsiz > TPM_BUFSIZE)
-> +		bufsiz = TPM_BUFSIZE;
-> +
-> +	count = be32_to_cpu(*((__be32 *) (buf + 2)));
-> +	ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
-> +	if (count == 0)
-> +		return -ENODATA;
-> +	if (count > bufsiz) {
-> +		dev_err(&chip->dev,
-> +			"invalid count value %x %zx\n", count, bufsiz);
-> +		return -E2BIG;
-> +	}
-> +
-> +	if (!(flags & TPM_TRANSMIT_UNLOCKED))
-> +		mutex_lock(&chip->tpm_mutex);
-> +
-> +	if (chip->dev.parent)
-> +		pm_runtime_get_sync(chip->dev.parent);
-> +
-> +	/* Store the decision as chip->locality will be changed. */
-> +	need_locality = chip->locality == -1;
-> +
-> +	if (need_locality && chip->ops->request_locality)  {
-> +		rc = chip->ops->request_locality(chip, 0);
-> +		if (rc < 0)
-> +			goto out_no_locality;
-> +		chip->locality = rc;
->   	}
->
-> +	rc = tpm2_prepare_space(chip, space, ordinal, buf);
-> +	if (rc)
-> +		goto out;
-> +
-> +	len = tpm_transfer(chip, buf, count, bufsiz);
-> +	if (len < 0)
-> +		goto out;
-> +
->   	rc = tpm2_commit_space(chip, space, ordinal, buf, &len);
->
->   out:
+(In addition, update a comment to reflect an out-of-date path.)
+---
+ drivers/base/core.c    | 5 +++++
+ include/linux/device.h | 4 +++-
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/base/core.c b/drivers/base/core.c
+index bbecaf9293be..5c1648875e94 100644
+--- a/drivers/base/core.c
++++ b/drivers/base/core.c
+@@ -2667,6 +2667,11 @@ void device_shutdown(void)
+ 		pm_runtime_get_noresume(dev);
+ 		pm_runtime_barrier(dev);
+ 
++		if (dev->class && dev->class->shutdown) {
++			if (initcall_debug)
++				dev_info(dev, "shutdown\n");
++			dev->class->shutdown(dev);
++		}
+ 		if (dev->bus && dev->bus->shutdown) {
+ 			if (initcall_debug)
+ 				dev_info(dev, "shutdown\n");
+diff --git a/include/linux/device.h b/include/linux/device.h
+index 9ef518af5515..a150f8d3b3f1 100644
+--- a/include/linux/device.h
++++ b/include/linux/device.h
+@@ -378,6 +378,7 @@ int subsys_virtual_register(struct bus_type *subsys,
+  * @suspend:	Used to put the device to sleep mode, usually to a low power
+  *		state.
+  * @resume:	Used to bring the device from the sleep mode.
++ * @shutdown:	Called at shut-down time to quiesce the device.
+  * @ns_type:	Callbacks so sysfs can detemine namespaces.
+  * @namespace:	Namespace of the device belongs to this class.
+  * @pm:		The default device power management operations of this class.
+@@ -407,6 +408,7 @@ struct class {
+ 
+ 	int (*suspend)(struct device *dev, pm_message_t state);
+ 	int (*resume)(struct device *dev);
++	int (*shutdown)(struct device *dev);
+ 
+ 	const struct kobj_ns_type_operations *ns_type;
+ 	const void *(*namespace)(struct device *dev);
+@@ -1228,7 +1230,7 @@ static inline int devtmpfs_delete_node(struct device *dev) { return 0; }
+ static inline int devtmpfs_mount(const char *mountpoint) { return 0; }
+ #endif
+ 
+-/* drivers/base/power/shutdown.c */
++/* drivers/base/core.c */
+ extern void device_shutdown(void);
+ 
+ /* debugging and troubleshooting/diagnostic helpers. */
+-- 
+2.13.0.rc2.291.g57267f2277-goog
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
