@@ -1,7 +1,7 @@
 From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Subject: [PATCH] Add "shutdown" to "struct class".
-Date: Fri, 12 May 2017 16:32:03 -0700
-Message-ID: <20170512233203.23659-1-joshz@google.com>
+Subject: [PATCH v2] Add "shutdown" to "struct class".
+Date: Fri, 12 May 2017 16:38:31 -0700
+Message-ID: <20170512233831.25449-1-joshz@google.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
@@ -22,6 +22,8 @@ The TPM class has some common shutdown code that must be executed for
 all drivers. This adds some needed functionality for that.
 
 (In addition, update a comment to reflect an out-of-date path.)
+
+Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 ---
  drivers/base/core.c    | 5 +++++
  include/linux/device.h | 4 +++-
