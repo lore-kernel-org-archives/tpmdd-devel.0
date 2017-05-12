@@ -1,44 +1,192 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm: fix byte order related arithmetic inconsistency in
- tpm_getcap()
-Date: Thu, 11 May 2017 13:16:46 +0300
-Message-ID: <20170511101646.556aoezp77wlcrw7@intel.com>
-References: <20170507175002.9558-1-jarkko.sakkinen@linux.intel.com>
- <20170509141353.klo7lilef4qiqfoc@intel.com>
- <20170509151308.GA13586@obsidianresearch.com>
- <20170510123458.fh3ef3c55y2wiu35@intel.com>
- <CAExDi1RODELLA+N4_5JS3LcDa5DN4q_imYwhw4hd4BHq1GFRBw@mail.gmail.com>
+From: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Subject: Re: [PATCH v4 1/2] tpm: Refactor tpm_transmit pulling out
+ tpm_transfer function
+Date: Fri, 12 May 2017 09:30:36 -0400
+Message-ID: <1fd5572e-f816-9cc4-40f4-d8ac18aaacdb@linux.vnet.ibm.com>
+References: <1494460462-29022-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <1494460462-29022-2-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <CAExDi1RODELLA+N4_5JS3LcDa5DN4q_imYwhw4hd4BHq1GFRBw@mail.gmail.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Luc Van Oostenryck <luc.vanoostenryck@gmail.com>
-Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, open list <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <1494460462-29022-2-git-send-email-stefanb@linux.vnet.ibm.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jarkko.sakkinen@linux.intel.com
+Cc: jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, May 11, 2017 at 01:41:15AM +0200, Luc Van Oostenryck wrote:
-> On Wed, May 10, 2017 at 2:34 PM, Jarkko Sakkinen
-> <jarkko.sakkinen@linux.intel.com> wrote:
-> 
-> > Arithmetic should work but it's not a good practice to do additions,
-> > substractions or multiplications in any other byte order than the CPU
-> > byte order.
-> >
-> > sparse also complains about this.
-> >
-> > /Jarkko
-> 
-> Arithmetic should work?
-> let's try with 0x0080:
-> in native order: 0x0080 + 0x0080 = 0x0100
-> in reverse order: 0x8000 + 0x8000 = 0x0000 != swap16(0x0100)
-> 
-> Or do I misunderstand what you mean by "arithmetic should work"?
-> 
-> -- Luc Van Oostenryck
+On 05/10/2017 07:54 PM, Stefan Berger wrote:
+> Refactor tpm_transmit and pull out code sending the command
+> and receiving the response and put this into tpm_transfer.
+>
+> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+> ---
+>   drivers/char/tpm/tpm-interface.c | 121 +++++++++++++++++++++++----------------
+>   1 file changed, 73 insertions(+), 48 deletions(-)
+>
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index 158c1db..263b6d1 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -370,67 +370,29 @@ static bool tpm_validate_command(struct tpm_chip *chip,
+>   }
+>
+>   /**
+> - * tmp_transmit - Internal kernel interface to transmit TPM commands.
+> + * tmp_transfer - Send a TPM command to the TPM and receive response
+>    *
+>    * @chip: TPM chip to use
+>    * @buf: TPM command buffer
+> + * @count: size of the TPM command
+>    * @bufsiz: length of the TPM command buffer
+> - * @flags: tpm transmit flags - bitmap
+>    *
+>    * Return:
+> - *     0 when the operation is successful.
+> + *     >0 when the operation is successful; returns response length
+>    *     A negative number for system errors (errno).
+>    */
+> -ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+> -		     u8 *buf, size_t bufsiz, unsigned int flags)
+> +ssize_t tpm_transfer(struct tpm_chip *chip, u8 *buf, u32 count, size_t bufsiz)
+>   {
+> -	struct tpm_output_header *header = (void *)buf;
+>   	int rc;
+> +	struct tpm_output_header *header = (void *)buf;
+> +	u32 ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
+>   	ssize_t len = 0;
+> -	u32 count, ordinal;
+>   	unsigned long stop;
+> -	bool need_locality;
+> -
+> -	if (!tpm_validate_command(chip, space, buf, bufsiz))
+> -		return -EINVAL;
+> -
+> -	if (bufsiz > TPM_BUFSIZE)
+> -		bufsiz = TPM_BUFSIZE;
+> -
+> -	count = be32_to_cpu(*((__be32 *) (buf + 2)));
+> -	ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
+> -	if (count == 0)
+> -		return -ENODATA;
+> -	if (count > bufsiz) {
+> -		dev_err(&chip->dev,
+> -			"invalid count value %x %zx\n", count, bufsiz);
+> -		return -E2BIG;
+> -	}
+> -
+> -	if (!(flags & TPM_TRANSMIT_UNLOCKED))
+> -		mutex_lock(&chip->tpm_mutex);
+> -
+> -	if (chip->dev.parent)
+> -		pm_runtime_get_sync(chip->dev.parent);
+> -
+> -	/* Store the decision as chip->locality will be changed. */
+> -	need_locality = chip->locality == -1;
+> -
+> -	if (need_locality && chip->ops->request_locality)  {
+> -		rc = chip->ops->request_locality(chip, 0);
+> -		if (rc < 0)
+> -			goto out_no_locality;
+> -		chip->locality = rc;
+> -	}
+> -
+> -	rc = tpm2_prepare_space(chip, space, ordinal, buf);
+> -	if (rc)
+> -		goto out;
+>
+>   	rc = chip->ops->send(chip, (u8 *) buf, count);
+>   	if (rc < 0) {
+>   		dev_err(&chip->dev,
+> -			"tpm_transmit: tpm_send: error %d\n", rc);
+> +			"tpm_transfer: tpm_send: error %d\n", rc);
+>   		goto out;
+>   	}
+>
+> @@ -467,18 +429,81 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+missing here: rc = 0;
 
-I was referring to the specific code snippet in tpm-interface.c.
-
-/Jarkko
+>   	if (len < 0) {
+>   		rc = len;
+>   		dev_err(&chip->dev,
+> -			"tpm_transmit: tpm_recv: error %d\n", rc);
+> +			"tpm_transfer: tpm_recv: error %d\n", rc);
+>   		goto out;
+>   	} else if (len < TPM_HEADER_SIZE) {
+>   		rc = -EFAULT;
+>   		goto out;
+>   	}
+>
+> -	if (len != be32_to_cpu(header->length)) {
+> +	if (len != be32_to_cpu(header->length))
+>   		rc = -EFAULT;
+> -		goto out;
+> +
+> +out:
+> +	return rc ? rc : len;
+> +}
+> +EXPORT_SYMBOL_GPL(tpm_transfer);
+> +
+> +/**
+> + * tmp_transmit - Internal kernel interface to transmit TPM commands.
+> + *
+> + * @chip: TPM chip to use
+> + * @buf: TPM command buffer
+> + * @bufsiz: length of the TPM command buffer
+> + * @flags: tpm transmit flags - bitmap
+> + *
+> + * Return:
+> + *     0 when the operation is successful.
+> + *     A negative number for system errors (errno).
+> + */
+> +ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+> +		     u8 *buf, size_t bufsiz, unsigned int flags)
+> +{
+> +	int rc;
+> +	ssize_t len = 0;
+> +	u32 count, ordinal;
+> +	bool need_locality;
+> +
+> +	if (!tpm_validate_command(chip, space, buf, bufsiz))
+> +		return -EINVAL;
+> +
+> +	if (bufsiz > TPM_BUFSIZE)
+> +		bufsiz = TPM_BUFSIZE;
+> +
+> +	count = be32_to_cpu(*((__be32 *) (buf + 2)));
+> +	ordinal = be32_to_cpu(*((__be32 *) (buf + 6)));
+> +	if (count == 0)
+> +		return -ENODATA;
+> +	if (count > bufsiz) {
+> +		dev_err(&chip->dev,
+> +			"invalid count value %x %zx\n", count, bufsiz);
+> +		return -E2BIG;
+> +	}
+> +
+> +	if (!(flags & TPM_TRANSMIT_UNLOCKED))
+> +		mutex_lock(&chip->tpm_mutex);
+> +
+> +	if (chip->dev.parent)
+> +		pm_runtime_get_sync(chip->dev.parent);
+> +
+> +	/* Store the decision as chip->locality will be changed. */
+> +	need_locality = chip->locality == -1;
+> +
+> +	if (need_locality && chip->ops->request_locality)  {
+> +		rc = chip->ops->request_locality(chip, 0);
+> +		if (rc < 0)
+> +			goto out_no_locality;
+> +		chip->locality = rc;
+>   	}
+>
+> +	rc = tpm2_prepare_space(chip, space, ordinal, buf);
+> +	if (rc)
+> +		goto out;
+> +
+> +	len = tpm_transfer(chip, buf, count, bufsiz);
+> +	if (len < 0)
+> +		goto out;
+> +
+>   	rc = tpm2_commit_space(chip, space, ordinal, buf, &len);
+>
+>   out:
