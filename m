@@ -1,52 +1,41 @@
-From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Subject: Re: [PATCH] Add "shutdown" to "struct class".
-Date: Mon, 15 May 2017 16:17:36 +0000
-Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B641D8F02@hasmsx108.ger.corp.intel.com>
-References: <20170512233203.23659-1-joshz@google.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B641D7A27@hasmsx108.ger.corp.intel.com>
-	<20170515155110.GC3433@obsidianresearch.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170515155110.GC3433-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Content-Language: en-US
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "Rafael J. Wysocki" <rjw-LthD3rsA81gm4RdzfppkhA@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+From: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v5 0/2] Extend the vTPM proxy driver to pass locality
+Date: Mon, 15 May 2017 12:51:43 -0400
+Message-ID: <1494867105-30722-1-git-send-email-stefanb@linux.vnet.ibm.com>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Sender: owner-linux-security-module@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jarkko.sakkinen@linux.intel.com
+Cc: jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org, Stefan Berger <stefanb@linux.vnet.ibm.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-> 
-> On Sat, May 13, 2017 at 12:43:11PM +0000, Winkler, Tomas wrote:
-> > > The TPM class has some common shutdown code that must be executed
-> > > for all drivers. This adds some needed functionality for that
-> >
-> > The issue with this is, that on some platforms the only storage can be
-> > eMMC and TPM is using it,. It has to be ensured that the storage
-> > device won't go down before TPM2_shutdown is called.  And there is no
-> > direct device hierarchy to ensure an orderly shutdown.
-> 
-> Something will have to use the new device links stuff to define that
-> dependency, but that seems unrelated to this patch?
+The purpose of this series of patches is to enable the passing of the locality
+a command is executing in to a recipient, i.e., TPM emulator. To enable this we
+introduce vendor-specific TPM commands for TPM 1.2 and TPM 2 that the driver
+sends to the TPM emulator.
 
+v4->v5:
+  - introduce TPM_TRANSMIT_RAW to be able to call tpm_transmit without
+    recursing into requesting the locality.
 
-Yep, it's not directly related to this specific patch, this is more relevant particularly to TPM2_shutdown. 
+v3->v4:
+  - addressed Jarkko's comments: largely a rewrite of the patches
 
-> Can the kernel really shut down the eMMC while the hidden platform stuff is
-> still possibly using it? Goofy..
+v2->v3:
+  - addressed Jarkko's comments
 
-eMMC is single headed, so yes that can happen.
+v1->v2:
+  - fixed return value from function in patch 3/3
 
-Tomas
+Stefan Berger (2):
+  tpm: Introduce flag TPM_TRANSMIT_RAW
+  tpm: vtpm_proxy: Implement request_locality function.
 
+ drivers/char/tpm/tpm-interface.c  |  4 +++-
+ drivers/char/tpm/tpm.h            |  1 +
+ drivers/char/tpm/tpm_vtpm_proxy.c | 36 ++++++++++++++++++++++++++++++++++++
+ include/uapi/linux/vtpm_proxy.h   |  4 ++++
+ 4 files changed, 44 insertions(+), 1 deletion(-)
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+-- 
+2.4.3
+
