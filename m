@@ -1,51 +1,61 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH] tpm: fix byte order related arithmetic
- inconsistency in tpm_getcap()
-Date: Mon, 15 May 2017 14:36:02 +0300
-Message-ID: <20170515113602.2jypna4keatq73qy@intel.com>
-References: <20170507175002.9558-1-jarkko.sakkinen@linux.intel.com>
- <20170509141353.klo7lilef4qiqfoc@intel.com>
- <20170509151308.GA13586@obsidianresearch.com>
- <20170510123458.fh3ef3c55y2wiu35@intel.com>
+Subject: Re: [PATCH v4 1/2] tpm: Refactor tpm_transmit pulling out
+ tpm_transfer function
+Date: Mon, 15 May 2017 15:40:05 +0300
+Message-ID: <20170515124005.thnfzt4zz4yrba34@intel.com>
+References: <1494460462-29022-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <1494460462-29022-2-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170510123458.fh3ef3c55y2wiu35@intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, open list <linux-kernel@vger.kernel.org>
+In-Reply-To: <1494460462-29022-2-git-send-email-stefanb@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, May 10, 2017 at 03:34:58PM +0300, Jarkko Sakkinen wrote:
-> On Tue, May 09, 2017 at 09:13:08AM -0600, Jason Gunthorpe wrote:
-> > On Tue, May 09, 2017 at 05:13:53PM +0300, Jarkko Sakkinen wrote:
-> > > On Sun, May 07, 2017 at 08:50:02PM +0300, Jarkko Sakkinen wrote:
-> > > > You should not do arithmetic with __be32 or __le32 types because
-> > > > sometimes it results incorrect results. Calculations must be done only
-> > > > with integers that are in in the CPU byte order. This commit migrates
-> > > > tpm_getcap() to struct tpm_buf in order to sort out these issues.
-> > > > 
-> > > > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-> > > > Now this should work as Robertos patches move byte order conversion
-> > > > where it should be. Sadly I'm out of reach to my Dell E6400 laptop
-> > > > that I use for TPM 1.2 testing.
-> > > >  drivers/char/tpm/tpm-interface.c | 30 ++++++++++++++++--------------
-> > > >  drivers/char/tpm/tpm.h           | 13 -------------
-> > > >  2 files changed, 16 insertions(+), 27 deletions(-)
-> > > 
-> > > I've now tested this with TPM 1.2. Any complains?
-> > 
-> > Seems reasonable, but which linke had the problematic arithmetic?
-> > 
-> > Jason
+On Wed, May 10, 2017 at 07:54:21PM -0400, Stefan Berger wrote:
+> Refactor tpm_transmit and pull out code sending the command
+> and receiving the response and put this into tpm_transfer.
 > 
-> Arithmetic should work but it's not a good practice to do additions,
-> substractions or multiplications in any other byte order than the CPU
-> byte order.
+> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+> ---
+>  drivers/char/tpm/tpm-interface.c | 121 +++++++++++++++++++++++----------------
+>  1 file changed, 73 insertions(+), 48 deletions(-)
 > 
-> sparse also complains about this.
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index 158c1db..263b6d1 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -370,67 +370,29 @@ static bool tpm_validate_command(struct tpm_chip *chip,
+>  }
+>  
+>  /**
+> - * tmp_transmit - Internal kernel interface to transmit TPM commands.
+> + * tmp_transfer - Send a TPM command to the TPM and receive response
+>   *
+>   * @chip: TPM chip to use
+>   * @buf: TPM command buffer
+> + * @count: size of the TPM command
+>   * @bufsiz: length of the TPM command buffer
+> - * @flags: tpm transmit flags - bitmap
+>   *
+>   * Return:
+> - *     0 when the operation is successful.
+> + *     >0 when the operation is successful; returns response length
+>   *     A negative number for system errors (errno).
+>   */
+> -ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+> -		     u8 *buf, size_t bufsiz, unsigned int flags)
+> +ssize_t tpm_transfer(struct tpm_chip *chip, u8 *buf, u32 count, size_t bufsiz)
 
-Can I get your Reviewed-by for this one?
+Add instead a flag TPM_TRANSMIT_RAW (this name is just a suggestion)
+that skips "prepare" and "commit" parts. That would save us from a
+new export.
+
+Better way to make it less messy would be to add static functions
+tpm_prepare_command and tpm_commit_command that would be always
+called and would return immediately if flags contain TPM_TRANSMIT_RAW.
 
 /Jarkko
