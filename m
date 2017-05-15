@@ -1,13 +1,12 @@
-From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: [PATCH v5 1/2] tpm: Introduce flag TPM_TRANSMIT_RAW
-Date: Mon, 15 May 2017 12:51:44 -0400
-Message-ID: <1494867105-30722-2-git-send-email-stefanb@linux.vnet.ibm.com>
-References: <1494867105-30722-1-git-send-email-stefanb@linux.vnet.ibm.com>
+From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Subject: [PATCH v2] tpm: Issue a TPM2_Shutdown for TPM2
+	devices.
+Date: Mon, 15 May 2017 10:33:04 -0700
+Message-ID: <20170515173304.12216-1-joshz@google.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1494867105-30722-1-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -16,47 +15,88 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
-Cc: linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Introduce the flag TPM_TRASNMIT_RAW that allows us to transmit
-a command without recursing into the requesting of locality.
+If a TPM2 loses power without a TPM2_Shutdown command being issued (a
+"disorderly reboot"), it may lose some state that has yet to be
+persisted to NVRam, and will increment the DA counter (eventually, this
+will cause the TPM to lock the user out.)
 
-Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+NOTE: This only changes behavior on TPM2 devices. Since TPM1 uses sysfs,
+and sysfs relies on implicit locking on chip->ops, it is not safe to
+allow this code to run in TPM1, or to add sysfs support to TPM2, until
+that locking is made explicit.
+
+This patch is dependent on '[PATCH] Add "shutdown" to "struct class".'
+http://marc.info/?l=linux-kernel&m=149463235025420&w=2
+
+Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+
+----
+v2:
+  - Properly split changes between this and another commit
+  - Use proper locking primitive.
+  - Fix commenting style
 ---
- drivers/char/tpm/tpm-interface.c | 3 ++-
- drivers/char/tpm/tpm.h           | 1 +
- 2 files changed, 3 insertions(+), 1 deletion(-)
+ drivers/char/tpm/tpm-chip.c  | 20 ++++++++++++++++++++
+ drivers/char/tpm/tpm-sysfs.c |  2 ++
+ 2 files changed, 22 insertions(+)
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 4ed08ab..2eacda2 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -416,7 +416,8 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
- 	/* Store the decision as chip->locality will be changed. */
- 	need_locality = chip->locality == -1;
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 9dec9f551b83..e0c4323876b8 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -142,6 +142,25 @@ static void tpm_devs_release(struct device *dev)
+ 	put_device(&chip->dev);
+ }
  
--	if (need_locality && chip->ops->request_locality)  {
-+	if (!(flags & TPM_TRANSMIT_RAW) &&
-+	    need_locality && chip->ops->request_locality)  {
- 		rc = chip->ops->request_locality(chip, 0);
- 		if (rc < 0)
- 			goto out_no_locality;
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index e81d8c7..25d9858 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -525,6 +525,7 @@ extern struct idr dev_nums_idr;
++static void tpm_shutdown(struct device *dev)
++{
++	struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
++	/** TPM 2.0 requires that the TPM2_Shutdown() command be issued prior to
++	 * loss of power. If it is not, the DA counter will be incremented and,
++	 * eventually, the user will be locked out of their TPM.
++	 * XXX: This codepath relies on the fact that sysfs is not enabled for
++	 * TPM2: sysfs uses an implicit lock on chip->ops, so this use could
++	 * race if TPM2 has sysfs support enabled before TPM sysfs's implicit
++	 * locking is fixed.
++	 */
++	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
++		down_write(&chip->ops_sem);
++		tpm2_shutdown(chip, TPM_SU_CLEAR);
++		chip->ops = NULL;
++		up_write(&chip->ops_sem);
++	}
++}
++
+ /**
+  * tpm_chip_alloc() - allocate a new struct tpm_chip instance
+  * @pdev: device to which the chip is associated
+@@ -181,6 +200,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+ 	device_initialize(&chip->devs);
  
- enum tpm_transmit_flags {
- 	TPM_TRANSMIT_UNLOCKED	= BIT(0),
-+	TPM_TRANSMIT_RAW	= BIT(1),
- };
+ 	chip->dev.class = tpm_class;
++	chip->dev.class.shutdown = tpm_shutdown;
+ 	chip->dev.release = tpm_dev_release;
+ 	chip->dev.parent = pdev;
+ 	chip->dev.groups = chip->groups;
+diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+index 55405dbe43fa..6256f6e174b0 100644
+--- a/drivers/char/tpm/tpm-sysfs.c
++++ b/drivers/char/tpm/tpm-sysfs.c
+@@ -294,6 +294,8 @@ static const struct attribute_group tpm_dev_group = {
  
- ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+ void tpm_sysfs_add_device(struct tpm_chip *chip)
+ {
++	// XXX: Before this restriction is removed, tpm_sysfs must be updated
++	// to explicitly lock chip->ops.
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+ 		return;
+ 
 -- 
-2.4.3
+2.13.0.rc2.291.g57267f2277-goog
 
 
 ------------------------------------------------------------------------------
