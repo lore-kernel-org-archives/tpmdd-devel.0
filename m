@@ -1,104 +1,67 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v2 1/5] tpm: introduce tpm_pcr_algorithms()
-Date: Mon, 15 May 2017 13:36:23 +0300
-Message-ID: <20170515103623.sumyo2vyldezual2@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v2 2/5] tpm: introduce
+ tpm_pcr_algo_to_crypto() and tpm_pcr_algo_from_crypto()
+Date: Mon, 15 May 2017 14:16:29 +0300
+Message-ID: <20170515111629.urjvbhqzohv4vakc@intel.com>
 References: <20170505142152.29795-1-roberto.sassu@huawei.com>
- <20170505142152.29795-2-roberto.sassu@huawei.com>
+	<20170505142152.29795-3-roberto.sassu@huawei.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170505142152.29795-2-roberto.sassu@huawei.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Roberto Sassu <roberto.sassu@huawei.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org
+In-Reply-To: <20170505142152.29795-3-roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, May 05, 2017 at 04:21:48PM +0200, Roberto Sassu wrote:
-> This function allows TPM users to know which algorithms the TPM supports.
-> It stores the algorithms in a static array of 'enum tpm2_algorithms',
-> allocated by the caller. If the array is not large enough, the function
-> returns an error. Otherwise, it returns the number of algorithms written
-> to the array. If the TPM version is 1.2, the function writes TPM2_ALG_SHA1
-> to first element of the array.
+On Fri, May 05, 2017 at 04:21:49PM +0200, Roberto Sassu wrote:
+> tpm_pcr_algorithms() returns to its callers the IDs of the hash algorithms
+> supported by the TPM. This patch introduces tpm_pcr_algo_to_crypto(),
+> so that the callers can use the crypto subsystem to calculate the digest
+> to be passed to tpm_pcr_extend().
 > 
-> Writing the algorithm also for TPM 1.2 has the advantage that callers
-> can use the API, tpm_pcr_algorithms() and tpm_pcr_extend(), regardless
-> of the TPM version.
+> tpm_pcr_algo_from_crypto(), implemented for completeness, is instead used
+
+What do you mean by completeness? Please, never add unused stuff.
+
+> by tpm2_seal_trusted() to perform the opposite conversion.
 > 
-> A minor change added to this patch was to make available the size of
-> the active_banks array, member of the tpm_chip structure, outside
-> the TPM driver. The array size (TPM_ACTIVE_BANKS_MAX) has been exported
-> to include/linux/tpm.h.
-> 
-> With this information, callers of tpm_pcr_algorithms() can provide
-> a static array with enough room for all the algorithms, instead
-> of receiving the pointer of a dynamic array that they have to free later.
-> 
-> Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
+> Signed-off-by: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
 > ---
 > v2
 > 
-> - tpm_pcr_algorithms() returns supported algorithms also for TPM 1.2
-> 
->  drivers/char/tpm/tpm-interface.c | 46 ++++++++++++++++++++++++++++++++++++++++
->  drivers/char/tpm/tpm.h           | 13 +-----------
->  include/linux/tpm.h              | 19 +++++++++++++++++
->  3 files changed, 66 insertions(+), 12 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index 4ed08ab..b90de3d 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -911,6 +911,52 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
->  EXPORT_SYMBOL_GPL(tpm_pcr_extend);
->  
->  /**
-> + * tpm_pcr_algorithms - get TPM IDs of active PCR banks algorithms
+> - fixed return values of tpm2_pcr_algo_to_crypto() and
+>   tpm2_pcr_algo_from_crypto() if TPM support is disabled in the kernel
 
-The grammar is incorrect here I believe. Should rather be
+Change Log only to the cover letter.
 
-  "algorithms of the active PCR banks"
+>  drivers/char/tpm/tpm-interface.c | 51 ++++++++++++++++++++++++++++++++++++++++
+>  drivers/char/tpm/tpm2-cmd.c      | 42 +++++++++------------------------
+>  include/linux/tpm.h              | 13 ++++++++++
+>  3 files changed, 75 insertions(+), 31 deletions(-)
 
-And there is no such thing as "TPM ID".
+This commit is just deadly wrong in so many ways.
 
-> + * @chip_num:	tpm idx # or ANY
-> + * @count:	# of items in algorithms
-> + * @algorithms:	array of TPM IDs
-> + *
-> + * Returns < 0 on error, and the number of active PCR banks on success.
-> + *
-> + * TPM 1.2 has always one SHA1 bank.
-> + */
-> +int tpm_pcr_algorithms(u32 chip_num, int count,
-> +		       enum tpm2_algorithms *algorithms)
-                       unsigned int
+I would suggest to make extend always just take crypto ID in so you
+don't have to add these bizarre conversion functions.
 
-In addition the function name is not too greatg,
+This probably covers all the patches but just "unsigned int" as type
+for parameters and local variables.
 
-Your syntax for return value is not correct. In addition after
-describing the return value there should not be anything. You should
-study
-
-https://www.kernel.org/doc/Documentation/kernel-doc-nano-HOWTO.txt
-
-Better name for the function would be tpm_get_pcr_algorithms().
-
-> +{
-> +	struct tpm_chip *chip;
-> +	int i;
-> +
-> +	if (count <= 0 || algorithms == NULL)
-> +		return -EINVAL;
-
-Is there a legal case where caller would pass these values? Now it
-looks like that there is.
-
-'count' should unsigned int and zero should be a legal value for
-count.
-
-That said I think the whole design is wrong as you could calculate
-array for algs only one time and pass a const reference to it on
-request.
+I think I'll pass rest of the patches for now because just reviewing the
+two first took too much time and wait for an updated version.
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
