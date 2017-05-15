@@ -1,75 +1,52 @@
-From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: Re: [PATCH v4 1/2] tpm: Refactor tpm_transmit pulling out
- tpm_transfer function
-Date: Mon, 15 May 2017 12:06:57 -0400
-Message-ID: <89842442-e92f-6a65-9998-dd5eb186ca4c@linux.vnet.ibm.com>
-References: <1494460462-29022-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1494460462-29022-2-git-send-email-stefanb@linux.vnet.ibm.com>
- <20170515124005.thnfzt4zz4yrba34@intel.com>
- <1b9e7995-8ed0-cc62-40b7-55b8d1e71ffe@linux.vnet.ibm.com>
+From: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Subject: Re: [PATCH] Add "shutdown" to "struct class".
+Date: Mon, 15 May 2017 16:17:36 +0000
+Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B641D8F02@hasmsx108.ger.corp.intel.com>
+References: <20170512233203.23659-1-joshz@google.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B641D7A27@hasmsx108.ger.corp.intel.com>
+	<20170515155110.GC3433@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <1b9e7995-8ed0-cc62-40b7-55b8d1e71ffe@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170515155110.GC3433-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Content-Language: en-US
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Cc: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "Rafael J. Wysocki" <rjw-LthD3rsA81gm4RdzfppkhA@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 05/15/2017 12:04 PM, Stefan Berger wrote:
-> On 05/15/2017 08:40 AM, Jarkko Sakkinen wrote:
->> On Wed, May 10, 2017 at 07:54:21PM -0400, Stefan Berger wrote:
->>> Refactor tpm_transmit and pull out code sending the command
->>> and receiving the response and put this into tpm_transfer.
->>>
->>> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
->>> ---
->>>   drivers/char/tpm/tpm-interface.c | 121 
->>> +++++++++++++++++++++++----------------
->>>   1 file changed, 73 insertions(+), 48 deletions(-)
->>>
->>> diff --git a/drivers/char/tpm/tpm-interface.c 
->>> b/drivers/char/tpm/tpm-interface.c
->>> index 158c1db..263b6d1 100644
->>> --- a/drivers/char/tpm/tpm-interface.c
->>> +++ b/drivers/char/tpm/tpm-interface.c
->>> @@ -370,67 +370,29 @@ static bool tpm_validate_command(struct 
->>> tpm_chip *chip,
->>>   }
->>>     /**
->>> - * tmp_transmit - Internal kernel interface to transmit TPM commands.
->>> + * tmp_transfer - Send a TPM command to the TPM and receive response
->>>    *
->>>    * @chip: TPM chip to use
->>>    * @buf: TPM command buffer
->>> + * @count: size of the TPM command
->>>    * @bufsiz: length of the TPM command buffer
->>> - * @flags: tpm transmit flags - bitmap
->>>    *
->>>    * Return:
->>> - *     0 when the operation is successful.
->>> + *     >0 when the operation is successful; returns response length
->>>    *     A negative number for system errors (errno).
->>>    */
->>> -ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
->>> -             u8 *buf, size_t bufsiz, unsigned int flags)
->>> +ssize_t tpm_transfer(struct tpm_chip *chip, u8 *buf, u32 count, 
->>> size_t bufsiz)
->> Add instead a flag TPM_TRANSMIT_RAW (this name is just a suggestion)
->> that skips "prepare" and "commit" parts. That would save us from a
->> new export.
->>
->> Better way to make it less messy would be to add static functions
->> tpm_prepare_command and tpm_commit_command that would be always
->> called and would return immediately if flags contain TPM_TRANSMIT_RAW.
->
-> I'll do that then, modifying the code to skip tpm_validate_command as 
-> well.
->
+> 
+> On Sat, May 13, 2017 at 12:43:11PM +0000, Winkler, Tomas wrote:
+> > > The TPM class has some common shutdown code that must be executed
+> > > for all drivers. This adds some needed functionality for that
+> >
+> > The issue with this is, that on some platforms the only storage can be
+> > eMMC and TPM is using it,. It has to be ensured that the storage
+> > device won't go down before TPM2_shutdown is called.  And there is no
+> > direct device hierarchy to ensure an orderly shutdown.
+> 
+> Something will have to use the new device links stuff to define that
+> dependency, but that seems unrelated to this patch?
 
-But we don't want to recurse (in the 2nd patch) into 
-chip->ops->request_locality(). Any suggestions ?
 
-    Stefan
+Yep, it's not directly related to this specific patch, this is more relevant particularly to TPM2_shutdown. 
 
+> Can the kernel really shut down the eMMC while the hidden platform stuff is
+> still possibly using it? Goofy..
+
+eMMC is single headed, so yes that can happen.
+
+Tomas
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
