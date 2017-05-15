@@ -1,79 +1,36 @@
-From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Subject: [PATCH v3] Add "shutdown" to "struct class".
-Date: Mon, 15 May 2017 10:34:38 -0700
-Message-ID: <20170515173438.13420-1-joshz@google.com>
+From: Josh Zimmerman <joshz@google.com>
+Subject: Re: [PATCH v3] Add "shutdown" to "struct class".
+Date: Mon, 15 May 2017 10:39:08 -0700
+Message-ID: <CAHSjozBLBUpSzxrRsfnO49Thf9__MHdOmUdsX+5ST55=T2BWLA@mail.gmail.com>
+References: <20170515173438.13420-1-joshz@google.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset="UTF-8"
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20170515173438.13420-1-joshz@google.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, linux-kernel@vger.kernel.org, "Winkler, Tomas" <tomas.winkler@intel.com>
+Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, Josh Zimmerman <joshz@google.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The TPM class has some common shutdown code that must be executed for
-all drivers. This adds some needed functionality for that.
+(Continuing thread from patch v1)
+> > On Sat, May 13, 2017 at 12:43:11PM +0000, Winkler, Tomas wrote:
+> > > > The TPM class has some common shutdown code that must be executed
+> > > > for all drivers. This adds some needed functionality for that
+> > >
+> > > The issue with this is, that on some platforms the only storage can be
+> > > eMMC and TPM is using it,. It has to be ensured that the storage
+> > > device won't go down before TPM2_shutdown is called.  And there is no
+> > > direct device hierarchy to ensure an orderly shutdown.
+> >
+> > Something will have to use the new device links stuff to define that
+> > dependency, but that seems unrelated to this patch?
+>
+>
+> Yep, it's not directly related to this specific patch, this is more relevant particularly to TPM2_shutdown.
 
-Usage example: 'tpm: Issue a TPM2_Shutdown for TPM2 devices.'
-(see https://patchwork.kernel.org/patch/9724919/ for v2).
+Jason, do you want me to do that in my patch on the tpmdd-devel list?
+If so, mind giving me a documentation pointer or two? I'm not familiar
+with this area.
 
-Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-
------
-v2: Add Signed-off-by.
-v3: Remove logically separate change.
----
- drivers/base/core.c    | 5 +++++
- include/linux/device.h | 2 ++
- 2 files changed, 7 insertions(+)
-
-diff --git a/drivers/base/core.c b/drivers/base/core.c
-index bbecaf9293be..5c1648875e94 100644
---- a/drivers/base/core.c
-+++ b/drivers/base/core.c
-@@ -2667,6 +2667,11 @@ void device_shutdown(void)
- 		pm_runtime_get_noresume(dev);
- 		pm_runtime_barrier(dev);
- 
-+		if (dev->class && dev->class->shutdown) {
-+			if (initcall_debug)
-+				dev_info(dev, "shutdown\n");
-+			dev->class->shutdown(dev);
-+		}
- 		if (dev->bus && dev->bus->shutdown) {
- 			if (initcall_debug)
- 				dev_info(dev, "shutdown\n");
-diff --git a/include/linux/device.h b/include/linux/device.h
-index 9ef518af5515..f240baac2001 100644
---- a/include/linux/device.h
-+++ b/include/linux/device.h
-@@ -378,6 +378,7 @@ int subsys_virtual_register(struct bus_type *subsys,
-  * @suspend:	Used to put the device to sleep mode, usually to a low power
-  *		state.
-  * @resume:	Used to bring the device from the sleep mode.
-+ * @shutdown:	Called at shut-down time to quiesce the device.
-  * @ns_type:	Callbacks so sysfs can detemine namespaces.
-  * @namespace:	Namespace of the device belongs to this class.
-  * @pm:		The default device power management operations of this class.
-@@ -407,6 +408,7 @@ struct class {
- 
- 	int (*suspend)(struct device *dev, pm_message_t state);
- 	int (*resume)(struct device *dev);
-+	int (*shutdown)(struct device *dev);
- 
- 	const struct kobj_ns_type_operations *ns_type;
- 	const void *(*namespace)(struct device *dev);
--- 
-2.13.0.rc2.291.g57267f2277-goog
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+Thanks,
+Josh
