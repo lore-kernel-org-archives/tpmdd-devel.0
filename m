@@ -1,116 +1,162 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v4 2/2] tpm: vtpm_proxy: Implement request_locality
- function.
-Date: Mon, 15 May 2017 15:41:59 +0300
-Message-ID: <20170515124159.2o3ybbxep6vldmid@intel.com>
-References: <1494460462-29022-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1494460462-29022-3-git-send-email-stefanb@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm: Issue a TPM2_Shutdown for TPM2
+	devices.
+Date: Mon, 15 May 2017 15:55:57 +0300
+Message-ID: <20170515125557.se35ksqrzdotpib7@intel.com>
+References: <20170512234058.25716-1-joshz@google.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1494460462-29022-3-git-send-email-stefanb@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
+In-Reply-To: <20170512234058.25716-1-joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, May 10, 2017 at 07:54:22PM -0400, Stefan Berger wrote:
-> Implement the request_locality function. To set the locality on the
-> backend we define vendor-specific TPM 1.2 and TPM 2 ordinals and send
-> a command to the backend to set the locality for the next commands.
+On Fri, May 12, 2017 at 04:40:58PM -0700, Josh Zimmerman wrote:
+> If a TPM2 loses power without a TPM2_Shutdown command being issued, it
+> may lose some state that has yet to be persisted to NVRam, and will
+> increment the DA counter (meaning that after too many disorderly
+> reboots, the TPM will lock the user out).
 > 
-> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
-> ---
->  drivers/char/tpm/tpm.h            |  1 +
->  drivers/char/tpm/tpm_vtpm_proxy.c | 34 ++++++++++++++++++++++++++++++++++
->  include/uapi/linux/vtpm_proxy.h   |  5 +++++
->  3 files changed, 40 insertions(+)
+> This is a variant of https://patchwork.kernel.org/patch/9516631/.
+> It differs in that:
+>   * It only changes behavior on TPM2 devices, to avoid invoking the
+>   unbounded-waiting sysfs codepath that was discussed on that patch, and
+>   to avoid racing on chip->ops.
+>   * It modifies tpm-chip rather than tpm_i2c_infineon, so that it can
+>   change behavior for all TPM2 devices.
 > 
-> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> index 4b4c8de..10f0467 100644
-> --- a/drivers/char/tpm/tpm.h
-> +++ b/drivers/char/tpm/tpm.h
-> @@ -527,6 +527,7 @@ enum tpm_transmit_flags {
->  	TPM_TRANSMIT_UNLOCKED	= BIT(0),
->  };
->  
-> +ssize_t tpm_transfer(struct tpm_chip *chip, u8 *buf, u32 count, size_t bufsiz);
->  ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
->  		     u8 *buf, size_t bufsiz, unsigned int flags);
->  ssize_t tpm_transmit_cmd(struct tpm_chip *chip, struct tpm_space *space,
-> diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
-> index 751059d..374c4ff 100644
-> --- a/drivers/char/tpm/tpm_vtpm_proxy.c
-> +++ b/drivers/char/tpm/tpm_vtpm_proxy.c
-> @@ -371,6 +371,39 @@ static bool vtpm_proxy_tpm_req_canceled(struct tpm_chip  *chip, u8 status)
->  	return ret;
->  }
->  
-> +static int vtpm_proxy_request_locality(struct tpm_chip *chip, int locality)
-> +{
-> +	struct tpm_buf buf;
-> +	int rc;
-> +	const struct tpm_output_header *header;
-> +
-> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> +		rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS,
-> +				  TPM2_CC_SET_LOCALITY);
-> +	else
-> +		rc = tpm_buf_init(&buf, TPM_TAG_RQU_COMMAND,
-> +				  TPM_ORD_SET_LOCALITY);
-> +	if (rc)
-> +		return rc;
-> +	tpm_buf_append_u8(&buf, locality);
-> +
-> +	rc = tpm_transfer(chip, buf.data, tpm_buf_length(&buf), PAGE_SIZE);
-> +	if (rc < 0) {
-> +		locality = rc;
-> +		goto out;
-> +	}
-> +
-> +	header = (const struct tpm_output_header *)buf.data;
-> +	rc = be32_to_cpu(header->return_code);
-> +	if (rc)
-> +		locality = -1;
-> +
-> +out:
-> +	tpm_buf_destroy(&buf);
-> +
-> +	return locality;
-> +}
-> +
->  static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
->  	.flags = TPM_OPS_AUTO_STARTUP,
->  	.recv = vtpm_proxy_tpm_op_recv,
-> @@ -380,6 +413,7 @@ static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
->  	.req_complete_mask = VTPM_PROXY_REQ_COMPLETE_FLAG,
->  	.req_complete_val = VTPM_PROXY_REQ_COMPLETE_FLAG,
->  	.req_canceled = vtpm_proxy_tpm_req_canceled,
-> +	.request_locality = vtpm_proxy_request_locality,
->  };
->  
->  /*
-> diff --git a/include/uapi/linux/vtpm_proxy.h b/include/uapi/linux/vtpm_proxy.h
-> index a69e991..6b91c2c 100644
-> --- a/include/uapi/linux/vtpm_proxy.h
-> +++ b/include/uapi/linux/vtpm_proxy.h
-> @@ -46,4 +46,9 @@ struct vtpm_proxy_new_dev {
->  
->  #define VTPM_PROXY_IOC_NEW_DEV	_IOWR(0xa1, 0x00, struct vtpm_proxy_new_dev)
->  
-> +/* vendor specific commands to set locality */
-> +#define TPM2_CC_SET_LOCALITY	0x20001000
-> +#define TPM_ORD_SET_LOCALITY	0x20001000
-> +
-> +
->  #endif /* _UAPI_LINUX_VTPM_PROXY_H */
-> -- 
-> 2.4.3
+> This patch is dependent on '[PATCH] Add "shutdown" to "struct class".'
+> http://marc.info/?l=linux-kernel&m=149463235025420&w=2
+> 
+> Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 
-This is a question.
+Split the core changes to a separate patch. Try to make a commit
+message that can stand on its own. I understand what you are doing
+below but after 6 months or so when I have to look at the commit
+history for one reason or another this commit might become a pain
+because of all these cross references. I hope you understand this.
 
-Did you have some kind of big idea with 0x20? I was just thinking
-that one way to do this would to allocate starting from 0xFFFFFFFF.
+Otherwise, thanks for doing all this effort!
 
 /Jarkko
+
+> ---
+>  drivers/base/core.c          |  5 +++++
+>  drivers/char/tpm/tpm-chip.c  | 19 +++++++++++++++++++
+>  drivers/char/tpm/tpm-sysfs.c |  2 ++
+>  include/linux/device.h       |  4 +++-
+>  4 files changed, 29 insertions(+), 1 deletion(-)
+> 
+> diff --git a/drivers/base/core.c b/drivers/base/core.c
+> index 6bb60fb6a30b..687668d9afbe 100644
+> --- a/drivers/base/core.c
+> +++ b/drivers/base/core.c
+> @@ -2667,6 +2667,11 @@ void device_shutdown(void)
+>  		pm_runtime_get_noresume(dev);
+>  		pm_runtime_barrier(dev);
+>  
+> +		if (dev->class && dev->class->shutdown) {
+> +			if (initcall_debug)
+> +				dev_info(dev, "shutdown\n");
+> +			dev->class->shutdown(dev);
+> +		}
+>  		if (dev->bus && dev->bus->shutdown) {
+>  			if (initcall_debug)
+>  				dev_info(dev, "shutdown\n");
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index 9dec9f551b83..024dadc0a829 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -142,6 +142,24 @@ static void tpm_devs_release(struct device *dev)
+>  	put_device(&chip->dev);
+>  }
+>  
+> +static void tpm_shutdown(struct device *dev)
+> +{
+> +	struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
+> +	// TPM 2.0 requires that the TPM2_Shutdown() command be issued prior to
+> +	// loss of power. If it is not, the DA counter will be incremented and,
+> +	// eventually, the user will be locked out of their TPM.
+> +	// XXX: This codepath relies on the fact that sysfs is not enabled for
+> +	// TPM2: sysfs uses an implicit lock on chip->ops, so this use could
+> +	// race if TPM2 has sysfs support enabled before TPM sysfs's implicit
+> +	// locking is fixed.
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+> +		down_read(&chip->ops_sem);
+> +		tpm2_shutdown(chip, TPM_SU_CLEAR);
+> +		chip->ops = NULL;
+> +		up_read(&chip->ops_sem);
+> +	}
+> +}
+> +
+>  /**
+>   * tpm_chip_alloc() - allocate a new struct tpm_chip instance
+>   * @pdev: device to which the chip is associated
+> @@ -181,6 +199,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+>  	device_initialize(&chip->devs);
+>  
+>  	chip->dev.class = tpm_class;
+> +	chip->dev.class.shutdown = tpm_shutdown;
+>  	chip->dev.release = tpm_dev_release;
+>  	chip->dev.parent = pdev;
+>  	chip->dev.groups = chip->groups;
+> diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+> index 55405dbe43fa..6256f6e174b0 100644
+> --- a/drivers/char/tpm/tpm-sysfs.c
+> +++ b/drivers/char/tpm/tpm-sysfs.c
+> @@ -294,6 +294,8 @@ static const struct attribute_group tpm_dev_group = {
+>  
+>  void tpm_sysfs_add_device(struct tpm_chip *chip)
+>  {
+> +	// XXX: Before this restriction is removed, tpm_sysfs must be updated
+> +	// to explicitly lock chip->ops.
+>  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+>  		return;
+>  
+> diff --git a/include/linux/device.h b/include/linux/device.h
+> index 9ef518af5515..a150f8d3b3f1 100644
+> --- a/include/linux/device.h
+> +++ b/include/linux/device.h
+> @@ -378,6 +378,7 @@ int subsys_virtual_register(struct bus_type *subsys,
+>   * @suspend:	Used to put the device to sleep mode, usually to a low power
+>   *		state.
+>   * @resume:	Used to bring the device from the sleep mode.
+> + * @shutdown:	Called at shut-down time to quiesce the device.
+>   * @ns_type:	Callbacks so sysfs can detemine namespaces.
+>   * @namespace:	Namespace of the device belongs to this class.
+>   * @pm:		The default device power management operations of this class.
+> @@ -407,6 +408,7 @@ struct class {
+>  
+>  	int (*suspend)(struct device *dev, pm_message_t state);
+>  	int (*resume)(struct device *dev);
+> +	int (*shutdown)(struct device *dev);
+>  
+>  	const struct kobj_ns_type_operations *ns_type;
+>  	const void *(*namespace)(struct device *dev);
+> @@ -1228,7 +1230,7 @@ static inline int devtmpfs_delete_node(struct device *dev) { return 0; }
+>  static inline int devtmpfs_mount(const char *mountpoint) { return 0; }
+>  #endif
+>  
+> -/* drivers/base/power/shutdown.c */
+> +/* drivers/base/core.c */
+>  extern void device_shutdown(void);
+>  
+>  /* debugging and troubleshooting/diagnostic helpers. */
+> -- 
+> 2.13.0.rc2.291.g57267f2277-goog
+> 
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
