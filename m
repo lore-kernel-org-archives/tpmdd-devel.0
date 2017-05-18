@@ -1,16 +1,14 @@
 From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH v3] Add "shutdown" to "struct class".
-Date: Thu, 18 May 2017 08:20:53 -0700
-Message-ID: <CAHSjozAQcMHSsbq-D4ytOk+qMa=3btx1UkF6rctsa2p8U8Gv1w@mail.gmail.com>
-References: <20170515173438.13420-1-joshz@google.com>
-	<CAHSjozBLBUpSzxrRsfnO49Thf9__MHdOmUdsX+5ST55=T2BWLA@mail.gmail.com>
-	<20170515174533.GB6229@obsidianresearch.com>
-	<5B8DA87D05A7694D9FA63FD143655C1B641D90DB@hasmsx108.ger.corp.intel.com>
+Subject: Re: [PATCH v3] tpm: Issue a TPM2_Shutdown for TPM2
+	devices.
+Date: Thu, 18 May 2017 08:21:32 -0700
+Message-ID: <CAHSjozBoysvjHh_4hKuE8v7Sq3L9LjmZEcpCb_SZ=g63GpS7Aw@mail.gmail.com>
+References: <20170516000852.28400-1-joshz@google.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B641D90DB-Jy8z56yoSI8MvF1YICWikbfspsVTdybXVpNB7YpNyf8@public.gmane.org>
+In-Reply-To: <20170516000852.28400-1-joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,67 +17,100 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-Cc: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Are there any more changes any of you would like to see in this patch?
+Are there any other changes I should make to this patch, or is it good
+to go once the patch it depends on is in?
 
 Thanks!
 Josh
 
 
-On Mon, May 15, 2017 at 1:49 PM, Winkler, Tomas <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org> wrote:
+On Mon, May 15, 2017 at 5:08 PM, Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org> wrote:
+> If a TPM2 loses power without a TPM2_Shutdown command being issued (a
+> "disorderly reboot"), it may lose some state that has yet to be
+> persisted to NVRam, and will increment the DA counter (eventually, this
+> will cause the TPM to lock the user out.)
 >
+> NOTE: This only changes behavior on TPM2 devices. Since TPM1 uses sysfs,
+> and sysfs relies on implicit locking on chip->ops, it is not safe to
+> allow this code to run in TPM1, or to add sysfs support to TPM2, until
+> that locking is made explicit.
 >
->> -----Original Message-----
->> From: Jason Gunthorpe [mailto:jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org]
->> Sent: Monday, May 15, 2017 20:46
->> To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
->> Cc: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>; linux-
->> kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org; Winkler, Tomas <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>; Jarkko
->> Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>; tpmdd-
->> devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
->> Subject: Re: [PATCH v3] Add "shutdown" to "struct class".
->>
->> On Mon, May 15, 2017 at 10:39:08AM -0700, Josh Zimmerman wrote:
->> > (Continuing thread from patch v1)
->> > > > On Sat, May 13, 2017 at 12:43:11PM +0000, Winkler, Tomas wrote:
->> > > > > > The TPM class has some common shutdown code that must be
->> > > > > > executed for all drivers. This adds some needed functionality
->> > > > > > for that
->> > > > >
->> > > > > The issue with this is, that on some platforms the only storage
->> > > > > can be eMMC and TPM is using it,. It has to be ensured that the
->> > > > > storage device won't go down before TPM2_shutdown is called.
->> > > > > And there is no direct device hierarchy to ensure an orderly
->> shutdown.
->> > > >
->> > > > Something will have to use the new device links stuff to define
->> > > > that dependency, but that seems unrelated to this patch?
->> > >
->> > >
->> > > Yep, it's not directly related to this specific patch, this is more relevant
->> particularly to TPM2_shutdown.
->> >
->> > Jason, do you want me to do that in my patch on the tpmdd-devel list?
->> > If so, mind giving me a documentation pointer or two? I'm not familiar
->> > with this area.
->>
->> No.. Ordering power management events is something someone with
->> knowledge of the specific emmc platform is going to have to tackle..
->> It isn't really a core problem, platform specific code will have to setup the
->> needed device links to order power management properly..
+> This patch is dependent on '[PATCH] Add "shutdown" to "struct class".'
+> http://marc.info/?l=linux-kernel&m=149463235025420&w=2
 >
-> eMMC is just an example, that can be other storage device (ufs, nvme) and some type of abstraction of underlying storage
-> dependency would be required. I just wanted to put it on the table, not sure it has to be solved in this round.
-> Tomas
+> Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 >
+> ----
+> v2:
+>   - Properly split changes between this and another commit
+>   - Use proper locking primitive.
+>   - Fix commenting style
+> v3:
+>   - Re-fix commenting style
+> ---
+>  drivers/char/tpm/tpm-chip.c  | 20 ++++++++++++++++++++
+>  drivers/char/tpm/tpm-sysfs.c |  3 +++
+>  2 files changed, 23 insertions(+)
 >
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index 9dec9f551b83..272a42e77574 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -142,6 +142,25 @@ static void tpm_devs_release(struct device *dev)
+>         put_device(&chip->dev);
+>  }
 >
+> +static void tpm_shutdown(struct device *dev)
+> +{
+> +       struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
+> +       /* TPM 2.0 requires that the TPM2_Shutdown() command be issued prior to
+> +        * loss of power. If it is not, the DA counter will be incremented and,
+> +        * eventually, the user will be locked out of their TPM.
+> +        * XXX: This codepath relies on the fact that sysfs is not enabled for
+> +        * TPM2: sysfs uses an implicit lock on chip->ops, so this use could
+> +        * race if TPM2 has sysfs support enabled before TPM sysfs's implicit
+> +        * locking is fixed.
+> +        */
+> +       if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+> +               down_write(&chip->ops_sem);
+> +               tpm2_shutdown(chip, TPM_SU_CLEAR);
+> +               chip->ops = NULL;
+> +               up_write(&chip->ops_sem);
+> +       }
+> +}
+> +
+>  /**
+>   * tpm_chip_alloc() - allocate a new struct tpm_chip instance
+>   * @pdev: device to which the chip is associated
+> @@ -181,6 +200,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+>         device_initialize(&chip->devs);
 >
->>
->> Jason
+>         chip->dev.class = tpm_class;
+> +       chip->dev.class.shutdown = tpm_shutdown;
+>         chip->dev.release = tpm_dev_release;
+>         chip->dev.parent = pdev;
+>         chip->dev.groups = chip->groups;
+> diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+> index 55405dbe43fa..5e5ff7eb6f7e 100644
+> --- a/drivers/char/tpm/tpm-sysfs.c
+> +++ b/drivers/char/tpm/tpm-sysfs.c
+> @@ -294,6 +294,9 @@ static const struct attribute_group tpm_dev_group = {
+>
+>  void tpm_sysfs_add_device(struct tpm_chip *chip)
+>  {
+> +       /* XXX: Before this restriction is removed, tpm_sysfs must be updated
+> +        * to explicitly lock chip->ops.
+> +        */
+>         if (chip->flags & TPM_CHIP_FLAG_TPM2)
+>                 return;
+>
+> --
+> 2.13.0.303.g4ebf302169-goog
+>
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
