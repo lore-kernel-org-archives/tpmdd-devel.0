@@ -1,14 +1,16 @@
-From: "Stefan Berger" <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 Subject: Re: [PATCH v3] tpm: Issue a TPM2_Shutdown for
 	TPM2devices.
-Date: Thu, 18 May 2017 21:13:50 +0000
-Message-ID: <OFBE16F6BF.0143BC70-ON00258124.00741785-00258124.00749FD3@notes.na.collabserv.com>
-References: <CAHSjozBoysvjHh_4hKuE8v7Sq3L9LjmZEcpCb_SZ=g63GpS7Aw@mail.gmail.com>,
-	<20170516000852.28400-1-joshz@google.com>
+Date: Thu, 18 May 2017 15:24:40 -0700
+Message-ID: <CAHSjozB3DxoD-NQTKEDOtUTXxo9Cw+v1UQGWuxbEZwXCrvo95w@mail.gmail.com>
+References: <20170516000852.28400-1-joshz@google.com>
+	<CAHSjozBoysvjHh_4hKuE8v7Sq3L9LjmZEcpCb_SZ=g63GpS7Aw@mail.gmail.com>
+	<OFBE16F6BF.0143BC70-ON00258124.00741785-00258124.00749FD3@notes.na.collabserv.com>
 Mime-Version: 1.0
-Content-Type: multipart/mixed; boundary="===============7493000086954094751=="
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <CAHSjozBoysvjHh_4hKuE8v7Sq3L9LjmZEcpCb_SZ=g63GpS7Aw-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
+In-Reply-To: <OFBE16F6BF.0143BC70-ON00258124.00741785-00258124.00749FD3-8eTO7WVQ4XIsd+ienQ86orlN3bxYEBpz@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,129 +19,128 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org
-Cc: gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Stefan Berger <stefanb-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Cc: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
---===============7493000086954094751==
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/html; charset=UTF-8
-
-<div class=3D"socmaildefaultfont" dir=3D"ltr" style=3D"font-family:Arial, H=
-elvetica, sans-serif;font-size:10.5pt" ><div dir=3D"ltr" >Does it work when=
- doing suspend (to RAM) and tpm=5Fpm=5Fsuspend sent a tpm2=5Fshutdown(chip,=
- TPM2=5FSU=5FSTATE) presumably before that?</div>
-<div dir=3D"ltr" >&nbsp;</div>
-<div dir=3D"ltr" >&nbsp;&nbsp;&nbsp; Stefan</div>
-<div dir=3D"ltr" >&nbsp;</div>
-<blockquote data-history-content-modified=3D"1" dir=3D"ltr" style=3D"border=
--left:solid #aaaaaa 2px; margin-left:5px; padding-left:5px; direction:ltr; =
-margin-right:0px" >----- Original message -----<br>From: Josh Zimmerman &lt=
-;joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org&gt;<br>To: Peter Huewe &lt;peterhuewe-Mmb7MZpHnFY@public.gmane.org&gt;, Marcel =
-Selhorst &lt;tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org&gt;, Jarkko Sakkinen &lt;jarkko.sakkinen@li=
-nux.intel.com&gt;, Jason Gunthorpe &lt;jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org&gt;,=
- tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org<br>Cc: Greg Kroah-Hartman &lt;gregkh@lin=
-uxfoundation.org&gt;<br>Subject: Re: [tpmdd-devel] [PATCH v3] tpm: Issue a =
-TPM2=5FShutdown for TPM2 devices.<br>Date: Thu, May 18, 2017 11:22 AM<br>&n=
-bsp;
-<div><font size=3D"2" face=3D"Default Monospace,Courier New,Courier,monospa=
-ce" >Are there any other changes I should make to this patch, or is it good=
-<br>to go once the patch it depends on is in?<br><br>Thanks!<br>Josh<br><br=
-><br>On Mon, May 15, 2017 at 5:08 PM, Josh Zimmerman &lt;joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org&g=
-t; wrote:<br>&gt; If a TPM2 loses power without a TPM2=5FShutdown command b=
-eing issued (a<br>&gt; "disorderly reboot"), it may lose some state that ha=
-s yet to be<br>&gt; persisted to NVRam, and will increment the DA counter (=
-eventually, this<br>&gt; will cause the TPM to lock the user out.)<br>&gt;<=
-br>&gt; NOTE: This only changes behavior on TPM2 devices. Since TPM1 uses s=
-ysfs,<br>&gt; and sysfs relies on implicit locking on chip-&gt;ops, it is n=
-ot safe to<br>&gt; allow this code to run in TPM1, or to add sysfs support =
-to TPM2, until<br>&gt; that locking is made explicit.<br>&gt;<br>&gt; This =
-patch is dependent on '[PATCH] Add "shutdown" to "struct class".'<br>&gt; <=
-a href=3D"http://marc.info/?l=3Dlinux-kernel&amp;m=3D149463235025420&amp;w=
-=3D2" target=3D"=5Fblank" >http://marc.info/?l=3Dlinux-kernel&amp;m=3D14946=
-3235025420&amp;w=3D2</a><br>&gt;<br>&gt; Signed-off-by: Josh Zimmerman &lt;=
-joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org&gt;<br>&gt;<br>&gt; ----<br>&gt; v2:<br>&gt; &nbsp; - Prop=
-erly split changes between this and another commit<br>&gt; &nbsp; - Use pro=
-per locking primitive.<br>&gt; &nbsp; - Fix commenting style<br>&gt; v3:<br=
->&gt; &nbsp; - Re-fix commenting style<br>&gt; ---<br>&gt; &nbsp;drivers/ch=
-ar/tpm/tpm-chip.c &nbsp;| 20 ++++++++++++++++++++<br>&gt; &nbsp;drivers/cha=
-r/tpm/tpm-sysfs.c | &nbsp;3 +++<br>&gt; &nbsp;2 files changed, 23 insertion=
-s(+)<br>&gt;<br>&gt; diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/cha=
-r/tpm/tpm-chip.c<br>&gt; index 9dec9f551b83..272a42e77574 100644<br>&gt; --=
-- a/drivers/char/tpm/tpm-chip.c<br>&gt; +++ b/drivers/char/tpm/tpm-chip.c<b=
-r>&gt; @@ -142,6 +142,25 @@ static void tpm=5Fdevs=5Frelease(struct device =
-*dev)<br>&gt; &nbsp; &nbsp; &nbsp; &nbsp; put=5Fdevice(&amp;chip-&gt;dev);<=
-br>&gt; &nbsp;}<br>&gt;<br>&gt; +static void tpm=5Fshutdown(struct device *=
-dev)<br>&gt; +{<br>&gt; + &nbsp; &nbsp; &nbsp; struct tpm=5Fchip *chip =3D =
-container=5Fof(dev, struct tpm=5Fchip, dev);<br>&gt; + &nbsp; &nbsp; &nbsp;=
- /* TPM 2.0 requires that the TPM2=5FShutdown() command be issued prior to<=
-br>&gt; + &nbsp; &nbsp; &nbsp; &nbsp;* loss of power. If it is not, the DA =
-counter will be incremented and,<br>&gt; + &nbsp; &nbsp; &nbsp; &nbsp;* eve=
-ntually, the user will be locked out of their TPM.<br>&gt; + &nbsp; &nbsp; =
-&nbsp; &nbsp;* XXX: This codepath relies on the fact that sysfs is not enab=
-led for<br>&gt; + &nbsp; &nbsp; &nbsp; &nbsp;* TPM2: sysfs uses an implicit=
- lock on chip-&gt;ops, so this use could<br>&gt; + &nbsp; &nbsp; &nbsp; &nb=
-sp;* race if TPM2 has sysfs support enabled before TPM sysfs's implicit<br>=
-&gt; + &nbsp; &nbsp; &nbsp; &nbsp;* locking is fixed.<br>&gt; + &nbsp; &nbs=
-p; &nbsp; &nbsp;*/<br>&gt; + &nbsp; &nbsp; &nbsp; if (chip-&gt;flags &amp; =
-TPM=5FCHIP=5FFLAG=5FTPM2) {<br>&gt; + &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &n=
-bsp; &nbsp; down=5Fwrite(&amp;chip-&gt;ops=5Fsem);<br>&gt; + &nbsp; &nbsp; =
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; tpm2=5Fshutdown(chip, TPM=5FSU=5FCLEAR);=
-<br>&gt; + &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; chip-&gt;ops =
-=3D NULL;<br>&gt; + &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; up=5Fw=
-rite(&amp;chip-&gt;ops=5Fsem);<br>&gt; + &nbsp; &nbsp; &nbsp; }<br>&gt; +}<=
-br>&gt; +<br>&gt; &nbsp;/**<br>&gt; &nbsp; * tpm=5Fchip=5Falloc() - allocat=
-e a new struct tpm=5Fchip instance<br>&gt; &nbsp; * @pdev: device to which =
-the chip is associated<br>&gt; @@ -181,6 +200,7 @@ struct tpm=5Fchip *tpm=
-=5Fchip=5Falloc(struct device *pdev,<br>&gt; &nbsp; &nbsp; &nbsp; &nbsp; de=
-vice=5Finitialize(&amp;chip-&gt;devs);<br>&gt;<br>&gt; &nbsp; &nbsp; &nbsp;=
- &nbsp; chip-&gt;dev.class =3D tpm=5Fclass;<br>&gt; + &nbsp; &nbsp; &nbsp; =
-chip-&gt;dev.class.shutdown =3D tpm=5Fshutdown;<br>&gt; &nbsp; &nbsp; &nbsp=
-; &nbsp; chip-&gt;dev.release =3D tpm=5Fdev=5Frelease;<br>&gt; &nbsp; &nbsp=
-; &nbsp; &nbsp; chip-&gt;dev.parent =3D pdev;<br>&gt; &nbsp; &nbsp; &nbsp; =
-&nbsp; chip-&gt;dev.groups =3D chip-&gt;groups;<br>&gt; diff --git a/driver=
-s/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c<br>&gt; index 55405db=
-e43fa..5e5ff7eb6f7e 100644<br>&gt; --- a/drivers/char/tpm/tpm-sysfs.c<br>&g=
-t; +++ b/drivers/char/tpm/tpm-sysfs.c<br>&gt; @@ -294,6 +294,9 @@ static co=
-nst struct attribute=5Fgroup tpm=5Fdev=5Fgroup =3D {<br>&gt;<br>&gt; &nbsp;=
-void tpm=5Fsysfs=5Fadd=5Fdevice(struct tpm=5Fchip *chip)<br>&gt; &nbsp;{<br=
->&gt; + &nbsp; &nbsp; &nbsp; /* XXX: Before this restriction is removed, tp=
-m=5Fsysfs must be updated<br>&gt; + &nbsp; &nbsp; &nbsp; &nbsp;* to explici=
-tly lock chip-&gt;ops.<br>&gt; + &nbsp; &nbsp; &nbsp; &nbsp;*/<br>&gt; &nbs=
-p; &nbsp; &nbsp; &nbsp; if (chip-&gt;flags &amp; TPM=5FCHIP=5FFLAG=5FTPM2)<=
-br>&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; return;<br>=
-&gt;<br>&gt; --<br>&gt; 2.13.0.303.g4ebf302169-goog<br>&gt;<br><br>--------=
-----------------------------------------------------------------------<br>C=
-heck out the vibrant tech community on one of the world's most<br>engaging =
-tech sites, Slashdot.org! <a href=3D"http://sdm.link/slashdot" target=3D"=
-=5Fblank" >http://sdm.link/slashdot</a><br>=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=
-=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=
-=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F<br>tpmdd-devel mailing list<br>tpmdd-d=
-evel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org<br><a href=3D"https://lists.sourceforge.net/list=
-s/listinfo/tpmdd-devel" target=3D"=5Fblank" >https://lists.sourceforge.net/=
-lists/listinfo/tpmdd-devel</a></font><br>&nbsp;</div></blockquote>
-<div dir=3D"ltr" >&nbsp;</div></div><BR>
-
-
-
---===============7493000086954094751==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
---===============7493000086954094751==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-_______________________________________________
-tpmdd-devel mailing list
-tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-
---===============7493000086954094751==--
+VGhpcyBpcyBhIGJpdCBoYXJkIHRvIHRyYWNrIGRvd24sIGJ1dCBJIHRoaW5rIEkndmUgZm91bmQg
+YSByZWxldmFudApiaXQgb2YgdGhlIFBUUCBzcGVjIChzZWN0aW9uIDMuOCk6Cmh0dHBzOi8vd3d3
+LnRydXN0ZWRjb21wdXRpbmdncm91cC5vcmcvd3AtY29udGVudC91cGxvYWRzL1BDLUNsaWVudC1T
+cGVjaWZpYy1QbGF0Zm9ybS1UUE0tUHJvZmlsZS1mb3ItVFBNLTItMC12NDMtMTUwMTI2LnBkZgoK
+PiBUaGUgVFBNMl9TaHV0ZG93bgo+IChTVEFURSkgY29tbWFuZCBhbGxvd3MgYSBTdGF0aWMgT1Mg
+dG8gaW5kaWNhdGUgdG8gdGhlIFRQTSB0aGF0IHRoZSBwbGF0Zm9ybSBtYXkKPiBlbnRlciBhIGxv
+dyBwb3dlciBzdGF0ZSB3aGVyZSB0aGUgVFBNIHdpbGwgYmUgcmVxdWlyZWQgdG8gZW50ZXIgaW50
+byB0aGUgRDMgcG93ZXIKPiBzdGF0ZS4gVGhlIHVzZSBvZiB0aGUgdGVybSAibWF5IiBpcyBzaWdu
+aWZpY2FudCBpbiB0aGF0IHRoZXJlIGlzIG5vIHJlcXVpcmVtZW50IGZvciB0aGUKPiBwbGF0Zm9y
+bSB0byBhY3R1YWxseSBlbnRlciB0aGUgbG93IHBvd2VyIHN0YXRlIGFmdGVyIHNlbmRpbmcgdGhl
+IFRQTTJfU2h1dGRvd24KPiAoU1RBVEUpIGNvbW1hbmQuIFRoZSBzb2Z0d2FyZSBtYXksIGluIGZh
+Y3QsIHNlbmQgc3Vic2VxdWVudCBjb21tYW5kcyBhZnRlcgo+IHNlbmRpbmcgdGhlIFRQTTJfU2h1
+dGRvd24gKFNUQVRFKSBjb21tYW5kcy4gVGhlIFRQTTJfU2h1dGRvd24gKFNUQVRFKQo+IGNvbW1h
+bmQgc2ltcGx5IHRlbGxzIHRoZSBUUE0gdG8gc2F2ZSB0aGUgcmVxdWlyZWQgdm9sYXRpbGUgY29u
+dGVudHMgYmVjYXVzZSBwb3dlciB0bwo+IHRoZSBUUE0gbWF5IGJlIHJlbW92ZWQgYXQgYW55IHRp
+bWUuIFRoZSBUUE0gaXMgcmVzcG9uc2libGUgZm9yIHRyYWNraW5nIGl0cyBpbnRlcm5hbAo+IHN0
+YXRlIHNvIHRoYXQsIGlmIGEgY29tbWFuZCB0aGF0IGFsdGVycyB0aGUgVFBN4oCZcyBzYXZlZCBz
+dGF0ZSBpcyBzZW50IHRvIHRoZSBUUE0gYWZ0ZXIgYQo+IFRQTTJfU2h1dGRvd24gKFNUQVRFKSBj
+b21tYW5kLCB0aGUgVFBNIHZvaWRzIHRoZSBzYXZlZCBpbnRlcm5hbCBzdGF0ZSBzbyBhCj4gc3Vi
+c2VxdWVudCBUUE0yX1N0YXJ0dXAoU1RBVEUpIHdpbGwgZmFpbC4gSW4gdGhpcyBjYXNlLCBpdCBp
+cyB0aGUgcmVzcG9uc2liaWxpdHkgb2YKPiBwbGF0Zm9ybSBzb2Z0d2FyZSB0byBzZW5kIGEgc3Vi
+c2VxdWVudCBUUE0yX1NodXRkb3duIChTVEFURSkgY29tbWFuZCB0bwo+IHByZXNlcnZlIHRoZSBu
+ZXcgaW50ZXJuYWwgc3RhdGUgb2YgdGhlIFRQTS4KCkZyb20gUGFydCAxIChhcmNoaXRlY3R1cmUp
+LApodHRwczovL3RydXN0ZWRjb21wdXRpbmdncm91cC5vcmcvd3AtY29udGVudC91cGxvYWRzL1RQ
+TS1SZXYtMi4wLVBhcnQtMS1BcmNoaXRlY3R1cmUtMDEuMzgucGRmOgoKPiBBIFRQTSBpbXBsZW1l
+bnRhdGlvbiBtYXkgaW52YWxpZGF0ZSBhIHByZXNlcnZlZCBjb250ZXh0IG9uIGFueSBjb21tYW5k
+IGV4Y2VwdCBUUE0yX0dldENhcGFiaWxpdHkoKS4KCkkgaGF2ZW4ndCBmb3VuZCBhbnl0aGluZyBp
+biB0aGUgc3BlYyB0aGF0IGV4cGxpY2l0bHkgYWRkcmVzc2VzIGJlaW5nCmFibGUgdG8gaW1tZWRp
+YXRlbHkgZm9sbG93IGEgVFBNMl9TaHV0ZG93bihTVEFURSkgd2l0aCBhClRQTTJfU2h1dGRvd24o
+Q0xFQVIpLCBidXQgbXkgdW5kZXJzdGFuZGluZyBiYXNlZCBvbiB0aGUgZmlyc3QgcXVvdGUgaXMK
+dGhhdCBhIFRQTTJfU2h1dGRvd24oQ0xFQVIpIG1heSBjbGVhciB0aGUgcHJldmlvdXMgc2h1dGRv
+d24gc3RhdGUsIGFuZAphcyBsb25nIGFzIHRoZSBTaHV0ZG93bihDTEVBUikgaXMgdGhlIGZpbmFs
+IGNvbW1hbmQsIHRoZSBzaHV0ZG93biB3aWxsCmJlIG9yZGVybHkuCkpvc2gKCgpPbiBUaHUsIE1h
+eSAxOCwgMjAxNyBhdCAyOjEzIFBNLCBTdGVmYW4gQmVyZ2VyIDxzdGVmYW5iQHVzLmlibS5jb20+
+IHdyb3RlOgo+IERvZXMgaXQgd29yayB3aGVuIGRvaW5nIHN1c3BlbmQgKHRvIFJBTSkgYW5kIHRw
+bV9wbV9zdXNwZW5kIHNlbnQgYQo+IHRwbTJfc2h1dGRvd24oY2hpcCwgVFBNMl9TVV9TVEFURSkg
+cHJlc3VtYWJseSBiZWZvcmUgdGhhdD8KPgo+ICAgICBTdGVmYW4KPgo+Cj4gLS0tLS0gT3JpZ2lu
+YWwgbWVzc2FnZSAtLS0tLQo+IEZyb206IEpvc2ggWmltbWVybWFuIDxqb3NoekBnb29nbGUuY29t
+Pgo+IFRvOiBQZXRlciBIdWV3ZSA8cGV0ZXJodWV3ZUBnbXguZGU+LCBNYXJjZWwgU2VsaG9yc3Qg
+PHRwbWRkQHNlbGhvcnN0Lm5ldD4sCj4gSmFya2tvIFNha2tpbmVuIDxqYXJra28uc2Fra2luZW5A
+bGludXguaW50ZWwuY29tPiwgSmFzb24gR3VudGhvcnBlCj4gPGpndW50aG9ycGVAb2JzaWRpYW5y
+ZXNlYXJjaC5jb20+LCB0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKPiBDYzogR3Jl
+ZyBLcm9haC1IYXJ0bWFuIDxncmVna2hAbGludXhmb3VuZGF0aW9uLm9yZz4KPiBTdWJqZWN0OiBS
+ZTogW3RwbWRkLWRldmVsXSBbUEFUQ0ggdjNdIHRwbTogSXNzdWUgYSBUUE0yX1NodXRkb3duIGZv
+ciBUUE0yCj4gZGV2aWNlcy4KPiBEYXRlOiBUaHUsIE1heSAxOCwgMjAxNyAxMToyMiBBTQo+Cj4g
+QXJlIHRoZXJlIGFueSBvdGhlciBjaGFuZ2VzIEkgc2hvdWxkIG1ha2UgdG8gdGhpcyBwYXRjaCwg
+b3IgaXMgaXQgZ29vZAo+IHRvIGdvIG9uY2UgdGhlIHBhdGNoIGl0IGRlcGVuZHMgb24gaXMgaW4/
+Cj4KPiBUaGFua3MhCj4gSm9zaAo+Cj4KPiBPbiBNb24sIE1heSAxNSwgMjAxNyBhdCA1OjA4IFBN
+LCBKb3NoIFppbW1lcm1hbiA8am9zaHpAZ29vZ2xlLmNvbT4gd3JvdGU6Cj4+IElmIGEgVFBNMiBs
+b3NlcyBwb3dlciB3aXRob3V0IGEgVFBNMl9TaHV0ZG93biBjb21tYW5kIGJlaW5nIGlzc3VlZCAo
+YQo+PiAiZGlzb3JkZXJseSByZWJvb3QiKSwgaXQgbWF5IGxvc2Ugc29tZSBzdGF0ZSB0aGF0IGhh
+cyB5ZXQgdG8gYmUKPj4gcGVyc2lzdGVkIHRvIE5WUmFtLCBhbmQgd2lsbCBpbmNyZW1lbnQgdGhl
+IERBIGNvdW50ZXIgKGV2ZW50dWFsbHksIHRoaXMKPj4gd2lsbCBjYXVzZSB0aGUgVFBNIHRvIGxv
+Y2sgdGhlIHVzZXIgb3V0LikKPj4KPj4gTk9URTogVGhpcyBvbmx5IGNoYW5nZXMgYmVoYXZpb3Ig
+b24gVFBNMiBkZXZpY2VzLiBTaW5jZSBUUE0xIHVzZXMgc3lzZnMsCj4+IGFuZCBzeXNmcyByZWxp
+ZXMgb24gaW1wbGljaXQgbG9ja2luZyBvbiBjaGlwLT5vcHMsIGl0IGlzIG5vdCBzYWZlIHRvCj4+
+IGFsbG93IHRoaXMgY29kZSB0byBydW4gaW4gVFBNMSwgb3IgdG8gYWRkIHN5c2ZzIHN1cHBvcnQg
+dG8gVFBNMiwgdW50aWwKPj4gdGhhdCBsb2NraW5nIGlzIG1hZGUgZXhwbGljaXQuCj4+Cj4+IFRo
+aXMgcGF0Y2ggaXMgZGVwZW5kZW50IG9uICdbUEFUQ0hdIEFkZCAic2h1dGRvd24iIHRvICJzdHJ1
+Y3QgY2xhc3MiLicKPj4gaHR0cDovL21hcmMuaW5mby8/bD1saW51eC1rZXJuZWwmbT0xNDk0NjMy
+MzUwMjU0MjAmdz0yCj4+Cj4+IFNpZ25lZC1vZmYtYnk6IEpvc2ggWmltbWVybWFuIDxqb3NoekBn
+b29nbGUuY29tPgo+Pgo+PiAtLS0tCj4+IHYyOgo+PiAgIC0gUHJvcGVybHkgc3BsaXQgY2hhbmdl
+cyBiZXR3ZWVuIHRoaXMgYW5kIGFub3RoZXIgY29tbWl0Cj4+ICAgLSBVc2UgcHJvcGVyIGxvY2tp
+bmcgcHJpbWl0aXZlLgo+PiAgIC0gRml4IGNvbW1lbnRpbmcgc3R5bGUKPj4gdjM6Cj4+ICAgLSBS
+ZS1maXggY29tbWVudGluZyBzdHlsZQo+PiAtLS0KPj4gIGRyaXZlcnMvY2hhci90cG0vdHBtLWNo
+aXAuYyAgfCAyMCArKysrKysrKysrKysrKysrKysrKwo+PiAgZHJpdmVycy9jaGFyL3RwbS90cG0t
+c3lzZnMuYyB8ICAzICsrKwo+PiAgMiBmaWxlcyBjaGFuZ2VkLCAyMyBpbnNlcnRpb25zKCspCj4+
+Cj4+IGRpZmYgLS1naXQgYS9kcml2ZXJzL2NoYXIvdHBtL3RwbS1jaGlwLmMgYi9kcml2ZXJzL2No
+YXIvdHBtL3RwbS1jaGlwLmMKPj4gaW5kZXggOWRlYzlmNTUxYjgzLi4yNzJhNDJlNzc1NzQgMTAw
+NjQ0Cj4+IC0tLSBhL2RyaXZlcnMvY2hhci90cG0vdHBtLWNoaXAuYwo+PiArKysgYi9kcml2ZXJz
+L2NoYXIvdHBtL3RwbS1jaGlwLmMKPj4gQEAgLTE0Miw2ICsxNDIsMjUgQEAgc3RhdGljIHZvaWQg
+dHBtX2RldnNfcmVsZWFzZShzdHJ1Y3QgZGV2aWNlICpkZXYpCj4+ICAgICAgICAgcHV0X2Rldmlj
+ZSgmY2hpcC0+ZGV2KTsKPj4gIH0KPj4KPj4gK3N0YXRpYyB2b2lkIHRwbV9zaHV0ZG93bihzdHJ1
+Y3QgZGV2aWNlICpkZXYpCj4+ICt7Cj4+ICsgICAgICAgc3RydWN0IHRwbV9jaGlwICpjaGlwID0g
+Y29udGFpbmVyX29mKGRldiwgc3RydWN0IHRwbV9jaGlwLCBkZXYpOwo+PiArICAgICAgIC8qIFRQ
+TSAyLjAgcmVxdWlyZXMgdGhhdCB0aGUgVFBNMl9TaHV0ZG93bigpIGNvbW1hbmQgYmUgaXNzdWVk
+Cj4+IHByaW9yIHRvCj4+ICsgICAgICAgICogbG9zcyBvZiBwb3dlci4gSWYgaXQgaXMgbm90LCB0
+aGUgREEgY291bnRlciB3aWxsIGJlIGluY3JlbWVudGVkCj4+IGFuZCwKPj4gKyAgICAgICAgKiBl
+dmVudHVhbGx5LCB0aGUgdXNlciB3aWxsIGJlIGxvY2tlZCBvdXQgb2YgdGhlaXIgVFBNLgo+PiAr
+ICAgICAgICAqIFhYWDogVGhpcyBjb2RlcGF0aCByZWxpZXMgb24gdGhlIGZhY3QgdGhhdCBzeXNm
+cyBpcyBub3QgZW5hYmxlZAo+PiBmb3IKPj4gKyAgICAgICAgKiBUUE0yOiBzeXNmcyB1c2VzIGFu
+IGltcGxpY2l0IGxvY2sgb24gY2hpcC0+b3BzLCBzbyB0aGlzIHVzZQo+PiBjb3VsZAo+PiArICAg
+ICAgICAqIHJhY2UgaWYgVFBNMiBoYXMgc3lzZnMgc3VwcG9ydCBlbmFibGVkIGJlZm9yZSBUUE0g
+c3lzZnMncwo+PiBpbXBsaWNpdAo+PiArICAgICAgICAqIGxvY2tpbmcgaXMgZml4ZWQuCj4+ICsg
+ICAgICAgICovCj4+ICsgICAgICAgaWYgKGNoaXAtPmZsYWdzICYgVFBNX0NISVBfRkxBR19UUE0y
+KSB7Cj4+ICsgICAgICAgICAgICAgICBkb3duX3dyaXRlKCZjaGlwLT5vcHNfc2VtKTsKPj4gKyAg
+ICAgICAgICAgICAgIHRwbTJfc2h1dGRvd24oY2hpcCwgVFBNX1NVX0NMRUFSKTsKPj4gKyAgICAg
+ICAgICAgICAgIGNoaXAtPm9wcyA9IE5VTEw7Cj4+ICsgICAgICAgICAgICAgICB1cF93cml0ZSgm
+Y2hpcC0+b3BzX3NlbSk7Cj4+ICsgICAgICAgfQo+PiArfQo+PiArCj4+ICAvKioKPj4gICAqIHRw
+bV9jaGlwX2FsbG9jKCkgLSBhbGxvY2F0ZSBhIG5ldyBzdHJ1Y3QgdHBtX2NoaXAgaW5zdGFuY2UK
+Pj4gICAqIEBwZGV2OiBkZXZpY2UgdG8gd2hpY2ggdGhlIGNoaXAgaXMgYXNzb2NpYXRlZAo+PiBA
+QCAtMTgxLDYgKzIwMCw3IEBAIHN0cnVjdCB0cG1fY2hpcCAqdHBtX2NoaXBfYWxsb2Moc3RydWN0
+IGRldmljZSAqcGRldiwKPj4gICAgICAgICBkZXZpY2VfaW5pdGlhbGl6ZSgmY2hpcC0+ZGV2cyk7
+Cj4+Cj4+ICAgICAgICAgY2hpcC0+ZGV2LmNsYXNzID0gdHBtX2NsYXNzOwo+PiArICAgICAgIGNo
+aXAtPmRldi5jbGFzcy5zaHV0ZG93biA9IHRwbV9zaHV0ZG93bjsKPj4gICAgICAgICBjaGlwLT5k
+ZXYucmVsZWFzZSA9IHRwbV9kZXZfcmVsZWFzZTsKPj4gICAgICAgICBjaGlwLT5kZXYucGFyZW50
+ID0gcGRldjsKPj4gICAgICAgICBjaGlwLT5kZXYuZ3JvdXBzID0gY2hpcC0+Z3JvdXBzOwo+PiBk
+aWZmIC0tZ2l0IGEvZHJpdmVycy9jaGFyL3RwbS90cG0tc3lzZnMuYyBiL2RyaXZlcnMvY2hhci90
+cG0vdHBtLXN5c2ZzLmMKPj4gaW5kZXggNTU0MDVkYmU0M2ZhLi41ZTVmZjdlYjZmN2UgMTAwNjQ0
+Cj4+IC0tLSBhL2RyaXZlcnMvY2hhci90cG0vdHBtLXN5c2ZzLmMKPj4gKysrIGIvZHJpdmVycy9j
+aGFyL3RwbS90cG0tc3lzZnMuYwo+PiBAQCAtMjk0LDYgKzI5NCw5IEBAIHN0YXRpYyBjb25zdCBz
+dHJ1Y3QgYXR0cmlidXRlX2dyb3VwIHRwbV9kZXZfZ3JvdXAgPSB7Cj4+Cj4+ICB2b2lkIHRwbV9z
+eXNmc19hZGRfZGV2aWNlKHN0cnVjdCB0cG1fY2hpcCAqY2hpcCkKPj4gIHsKPj4gKyAgICAgICAv
+KiBYWFg6IEJlZm9yZSB0aGlzIHJlc3RyaWN0aW9uIGlzIHJlbW92ZWQsIHRwbV9zeXNmcyBtdXN0
+IGJlCj4+IHVwZGF0ZWQKPj4gKyAgICAgICAgKiB0byBleHBsaWNpdGx5IGxvY2sgY2hpcC0+b3Bz
+Lgo+PiArICAgICAgICAqLwo+PiAgICAgICAgIGlmIChjaGlwLT5mbGFncyAmIFRQTV9DSElQX0ZM
+QUdfVFBNMikKPj4gICAgICAgICAgICAgICAgIHJldHVybjsKPj4KPj4gLS0KPj4gMi4xMy4wLjMw
+My5nNGViZjMwMjE2OS1nb29nCj4+Cj4KPiAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KPiBDaGVjayBv
+dXQgdGhlIHZpYnJhbnQgdGVjaCBjb21tdW5pdHkgb24gb25lIG9mIHRoZSB3b3JsZCdzIG1vc3QK
+PiBlbmdhZ2luZyB0ZWNoIHNpdGVzLCBTbGFzaGRvdC5vcmchIGh0dHA6Ly9zZG0ubGluay9zbGFz
+aGRvdAo+IF9fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fCj4g
+dHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0Cj4gdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2Uu
+bmV0Cj4gaHR0cHM6Ly9saXN0cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQt
+ZGV2ZWwKPgo+Cj4KPgoKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCkNoZWNrIG91dCB0aGUgdmlicmFu
+dCB0ZWNoIGNvbW11bml0eSBvbiBvbmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAplbmdhZ2luZyB0ZWNo
+IHNpdGVzLCBTbGFzaGRvdC5vcmchIGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdApfX19fX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwp0cG1kZC1kZXZlbCBtYWlsaW5n
+IGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8vbGlzdHMuc291
+cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
