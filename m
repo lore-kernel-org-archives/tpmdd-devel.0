@@ -1,16 +1,16 @@
-From: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH v2 1/5] tpm: introduce tpm_pcr_algorithms()
-Date: Wed, 17 May 2017 10:42:35 +0200
-Message-ID: <8aacf9c7-ac99-578e-ca60-6bb45bf3ab2b@huawei.com>
-References: <20170505142152.29795-1-roberto.sassu@huawei.com>
-	<20170505142152.29795-2-roberto.sassu@huawei.com>
-	<20170515103623.sumyo2vyldezual2@intel.com>
-	<d2974dd2-e30d-e8f0-a60a-2147f3290670@huawei.com>
+From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Subject: Re: [PATCH v3] Add "shutdown" to "struct class".
+Date: Thu, 18 May 2017 08:20:53 -0700
+Message-ID: <CAHSjozAQcMHSsbq-D4ytOk+qMa=3btx1UkF6rctsa2p8U8Gv1w@mail.gmail.com>
+References: <20170515173438.13420-1-joshz@google.com>
+	<CAHSjozBLBUpSzxrRsfnO49Thf9__MHdOmUdsX+5ST55=T2BWLA@mail.gmail.com>
+	<20170515174533.GB6229@obsidianresearch.com>
+	<5B8DA87D05A7694D9FA63FD143655C1B641D90DB@hasmsx108.ger.corp.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <d2974dd2-e30d-e8f0-a60a-2147f3290670-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+In-Reply-To: <5B8DA87D05A7694D9FA63FD143655C1B641D90DB-Jy8z56yoSI8MvF1YICWikbfspsVTdybXVpNB7YpNyf8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,122 +19,67 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: "Winkler, Tomas" <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Cc: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 5/15/2017 3:18 PM, Roberto Sassu wrote:
->
->
-> On 5/15/2017 12:36 PM, Jarkko Sakkinen wrote:
->> On Fri, May 05, 2017 at 04:21:48PM +0200, Roberto Sassu wrote:
->>> This function allows TPM users to know which algorithms the TPM
->>> supports.
->>> It stores the algorithms in a static array of 'enum tpm2_algorithms',
->>> allocated by the caller. If the array is not large enough, the function
->>> returns an error. Otherwise, it returns the number of algorithms written
->>> to the array. If the TPM version is 1.2, the function writes
->>> TPM2_ALG_SHA1
->>> to first element of the array.
->>>
->>> Writing the algorithm also for TPM 1.2 has the advantage that callers
->>> can use the API, tpm_pcr_algorithms() and tpm_pcr_extend(), regardless
->>> of the TPM version.
->>>
->>> A minor change added to this patch was to make available the size of
->>> the active_banks array, member of the tpm_chip structure, outside
->>> the TPM driver. The array size (TPM_ACTIVE_BANKS_MAX) has been exported
->>> to include/linux/tpm.h.
->>>
->>> With this information, callers of tpm_pcr_algorithms() can provide
->>> a static array with enough room for all the algorithms, instead
->>> of receiving the pointer of a dynamic array that they have to free
->>> later.
->>>
->>> Signed-off-by: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
->>> ---
->>> v2
->>>
->>> - tpm_pcr_algorithms() returns supported algorithms also for TPM 1.2
->>>
->>>  drivers/char/tpm/tpm-interface.c | 46
->>> ++++++++++++++++++++++++++++++++++++++++
->>>  drivers/char/tpm/tpm.h           | 13 +-----------
->>>  include/linux/tpm.h              | 19 +++++++++++++++++
->>>  3 files changed, 66 insertions(+), 12 deletions(-)
->>>
->>> diff --git a/drivers/char/tpm/tpm-interface.c
->>> b/drivers/char/tpm/tpm-interface.c
->>> index 4ed08ab..b90de3d 100644
->>> --- a/drivers/char/tpm/tpm-interface.c
->>> +++ b/drivers/char/tpm/tpm-interface.c
->>> @@ -911,6 +911,52 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx,
->>> const u8 *hash)
->>>  EXPORT_SYMBOL_GPL(tpm_pcr_extend);
->>>
->>>  /**
->>> + * tpm_pcr_algorithms - get TPM IDs of active PCR banks algorithms
->>
->> The grammar is incorrect here I believe. Should rather be
->>
->>   "algorithms of the active PCR banks"
->>
->> And there is no such thing as "TPM ID".
->>
->>> + * @chip_num:    tpm idx # or ANY
->>> + * @count:    # of items in algorithms
->>> + * @algorithms:    array of TPM IDs
->>> + *
->>> + * Returns < 0 on error, and the number of active PCR banks on success.
->>> + *
->>> + * TPM 1.2 has always one SHA1 bank.
->>> + */
->>> +int tpm_pcr_algorithms(u32 chip_num, int count,
->>> +               enum tpm2_algorithms *algorithms)
->>                        unsigned int
->>
->> In addition the function name is not too greatg,
->>
->> Your syntax for return value is not correct. In addition after
->> describing the return value there should not be anything. You should
->> study
->>
->> https://www.kernel.org/doc/Documentation/kernel-doc-nano-HOWTO.txt
->>
->> Better name for the function would be tpm_get_pcr_algorithms().
->>
->>> +{
->>> +    struct tpm_chip *chip;
->>> +    int i;
->>> +
->>> +    if (count <= 0 || algorithms == NULL)
->>> +        return -EINVAL;
->>
->> Is there a legal case where caller would pass these values? Now it
->> looks like that there is.
->>
->> 'count' should unsigned int and zero should be a legal value for
->> count.
->
-> I wanted to avoid that a negative value returned by tpm_pcr_algorithms()
-> is passed to tpm_pcr_extend() as unsigned int.
->
->
->> That said I think the whole design is wrong as you could calculate
->> array for algs only one time and pass a const reference to it on
->> request.
->
-> Ok. If I understood it correctly, you are saying to pass a const
-> reference of chip->active_banks. Then, I should also:
+Are there any more changes any of you would like to see in this patch?
 
-This is not a viable option. chip could be freed and the reference
-becomes invalid, without increasing the reference count.
+Thanks!
+Josh
 
-Did you think about something different?
 
-Thanks
-
-Roberto
+On Mon, May 15, 2017 at 1:49 PM, Winkler, Tomas <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org> wrote:
+>
+>
+>> -----Original Message-----
+>> From: Jason Gunthorpe [mailto:jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org]
+>> Sent: Monday, May 15, 2017 20:46
+>> To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+>> Cc: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>; linux-
+>> kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org; Winkler, Tomas <tomas.winkler-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>; Jarkko
+>> Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>; tpmdd-
+>> devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+>> Subject: Re: [PATCH v3] Add "shutdown" to "struct class".
+>>
+>> On Mon, May 15, 2017 at 10:39:08AM -0700, Josh Zimmerman wrote:
+>> > (Continuing thread from patch v1)
+>> > > > On Sat, May 13, 2017 at 12:43:11PM +0000, Winkler, Tomas wrote:
+>> > > > > > The TPM class has some common shutdown code that must be
+>> > > > > > executed for all drivers. This adds some needed functionality
+>> > > > > > for that
+>> > > > >
+>> > > > > The issue with this is, that on some platforms the only storage
+>> > > > > can be eMMC and TPM is using it,. It has to be ensured that the
+>> > > > > storage device won't go down before TPM2_shutdown is called.
+>> > > > > And there is no direct device hierarchy to ensure an orderly
+>> shutdown.
+>> > > >
+>> > > > Something will have to use the new device links stuff to define
+>> > > > that dependency, but that seems unrelated to this patch?
+>> > >
+>> > >
+>> > > Yep, it's not directly related to this specific patch, this is more relevant
+>> particularly to TPM2_shutdown.
+>> >
+>> > Jason, do you want me to do that in my patch on the tpmdd-devel list?
+>> > If so, mind giving me a documentation pointer or two? I'm not familiar
+>> > with this area.
+>>
+>> No.. Ordering power management events is something someone with
+>> knowledge of the specific emmc platform is going to have to tackle..
+>> It isn't really a core problem, platform specific code will have to setup the
+>> needed device links to order power management properly..
+>
+> eMMC is just an example, that can be other storage device (ufs, nvme) and some type of abstraction of underlying storage
+> dependency would be required. I just wanted to put it on the table, not sure it has to be solved in this round.
+> Tomas
+>
+>
+>
+>
+>>
+>> Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
