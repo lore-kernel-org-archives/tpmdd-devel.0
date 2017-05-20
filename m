@@ -1,129 +1,132 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v4 2/2] tpm: vtpm_proxy: Implement request_locality
- function.
-Date: Sat, 20 May 2017 15:47:57 +0300
-Message-ID: <20170520124757.qdlkuv42kpm2dsj3@intel.com>
-References: <1494460462-29022-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1494460462-29022-3-git-send-email-stefanb@linux.vnet.ibm.com>
- <20170515124159.2o3ybbxep6vldmid@intel.com>
- <17af34d3-e07e-8865-0026-ec3e4994a7aa@linux.vnet.ibm.com>
+Subject: Re: [PATCH v2 1/5] tpm: introduce tpm_pcr_algorithms()
+Date: Sat, 20 May 2017 16:00:19 +0300
+Message-ID: <20170520130019.3dw5emkgqjlcvtjp@intel.com>
+References: <20170505142152.29795-1-roberto.sassu@huawei.com>
+ <20170505142152.29795-2-roberto.sassu@huawei.com>
+ <20170515103623.sumyo2vyldezual2@intel.com>
+ <d2974dd2-e30d-e8f0-a60a-2147f3290670@huawei.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <17af34d3-e07e-8865-0026-ec3e4994a7aa@linux.vnet.ibm.com>
+In-Reply-To: <d2974dd2-e30d-e8f0-a60a-2147f3290670@huawei.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
+To: Roberto Sassu <roberto.sassu@huawei.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, May 15, 2017 at 11:56:51AM -0400, Stefan Berger wrote:
-> On 05/15/2017 08:41 AM, Jarkko Sakkinen wrote:
-> > On Wed, May 10, 2017 at 07:54:22PM -0400, Stefan Berger wrote:
-> > > Implement the request_locality function. To set the locality on the
-> > > backend we define vendor-specific TPM 1.2 and TPM 2 ordinals and send
-> > > a command to the backend to set the locality for the next commands.
+On Mon, May 15, 2017 at 03:18:41PM +0200, Roberto Sassu wrote:
+> 
+> 
+> On 5/15/2017 12:36 PM, Jarkko Sakkinen wrote:
+> > On Fri, May 05, 2017 at 04:21:48PM +0200, Roberto Sassu wrote:
+> > > This function allows TPM users to know which algorithms the TPM supports.
+> > > It stores the algorithms in a static array of 'enum tpm2_algorithms',
+> > > allocated by the caller. If the array is not large enough, the function
+> > > returns an error. Otherwise, it returns the number of algorithms written
+> > > to the array. If the TPM version is 1.2, the function writes TPM2_ALG_SHA1
+> > > to first element of the array.
 > > > 
-> > > Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+> > > Writing the algorithm also for TPM 1.2 has the advantage that callers
+> > > can use the API, tpm_pcr_algorithms() and tpm_pcr_extend(), regardless
+> > > of the TPM version.
+> > > 
+> > > A minor change added to this patch was to make available the size of
+> > > the active_banks array, member of the tpm_chip structure, outside
+> > > the TPM driver. The array size (TPM_ACTIVE_BANKS_MAX) has been exported
+> > > to include/linux/tpm.h.
+> > > 
+> > > With this information, callers of tpm_pcr_algorithms() can provide
+> > > a static array with enough room for all the algorithms, instead
+> > > of receiving the pointer of a dynamic array that they have to free later.
+> > > 
+> > > Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
 > > > ---
-> > >   drivers/char/tpm/tpm.h            |  1 +
-> > >   drivers/char/tpm/tpm_vtpm_proxy.c | 34 ++++++++++++++++++++++++++++++++++
-> > >   include/uapi/linux/vtpm_proxy.h   |  5 +++++
-> > >   3 files changed, 40 insertions(+)
+> > > v2
 > > > 
-> > > diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> > > index 4b4c8de..10f0467 100644
-> > > --- a/drivers/char/tpm/tpm.h
-> > > +++ b/drivers/char/tpm/tpm.h
-> > > @@ -527,6 +527,7 @@ enum tpm_transmit_flags {
-> > >   	TPM_TRANSMIT_UNLOCKED	= BIT(0),
-> > >   };
-> > > +ssize_t tpm_transfer(struct tpm_chip *chip, u8 *buf, u32 count, size_t bufsiz);
-> > >   ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
-> > >   		     u8 *buf, size_t bufsiz, unsigned int flags);
-> > >   ssize_t tpm_transmit_cmd(struct tpm_chip *chip, struct tpm_space *space,
-> > > diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
-> > > index 751059d..374c4ff 100644
-> > > --- a/drivers/char/tpm/tpm_vtpm_proxy.c
-> > > +++ b/drivers/char/tpm/tpm_vtpm_proxy.c
-> > > @@ -371,6 +371,39 @@ static bool vtpm_proxy_tpm_req_canceled(struct tpm_chip  *chip, u8 status)
-> > >   	return ret;
-> > >   }
-> > > +static int vtpm_proxy_request_locality(struct tpm_chip *chip, int locality)
-> > > +{
-> > > +	struct tpm_buf buf;
-> > > +	int rc;
-> > > +	const struct tpm_output_header *header;
-> > > +
-> > > +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> > > +		rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS,
-> > > +				  TPM2_CC_SET_LOCALITY);
-> > > +	else
-> > > +		rc = tpm_buf_init(&buf, TPM_TAG_RQU_COMMAND,
-> > > +				  TPM_ORD_SET_LOCALITY);
-> > > +	if (rc)
-> > > +		return rc;
-> > > +	tpm_buf_append_u8(&buf, locality);
-> > > +
-> > > +	rc = tpm_transfer(chip, buf.data, tpm_buf_length(&buf), PAGE_SIZE);
-> > > +	if (rc < 0) {
-> > > +		locality = rc;
-> > > +		goto out;
-> > > +	}
-> > > +
-> > > +	header = (const struct tpm_output_header *)buf.data;
-> > > +	rc = be32_to_cpu(header->return_code);
-> > > +	if (rc)
-> > > +		locality = -1;
-> > > +
-> > > +out:
-> > > +	tpm_buf_destroy(&buf);
-> > > +
-> > > +	return locality;
-> > > +}
-> > > +
-> > >   static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
-> > >   	.flags = TPM_OPS_AUTO_STARTUP,
-> > >   	.recv = vtpm_proxy_tpm_op_recv,
-> > > @@ -380,6 +413,7 @@ static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
-> > >   	.req_complete_mask = VTPM_PROXY_REQ_COMPLETE_FLAG,
-> > >   	.req_complete_val = VTPM_PROXY_REQ_COMPLETE_FLAG,
-> > >   	.req_canceled = vtpm_proxy_tpm_req_canceled,
-> > > +	.request_locality = vtpm_proxy_request_locality,
-> > >   };
-> > >   /*
-> > > diff --git a/include/uapi/linux/vtpm_proxy.h b/include/uapi/linux/vtpm_proxy.h
-> > > index a69e991..6b91c2c 100644
-> > > --- a/include/uapi/linux/vtpm_proxy.h
-> > > +++ b/include/uapi/linux/vtpm_proxy.h
-> > > @@ -46,4 +46,9 @@ struct vtpm_proxy_new_dev {
-> > >   #define VTPM_PROXY_IOC_NEW_DEV	_IOWR(0xa1, 0x00, struct vtpm_proxy_new_dev)
-> > > +/* vendor specific commands to set locality */
-> > > +#define TPM2_CC_SET_LOCALITY	0x20001000
-> > > +#define TPM_ORD_SET_LOCALITY	0x20001000
-> > > +
-> > > +
-> > >   #endif /* _UAPI_LINUX_VTPM_PROXY_H */
-> > > -- 
-> > > 2.4.3
-> > This is a question.
+> > > - tpm_pcr_algorithms() returns supported algorithms also for TPM 1.2
+> > > 
+> > >  drivers/char/tpm/tpm-interface.c | 46 ++++++++++++++++++++++++++++++++++++++++
+> > >  drivers/char/tpm/tpm.h           | 13 +-----------
+> > >  include/linux/tpm.h              | 19 +++++++++++++++++
+> > >  3 files changed, 66 insertions(+), 12 deletions(-)
+> > > 
+> > > diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> > > index 4ed08ab..b90de3d 100644
+> > > --- a/drivers/char/tpm/tpm-interface.c
+> > > +++ b/drivers/char/tpm/tpm-interface.c
+> > > @@ -911,6 +911,52 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
+> > >  EXPORT_SYMBOL_GPL(tpm_pcr_extend);
+> > > 
+> > >  /**
+> > > + * tpm_pcr_algorithms - get TPM IDs of active PCR banks algorithms
 > > 
-> > Did you have some kind of big idea with 0x20? I was just thinking
-> > that one way to do this would to allocate starting from 0xFFFFFFFF.
+> > The grammar is incorrect here I believe. Should rather be
+> > 
+> >   "algorithms of the active PCR banks"
+> > 
+> > And there is no such thing as "TPM ID".
+> > 
+> > > + * @chip_num:	tpm idx # or ANY
+> > > + * @count:	# of items in algorithms
+> > > + * @algorithms:	array of TPM IDs
+> > > + *
+> > > + * Returns < 0 on error, and the number of active PCR banks on success.
+> > > + *
+> > > + * TPM 1.2 has always one SHA1 bank.
+> > > + */
+> > > +int tpm_pcr_algorithms(u32 chip_num, int count,
+> > > +		       enum tpm2_algorithms *algorithms)
+> >                        unsigned int
+> > 
+> > In addition the function name is not too greatg,
+> > 
+> > Your syntax for return value is not correct. In addition after
+> > describing the return value there should not be anything. You should
+> > study
+> > 
+> > https://www.kernel.org/doc/Documentation/kernel-doc-nano-HOWTO.txt
+> > 
+> > Better name for the function would be tpm_get_pcr_algorithms().
+> > 
+> > > +{
+> > > +	struct tpm_chip *chip;
+> > > +	int i;
+> > > +
+> > > +	if (count <= 0 || algorithms == NULL)
+> > > +		return -EINVAL;
+> > 
+> > Is there a legal case where caller would pass these values? Now it
+> > looks like that there is.
+> > 
+> > 'count' should unsigned int and zero should be a legal value for
+> > count.
 > 
-> Not quite. Per TPM 1.2 and TPM 2 specs we should operate here with Vendor
-> specific commands and they are identified by bit 29.
-> 
-> Check section 17 'Ordinals': https://trustedcomputinggroup.org/wp-content/uploads/TPM-Main-Part-2-TPM-Structures_v1.2_rev116_01032011.pdf
-> 
-> Check section 8.9 TPMA_CC: https://trustedcomputinggroup.org/wp-content/uploads/TPM-Rev-2.0-Part-2-Structures-01.38.pdf
-> 
-> If anything was the 'big idea' then it was the offset '0x1000' :-)
-> 
->    Stefan
+> I wanted to avoid that a negative value returned by tpm_pcr_algorithms()
+> is passed to tpm_pcr_extend() as unsigned int.
 
-Maybe we should use have concept of driver specific commands? You could
-in theory use vtpm to proxy a real chip and this would cause a potential
-regression as vendor specific code might collide.
+Why would you pass a negative value? I'm sorry but I have to admit tht I'm
+seriously not computing your argument.
+
+> > That said I think the whole design is wrong as you could calculate
+> > array for algs only one time and pass a const reference to it on
+> > request.
+> 
+> Ok. If I understood it correctly, you are saying to pass a const
+> reference of chip->active_banks. Then, I should also:
+> 
+> - add a new field (e.g. active_banks_num) in the tpm_chip structure
+>   to store the number of algorithms supported by the TPM (unless,
+>   I should determine it every time tpm_pcr_algorithms() is called)
+> - initialize chip->active_banks and chip->active_banks_num
+>   respectively to TPM2_ALG_SHA1 and 1 in tpm1_auto_startup()
+> 
+> Roberto
+
+Something along those lines.
+
+Doing precalcuation makes the code more stable as you can only fall to
+an error conditio when the driver is initialized.
 
 /Jarkko
