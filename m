@@ -1,171 +1,128 @@
-From: Andrey Pronin <apronin-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Subject: Re: [PATCH v3] tpm: Issue a TPM2_Shutdown for
- TPM2devices.
-Date: Thu, 18 May 2017 15:29:19 -0700
-Message-ID: <20170518222919.GA118903@apronin>
-References: <20170516000852.28400-1-joshz@google.com>
-	<CAHSjozBoysvjHh_4hKuE8v7Sq3L9LjmZEcpCb_SZ=g63GpS7Aw@mail.gmail.com>
-	<OFBE16F6BF.0143BC70-ON00258124.00741785-00258124.00749FD3@notes.na.collabserv.com>
-	<CAHSjozB3DxoD-NQTKEDOtUTXxo9Cw+v1UQGWuxbEZwXCrvo95w@mail.gmail.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v5 2/2] tpm: vtpm_proxy: Implement request_locality
+ function.
+Date: Sat, 20 May 2017 15:40:18 +0300
+Message-ID: <20170520124018.d2wmhnb6mwmlkgtz@intel.com>
+References: <1494867105-30722-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <1494867105-30722-3-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <CAHSjozB3DxoD-NQTKEDOtUTXxo9Cw+v1UQGWuxbEZwXCrvo95w-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Cc: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+In-Reply-To: <1494867105-30722-3-git-send-email-stefanb@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gVGh1LCBNYXkgMTgsIDIwMTcgYXQgMDM6MjQ6NDBQTSAtMDcwMCwgSm9zaCBaaW1tZXJtYW4g
-d3JvdGU6Cj4gVGhpcyBpcyBhIGJpdCBoYXJkIHRvIHRyYWNrIGRvd24sIGJ1dCBJIHRoaW5rIEkn
-dmUgZm91bmQgYSByZWxldmFudAo+IGJpdCBvZiB0aGUgUFRQIHNwZWMgKHNlY3Rpb24gMy44KToK
-PiBodHRwczovL3d3dy50cnVzdGVkY29tcHV0aW5nZ3JvdXAub3JnL3dwLWNvbnRlbnQvdXBsb2Fk
-cy9QQy1DbGllbnQtU3BlY2lmaWMtUGxhdGZvcm0tVFBNLVByb2ZpbGUtZm9yLVRQTS0yLTAtdjQz
-LTE1MDEyNi5wZGYKPiAKPiA+IFRoZSBUUE0yX1NodXRkb3duCj4gPiAoU1RBVEUpIGNvbW1hbmQg
-YWxsb3dzIGEgU3RhdGljIE9TIHRvIGluZGljYXRlIHRvIHRoZSBUUE0gdGhhdCB0aGUgcGxhdGZv
-cm0gbWF5Cj4gPiBlbnRlciBhIGxvdyBwb3dlciBzdGF0ZSB3aGVyZSB0aGUgVFBNIHdpbGwgYmUg
-cmVxdWlyZWQgdG8gZW50ZXIgaW50byB0aGUgRDMgcG93ZXIKPiA+IHN0YXRlLiBUaGUgdXNlIG9m
-IHRoZSB0ZXJtICJtYXkiIGlzIHNpZ25pZmljYW50IGluIHRoYXQgdGhlcmUgaXMgbm8gcmVxdWly
-ZW1lbnQgZm9yIHRoZQo+ID4gcGxhdGZvcm0gdG8gYWN0dWFsbHkgZW50ZXIgdGhlIGxvdyBwb3dl
-ciBzdGF0ZSBhZnRlciBzZW5kaW5nIHRoZSBUUE0yX1NodXRkb3duCj4gPiAoU1RBVEUpIGNvbW1h
-bmQuIFRoZSBzb2Z0d2FyZSBtYXksIGluIGZhY3QsIHNlbmQgc3Vic2VxdWVudCBjb21tYW5kcyBh
-ZnRlcgo+ID4gc2VuZGluZyB0aGUgVFBNMl9TaHV0ZG93biAoU1RBVEUpIGNvbW1hbmRzLiBUaGUg
-VFBNMl9TaHV0ZG93biAoU1RBVEUpCj4gPiBjb21tYW5kIHNpbXBseSB0ZWxscyB0aGUgVFBNIHRv
-IHNhdmUgdGhlIHJlcXVpcmVkIHZvbGF0aWxlIGNvbnRlbnRzIGJlY2F1c2UgcG93ZXIgdG8KPiA+
-IHRoZSBUUE0gbWF5IGJlIHJlbW92ZWQgYXQgYW55IHRpbWUuIFRoZSBUUE0gaXMgcmVzcG9uc2li
-bGUgZm9yIHRyYWNraW5nIGl0cyBpbnRlcm5hbAo+ID4gc3RhdGUgc28gdGhhdCwgaWYgYSBjb21t
-YW5kIHRoYXQgYWx0ZXJzIHRoZSBUUE3igJlzIHNhdmVkIHN0YXRlIGlzIHNlbnQgdG8gdGhlIFRQ
-TSBhZnRlciBhCj4gPiBUUE0yX1NodXRkb3duIChTVEFURSkgY29tbWFuZCwgdGhlIFRQTSB2b2lk
-cyB0aGUgc2F2ZWQgaW50ZXJuYWwgc3RhdGUgc28gYQo+ID4gc3Vic2VxdWVudCBUUE0yX1N0YXJ0
-dXAoU1RBVEUpIHdpbGwgZmFpbC4gSW4gdGhpcyBjYXNlLCBpdCBpcyB0aGUgcmVzcG9uc2liaWxp
-dHkgb2YKPiA+IHBsYXRmb3JtIHNvZnR3YXJlIHRvIHNlbmQgYSBzdWJzZXF1ZW50IFRQTTJfU2h1
-dGRvd24gKFNUQVRFKSBjb21tYW5kIHRvCj4gPiBwcmVzZXJ2ZSB0aGUgbmV3IGludGVybmFsIHN0
-YXRlIG9mIHRoZSBUUE0uCj4gCj4gRnJvbSBQYXJ0IDEgKGFyY2hpdGVjdHVyZSksCj4gaHR0cHM6
-Ly90cnVzdGVkY29tcHV0aW5nZ3JvdXAub3JnL3dwLWNvbnRlbnQvdXBsb2Fkcy9UUE0tUmV2LTIu
-MC1QYXJ0LTEtQXJjaGl0ZWN0dXJlLTAxLjM4LnBkZjoKPiAKPiA+IEEgVFBNIGltcGxlbWVudGF0
-aW9uIG1heSBpbnZhbGlkYXRlIGEgcHJlc2VydmVkIGNvbnRleHQgb24gYW55IGNvbW1hbmQgZXhj
-ZXB0IFRQTTJfR2V0Q2FwYWJpbGl0eSgpLgo+IAo+IEkgaGF2ZW4ndCBmb3VuZCBhbnl0aGluZyBp
-biB0aGUgc3BlYyB0aGF0IGV4cGxpY2l0bHkgYWRkcmVzc2VzIGJlaW5nCj4gYWJsZSB0byBpbW1l
-ZGlhdGVseSBmb2xsb3cgYSBUUE0yX1NodXRkb3duKFNUQVRFKSB3aXRoIGEKPiBUUE0yX1NodXRk
-b3duKENMRUFSKSwgYnV0IG15IHVuZGVyc3RhbmRpbmcgYmFzZWQgb24gdGhlIGZpcnN0IHF1b3Rl
-IGlzCj4gdGhhdCBhIFRQTTJfU2h1dGRvd24oQ0xFQVIpIG1heSBjbGVhciB0aGUgcHJldmlvdXMg
-c2h1dGRvd24gc3RhdGUsIGFuZAo+IGFzIGxvbmcgYXMgdGhlIFNodXRkb3duKENMRUFSKSBpcyB0
-aGUgZmluYWwgY29tbWFuZCwgdGhlIHNodXRkb3duIHdpbGwKPiBiZSBvcmRlcmx5Lgo+IEpvc2gK
-PgoKUGVyIHNwZWMsIHRoZXJlJ3Mgbm90aGluZyB3cm9uZyB3aXRoIFRQTTJfU2h1dGRvd24oQ0xF
-QVIpIGFmdGVyClRQTTJfU2h1dGRvd24oU1RBVEUpLiBIb3dldmVyLCBpZiB0aGF0IGhhcHBlbmVk
-LCB0aGF0J2QgYnJlYWsgdGhlCnN1c3BlbmQtcmVzdW1lIHByb2Nlc3MsIHdoaWNoIHByZXN1bWFi
-bHkgc2VuZHMgVFBNMl9TdGFydHVwKFNUQVRFKQpvbiByZXN1bWUsIHdoaWNoIHdvdWxkIG9idmlv
-dXNseSBmYWlsIGFmdGVyIFRQTTJfU2h1dGRvd24oQ0xFQVIpLgoKQnV0IG1vcmUgaW1wb3J0YW50
-bHk6IEZyZWV6ZS9zdXNwZW5kIGRvZXNuJ3QgdHJpZ2dlciAuc2h1dGRvd24gZm9yIHRoZQpkZXZp
-Y2UuIEFzIHByb3Bvc2VkIGluIGh0dHBzOi8vcGF0Y2h3b3JrLmtlcm5lbC5vcmcvcGF0Y2gvOTcy
-NzY5My8sCi5zaHV0ZG93biBvbmx5IGhhcHBlbnMgd2hlbiB0aGUga2VybmVsIHNodXRzIGRvd24g
-b3IgcmVzdGFydHMgLQprZXJuZWxfcmVzdGFydCwga2VybmVsX2hhbHQsIG9yIGtlcm5lbF9wb3dl
-cl9vZmZyLiBOb3QgZm9yIFBNCnRyYW5zaXRpb25zIHRvIFMzIG9yIFMwaXguCgo+IAo+IAo+IE9u
-IFRodSwgTWF5IDE4LCAyMDE3IGF0IDI6MTMgUE0sIFN0ZWZhbiBCZXJnZXIgPHN0ZWZhbmJAdXMu
-aWJtLmNvbT4gd3JvdGU6Cj4gPiBEb2VzIGl0IHdvcmsgd2hlbiBkb2luZyBzdXNwZW5kICh0byBS
-QU0pIGFuZCB0cG1fcG1fc3VzcGVuZCBzZW50IGEKPiA+IHRwbTJfc2h1dGRvd24oY2hpcCwgVFBN
-Ml9TVV9TVEFURSkgcHJlc3VtYWJseSBiZWZvcmUgdGhhdD8KPiA+Cj4gPiAgICAgU3RlZmFuCj4g
-Pgo+ID4KPiA+IC0tLS0tIE9yaWdpbmFsIG1lc3NhZ2UgLS0tLS0KPiA+IEZyb206IEpvc2ggWmlt
-bWVybWFuIDxqb3NoekBnb29nbGUuY29tPgo+ID4gVG86IFBldGVyIEh1ZXdlIDxwZXRlcmh1ZXdl
-QGdteC5kZT4sIE1hcmNlbCBTZWxob3JzdCA8dHBtZGRAc2VsaG9yc3QubmV0PiwKPiA+IEphcmtr
-byBTYWtraW5lbiA8amFya2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbT4sIEphc29uIEd1bnRo
-b3JwZQo+ID4gPGpndW50aG9ycGVAb2JzaWRpYW5yZXNlYXJjaC5jb20+LCB0cG1kZC1kZXZlbEBs
-aXN0cy5zb3VyY2Vmb3JnZS5uZXQKPiA+IENjOiBHcmVnIEtyb2FoLUhhcnRtYW4gPGdyZWdraEBs
-aW51eGZvdW5kYXRpb24ub3JnPgo+ID4gU3ViamVjdDogUmU6IFt0cG1kZC1kZXZlbF0gW1BBVENI
-IHYzXSB0cG06IElzc3VlIGEgVFBNMl9TaHV0ZG93biBmb3IgVFBNMgo+ID4gZGV2aWNlcy4KPiA+
-IERhdGU6IFRodSwgTWF5IDE4LCAyMDE3IDExOjIyIEFNCj4gPgo+ID4gQXJlIHRoZXJlIGFueSBv
-dGhlciBjaGFuZ2VzIEkgc2hvdWxkIG1ha2UgdG8gdGhpcyBwYXRjaCwgb3IgaXMgaXQgZ29vZAo+
-ID4gdG8gZ28gb25jZSB0aGUgcGF0Y2ggaXQgZGVwZW5kcyBvbiBpcyBpbj8KPiA+Cj4gPiBUaGFu
-a3MhCj4gPiBKb3NoCj4gPgo+ID4KPiA+IE9uIE1vbiwgTWF5IDE1LCAyMDE3IGF0IDU6MDggUE0s
-IEpvc2ggWmltbWVybWFuIDxqb3NoekBnb29nbGUuY29tPiB3cm90ZToKPiA+PiBJZiBhIFRQTTIg
-bG9zZXMgcG93ZXIgd2l0aG91dCBhIFRQTTJfU2h1dGRvd24gY29tbWFuZCBiZWluZyBpc3N1ZWQg
-KGEKPiA+PiAiZGlzb3JkZXJseSByZWJvb3QiKSwgaXQgbWF5IGxvc2Ugc29tZSBzdGF0ZSB0aGF0
-IGhhcyB5ZXQgdG8gYmUKPiA+PiBwZXJzaXN0ZWQgdG8gTlZSYW0sIGFuZCB3aWxsIGluY3JlbWVu
-dCB0aGUgREEgY291bnRlciAoZXZlbnR1YWxseSwgdGhpcwo+ID4+IHdpbGwgY2F1c2UgdGhlIFRQ
-TSB0byBsb2NrIHRoZSB1c2VyIG91dC4pCj4gPj4KPiA+PiBOT1RFOiBUaGlzIG9ubHkgY2hhbmdl
-cyBiZWhhdmlvciBvbiBUUE0yIGRldmljZXMuIFNpbmNlIFRQTTEgdXNlcyBzeXNmcywKPiA+PiBh
-bmQgc3lzZnMgcmVsaWVzIG9uIGltcGxpY2l0IGxvY2tpbmcgb24gY2hpcC0+b3BzLCBpdCBpcyBu
-b3Qgc2FmZSB0bwo+ID4+IGFsbG93IHRoaXMgY29kZSB0byBydW4gaW4gVFBNMSwgb3IgdG8gYWRk
-IHN5c2ZzIHN1cHBvcnQgdG8gVFBNMiwgdW50aWwKPiA+PiB0aGF0IGxvY2tpbmcgaXMgbWFkZSBl
-eHBsaWNpdC4KPiA+Pgo+ID4+IFRoaXMgcGF0Y2ggaXMgZGVwZW5kZW50IG9uICdbUEFUQ0hdIEFk
-ZCAic2h1dGRvd24iIHRvICJzdHJ1Y3QgY2xhc3MiLicKPiA+PiBodHRwOi8vbWFyYy5pbmZvLz9s
-PWxpbnV4LWtlcm5lbCZtPTE0OTQ2MzIzNTAyNTQyMCZ3PTIKPiA+Pgo+ID4+IFNpZ25lZC1vZmYt
-Ynk6IEpvc2ggWmltbWVybWFuIDxqb3NoekBnb29nbGUuY29tPgo+ID4+Cj4gPj4gLS0tLQo+ID4+
-IHYyOgo+ID4+ICAgLSBQcm9wZXJseSBzcGxpdCBjaGFuZ2VzIGJldHdlZW4gdGhpcyBhbmQgYW5v
-dGhlciBjb21taXQKPiA+PiAgIC0gVXNlIHByb3BlciBsb2NraW5nIHByaW1pdGl2ZS4KPiA+PiAg
-IC0gRml4IGNvbW1lbnRpbmcgc3R5bGUKPiA+PiB2MzoKPiA+PiAgIC0gUmUtZml4IGNvbW1lbnRp
-bmcgc3R5bGUKPiA+PiAtLS0KPiA+PiAgZHJpdmVycy9jaGFyL3RwbS90cG0tY2hpcC5jICB8IDIw
-ICsrKysrKysrKysrKysrKysrKysrCj4gPj4gIGRyaXZlcnMvY2hhci90cG0vdHBtLXN5c2ZzLmMg
-fCAgMyArKysKPiA+PiAgMiBmaWxlcyBjaGFuZ2VkLCAyMyBpbnNlcnRpb25zKCspCj4gPj4KPiA+
-PiBkaWZmIC0tZ2l0IGEvZHJpdmVycy9jaGFyL3RwbS90cG0tY2hpcC5jIGIvZHJpdmVycy9jaGFy
-L3RwbS90cG0tY2hpcC5jCj4gPj4gaW5kZXggOWRlYzlmNTUxYjgzLi4yNzJhNDJlNzc1NzQgMTAw
-NjQ0Cj4gPj4gLS0tIGEvZHJpdmVycy9jaGFyL3RwbS90cG0tY2hpcC5jCj4gPj4gKysrIGIvZHJp
-dmVycy9jaGFyL3RwbS90cG0tY2hpcC5jCj4gPj4gQEAgLTE0Miw2ICsxNDIsMjUgQEAgc3RhdGlj
-IHZvaWQgdHBtX2RldnNfcmVsZWFzZShzdHJ1Y3QgZGV2aWNlICpkZXYpCj4gPj4gICAgICAgICBw
-dXRfZGV2aWNlKCZjaGlwLT5kZXYpOwo+ID4+ICB9Cj4gPj4KPiA+PiArc3RhdGljIHZvaWQgdHBt
-X3NodXRkb3duKHN0cnVjdCBkZXZpY2UgKmRldikKPiA+PiArewo+ID4+ICsgICAgICAgc3RydWN0
-IHRwbV9jaGlwICpjaGlwID0gY29udGFpbmVyX29mKGRldiwgc3RydWN0IHRwbV9jaGlwLCBkZXYp
-Owo+ID4+ICsgICAgICAgLyogVFBNIDIuMCByZXF1aXJlcyB0aGF0IHRoZSBUUE0yX1NodXRkb3du
-KCkgY29tbWFuZCBiZSBpc3N1ZWQKPiA+PiBwcmlvciB0bwo+ID4+ICsgICAgICAgICogbG9zcyBv
-ZiBwb3dlci4gSWYgaXQgaXMgbm90LCB0aGUgREEgY291bnRlciB3aWxsIGJlIGluY3JlbWVudGVk
-Cj4gPj4gYW5kLAo+ID4+ICsgICAgICAgICogZXZlbnR1YWxseSwgdGhlIHVzZXIgd2lsbCBiZSBs
-b2NrZWQgb3V0IG9mIHRoZWlyIFRQTS4KPiA+PiArICAgICAgICAqIFhYWDogVGhpcyBjb2RlcGF0
-aCByZWxpZXMgb24gdGhlIGZhY3QgdGhhdCBzeXNmcyBpcyBub3QgZW5hYmxlZAo+ID4+IGZvcgo+
-ID4+ICsgICAgICAgICogVFBNMjogc3lzZnMgdXNlcyBhbiBpbXBsaWNpdCBsb2NrIG9uIGNoaXAt
-Pm9wcywgc28gdGhpcyB1c2UKPiA+PiBjb3VsZAo+ID4+ICsgICAgICAgICogcmFjZSBpZiBUUE0y
-IGhhcyBzeXNmcyBzdXBwb3J0IGVuYWJsZWQgYmVmb3JlIFRQTSBzeXNmcydzCj4gPj4gaW1wbGlj
-aXQKPiA+PiArICAgICAgICAqIGxvY2tpbmcgaXMgZml4ZWQuCj4gPj4gKyAgICAgICAgKi8KPiA+
-PiArICAgICAgIGlmIChjaGlwLT5mbGFncyAmIFRQTV9DSElQX0ZMQUdfVFBNMikgewo+ID4+ICsg
-ICAgICAgICAgICAgICBkb3duX3dyaXRlKCZjaGlwLT5vcHNfc2VtKTsKPiA+PiArICAgICAgICAg
-ICAgICAgdHBtMl9zaHV0ZG93bihjaGlwLCBUUE1fU1VfQ0xFQVIpOwo+ID4+ICsgICAgICAgICAg
-ICAgICBjaGlwLT5vcHMgPSBOVUxMOwo+ID4+ICsgICAgICAgICAgICAgICB1cF93cml0ZSgmY2hp
-cC0+b3BzX3NlbSk7Cj4gPj4gKyAgICAgICB9Cj4gPj4gK30KPiA+PiArCj4gPj4gIC8qKgo+ID4+
-ICAgKiB0cG1fY2hpcF9hbGxvYygpIC0gYWxsb2NhdGUgYSBuZXcgc3RydWN0IHRwbV9jaGlwIGlu
-c3RhbmNlCj4gPj4gICAqIEBwZGV2OiBkZXZpY2UgdG8gd2hpY2ggdGhlIGNoaXAgaXMgYXNzb2Np
-YXRlZAo+ID4+IEBAIC0xODEsNiArMjAwLDcgQEAgc3RydWN0IHRwbV9jaGlwICp0cG1fY2hpcF9h
-bGxvYyhzdHJ1Y3QgZGV2aWNlICpwZGV2LAo+ID4+ICAgICAgICAgZGV2aWNlX2luaXRpYWxpemUo
-JmNoaXAtPmRldnMpOwo+ID4+Cj4gPj4gICAgICAgICBjaGlwLT5kZXYuY2xhc3MgPSB0cG1fY2xh
-c3M7Cj4gPj4gKyAgICAgICBjaGlwLT5kZXYuY2xhc3Muc2h1dGRvd24gPSB0cG1fc2h1dGRvd247
-Cj4gPj4gICAgICAgICBjaGlwLT5kZXYucmVsZWFzZSA9IHRwbV9kZXZfcmVsZWFzZTsKPiA+PiAg
-ICAgICAgIGNoaXAtPmRldi5wYXJlbnQgPSBwZGV2Owo+ID4+ICAgICAgICAgY2hpcC0+ZGV2Lmdy
-b3VwcyA9IGNoaXAtPmdyb3VwczsKPiA+PiBkaWZmIC0tZ2l0IGEvZHJpdmVycy9jaGFyL3RwbS90
-cG0tc3lzZnMuYyBiL2RyaXZlcnMvY2hhci90cG0vdHBtLXN5c2ZzLmMKPiA+PiBpbmRleCA1NTQw
-NWRiZTQzZmEuLjVlNWZmN2ViNmY3ZSAxMDA2NDQKPiA+PiAtLS0gYS9kcml2ZXJzL2NoYXIvdHBt
-L3RwbS1zeXNmcy5jCj4gPj4gKysrIGIvZHJpdmVycy9jaGFyL3RwbS90cG0tc3lzZnMuYwo+ID4+
-IEBAIC0yOTQsNiArMjk0LDkgQEAgc3RhdGljIGNvbnN0IHN0cnVjdCBhdHRyaWJ1dGVfZ3JvdXAg
-dHBtX2Rldl9ncm91cCA9IHsKPiA+Pgo+ID4+ICB2b2lkIHRwbV9zeXNmc19hZGRfZGV2aWNlKHN0
-cnVjdCB0cG1fY2hpcCAqY2hpcCkKPiA+PiAgewo+ID4+ICsgICAgICAgLyogWFhYOiBCZWZvcmUg
-dGhpcyByZXN0cmljdGlvbiBpcyByZW1vdmVkLCB0cG1fc3lzZnMgbXVzdCBiZQo+ID4+IHVwZGF0
-ZWQKPiA+PiArICAgICAgICAqIHRvIGV4cGxpY2l0bHkgbG9jayBjaGlwLT5vcHMuCj4gPj4gKyAg
-ICAgICAgKi8KPiA+PiAgICAgICAgIGlmIChjaGlwLT5mbGFncyAmIFRQTV9DSElQX0ZMQUdfVFBN
-MikKPiA+PiAgICAgICAgICAgICAgICAgcmV0dXJuOwo+ID4+Cj4gPj4gLS0KPiA+PiAyLjEzLjAu
-MzAzLmc0ZWJmMzAyMTY5LWdvb2cKPiA+Pgo+ID4KPiA+IC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQo+
-ID4gQ2hlY2sgb3V0IHRoZSB2aWJyYW50IHRlY2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29y
-bGQncyBtb3N0Cj4gPiBlbmdhZ2luZyB0ZWNoIHNpdGVzLCBTbGFzaGRvdC5vcmchIGh0dHA6Ly9z
-ZG0ubGluay9zbGFzaGRvdAo+ID4gX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fX19fX18KPiA+IHRwbWRkLWRldmVsIG1haWxpbmcgbGlzdAo+ID4gdHBtZGQtZGV2ZWxA
-bGlzdHMuc291cmNlZm9yZ2UubmV0Cj4gPiBodHRwczovL2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9s
-aXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo+ID4KPiA+Cj4gPgo+ID4KPiAKPiAtLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0KPiBDaGVjayBvdXQgdGhlIHZpYnJhbnQgdGVjaCBjb21tdW5pdHkgb24gb25l
-IG9mIHRoZSB3b3JsZCdzIG1vc3QKPiBlbmdhZ2luZyB0ZWNoIHNpdGVzLCBTbGFzaGRvdC5vcmch
-IGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdAo+IF9fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fX19fX19fX19fX19fCj4gdHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0Cj4gdHBtZGQtZGV2
-ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cj4gaHR0cHM6Ly9saXN0cy5zb3VyY2Vmb3JnZS5uZXQv
-bGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwKCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpDaGVjayBv
-dXQgdGhlIHZpYnJhbnQgdGVjaCBjb21tdW5pdHkgb24gb25lIG9mIHRoZSB3b3JsZCdzIG1vc3QK
-ZW5nYWdpbmcgdGVjaCBzaXRlcywgU2xhc2hkb3Qub3JnISBodHRwOi8vc2RtLmxpbmsvc2xhc2hk
-b3QKX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQt
-ZGV2ZWwgbWFpbGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRw
-czovL2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
+On Mon, May 15, 2017 at 12:51:45PM -0400, Stefan Berger wrote:
+> Implement the request_locality function. To set the locality on the
+> backend we define vendor-specific TPM 1.2 and TPM 2 ordinals and send
+> a command to the backend to set the locality for the next commands.
+> 
+> To avoid recursing into requesting the locality, we set the
+> TPM_TRASNMIT_RAW flag when calling tpm_trasnmit_cmd. To avoid recursing
+> into TPM 2 space related commands, we set the space parameter to NULL.
+> 
+> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+> ---
+>  drivers/char/tpm/tpm-interface.c  |  1 +
+>  drivers/char/tpm/tpm_vtpm_proxy.c | 36 ++++++++++++++++++++++++++++++++++++
+>  include/uapi/linux/vtpm_proxy.h   |  4 ++++
+>  3 files changed, 41 insertions(+)
+> 
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index 2eacda2..876d45f 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -537,6 +537,7 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, struct tpm_space *space,
+>  
+>  	return 0;
+>  }
+> +EXPORT_SYMBOL_GPL(tpm_transmit_cmd);
+>  
+>  #define TPM_DIGEST_SIZE 20
+>  #define TPM_RET_CODE_IDX 6
+> diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
+> index 751059d..66024bf 100644
+> --- a/drivers/char/tpm/tpm_vtpm_proxy.c
+> +++ b/drivers/char/tpm/tpm_vtpm_proxy.c
+> @@ -371,6 +371,41 @@ static bool vtpm_proxy_tpm_req_canceled(struct tpm_chip  *chip, u8 status)
+>  	return ret;
+>  }
+>  
+> +static int vtpm_proxy_request_locality(struct tpm_chip *chip, int locality)
+> +{
+> +	struct tpm_buf buf;
+> +	int rc;
+> +	const struct tpm_output_header *header;
+> +
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS,
+> +				  TPM2_CC_SET_LOCALITY);
+> +	else
+> +		rc = tpm_buf_init(&buf, TPM_TAG_RQU_COMMAND,
+> +				  TPM_ORD_SET_LOCALITY);
+> +	if (rc)
+> +		return rc;
+> +	tpm_buf_append_u8(&buf, locality);
+> +
+> +	rc = tpm_transmit_cmd(chip, NULL, buf.data, tpm_buf_length(&buf), 0,
+> +			      TPM_TRANSMIT_UNLOCKED | TPM_TRANSMIT_RAW,
+> +			      "attempting to set locality");
+> +	if (rc < 0) {
+> +		locality = rc;
+> +		goto out;
+> +	}
+> +
+> +	header = (const struct tpm_output_header *)buf.data;
+> +	rc = be32_to_cpu(header->return_code);
+> +	if (rc)
+> +		locality = -1;
+> +
+> +out:
+> +	tpm_buf_destroy(&buf);
+> +
+> +	return locality;
+> +}
+> +
+
+This looks good.
+
+>  static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
+>  	.flags = TPM_OPS_AUTO_STARTUP,
+>  	.recv = vtpm_proxy_tpm_op_recv,
+> @@ -380,6 +415,7 @@ static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
+>  	.req_complete_mask = VTPM_PROXY_REQ_COMPLETE_FLAG,
+>  	.req_complete_val = VTPM_PROXY_REQ_COMPLETE_FLAG,
+>  	.req_canceled = vtpm_proxy_tpm_req_canceled,
+> +	.request_locality = vtpm_proxy_request_locality,
+>  };
+>  
+>  /*
+> diff --git a/include/uapi/linux/vtpm_proxy.h b/include/uapi/linux/vtpm_proxy.h
+> index a69e991..58ac73c 100644
+> --- a/include/uapi/linux/vtpm_proxy.h
+> +++ b/include/uapi/linux/vtpm_proxy.h
+> @@ -46,4 +46,8 @@ struct vtpm_proxy_new_dev {
+>  
+>  #define VTPM_PROXY_IOC_NEW_DEV	_IOWR(0xa1, 0x00, struct vtpm_proxy_new_dev)
+>  
+> +/* vendor specific commands to set locality */
+> +#define TPM2_CC_SET_LOCALITY	0x20001000
+> +#define TPM_ORD_SET_LOCALITY	0x20001000
+> +
+
+Maybe we should just have VTPM_CC_SET_LOCALITY? No reason to have TPM
+version specific constant names. I wonder what would be the best range
+for these CCs.  Maybe 0xF0xxxxxxxx would be better?
+
+These are not changes that require a new patch set version but we they
+need to be discussed before merging these changes.
+
+>  #endif /* _UAPI_LINUX_VTPM_PROXY_H */
+> -- 
+> 2.4.3
+> 
+
+/Jarkko
