@@ -1,242 +1,74 @@
-From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: Re: [PATCH v5 2/2] tpm: vtpm_proxy: Implement request_locality
- function.
-Date: Mon, 22 May 2017 10:29:24 -0400
-Message-ID: <3b83ee0e-a20f-3a96-6f25-9c7a2aa68fbd@linux.vnet.ibm.com>
-References: <1494867105-30722-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1494867105-30722-3-git-send-email-stefanb@linux.vnet.ibm.com>
- <20170520124018.d2wmhnb6mwmlkgtz@intel.com>
+From: Andy Shevchenko <andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v1] ACPI: Switch to use generic UUID API
+Date: Mon, 22 May 2017 22:08:57 +0300
+Message-ID: <1495480137.6967.77.camel@linux.intel.com>
+References: <20170504092151.88646-1-andriy.shevchenko@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170520124018.d2wmhnb6mwmlkgtz@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
+Return-path: <iommu-bounces-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org>
+In-Reply-To: <20170504092151.88646-1-andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+List-Unsubscribe: <https://lists.linuxfoundation.org/mailman/options/iommu>,
+	<mailto:iommu-request-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://lists.linuxfoundation.org/pipermail/iommu/>
+List-Post: <mailto:iommu-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org>
+List-Help: <mailto:iommu-request-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.linuxfoundation.org/mailman/listinfo/iommu>,
+	<mailto:iommu-request-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org?subject=subscribe>
+Sender: iommu-bounces-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org
+Errors-To: iommu-bounces-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org
+To: linux-acpi-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, intel-gfx-PD4FTy7X32lNgt0PjOBp9y5qC8QIuHrW@public.gmane.org, nouveau-PD4FTy7X32lNgt0PjOBp9y5qC8QIuHrW@public.gmane.org, linux-input-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, iommu-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org, linux-mmc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, netdev-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-pci-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-usb-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, alsa-devel-K7yf7f+aM1XWsZ/bQMPhNw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: Felipe Balbi <balbi-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Heikki Krogerus <heikki.krogerus-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Mathias Nyman <mathias.nyman-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, Yisen Zhuang <yisen.zhuang-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>, Amir Goldstein <amir73il-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, "Rafael J . Wysocki" <rjw-LthD3rsA81gm4RdzfppkhA@public.gmane.org>, Adrian Hunter <adrian.hunter-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Liam Girdwood <lgirdwood-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Benjamin Tissoires <benjamin.tissoires-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, Mark Brown <broonie-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Jani Nikula <jani.nikula-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Bjorn Helgaas <bhelgaas-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>, Dan Williams <dan.j.williams-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, Borislav Petkov <bp-l3A5Bk7waGM@public.gmane.org>, Mika Westerberg <mika.westerberg-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Zhang Rui <rui.zhang-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, Ben Skeggs <bskeggs-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 05/20/2017 08:40 AM, Jarkko Sakkinen wrote:
-> On Mon, May 15, 2017 at 12:51:45PM -0400, Stefan Berger wrote:
->> Implement the request_locality function. To set the locality on the
->> backend we define vendor-specific TPM 1.2 and TPM 2 ordinals and send
->> a command to the backend to set the locality for the next commands.
->>
->> To avoid recursing into requesting the locality, we set the
->> TPM_TRASNMIT_RAW flag when calling tpm_trasnmit_cmd. To avoid recursing
->> into TPM 2 space related commands, we set the space parameter to NULL.
->>
->> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
->> ---
->>   drivers/char/tpm/tpm-interface.c  |  1 +
->>   drivers/char/tpm/tpm_vtpm_proxy.c | 36 ++++++++++++++++++++++++++++++++++++
->>   include/uapi/linux/vtpm_proxy.h   |  4 ++++
->>   3 files changed, 41 insertions(+)
->>
->> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
->> index 2eacda2..876d45f 100644
->> --- a/drivers/char/tpm/tpm-interface.c
->> +++ b/drivers/char/tpm/tpm-interface.c
->> @@ -537,6 +537,7 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, struct tpm_space *space,
->>   
->>   	return 0;
->>   }
->> +EXPORT_SYMBOL_GPL(tpm_transmit_cmd);
->>   
->>   #define TPM_DIGEST_SIZE 20
->>   #define TPM_RET_CODE_IDX 6
->> diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
->> index 751059d..66024bf 100644
->> --- a/drivers/char/tpm/tpm_vtpm_proxy.c
->> +++ b/drivers/char/tpm/tpm_vtpm_proxy.c
->> @@ -371,6 +371,41 @@ static bool vtpm_proxy_tpm_req_canceled(struct tpm_chip  *chip, u8 status)
->>   	return ret;
->>   }
->>   
->> +static int vtpm_proxy_request_locality(struct tpm_chip *chip, int locality)
->> +{
->> +	struct tpm_buf buf;
->> +	int rc;
->> +	const struct tpm_output_header *header;
->> +
->> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
->> +		rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS,
->> +				  TPM2_CC_SET_LOCALITY);
->> +	else
->> +		rc = tpm_buf_init(&buf, TPM_TAG_RQU_COMMAND,
->> +				  TPM_ORD_SET_LOCALITY);
->> +	if (rc)
->> +		return rc;
->> +	tpm_buf_append_u8(&buf, locality);
->> +
->> +	rc = tpm_transmit_cmd(chip, NULL, buf.data, tpm_buf_length(&buf), 0,
->> +			      TPM_TRANSMIT_UNLOCKED | TPM_TRANSMIT_RAW,
->> +			      "attempting to set locality");
->> +	if (rc < 0) {
->> +		locality = rc;
->> +		goto out;
->> +	}
->> +
->> +	header = (const struct tpm_output_header *)buf.data;
->> +	rc = be32_to_cpu(header->return_code);
->> +	if (rc)
->> +		locality = -1;
->> +
->> +out:
->> +	tpm_buf_destroy(&buf);
->> +
->> +	return locality;
->> +}
->> +
-> This looks good.
->
->>   static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
->>   	.flags = TPM_OPS_AUTO_STARTUP,
->>   	.recv = vtpm_proxy_tpm_op_recv,
->> @@ -380,6 +415,7 @@ static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
->>   	.req_complete_mask = VTPM_PROXY_REQ_COMPLETE_FLAG,
->>   	.req_complete_val = VTPM_PROXY_REQ_COMPLETE_FLAG,
->>   	.req_canceled = vtpm_proxy_tpm_req_canceled,
->> +	.request_locality = vtpm_proxy_request_locality,
->>   };
->>   
->>   /*
->> diff --git a/include/uapi/linux/vtpm_proxy.h b/include/uapi/linux/vtpm_proxy.h
->> index a69e991..58ac73c 100644
->> --- a/include/uapi/linux/vtpm_proxy.h
->> +++ b/include/uapi/linux/vtpm_proxy.h
->> @@ -46,4 +46,8 @@ struct vtpm_proxy_new_dev {
->>   
->>   #define VTPM_PROXY_IOC_NEW_DEV	_IOWR(0xa1, 0x00, struct vtpm_proxy_new_dev)
->>   
->> +/* vendor specific commands to set locality */
->> +#define TPM2_CC_SET_LOCALITY	0x20001000
->> +#define TPM_ORD_SET_LOCALITY	0x20001000
->> +
-> Maybe we should just have VTPM_CC_SET_LOCALITY? No reason to have TPM
-> version specific constant names. I wonder what would be the best range
-> for these CCs.  Maybe 0xF0xxxxxxxx would be better?
+On Thu, 2017-05-04 at 12:21 +0300, Andy Shevchenko wrote:
+> acpi_evaluate_dsm() and friends take a pointer to a raw buffer of 16
+> bytes. Instead we convert them to use uuid_le type. At the same time
+> we
+> convert current users.
+> 
+> acpi_str_to_uuid() becomes useless after the conversion and it's safe
+> to
+> get rid of it.
+> 
+> The conversion fixes a potential bug in int340x_thermal as well since
+> we have to use memcmp() on binary data.
+> 
+> Cc: Rafael J. Wysocki <rjw-LthD3rsA81gm4RdzfppkhA@public.gmane.org>
+> Cc: Mika Westerberg <mika.westerberg-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> Cc: Borislav Petkov <bp-l3A5Bk7waGM@public.gmane.org>
+> Cc: Dan Williams <dan.j.williams-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+> Cc: Amir Goldstein <amir73il-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+> Cc: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> Cc: Jani Nikula <jani.nikula-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> Cc: Ben Skeggs <bskeggs-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+> Cc: Benjamin Tissoires <benjamin.tissoires-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+> Cc: Joerg Roedel <joro-zLv9SwRftAIdnm+yROfE0A@public.gmane.org>
+> Cc: Adrian Hunter <adrian.hunter-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+> Cc: Yisen Zhuang <yisen.zhuang-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+> Cc: Bjorn Helgaas <bhelgaas-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+> Cc: Zhang Rui <rui.zhang-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+> Cc: Felipe Balbi <balbi-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
+> Cc: Mathias Nyman <mathias.nyman-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+> Cc: Heikki Krogerus <heikki.krogerus-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> Cc: Liam Girdwood <lgirdwood-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+> Cc: Mark Brown <broonie-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
+> Signed-off-by: Andy Shevchenko <andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
-I am not sure about that.
+Thank you everyone who gave a tag to this.
 
->
-> These are not changes that require a new patch set version but we they
-> need to be discussed before merging these changes.
+I'm going to split and rebase on top of Christoph's branch
+http://git.infradead.org/users/hch/vfs.git/shortlog/refs/heads/uuid-type
+s
 
-Unfortunately there is one more patch needed. We now need to restrict 
-that this particular driver command can only be sent from inside the 
-driver and never via any of the TPM devices (/dev/vtpm%d or 
-/dev/tpmrm%d). That patch could then either return an error code if 
-tried or return an error message. In the case of the TPM 2 spaces 
-commands an error code is returned if a command isn't known. We could 
-just do that instead of returning a full TPM error message. Here's the 
-patch that would do that.
+followed by changing types and API calls accordingly (without changing a
+logic!).
 
+So, I would like to keep tags in place. If there is any objection, speak
+up now!
+ 
+Thanks!
 
-To prevent userspace from sending the TPM driver command to set
-the locality, we need to check every command that is sent from
-user space. To distinguish user space commands from internally
-sent commands we introduce an additional state flag
-STATE_DRIVER_COMMAND that is set while the driver sends this
-command. Similar to the TPM 2 space commands we return an error
-code when this command is detected.
-
-Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
----
-  drivers/char/tpm/tpm_vtpm_proxy.c | 33 +++++++++++++++++++++++++++++++++
-  1 file changed, 33 insertions(+)
-
-diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c 
-b/drivers/char/tpm/tpm_vtpm_proxy.c
-index 66024bf..d25c361 100644
---- a/drivers/char/tpm/tpm_vtpm_proxy.c
-+++ b/drivers/char/tpm/tpm_vtpm_proxy.c
-@@ -43,6 +43,7 @@ struct proxy_dev {
-  #define STATE_OPENED_FLAG        BIT(0)
-  #define STATE_WAIT_RESPONSE_FLAG BIT(1)  /* waiting for emulator 
-response */
-  #define STATE_REGISTERED_FLAG     BIT(2)
-+#define STATE_DRIVER_COMMAND     BIT(3)  /* sending a driver specific 
-command */
-
-      size_t req_len;              /* length of queued TPM request */
-      size_t resp_len;             /* length of queued TPM response */
-@@ -299,6 +300,28 @@ static int vtpm_proxy_tpm_op_recv(struct tpm_chip 
-*chip, u8 *buf, size_t count)
-      return len;
-  }
-
-+static int vtpm_proxy_is_driver_command(struct tpm_chip *chip,
-+                    u8 *buf, size_t count)
-+{
-+    struct tpm_input_header *hdr = (struct tpm_input_header*)buf;
-+
-+    if (count < sizeof(struct tpm_input_header))
-+        return 0;
-+
-+    if (chip->flags & TPM_CHIP_FLAG_TPM2) {
-+        switch (be32_to_cpu(hdr->ordinal)) {
-+        case TPM2_CC_SET_LOCALITY:
-+            return 1;
-+        }
-+    } else {
-+        switch (be32_to_cpu(hdr->ordinal)) {
-+        case TPM_ORD_SET_LOCALITY:
-+            return 1;
-+        }
-+    }
-+    return 0;
-+}
-+
-  /*
-   * Called when core TPM driver forwards TPM requests to 'server side'.
-   *
-@@ -321,6 +344,10 @@ static int vtpm_proxy_tpm_op_send(struct tpm_chip 
-*chip, u8 *buf, size_t count)
-          return -EIO;
-      }
-
-+    if (!(proxy_dev->state & STATE_DRIVER_COMMAND) &&
-+        vtpm_proxy_is_driver_command(chip, buf, count))
-+        return -EFAULT;
-+
-      mutex_lock(&proxy_dev->buf_lock);
-
-      if (!(proxy_dev->state & STATE_OPENED_FLAG)) {
-@@ -376,6 +403,7 @@ static int vtpm_proxy_request_locality(struct 
-tpm_chip *chip, int locality)
-      struct tpm_buf buf;
-      int rc;
-      const struct tpm_output_header *header;
-+    struct proxy_dev *proxy_dev = dev_get_drvdata(&chip->dev);
-
-      if (chip->flags & TPM_CHIP_FLAG_TPM2)
-          rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS,
-@@ -387,9 +415,14 @@ static int vtpm_proxy_request_locality(struct 
-tpm_chip *chip, int locality)
-          return rc;
-      tpm_buf_append_u8(&buf, locality);
-
-+    proxy_dev->state |= STATE_DRIVER_COMMAND;
-+
-      rc = tpm_transmit_cmd(chip, NULL, buf.data, tpm_buf_length(&buf), 0,
-                    TPM_TRANSMIT_UNLOCKED | TPM_TRANSMIT_RAW,
-                    "attempting to set locality");
-+
-+    proxy_dev->state &= ~STATE_DRIVER_COMMAND;
-+
-      if (rc < 0) {
-          locality = rc;
-          goto out;
 -- 
-2.4.3
-
-
->
->>   #endif /* _UAPI_LINUX_VTPM_PROXY_H */
->> -- 
->> 2.4.3
->>
-> /Jarkko
->
-
+Andy Shevchenko <andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Intel Finland Oy
