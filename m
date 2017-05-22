@@ -1,37 +1,26 @@
-From: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
-Subject: [PATCH RESEND v2] tpm: Apply a sane minimum
-	adapterlimit value for retransmission.
-Date: Mon, 22 May 2017 11:16:38 +0200
-Message-ID: <20170522091638.8436-1-enric.balletbo@collabora.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Bryan Freed <bfreed-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+From: Enric Balletbo i Serra <enric.balletbo@collabora.com>
+Subject: [PATCH v3] tpm: Apply a sane minimum adapterlimit value for retransmission.
+Date: Mon, 22 May 2017 11:20:11 +0200
+Message-ID: <20170522092011.8937-1-enric.balletbo@collabora.com>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>
+Cc: wsa@the-dreams.de, Andrew Lunn <andrew@lunn.ch>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, Bryan Freed <bfreed@chromium.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Bryan Freed <bfreed-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+From: Bryan Freed <bfreed@chromium.org>
 
 When the I2C Infineon part is attached to an I2C adapter that imposes
 a size limitation, large requests will fail with -EOPNOTSUPP. Retry
 them with a sane minimum size without re-issuing the 0x05 command
 as this appears to occasionally put the TPM in a bad state.
 
-Signed-off-by: Bryan Freed <bfreed-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Signed-off-by: Bryan Freed <bfreed@chromium.org>
 [rework the patch to adapt to the feedback received]
-Signed-off-by: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
-Acked-by: Andrew Lunn <andrew-g2DYL2Zd6BY@public.gmane.org>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Reviewed-by: Andrew Lunn <andrew-g2DYL2Zd6BY@public.gmane.org>
+Signed-off-by: Enric Balletbo i Serra <enric.balletbo@collabora.com>
+Acked-by: Andrew Lunn <andrew@lunn.ch>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
 ---
 The purpose of this resend is only a reminder for if this can be accepted
 for the next merge window as I missed last merge. Thanks.
@@ -143,8 +132,3 @@ index dc47fa2..79d6bbb 100644
  
 -- 
 2.9.3
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
