@@ -1,134 +1,242 @@
-From: Enric Balletbo i Serra <enric.balletbo@collabora.com>
-Subject: [PATCH v3] tpm: Apply a sane minimum adapterlimit value for retransmission.
-Date: Mon, 22 May 2017 11:20:11 +0200
-Message-ID: <20170522092011.8937-1-enric.balletbo@collabora.com>
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>
-Cc: wsa@the-dreams.de, Andrew Lunn <andrew@lunn.ch>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, Bryan Freed <bfreed@chromium.org>
+From: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Subject: Re: [PATCH v5 2/2] tpm: vtpm_proxy: Implement request_locality
+ function.
+Date: Mon, 22 May 2017 10:29:24 -0400
+Message-ID: <3b83ee0e-a20f-3a96-6f25-9c7a2aa68fbd@linux.vnet.ibm.com>
+References: <1494867105-30722-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <1494867105-30722-3-git-send-email-stefanb@linux.vnet.ibm.com>
+ <20170520124018.d2wmhnb6mwmlkgtz@intel.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170520124018.d2wmhnb6mwmlkgtz@intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Bryan Freed <bfreed@chromium.org>
+On 05/20/2017 08:40 AM, Jarkko Sakkinen wrote:
+> On Mon, May 15, 2017 at 12:51:45PM -0400, Stefan Berger wrote:
+>> Implement the request_locality function. To set the locality on the
+>> backend we define vendor-specific TPM 1.2 and TPM 2 ordinals and send
+>> a command to the backend to set the locality for the next commands.
+>>
+>> To avoid recursing into requesting the locality, we set the
+>> TPM_TRASNMIT_RAW flag when calling tpm_trasnmit_cmd. To avoid recursing
+>> into TPM 2 space related commands, we set the space parameter to NULL.
+>>
+>> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+>> ---
+>>   drivers/char/tpm/tpm-interface.c  |  1 +
+>>   drivers/char/tpm/tpm_vtpm_proxy.c | 36 ++++++++++++++++++++++++++++++++++++
+>>   include/uapi/linux/vtpm_proxy.h   |  4 ++++
+>>   3 files changed, 41 insertions(+)
+>>
+>> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+>> index 2eacda2..876d45f 100644
+>> --- a/drivers/char/tpm/tpm-interface.c
+>> +++ b/drivers/char/tpm/tpm-interface.c
+>> @@ -537,6 +537,7 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, struct tpm_space *space,
+>>   
+>>   	return 0;
+>>   }
+>> +EXPORT_SYMBOL_GPL(tpm_transmit_cmd);
+>>   
+>>   #define TPM_DIGEST_SIZE 20
+>>   #define TPM_RET_CODE_IDX 6
+>> diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
+>> index 751059d..66024bf 100644
+>> --- a/drivers/char/tpm/tpm_vtpm_proxy.c
+>> +++ b/drivers/char/tpm/tpm_vtpm_proxy.c
+>> @@ -371,6 +371,41 @@ static bool vtpm_proxy_tpm_req_canceled(struct tpm_chip  *chip, u8 status)
+>>   	return ret;
+>>   }
+>>   
+>> +static int vtpm_proxy_request_locality(struct tpm_chip *chip, int locality)
+>> +{
+>> +	struct tpm_buf buf;
+>> +	int rc;
+>> +	const struct tpm_output_header *header;
+>> +
+>> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+>> +		rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS,
+>> +				  TPM2_CC_SET_LOCALITY);
+>> +	else
+>> +		rc = tpm_buf_init(&buf, TPM_TAG_RQU_COMMAND,
+>> +				  TPM_ORD_SET_LOCALITY);
+>> +	if (rc)
+>> +		return rc;
+>> +	tpm_buf_append_u8(&buf, locality);
+>> +
+>> +	rc = tpm_transmit_cmd(chip, NULL, buf.data, tpm_buf_length(&buf), 0,
+>> +			      TPM_TRANSMIT_UNLOCKED | TPM_TRANSMIT_RAW,
+>> +			      "attempting to set locality");
+>> +	if (rc < 0) {
+>> +		locality = rc;
+>> +		goto out;
+>> +	}
+>> +
+>> +	header = (const struct tpm_output_header *)buf.data;
+>> +	rc = be32_to_cpu(header->return_code);
+>> +	if (rc)
+>> +		locality = -1;
+>> +
+>> +out:
+>> +	tpm_buf_destroy(&buf);
+>> +
+>> +	return locality;
+>> +}
+>> +
+> This looks good.
+>
+>>   static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
+>>   	.flags = TPM_OPS_AUTO_STARTUP,
+>>   	.recv = vtpm_proxy_tpm_op_recv,
+>> @@ -380,6 +415,7 @@ static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
+>>   	.req_complete_mask = VTPM_PROXY_REQ_COMPLETE_FLAG,
+>>   	.req_complete_val = VTPM_PROXY_REQ_COMPLETE_FLAG,
+>>   	.req_canceled = vtpm_proxy_tpm_req_canceled,
+>> +	.request_locality = vtpm_proxy_request_locality,
+>>   };
+>>   
+>>   /*
+>> diff --git a/include/uapi/linux/vtpm_proxy.h b/include/uapi/linux/vtpm_proxy.h
+>> index a69e991..58ac73c 100644
+>> --- a/include/uapi/linux/vtpm_proxy.h
+>> +++ b/include/uapi/linux/vtpm_proxy.h
+>> @@ -46,4 +46,8 @@ struct vtpm_proxy_new_dev {
+>>   
+>>   #define VTPM_PROXY_IOC_NEW_DEV	_IOWR(0xa1, 0x00, struct vtpm_proxy_new_dev)
+>>   
+>> +/* vendor specific commands to set locality */
+>> +#define TPM2_CC_SET_LOCALITY	0x20001000
+>> +#define TPM_ORD_SET_LOCALITY	0x20001000
+>> +
+> Maybe we should just have VTPM_CC_SET_LOCALITY? No reason to have TPM
+> version specific constant names. I wonder what would be the best range
+> for these CCs.  Maybe 0xF0xxxxxxxx would be better?
 
-When the I2C Infineon part is attached to an I2C adapter that imposes
-a size limitation, large requests will fail with -EOPNOTSUPP. Retry
-them with a sane minimum size without re-issuing the 0x05 command
-as this appears to occasionally put the TPM in a bad state.
+I am not sure about that.
 
-Signed-off-by: Bryan Freed <bfreed@chromium.org>
-[rework the patch to adapt to the feedback received]
-Signed-off-by: Enric Balletbo i Serra <enric.balletbo@collabora.com>
-Acked-by: Andrew Lunn <andrew@lunn.ch>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+>
+> These are not changes that require a new patch set version but we they
+> need to be discussed before merging these changes.
+
+Unfortunately there is one more patch needed. We now need to restrict 
+that this particular driver command can only be sent from inside the 
+driver and never via any of the TPM devices (/dev/vtpm%d or 
+/dev/tpmrm%d). That patch could then either return an error code if 
+tried or return an error message. In the case of the TPM 2 spaces 
+commands an error code is returned if a command isn't known. We could 
+just do that instead of returning a full TPM error message. Here's the 
+patch that would do that.
+
+
+To prevent userspace from sending the TPM driver command to set
+the locality, we need to check every command that is sent from
+user space. To distinguish user space commands from internally
+sent commands we introduce an additional state flag
+STATE_DRIVER_COMMAND that is set while the driver sends this
+command. Similar to the TPM 2 space commands we return an error
+code when this command is detected.
+
+Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
 ---
-The purpose of this resend is only a reminder for if this can be accepted
-for the next merge window as I missed last merge. Thanks.
+  drivers/char/tpm/tpm_vtpm_proxy.c | 33 +++++++++++++++++++++++++++++++++
+  1 file changed, 33 insertions(+)
 
- drivers/char/tpm/tpm_i2c_infineon.c | 76 +++++++++++++++++++++++++++----------
- 1 file changed, 56 insertions(+), 20 deletions(-)
+diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c 
+b/drivers/char/tpm/tpm_vtpm_proxy.c
+index 66024bf..d25c361 100644
+--- a/drivers/char/tpm/tpm_vtpm_proxy.c
++++ b/drivers/char/tpm/tpm_vtpm_proxy.c
+@@ -43,6 +43,7 @@ struct proxy_dev {
+  #define STATE_OPENED_FLAG        BIT(0)
+  #define STATE_WAIT_RESPONSE_FLAG BIT(1)  /* waiting for emulator 
+response */
+  #define STATE_REGISTERED_FLAG     BIT(2)
++#define STATE_DRIVER_COMMAND     BIT(3)  /* sending a driver specific 
+command */
 
-diff --git a/drivers/char/tpm/tpm_i2c_infineon.c b/drivers/char/tpm/tpm_i2c_infineon.c
-index dc47fa2..79d6bbb 100644
---- a/drivers/char/tpm/tpm_i2c_infineon.c
-+++ b/drivers/char/tpm/tpm_i2c_infineon.c
-@@ -70,6 +70,7 @@ struct tpm_inf_dev {
- 	u8 buf[TPM_BUFSIZE + sizeof(u8)]; /* max. buffer size + addr */
- 	struct tpm_chip *chip;
- 	enum i2c_chip_type chip_type;
-+	unsigned int adapterlimit;
- };
- 
- static struct tpm_inf_dev tpm_dev;
-@@ -111,6 +112,7 @@ static int iic_tpm_read(u8 addr, u8 *buffer, size_t len)
- 
- 	int rc = 0;
- 	int count;
-+	unsigned int msglen = len;
- 
- 	/* Lock the adapter for the duration of the whole sequence. */
- 	if (!tpm_dev.client->adapter->algo->master_xfer)
-@@ -131,27 +133,61 @@ static int iic_tpm_read(u8 addr, u8 *buffer, size_t len)
- 			usleep_range(SLEEP_DURATION_LOW, SLEEP_DURATION_HI);
- 		}
- 	} else {
--		/* slb9635 protocol should work in all cases */
--		for (count = 0; count < MAX_COUNT; count++) {
--			rc = __i2c_transfer(tpm_dev.client->adapter, &msg1, 1);
--			if (rc > 0)
--				break;	/* break here to skip sleep */
--
--			usleep_range(SLEEP_DURATION_LOW, SLEEP_DURATION_HI);
--		}
--
--		if (rc <= 0)
--			goto out;
--
--		/* After the TPM has successfully received the register address
--		 * it needs some time, thus we're sleeping here again, before
--		 * retrieving the data
-+		/* Expect to send one command message and one data message, but
-+		 * support looping over each or both if necessary.
- 		 */
--		for (count = 0; count < MAX_COUNT; count++) {
--			usleep_range(SLEEP_DURATION_LOW, SLEEP_DURATION_HI);
--			rc = __i2c_transfer(tpm_dev.client->adapter, &msg2, 1);
--			if (rc > 0)
--				break;
-+		while (len > 0) {
-+			/* slb9635 protocol should work in all cases */
-+			for (count = 0; count < MAX_COUNT; count++) {
-+				rc = __i2c_transfer(tpm_dev.client->adapter,
-+						    &msg1, 1);
-+				if (rc > 0)
-+					break;	/* break here to skip sleep */
+      size_t req_len;              /* length of queued TPM request */
+      size_t resp_len;             /* length of queued TPM response */
+@@ -299,6 +300,28 @@ static int vtpm_proxy_tpm_op_recv(struct tpm_chip 
+*chip, u8 *buf, size_t count)
+      return len;
+  }
+
++static int vtpm_proxy_is_driver_command(struct tpm_chip *chip,
++                    u8 *buf, size_t count)
++{
++    struct tpm_input_header *hdr = (struct tpm_input_header*)buf;
 +
-+				usleep_range(SLEEP_DURATION_LOW,
-+					     SLEEP_DURATION_HI);
-+			}
++    if (count < sizeof(struct tpm_input_header))
++        return 0;
 +
-+			if (rc <= 0)
-+				goto out;
++    if (chip->flags & TPM_CHIP_FLAG_TPM2) {
++        switch (be32_to_cpu(hdr->ordinal)) {
++        case TPM2_CC_SET_LOCALITY:
++            return 1;
++        }
++    } else {
++        switch (be32_to_cpu(hdr->ordinal)) {
++        case TPM_ORD_SET_LOCALITY:
++            return 1;
++        }
++    }
++    return 0;
++}
 +
-+			/* After the TPM has successfully received the register
-+			 * address it needs some time, thus we're sleeping here
-+			 * again, before retrieving the data
-+			 */
-+			for (count = 0; count < MAX_COUNT; count++) {
-+				if (tpm_dev.adapterlimit) {
-+					msglen = min_t(unsigned int,
-+						       tpm_dev.adapterlimit,
-+						       len);
-+					msg2.len = msglen;
-+				}
-+				usleep_range(SLEEP_DURATION_LOW,
-+					     SLEEP_DURATION_HI);
-+				rc = __i2c_transfer(tpm_dev.client->adapter,
-+						    &msg2, 1);
-+				if (rc > 0) {
-+					/* Since len is unsigned, make doubly
-+					 * sure we do not underflow it.
-+					 */
-+					if (msglen > len)
-+						len = 0;
-+					else
-+						len -= msglen;
-+					msg2.buf += msglen;
-+					break;
-+				}
-+				/* If the I2C adapter rejected the request (e.g
-+				 * when the quirk read_max_len < len) fall back
-+				 * to a sane minimum value and try again.
-+				 */
-+				if (rc == -EOPNOTSUPP)
-+					tpm_dev.adapterlimit =
-+							I2C_SMBUS_BLOCK_MAX;
-+			}
+  /*
+   * Called when core TPM driver forwards TPM requests to 'server side'.
+   *
+@@ -321,6 +344,10 @@ static int vtpm_proxy_tpm_op_send(struct tpm_chip 
+*chip, u8 *buf, size_t count)
+          return -EIO;
+      }
+
++    if (!(proxy_dev->state & STATE_DRIVER_COMMAND) &&
++        vtpm_proxy_is_driver_command(chip, buf, count))
++        return -EFAULT;
 +
-+			if (rc <= 0)
-+				goto out;
- 		}
- 	}
- 
+      mutex_lock(&proxy_dev->buf_lock);
+
+      if (!(proxy_dev->state & STATE_OPENED_FLAG)) {
+@@ -376,6 +403,7 @@ static int vtpm_proxy_request_locality(struct 
+tpm_chip *chip, int locality)
+      struct tpm_buf buf;
+      int rc;
+      const struct tpm_output_header *header;
++    struct proxy_dev *proxy_dev = dev_get_drvdata(&chip->dev);
+
+      if (chip->flags & TPM_CHIP_FLAG_TPM2)
+          rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS,
+@@ -387,9 +415,14 @@ static int vtpm_proxy_request_locality(struct 
+tpm_chip *chip, int locality)
+          return rc;
+      tpm_buf_append_u8(&buf, locality);
+
++    proxy_dev->state |= STATE_DRIVER_COMMAND;
++
+      rc = tpm_transmit_cmd(chip, NULL, buf.data, tpm_buf_length(&buf), 0,
+                    TPM_TRANSMIT_UNLOCKED | TPM_TRANSMIT_RAW,
+                    "attempting to set locality");
++
++    proxy_dev->state &= ~STATE_DRIVER_COMMAND;
++
+      if (rc < 0) {
+          locality = rc;
+          goto out;
 -- 
-2.9.3
+2.4.3
+
+
+>
+>>   #endif /* _UAPI_LINUX_VTPM_PROXY_H */
+>> -- 
+>> 2.4.3
+>>
+> /Jarkko
+>
+
