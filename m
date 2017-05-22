@@ -1,18 +1,18 @@
 From: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH v2 2/5] tpm: introduce
- tpm_pcr_algo_to_crypto() and tpm_pcr_algo_from_crypto()
-Date: Mon, 22 May 2017 09:21:28 +0200
-Message-ID: <0b04a33c-248b-6597-473f-c5bc4ccaba62@huawei.com>
+Subject: Re: [PATCH v2 1/5] tpm: introduce tpm_pcr_algorithms()
+Date: Mon, 22 May 2017 11:07:54 +0200
+Message-ID: <cc7efaa2-4d5b-2142-3b23-06864589c212@huawei.com>
 References: <20170505142152.29795-1-roberto.sassu@huawei.com>
-	<20170505142152.29795-3-roberto.sassu@huawei.com>
-	<20170515111629.urjvbhqzohv4vakc@intel.com>
-	<0deed9be-d0c3-3a69-d510-1c8aa3513ba8@huawei.com>
-	<20170520132217.t7n7l2pjn7i63hbm@intel.com>
+	<20170505142152.29795-2-roberto.sassu@huawei.com>
+	<20170515103623.sumyo2vyldezual2@intel.com>
+	<d2974dd2-e30d-e8f0-a60a-2147f3290670@huawei.com>
+	<8aacf9c7-ac99-578e-ca60-6bb45bf3ab2b@huawei.com>
+	<20170520131846.e3niqiknlrttbdf4@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170520132217.t7n7l2pjn7i63hbm-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20170520131846.e3niqiknlrttbdf4-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -25,70 +25,142 @@ To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 5/20/2017 3:22 PM, Jarkko Sakkinen wrote:
-> On Mon, May 15, 2017 at 04:22:22PM +0200, Roberto Sassu wrote:
->> On 5/15/2017 1:16 PM, Jarkko Sakkinen wrote:
->>> On Fri, May 05, 2017 at 04:21:49PM +0200, Roberto Sassu wrote:
->>>> tpm_pcr_algorithms() returns to its callers the IDs of the hash algorithms
->>>> supported by the TPM. This patch introduces tpm_pcr_algo_to_crypto(),
->>>> so that the callers can use the crypto subsystem to calculate the digest
->>>> to be passed to tpm_pcr_extend().
+On 5/20/2017 3:18 PM, Jarkko Sakkinen wrote:
+> On Wed, May 17, 2017 at 10:42:35AM +0200, Roberto Sassu wrote:
+>> On 5/15/2017 3:18 PM, Roberto Sassu wrote:
+>>>
+>>>
+>>> On 5/15/2017 12:36 PM, Jarkko Sakkinen wrote:
+>>>> On Fri, May 05, 2017 at 04:21:48PM +0200, Roberto Sassu wrote:
+>>>>> This function allows TPM users to know which algorithms the TPM
+>>>>> supports.
+>>>>> It stores the algorithms in a static array of 'enum tpm2_algorithms',
+>>>>> allocated by the caller. If the array is not large enough, the function
+>>>>> returns an error. Otherwise, it returns the number of algorithms written
+>>>>> to the array. If the TPM version is 1.2, the function writes
+>>>>> TPM2_ALG_SHA1
+>>>>> to first element of the array.
+>>>>>
+>>>>> Writing the algorithm also for TPM 1.2 has the advantage that callers
+>>>>> can use the API, tpm_pcr_algorithms() and tpm_pcr_extend(), regardless
+>>>>> of the TPM version.
+>>>>>
+>>>>> A minor change added to this patch was to make available the size of
+>>>>> the active_banks array, member of the tpm_chip structure, outside
+>>>>> the TPM driver. The array size (TPM_ACTIVE_BANKS_MAX) has been exported
+>>>>> to include/linux/tpm.h.
+>>>>>
+>>>>> With this information, callers of tpm_pcr_algorithms() can provide
+>>>>> a static array with enough room for all the algorithms, instead
+>>>>> of receiving the pointer of a dynamic array that they have to free
+>>>>> later.
+>>>>>
+>>>>> Signed-off-by: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+>>>>> ---
+>>>>> v2
+>>>>>
+>>>>> - tpm_pcr_algorithms() returns supported algorithms also for TPM 1.2
+>>>>>
+>>>>>  drivers/char/tpm/tpm-interface.c | 46
+>>>>> ++++++++++++++++++++++++++++++++++++++++
+>>>>>  drivers/char/tpm/tpm.h           | 13 +-----------
+>>>>>  include/linux/tpm.h              | 19 +++++++++++++++++
+>>>>>  3 files changed, 66 insertions(+), 12 deletions(-)
+>>>>>
+>>>>> diff --git a/drivers/char/tpm/tpm-interface.c
+>>>>> b/drivers/char/tpm/tpm-interface.c
+>>>>> index 4ed08ab..b90de3d 100644
+>>>>> --- a/drivers/char/tpm/tpm-interface.c
+>>>>> +++ b/drivers/char/tpm/tpm-interface.c
+>>>>> @@ -911,6 +911,52 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx,
+>>>>> const u8 *hash)
+>>>>>  EXPORT_SYMBOL_GPL(tpm_pcr_extend);
+>>>>>
+>>>>>  /**
+>>>>> + * tpm_pcr_algorithms - get TPM IDs of active PCR banks algorithms
 >>>>
->>>> tpm_pcr_algo_from_crypto(), implemented for completeness, is instead used
->>>
->>> What do you mean by completeness? Please, never add unused stuff.
->>>
->>>> by tpm2_seal_trusted() to perform the opposite conversion.
+>>>> The grammar is incorrect here I believe. Should rather be
 >>>>
->>>> Signed-off-by: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
->>>> ---
->>>> v2
+>>>>   "algorithms of the active PCR banks"
 >>>>
->>>> - fixed return values of tpm2_pcr_algo_to_crypto() and
->>>>   tpm2_pcr_algo_from_crypto() if TPM support is disabled in the kernel
+>>>> And there is no such thing as "TPM ID".
+>>>>
+>>>>> + * @chip_num:    tpm idx # or ANY
+>>>>> + * @count:    # of items in algorithms
+>>>>> + * @algorithms:    array of TPM IDs
+>>>>> + *
+>>>>> + * Returns < 0 on error, and the number of active PCR banks on success.
+>>>>> + *
+>>>>> + * TPM 1.2 has always one SHA1 bank.
+>>>>> + */
+>>>>> +int tpm_pcr_algorithms(u32 chip_num, int count,
+>>>>> +               enum tpm2_algorithms *algorithms)
+>>>>                        unsigned int
+>>>>
+>>>> In addition the function name is not too greatg,
+>>>>
+>>>> Your syntax for return value is not correct. In addition after
+>>>> describing the return value there should not be anything. You should
+>>>> study
+>>>>
+>>>> https://www.kernel.org/doc/Documentation/kernel-doc-nano-HOWTO.txt
+>>>>
+>>>> Better name for the function would be tpm_get_pcr_algorithms().
+>>>>
+>>>>> +{
+>>>>> +    struct tpm_chip *chip;
+>>>>> +    int i;
+>>>>> +
+>>>>> +    if (count <= 0 || algorithms == NULL)
+>>>>> +        return -EINVAL;
+>>>>
+>>>> Is there a legal case where caller would pass these values? Now it
+>>>> looks like that there is.
+>>>>
+>>>> 'count' should unsigned int and zero should be a legal value for
+>>>> count.
 >>>
->>> Change Log only to the cover letter.
+>>> I wanted to avoid that a negative value returned by tpm_pcr_algorithms()
+>>> is passed to tpm_pcr_extend() as unsigned int.
 >>>
->>>>  drivers/char/tpm/tpm-interface.c | 51 ++++++++++++++++++++++++++++++++++++++++
->>>>  drivers/char/tpm/tpm2-cmd.c      | 42 +++++++++------------------------
->>>>  include/linux/tpm.h              | 13 ++++++++++
->>>>  3 files changed, 75 insertions(+), 31 deletions(-)
 >>>
->>> This commit is just deadly wrong in so many ways.
+>>>> That said I think the whole design is wrong as you could calculate
+>>>> array for algs only one time and pass a const reference to it on
+>>>> request.
 >>>
->>> I would suggest to make extend always just take crypto ID in so you
->>> don't have to add these bizarre conversion functions.
+>>> Ok. If I understood it correctly, you are saying to pass a const
+>>> reference of chip->active_banks. Then, I should also:
 >>
->> The reason of this choice (as I explained in the cover letter)
->> is that TPM users might want to produce an event log with
->> the TCG format (which includes the TPM algorithm ID). Also,
->> TPM IDs should be preferred because, with them, TPM users
->> can calculate a digest directly with the TPM.
+>> This is not a viable option. chip could be freed and the reference
+>> becomes invalid, without increasing the reference count.
 >>
->> Taking crypto IDs means relying on the fact that there
->> is always a mapping between TPM IDs and crypto IDs.
->> Otherwise, tpm_pcr_algorithms() cannot return the algorithms
->> to its callers and PCRs cannot be extended. If TPM IDs are used,
->> TPM users have two alternatives: calculate the digest with
->> the TPM, or pass a SHA1 digest to tpm_pcr_extend(), so that
->> it can be padded to extend remanining PCR banks.
+>> Did you think about something different?
 >>
->> However, this second option will work only when the TPM driver
->> determines the size of an algorithm without relying on the crypto
->> subsystem. At the moment, if a TPM ID is not mapped to a crypto ID,
->> tpm2_pcr_extend() ignores the digest.
+>> Thanks
 >>
 >> Roberto
 >
-> What if tpm_pcr_algorithms would convert TPM IDs to crypto IDs?
+> Two alternatives come in mind.
 >
-> Externally other subsystems would have to then deal with only crypto
-> IDs.
+> 1. add tpm_put to linclude/linux/tpm.h
+> 2. take put_ops away from the implementation
+> 3. add documentation that tpm_put needs to be called
+>
+> or acceptable alternative would memcpy in the implementation
+>
+> In any case, you should probably drop completely 'count' and have
+> function for getting the number of active banks.
 
-Then, other subsystems cannot:
+Having a variable number, makes things more complicated.
+In the IMA patch set for multiple template digests,
+the array of algorithms is stored inside a structure
+called digest descriptor. The array size must be fixed,
+to avoid VLAIS (which is not supported by clang).
 
-- use the TPM to calculate a digest
-- create an event log with the TCG format
+Since the size of tpm_chip->active_banks is a small number,
+we can drop count, and assume that the size of the array
+passed to tpm_pcr_algorithms() always matches the size
+of the active_banks array.
 
 Roberto
 
