@@ -1,74 +1,132 @@
-From: Andy Shevchenko <andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v1] ACPI: Switch to use generic UUID API
-Date: Mon, 22 May 2017 22:08:57 +0300
-Message-ID: <1495480137.6967.77.camel@linux.intel.com>
-References: <20170504092151.88646-1-andriy.shevchenko@linux.intel.com>
+From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Subject: Re: [PATCH v3] tpm: Issue a TPM2_Shutdown for TPM2
+	devices.
+Date: Tue, 23 May 2017 08:34:20 -0700
+Message-ID: <CAHSjozBzK4QmJ61hvRTfp2uxEW7dg0E-SvGvvoMeG0AaLdHSsg@mail.gmail.com>
+References: <20170516000852.28400-1-joshz@google.com>
+	<CAHSjozBoysvjHh_4hKuE8v7Sq3L9LjmZEcpCb_SZ=g63GpS7Aw@mail.gmail.com>
+	<20170520132017.gcg4r642od2moku5@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <iommu-bounces-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org>
-In-Reply-To: <20170504092151.88646-1-andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.linuxfoundation.org/mailman/options/iommu>,
-	<mailto:iommu-request-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://lists.linuxfoundation.org/pipermail/iommu/>
-List-Post: <mailto:iommu-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org>
-List-Help: <mailto:iommu-request-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.linuxfoundation.org/mailman/listinfo/iommu>,
-	<mailto:iommu-request-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org?subject=subscribe>
-Sender: iommu-bounces-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org
-Errors-To: iommu-bounces-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org
-To: linux-acpi-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, intel-gfx-PD4FTy7X32lNgt0PjOBp9y5qC8QIuHrW@public.gmane.org, nouveau-PD4FTy7X32lNgt0PjOBp9y5qC8QIuHrW@public.gmane.org, linux-input-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, iommu-cunTk1MwBs9QetFLy7KEm3xJsTq8ys+cHZ5vskTnxNA@public.gmane.org, linux-mmc-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, netdev-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-pci-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-usb-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, alsa-devel-K7yf7f+aM1XWsZ/bQMPhNw@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-Cc: Felipe Balbi <balbi-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Heikki Krogerus <heikki.krogerus-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Mathias Nyman <mathias.nyman-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, Yisen Zhuang <yisen.zhuang-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>, Amir Goldstein <amir73il-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, "Rafael J . Wysocki" <rjw-LthD3rsA81gm4RdzfppkhA@public.gmane.org>, Adrian Hunter <adrian.hunter-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Liam Girdwood <lgirdwood-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Benjamin Tissoires <benjamin.tissoires-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, Mark Brown <broonie-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Jani Nikula <jani.nikula-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Bjorn Helgaas <bhelgaas-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>, Dan Williams <dan.j.williams-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, Borislav Petkov <bp-l3A5Bk7waGM@public.gmane.org>, Mika Westerberg <mika.westerberg-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Zhang Rui <rui.zhang-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>, Ben Skeggs <bskeggs-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170520132017.gcg4r642od2moku5-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, 2017-05-04 at 12:21 +0300, Andy Shevchenko wrote:
-> acpi_evaluate_dsm() and friends take a pointer to a raw buffer of 16
-> bytes. Instead we convert them to use uuid_le type. At the same time
-> we
-> convert current users.
-> 
-> acpi_str_to_uuid() becomes useless after the conversion and it's safe
-> to
-> get rid of it.
-> 
-> The conversion fixes a potential bug in int340x_thermal as well since
-> we have to use memcmp() on binary data.
-> 
-> Cc: Rafael J. Wysocki <rjw-LthD3rsA81gm4RdzfppkhA@public.gmane.org>
-> Cc: Mika Westerberg <mika.westerberg-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> Cc: Borislav Petkov <bp-l3A5Bk7waGM@public.gmane.org>
-> Cc: Dan Williams <dan.j.williams-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-> Cc: Amir Goldstein <amir73il-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-> Cc: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> Cc: Jani Nikula <jani.nikula-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> Cc: Ben Skeggs <bskeggs-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-> Cc: Benjamin Tissoires <benjamin.tissoires-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-> Cc: Joerg Roedel <joro-zLv9SwRftAIdnm+yROfE0A@public.gmane.org>
-> Cc: Adrian Hunter <adrian.hunter-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-> Cc: Yisen Zhuang <yisen.zhuang-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-> Cc: Bjorn Helgaas <bhelgaas-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-> Cc: Zhang Rui <rui.zhang-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-> Cc: Felipe Balbi <balbi-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
-> Cc: Mathias Nyman <mathias.nyman-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
-> Cc: Heikki Krogerus <heikki.krogerus-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> Cc: Liam Girdwood <lgirdwood-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-> Cc: Mark Brown <broonie-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
-> Signed-off-by: Andy Shevchenko <andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Yes, will do. Can you mark a Reviewed-by on this version of the patch
+as well? You marked v2 already, but this is probably the version that
+should be submitted.
+Josh
 
-Thank you everyone who gave a tag to this.
 
-I'm going to split and rebase on top of Christoph's branch
-http://git.infradead.org/users/hch/vfs.git/shortlog/refs/heads/uuid-type
-s
+On Sat, May 20, 2017 at 6:20 AM, Jarkko Sakkinen
+<jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
+> Yes. Can you ping me once it is in? I can merge this after that.
+>
+> /Jarkko
+>
+> On Thu, May 18, 2017 at 08:21:32AM -0700, Josh Zimmerman wrote:
+>> Are there any other changes I should make to this patch, or is it good
+>> to go once the patch it depends on is in?
+>>
+>> Thanks!
+>> Josh
+>>
+>>
+>> On Mon, May 15, 2017 at 5:08 PM, Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org> wrote:
+>> > If a TPM2 loses power without a TPM2_Shutdown command being issued (a
+>> > "disorderly reboot"), it may lose some state that has yet to be
+>> > persisted to NVRam, and will increment the DA counter (eventually, this
+>> > will cause the TPM to lock the user out.)
+>> >
+>> > NOTE: This only changes behavior on TPM2 devices. Since TPM1 uses sysfs,
+>> > and sysfs relies on implicit locking on chip->ops, it is not safe to
+>> > allow this code to run in TPM1, or to add sysfs support to TPM2, until
+>> > that locking is made explicit.
+>> >
+>> > This patch is dependent on '[PATCH] Add "shutdown" to "struct class".'
+>> > http://marc.info/?l=linux-kernel&m=149463235025420&w=2
+>> >
+>> > Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+>> >
+>> > ----
+>> > v2:
+>> >   - Properly split changes between this and another commit
+>> >   - Use proper locking primitive.
+>> >   - Fix commenting style
+>> > v3:
+>> >   - Re-fix commenting style
+>> > ---
+>> >  drivers/char/tpm/tpm-chip.c  | 20 ++++++++++++++++++++
+>> >  drivers/char/tpm/tpm-sysfs.c |  3 +++
+>> >  2 files changed, 23 insertions(+)
+>> >
+>> > diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+>> > index 9dec9f551b83..272a42e77574 100644
+>> > --- a/drivers/char/tpm/tpm-chip.c
+>> > +++ b/drivers/char/tpm/tpm-chip.c
+>> > @@ -142,6 +142,25 @@ static void tpm_devs_release(struct device *dev)
+>> >         put_device(&chip->dev);
+>> >  }
+>> >
+>> > +static void tpm_shutdown(struct device *dev)
+>> > +{
+>> > +       struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
+>> > +       /* TPM 2.0 requires that the TPM2_Shutdown() command be issued prior to
+>> > +        * loss of power. If it is not, the DA counter will be incremented and,
+>> > +        * eventually, the user will be locked out of their TPM.
+>> > +        * XXX: This codepath relies on the fact that sysfs is not enabled for
+>> > +        * TPM2: sysfs uses an implicit lock on chip->ops, so this use could
+>> > +        * race if TPM2 has sysfs support enabled before TPM sysfs's implicit
+>> > +        * locking is fixed.
+>> > +        */
+>> > +       if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+>> > +               down_write(&chip->ops_sem);
+>> > +               tpm2_shutdown(chip, TPM_SU_CLEAR);
+>> > +               chip->ops = NULL;
+>> > +               up_write(&chip->ops_sem);
+>> > +       }
+>> > +}
+>> > +
+>> >  /**
+>> >   * tpm_chip_alloc() - allocate a new struct tpm_chip instance
+>> >   * @pdev: device to which the chip is associated
+>> > @@ -181,6 +200,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+>> >         device_initialize(&chip->devs);
+>> >
+>> >         chip->dev.class = tpm_class;
+>> > +       chip->dev.class.shutdown = tpm_shutdown;
+>> >         chip->dev.release = tpm_dev_release;
+>> >         chip->dev.parent = pdev;
+>> >         chip->dev.groups = chip->groups;
+>> > diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+>> > index 55405dbe43fa..5e5ff7eb6f7e 100644
+>> > --- a/drivers/char/tpm/tpm-sysfs.c
+>> > +++ b/drivers/char/tpm/tpm-sysfs.c
+>> > @@ -294,6 +294,9 @@ static const struct attribute_group tpm_dev_group = {
+>> >
+>> >  void tpm_sysfs_add_device(struct tpm_chip *chip)
+>> >  {
+>> > +       /* XXX: Before this restriction is removed, tpm_sysfs must be updated
+>> > +        * to explicitly lock chip->ops.
+>> > +        */
+>> >         if (chip->flags & TPM_CHIP_FLAG_TPM2)
+>> >                 return;
+>> >
+>> > --
+>> > 2.13.0.303.g4ebf302169-goog
+>> >
 
-followed by changing types and API calls accordingly (without changing a
-logic!).
-
-So, I would like to keep tags in place. If there is any objection, speak
-up now!
- 
-Thanks!
-
--- 
-Andy Shevchenko <andriy.shevchenko-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Intel Finland Oy
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
