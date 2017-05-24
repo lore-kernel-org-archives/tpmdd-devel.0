@@ -1,50 +1,46 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [PATCH] tpm, tpm_infineon: remove useless snprintf() calls
-Date: Wed, 24 May 2017 14:29:16 -0700
-Message-ID: <20170524212916.9106-1-jarkko.sakkinen@linux.intel.com>
+From: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v6 0/3] Extend the vTPM proxy driver to pass locality
+Date: Wed, 24 May 2017 17:39:38 -0400
+Message-ID: <1495661981-27249-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Sender: owner-linux-security-module@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: linux-security-module@vger.kernel.org, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
+To: jarkko.sakkinen@linux.intel.com, tpmdd-devel@lists.sourceforge.net
+Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, jgunthorpe@obsidianresearch.com, Stefan Berger <stefanb@linux.vnet.ibm.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The memory copy from rodata to stack is useless.
+The purpose of this series of patches is to enable the passing of the locality
+a command is executing in to a recipient, i.e., TPM emulator. To enable this we
+introduce vendor-specific TPM commands for TPM 1.2 and TPM 2 that the driver
+sends to the TPM emulator.
 
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
----
- drivers/char/tpm/tpm_infineon.c | 8 ++++----
- 1 file changed, 4 insertions(+), 4 deletions(-)
+v5->v6:
+  - Added patch 3/3.
 
-diff --git a/drivers/char/tpm/tpm_infineon.c b/drivers/char/tpm/tpm_infineon.c
-index e3cf9f3545c5..3b1b9f9322d5 100644
---- a/drivers/char/tpm/tpm_infineon.c
-+++ b/drivers/char/tpm/tpm_infineon.c
-@@ -397,7 +397,7 @@ static int tpm_inf_pnp_probe(struct pnp_dev *dev,
- 	int vendorid[2];
- 	int version[2];
- 	int productid[2];
--	char chipname[20];
-+	const char *chipname;
- 	struct tpm_chip *chip;
- 
- 	/* read IO-ports through PnP */
-@@ -488,13 +488,13 @@ static int tpm_inf_pnp_probe(struct pnp_dev *dev,
- 
- 	switch ((productid[0] << 8) | productid[1]) {
- 	case 6:
--		snprintf(chipname, sizeof(chipname), " (SLD 9630 TT 1.1)");
-+		chipname = " (SLD 9630 TT 1.1)";
- 		break;
- 	case 11:
--		snprintf(chipname, sizeof(chipname), " (SLB 9635 TT 1.2)");
-+		chipname = " (SLB 9635 TT 1.2)";
- 		break;
- 	default:
--		snprintf(chipname, sizeof(chipname), " (unknown chip)");
-+		chipname = " (unknown chip)";
- 		break;
- 	}
- 
+v4->v5:
+  - introduce TPM_TRANSMIT_RAW to be able to call tpm_transmit without
+    recursing into requesting the locality.
+
+v3->v4:
+  - addressed Jarkko's comments: largely a rewrite of the patches
+
+v2->v3:
+  - addressed Jarkko's comments
+
+v1->v2:
+  - fixed return value from function in patch 3/3
+
+
+Stefan Berger (3):
+  tpm: Introduce flag TPM_TRANSMIT_RAW
+  tpm: vtpm_proxy: Implement request_locality function.
+  tpm: vtpm_proxy: Prevent userspace from sending driver command
+
+ drivers/char/tpm/tpm-interface.c  |  4 ++-
+ drivers/char/tpm/tpm.h            |  1 +
+ drivers/char/tpm/tpm_vtpm_proxy.c | 69 +++++++++++++++++++++++++++++++++++++++
+ include/uapi/linux/vtpm_proxy.h   |  4 +++
+ 4 files changed, 77 insertions(+), 1 deletion(-)
+
 -- 
-2.11.0
+2.4.3
 
