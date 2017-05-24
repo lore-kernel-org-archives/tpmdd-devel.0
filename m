@@ -1,46 +1,65 @@
-From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: [PATCH v6 0/3] Extend the vTPM proxy driver to pass locality
-Date: Wed, 24 May 2017 17:39:38 -0400
-Message-ID: <1495661981-27249-1-git-send-email-stefanb@linux.vnet.ibm.com>
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Sender: owner-linux-security-module@vger.kernel.org
-To: jarkko.sakkinen@linux.intel.com, tpmdd-devel@lists.sourceforge.net
-Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, jgunthorpe@obsidianresearch.com, Stefan Berger <stefanb@linux.vnet.ibm.com>
+From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH v6 1/3] tpm: Introduce flag TPM_TRANSMIT_RAW
+Date: Wed, 24 May 2017 17:39:39 -0400
+Message-ID: <1495661981-27249-2-git-send-email-stefanb@linux.vnet.ibm.com>
+References: <1495661981-27249-1-git-send-email-stefanb@linux.vnet.ibm.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <1495661981-27249-1-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The purpose of this series of patches is to enable the passing of the locality
-a command is executing in to a recipient, i.e., TPM emulator. To enable this we
-introduce vendor-specific TPM commands for TPM 1.2 and TPM 2 that the driver
-sends to the TPM emulator.
+Introduce the flag TPM_TRANSMIT_RAW that allows us to transmit
+a command without recursing into the requesting of locality.
 
-v5->v6:
-  - Added patch 3/3.
+Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+---
+ drivers/char/tpm/tpm-interface.c | 3 ++-
+ drivers/char/tpm/tpm.h           | 1 +
+ 2 files changed, 3 insertions(+), 1 deletion(-)
 
-v4->v5:
-  - introduce TPM_TRANSMIT_RAW to be able to call tpm_transmit without
-    recursing into requesting the locality.
-
-v3->v4:
-  - addressed Jarkko's comments: largely a rewrite of the patches
-
-v2->v3:
-  - addressed Jarkko's comments
-
-v1->v2:
-  - fixed return value from function in patch 3/3
-
-
-Stefan Berger (3):
-  tpm: Introduce flag TPM_TRANSMIT_RAW
-  tpm: vtpm_proxy: Implement request_locality function.
-  tpm: vtpm_proxy: Prevent userspace from sending driver command
-
- drivers/char/tpm/tpm-interface.c  |  4 ++-
- drivers/char/tpm/tpm.h            |  1 +
- drivers/char/tpm/tpm_vtpm_proxy.c | 69 +++++++++++++++++++++++++++++++++++++++
- include/uapi/linux/vtpm_proxy.h   |  4 +++
- 4 files changed, 77 insertions(+), 1 deletion(-)
-
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index 4ed08ab..2eacda2 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -416,7 +416,8 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+ 	/* Store the decision as chip->locality will be changed. */
+ 	need_locality = chip->locality == -1;
+ 
+-	if (need_locality && chip->ops->request_locality)  {
++	if (!(flags & TPM_TRANSMIT_RAW) &&
++	    need_locality && chip->ops->request_locality)  {
+ 		rc = chip->ops->request_locality(chip, 0);
+ 		if (rc < 0)
+ 			goto out_no_locality;
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index e81d8c7..25d9858 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -525,6 +525,7 @@ extern struct idr dev_nums_idr;
+ 
+ enum tpm_transmit_flags {
+ 	TPM_TRANSMIT_UNLOCKED	= BIT(0),
++	TPM_TRANSMIT_RAW	= BIT(1),
+ };
+ 
+ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
 -- 
 2.4.3
 
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
