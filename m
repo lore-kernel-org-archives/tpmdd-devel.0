@@ -1,20 +1,20 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH RESEND v2] tpm: Apply a sane minimum adapterlimit value
- for retransmission.
-Date: Wed, 24 May 2017 11:51:13 -0700
-Message-ID: <20170524185113.v7ipn2d6lp7d2xwl@intel.com>
-References: <20170522091638.8436-1-enric.balletbo@collabora.com>
+Subject: Re: [PATCH v3] tpm: Apply a sane minimum adapterlimit value for
+ retransmission.
+Date: Wed, 24 May 2017 12:10:00 -0700
+Message-ID: <20170524191000.nycp5rhu2ndv3qli@intel.com>
+References: <20170522092011.8937-1-enric.balletbo@collabora.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170522091638.8436-1-enric.balletbo@collabora.com>
+In-Reply-To: <20170522092011.8937-1-enric.balletbo@collabora.com>
 Sender: linux-kernel-owner@vger.kernel.org
 To: Enric Balletbo i Serra <enric.balletbo@collabora.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, Rob Herring <robh+dt@kernel.org>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, Bryan Freed <bfreed@chromium.org>
+Cc: Peter Huewe <peterhuewe@gmx.de>, wsa@the-dreams.de, Andrew Lunn <andrew@lunn.ch>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, Bryan Freed <bfreed@chromium.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, May 22, 2017 at 11:16:38AM +0200, Enric Balletbo i Serra wrote:
+On Mon, May 22, 2017 at 11:20:11AM +0200, Enric Balletbo i Serra wrote:
 > From: Bryan Freed <bfreed@chromium.org>
 > 
 > When the I2C Infineon part is attached to an I2C adapter that imposes
@@ -28,14 +28,14 @@ On Mon, May 22, 2017 at 11:16:38AM +0200, Enric Balletbo i Serra wrote:
 > Acked-by: Andrew Lunn <andrew@lunn.ch>
 > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 > Reviewed-by: Andrew Lunn <andrew@lunn.ch>
-> ---
-> The purpose of this resend is only a reminder for if this can be accepted
-> for the next merge window as I missed last merge. Thanks.
 
-I'm sorry about this. Yes it can.
+Applied and should be available also in linux-next very soon.
 
 /Jarkko
 
+> ---
+> The purpose of this resend is only a reminder for if this can be accepted
+> for the next merge window as I missed last merge. Thanks.
 > 
 >  drivers/char/tpm/tpm_i2c_infineon.c | 76 +++++++++++++++++++++++++++----------
 >  1 file changed, 56 insertions(+), 20 deletions(-)
