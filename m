@@ -1,71 +1,58 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3] Add "shutdown" to "struct class".
-Date: Thu, 25 May 2017 10:06:16 -0700
-Message-ID: <20170525170616.uvj2ql7faqnwzwoe@intel.com>
-References: <20170515173438.13420-1-joshz@google.com>
-	<20170525130930.GA16244@kroah.com>
-	<CAHSjozAkGo1OnjK8HO3m1YyAwamd4CNZ9rUNiwmBeQz6Gau9VA@mail.gmail.com>
+From: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Subject: Re: [PATCH] tpm: vtpm_proxy: Do not run tpm2_shutdown
+Date: Thu, 25 May 2017 16:04:24 -0400
+Message-ID: <f6c024ae-fe93-251a-a176-1f27f25b1e21@linux.vnet.ibm.com>
+References: <1495717956-14252-1-git-send-email-stefanb@linux.vnet.ibm.com>
+ <20170525155059.GA5151@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset=windows-1252; format=flowed
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <CAHSjozAkGo1OnjK8HO3m1YyAwamd4CNZ9rUNiwmBeQz6Gau9VA-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Cc: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170525155059.GA5151@obsidianresearch.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: jarkko.sakkinen@linux.intel.com, tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, May 25, 2017 at 08:40:28AM -0700, Josh Zimmerman wrote:
-> Thanks, Greg.
-> 
-> Greg, Jarkko: Do either of you you have any objections to me
-> backporting these changes to 4.4 and 4.9? I'd like to make sure that
-> at least the couple most recent LTS kernels have this patch. (I don't
-> care so much about 4.1 as it'll be EOL'd this September, according to
-> https://www.kernel.org/category/releases.html, but I can backport it
-> to there as well if desired.)
-> 
-> Thanks,
-> 
-> Josh
+On 05/25/2017 11:50 AM, Jason Gunthorpe wrote:
+> On Thu, May 25, 2017 at 09:12:36AM -0400, Stefan Berger wrote:
+>> The tpm2_shutdown does not work with the VTPM proxy driver since the
+>> function only gets called when the backend file descriptor is already
+>> closed and at this point no data can be sent anymore. A proper shutdown
+>> would have to be initated by a user space application, such as a container
+>> management stack, that sends the command via the character device before
+>> terminating the TPM emulator.
+>>
+>> To avoid the tpm2_shutdown we introduce a TPM_CHIP_FLAG_NO_SHUTDOWN flag
+>> that only the VTPM proxy driver sets. This also avoids misleading kernel
+>> log messages.
+> This seems strange to me..
+>
+> Why isn't ops null if the fd has gone away?
+>
+> What is the call flow that hits this?
 
-Nope.
+In this function here.
 
-/Jarkko
+static void tpm_del_char_device(struct tpm_chip *chip)
+{
+     cdev_device_del(&chip->cdev, &chip->dev);
 
-> 
-> On Thu, May 25, 2017 at 6:09 AM, Greg Kroah-Hartman
-> <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org> wrote:
-> >
-> > On Mon, May 15, 2017 at 10:34:38AM -0700, Josh Zimmerman wrote:
-> > > The TPM class has some common shutdown code that must be executed for
-> > > all drivers. This adds some needed functionality for that.
-> > >
-> > > Usage example: 'tpm: Issue a TPM2_Shutdown for TPM2 devices.'
-> > > (see https://patchwork.kernel.org/patch/9724919/ for v2).
-> > >
-> > > Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-> >
-> > Given that the tpm code is going to need this, I recommend someone take
-> > it through that tree:
-> >
-> > Acked-by: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>
-> >
-> > Otherwise, if you want me to take it, I can, but I doubt you want it in
-> > my driver-core tree as that will not get merged to Linus until 4.13-rc1.
-> >
-> > thanks,
-> >
-> > greg k-h
+     /* Make the chip unavailable. */
+     mutex_lock(&idr_lock);
+     idr_replace(&dev_nums_idr, NULL, chip->dev_num);
+     mutex_unlock(&idr_lock);
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+     /* Make the driver uncallable. */
+     down_write(&chip->ops_sem);
+     if (chip->flags & TPM_CHIP_FLAG_TPM2)
+         tpm2_shutdown(chip, TPM2_SU_CLEAR);
+     chip->ops = NULL;
+     up_write(&chip->ops_sem);
+}
+
+The request cannot be deliver because the anonymous fd has been closed 
+already.
+
+     Stefan
+
