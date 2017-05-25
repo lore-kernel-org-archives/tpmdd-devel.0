@@ -1,11 +1,14 @@
-From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Subject: [PATCH] tpm, tpmrm: Mark tpmrm_write as static
-Date: Thu, 25 May 2017 07:43:05 +0200
-Message-ID: <20170525054305.15721-1-peterhuewe@gmx.de>
+From: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>
+Subject: Re: [PATCH v3] Add "shutdown" to "struct class".
+Date: Thu, 25 May 2017 15:09:30 +0200
+Message-ID: <20170525130930.GA16244@kroah.com>
+References: <20170515173438.13420-1-joshz@google.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20170515173438.13420-1-joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -14,34 +17,30 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
+To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-sparse complains that tpmrm_write can be made static, and since it is
-right we make it static.
+On Mon, May 15, 2017 at 10:34:38AM -0700, Josh Zimmerman wrote:
+> The TPM class has some common shutdown code that must be executed for
+> all drivers. This adds some needed functionality for that.
+> 
+> Usage example: 'tpm: Issue a TPM2_Shutdown for TPM2 devices.'
+> (see https://patchwork.kernel.org/patch/9724919/ for v2).
+> 
+> Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 
-Signed-off-by: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
----
- drivers/char/tpm/tpmrm-dev.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+Given that the tpm code is going to need this, I recommend someone take
+it through that tree:
 
-diff --git a/drivers/char/tpm/tpmrm-dev.c b/drivers/char/tpm/tpmrm-dev.c
-index c636e7f..1a0e97a 100644
---- a/drivers/char/tpm/tpmrm-dev.c
-+++ b/drivers/char/tpm/tpmrm-dev.c
-@@ -45,7 +45,7 @@ static int tpmrm_release(struct inode *inode, struct file *file)
- 	return 0;
- }
- 
--ssize_t tpmrm_write(struct file *file, const char __user *buf,
-+static ssize_t tpmrm_write(struct file *file, const char __user *buf,
- 		   size_t size, loff_t *off)
- {
- 	struct file_priv *fpriv = file->private_data;
--- 
-2.10.2
+Acked-by: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>
 
+Otherwise, if you want me to take it, I can, but I doubt you want it in
+my driver-core tree as that will not get merged to Linus until 4.13-rc1.
+
+thanks,
+
+greg k-h
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
