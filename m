@@ -1,59 +1,54 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH RFC] tpm: migrate pubek_show to struct tpm_buf
-Date: Thu, 25 May 2017 15:28:01 -0700
-Message-ID: <20170525222801.mayost6gxcggurjo@intel.com>
-References: <20170525211105.843-1-jarkko.sakkinen@linux.intel.com>
- <20170525211613.GA14802@obsidianresearch.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+From: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Subject: [PATCH v3] tpm: vtpm_proxy: Suppress error logging when in closed state
+Date: Thu, 25 May 2017 18:29:13 -0400
+Message-ID: <1495751353-28500-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20170525211613.GA14802@obsidianresearch.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, open list <linux-kernel@vger.kernel.org>
+To: jarkko.sakkinen@linux.intel.com, tpmdd-devel@lists.sourceforge.net
+Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, jgunthorpe@obsidianresearch.com, Stefan Berger <stefanb@linux.vnet.ibm.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, May 25, 2017 at 03:16:13PM -0600, Jason Gunthorpe wrote:
-> On Thu, May 25, 2017 at 02:11:04PM -0700, Jarkko Sakkinen wrote:
-> >  	struct tpm_chip *chip = to_tpm_chip(dev);
-> > +	char anti_replay[20];
-> >  
-> > -	tpm_cmd.header.in = tpm_readpubek_header;
-> > -	err = tpm_transmit_cmd(chip, NULL, &tpm_cmd, READ_PUBEK_RESULT_SIZE,
-> > +	rc = tpm_buf_init(&tpm_buf, TPM_TAG_RQU_COMMAND, TPM_ORD_READPUBEK);
-> > +	if (rc)
-> > +		return rc;
-> > +
-> > +	/* The checksum is ignored so it doesn't matter what the contents are.
-> > +	 */
-> > +	tpm_buf_append(&tpm_buf, anti_replay, sizeof(anti_replay));
-> 
-> It does matter, we do not want to leak random kernel memory incase it
-> has something sensitive. Zero anti_replay.
+Suppress the error logging when the core TPM driver sends commands
+to the VTPM proxy driver and -EPIPE is returned in case the VTPM
+proxy driver is 'closed' (closed anonymous file descriptor).  This
+error code is only returned by the send function and by tpm_transmit
+when the VTPM proxy driver is being used.
 
-If there was a leak it has existed before this change as tpm_cmd was
-also allocated from stack. And there is not leak because the checksum is
-not printed.
+Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+---
+ drivers/char/tpm/tpm-interface.c | 5 +++--
+ drivers/char/tpm/tpm2-cmd.c      | 2 +-
+ 2 files changed, 4 insertions(+), 3 deletions(-)
 
-> > +
-> > -	/*
-> > -	   ignore header 10 bytes
-> > -	   algorithm 32 bits (1 == RSA )
-> > -	   encscheme 16 bits
-> > -	   sigscheme 16 bits
-> > -	   parameters (RSA 12->bytes: keybit, #primes, expbit)
-> > -	   keylenbytes 32 bits
-> > -	   256 byte modulus
-> > -	   ignore checksum 20 bytes
-> > -	 */
-> 
-> Not sure we should delete the comment, tpm buf does not make the parse
-> any clearer.
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index d711186..d2b4df6 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -430,8 +430,9 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+ 
+ 	rc = chip->ops->send(chip, (u8 *) buf, count);
+ 	if (rc < 0) {
+-		dev_err(&chip->dev,
+-			"tpm_transmit: tpm_send: error %d\n", rc);
++		if (rc != -EPIPE)
++			dev_err(&chip->dev,
++				"%s: tpm_send: error %d\n", __func__, rc);
+ 		goto out;
+ 	}
+ 
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index 3ee6883..3a99643 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -840,7 +840,7 @@ void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type)
+ 	/* In places where shutdown command is sent there's no much we can do
+ 	 * except print the error code on a system failure.
+ 	 */
+-	if (rc < 0)
++	if (rc < 0 && rc != -EPIPE)
+ 		dev_warn(&chip->dev, "transmit returned %d while stopping the TPM",
+ 			 rc);
+ }
+-- 
+2.4.3
 
-I think better idea would be to move struct tpm_readpubek_params_out
-declaration here and use it to refer different fields. Previously this
-has been a complete mess. The structure has been declared but it has not
-been used for anything. I wonder what is the history here...
-
-/Jarkko
