@@ -1,31 +1,55 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: Re: [PATCH] tpm, tpm_infineon: remove useless snprintf() calls
-Date: Thu, 25 May 2017 09:44:16 -0700
-Message-ID: <20170525164416.5dn7l3eu4tkudypn@intel.com>
-References: <20170524212916.9106-1-jarkko.sakkinen@linux.intel.com>
- <20170524215259.xkaqrnhcb44jpyd5@intel.com>
- <trinity-b171219a-5a85-4fd0-9bc7-f5ecde2598f4-1495690145148@3capp-gmx-bs66>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v3] Add "shutdown" to "struct class".
+Date: Thu, 25 May 2017 10:05:08 -0700
+Message-ID: <20170525170508.4xw5vwq357wz76p3@intel.com>
+References: <20170515173438.13420-1-joshz@google.com>
+	<20170525130930.GA16244@kroah.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <trinity-b171219a-5a85-4fd0-9bc7-f5ecde2598f4-1495690145148@3capp-gmx-bs66>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Peter Huewe <PeterHuewe@gmx.de>
-Cc: tpmdd-devel@lists.sourceforge.net, jmorris@namei.org, linux-security-module@vger.kernel.org, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
+In-Reply-To: <20170525130930.GA16244-U8xfFu+wG4EAvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, May 25, 2017 at 07:29:05AM +0200, Peter Huewe wrote:
-> > The memory copy from rodata to stack is useless.
-> >
-> > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+On Thu, May 25, 2017 at 03:09:30PM +0200, Greg Kroah-Hartman wrote:
+> On Mon, May 15, 2017 at 10:34:38AM -0700, Josh Zimmerman wrote:
+> > The TPM class has some common shutdown code that must be executed for
+> > all drivers. This adds some needed functionality for that.
+> > 
+> > Usage example: 'tpm: Issue a TPM2_Shutdown for TPM2 devices.'
+> > (see https://patchwork.kernel.org/patch/9724919/ for v2).
+> > 
+> > Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 > 
-> After review, yes that should work.
-> Reviewed-by: Peter Huewe <peterhuewe@gmx.de>
+> Given that the tpm code is going to need this, I recommend someone take
+> it through that tree:
+> 
+> Acked-by: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>
+> 
+> Otherwise, if you want me to take it, I can, but I doubt you want it in
+> my driver-core tree as that will not get merged to Linus until 4.13-rc1.
+> 
+> thanks,
+> 
+> greg k-h
 
-Yes, the string gets stored to rodata section where it is copied to
-stack :-)
-
-Thanx!
+I can take this to the tpmdd tree. For me only thing that matters that
+there isn't collisions. If we all agree on this, I'll apply Josh's
+patches and include to my next PR.
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
