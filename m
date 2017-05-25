@@ -1,11 +1,18 @@
-From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Subject: [PATCH v4 2/2] Add "shutdown" to "struct class".
-Date: Thu, 25 May 2017 16:20:30 -0700
-Message-ID: <CAHSjozD_NjH0Ta=ELCOqG6ezX=qgteumKBnN2ceqE4ty2FaAZQ@mail.gmail.com>
+From: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: Re: [PATCH] tpm: vtpm_proxy: Do not run tpm2_shutdown
+Date: Thu, 25 May 2017 19:34:46 -0400
+Message-ID: <d4b01e71-9cb5-9019-c1ab-1a4ef29cc1ab@linux.vnet.ibm.com>
+References: <1495717956-14252-1-git-send-email-stefanb@linux.vnet.ibm.com>
+	<20170525155059.GA5151@obsidianresearch.com>
+	<f6c024ae-fe93-251a-a176-1f27f25b1e21@linux.vnet.ibm.com>
+	<20170525200931.GA12733@obsidianresearch.com>
+	<9ff88c24-ca7a-1867-7284-17689fdac655@linux.vnet.ibm.com>
+	<20170525223348.uh66n37dnvz3eptl@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset="us-ascii"; Format="flowed"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170525223348.uh66n37dnvz3eptl-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -14,64 +21,85 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The TPM class has some common shutdown code that must be executed for
-all drivers. This adds some needed functionality for that.
+On 05/25/2017 06:33 PM, Jarkko Sakkinen wrote:
+> On Thu, May 25, 2017 at 04:32:50PM -0400, Stefan Berger wrote:
+>> On 05/25/2017 04:09 PM, Jason Gunthorpe wrote:
+>>> On Thu, May 25, 2017 at 04:04:24PM -0400, Stefan Berger wrote:
+>>>> On 05/25/2017 11:50 AM, Jason Gunthorpe wrote:
+>>>>> On Thu, May 25, 2017 at 09:12:36AM -0400, Stefan Berger wrote:
+>>>>>> The tpm2_shutdown does not work with the VTPM proxy driver since the
+>>>>>> function only gets called when the backend file descriptor is already
+>>>>>> closed and at this point no data can be sent anymore. A proper shutdown
+>>>>>> would have to be initated by a user space application, such as a container
+>>>>>> management stack, that sends the command via the character device before
+>>>>>> terminating the TPM emulator.
+>>>>>>
+>>>>>> To avoid the tpm2_shutdown we introduce a TPM_CHIP_FLAG_NO_SHUTDOWN flag
+>>>>>> that only the VTPM proxy driver sets. This also avoids misleading kernel
+>>>>>> log messages.
+>>>>> This seems strange to me..
+>>>>>
+>>>>> Why isn't ops null if the fd has gone away?
+>>>>>
+>>>>> What is the call flow that hits this?
+>>>> In this function here.
+>>>>
+>>>> static void tpm_del_char_device(struct tpm_chip *chip)
+>>>> {
+>>>>       cdev_device_del(&chip->cdev, &chip->dev);
+>>>>
+>>>>       /* Make the chip unavailable. */
+>>>>       mutex_lock(&idr_lock);
+>>>>       idr_replace(&dev_nums_idr, NULL, chip->dev_num);
+>>>>       mutex_unlock(&idr_lock);
+>>>>
+>>>>       /* Make the driver uncallable. */
+>>>>       down_write(&chip->ops_sem);
+>>>>       if (chip->flags & TPM_CHIP_FLAG_TPM2)
+>>>>           tpm2_shutdown(chip, TPM2_SU_CLEAR);
+>>>>       chip->ops = NULL;
+>>>>       up_write(&chip->ops_sem);
+>>>> }
+>>>>
+>>>> The request cannot be deliver because the anonymous fd has been closed
+>>>> already.
+>>> The driver must always be able to process requests until
+>>> tpm_del_char_device completes, so this is triggering an existing bug
+>>> in vtpm. This change in core behvior is not going to fix the bug.
+>>>
+>>> eg a request from sysfs/etc could come in between vtpm fd closure and
+>>> tpm_del_char_device, and it still must be handled properly.
+>>>
+>>> I guess you need to have transmit command fail fast once the fd is
+>>> closed.
+>> It doesn't hang. Everything is torn down immediately. What is primarily
+>> annoying are these two log messages:
+>> tpm tpm0: tpm_transmit: tpm_send: error -32
+>> tpm tpm0: transmit returned -32 while stopping the TPM
+>>
+>>
+>>      Stefan
+> It's been a while since I've looked into vtpm code. Why was fd closed
+> before the above? I can go this through myself once I'm back in Finland
 
-Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Acked-by: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>
-Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+The tear-down only starts when the last file descriptor on /dev/tpm%d 
+and the (anonymous) file descriptor on the backend was closed. The 
+backend (TPM emulator) can also close before the frontend closes. So it 
+can happen that there is no backend anymore that would process commands 
+and that would cause error messages being logged for commands sent to 
+it. For sure there is no more listener for the TPM2 Shutdown command.
 
------
-v2: Add Signed-off-by.
-v3: Remove logically separate change.
-v4: Add "acked-by" and "cc".
----
- drivers/base/core.c    | 5 +++++
- include/linux/device.h | 2 ++
- 2 files changed, 7 insertions(+)
 
-diff --git a/drivers/base/core.c b/drivers/base/core.c
-index 6bb60fb6a30b..687668d9afbe 100644
---- a/drivers/base/core.c
-+++ b/drivers/base/core.c
-@@ -2667,6 +2667,11 @@ void device_shutdown(void)
-                pm_runtime_get_noresume(dev);
-                pm_runtime_barrier(dev);
+> next week. Just have forgotten this detail and do not have time to study
+> this right now.
+>
+> /Jarkko
+>
 
-+               if (dev->class && dev->class->shutdown) {
-+                       if (initcall_debug)
-+                               dev_info(dev, "shutdown\n");
-+                       dev->class->shutdown(dev);
-+               }
-                if (dev->bus && dev->bus->shutdown) {
-                        if (initcall_debug)
-                                dev_info(dev, "shutdown\n");
-diff --git a/include/linux/device.h b/include/linux/device.h
-index 9ef518af5515..f240baac2001 100644
---- a/include/linux/device.h
-+++ b/include/linux/device.h
-@@ -378,6 +378,7 @@ int subsys_virtual_register(struct bus_type *subsys,
-  * @suspend:   Used to put the device to sleep mode, usually to a low power
-  *             state.
-  * @resume:    Used to bring the device from the sleep mode.
-+ * @shutdown:  Called at shut-down time to quiesce the device.
-  * @ns_type:   Callbacks so sysfs can detemine namespaces.
-  * @namespace: Namespace of the device belongs to this class.
-  * @pm:                The default device power management operations
-of this class.
-@@ -407,6 +408,7 @@ struct class {
-
-        int (*suspend)(struct device *dev, pm_message_t state);
-        int (*resume)(struct device *dev);
-+       int (*shutdown)(struct device *dev);
-
-        const struct kobj_ns_type_operations *ns_type;
-        const void *(*namespace)(struct device *dev);
--- 
-2.13.0.219.gdb65acc882-goog
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
