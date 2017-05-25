@@ -1,18 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: vtpm_proxy: Do not run tpm2_shutdown
-Date: Thu, 25 May 2017 15:33:48 -0700
-Message-ID: <20170525223348.uh66n37dnvz3eptl@intel.com>
-References: <1495717956-14252-1-git-send-email-stefanb@linux.vnet.ibm.com>
-	<20170525155059.GA5151@obsidianresearch.com>
-	<f6c024ae-fe93-251a-a176-1f27f25b1e21@linux.vnet.ibm.com>
-	<20170525200931.GA12733@obsidianresearch.com>
-	<9ff88c24-ca7a-1867-7284-17689fdac655@linux.vnet.ibm.com>
+Subject: Re: [PATCH v2] tpm: vtpm_proxy: Suppresse error
+ logging when in closed state
+Date: Thu, 25 May 2017 15:35:35 -0700
+Message-ID: <20170525223535.y4v4mf35gdgfs5bu@intel.com>
+References: <1495748360-26558-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <9ff88c24-ca7a-1867-7284-17689fdac655-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+In-Reply-To: <1495748360-26558-1-git-send-email-stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -25,71 +22,62 @@ To: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, May 25, 2017 at 04:32:50PM -0400, Stefan Berger wrote:
-> On 05/25/2017 04:09 PM, Jason Gunthorpe wrote:
-> > On Thu, May 25, 2017 at 04:04:24PM -0400, Stefan Berger wrote:
-> > > On 05/25/2017 11:50 AM, Jason Gunthorpe wrote:
-> > > > On Thu, May 25, 2017 at 09:12:36AM -0400, Stefan Berger wrote:
-> > > > > The tpm2_shutdown does not work with the VTPM proxy driver since the
-> > > > > function only gets called when the backend file descriptor is already
-> > > > > closed and at this point no data can be sent anymore. A proper shutdown
-> > > > > would have to be initated by a user space application, such as a container
-> > > > > management stack, that sends the command via the character device before
-> > > > > terminating the TPM emulator.
-> > > > > 
-> > > > > To avoid the tpm2_shutdown we introduce a TPM_CHIP_FLAG_NO_SHUTDOWN flag
-> > > > > that only the VTPM proxy driver sets. This also avoids misleading kernel
-> > > > > log messages.
-> > > > This seems strange to me..
-> > > > 
-> > > > Why isn't ops null if the fd has gone away?
-> > > > 
-> > > > What is the call flow that hits this?
-> > > In this function here.
-> > > 
-> > > static void tpm_del_char_device(struct tpm_chip *chip)
-> > > {
-> > >      cdev_device_del(&chip->cdev, &chip->dev);
-> > > 
-> > >      /* Make the chip unavailable. */
-> > >      mutex_lock(&idr_lock);
-> > >      idr_replace(&dev_nums_idr, NULL, chip->dev_num);
-> > >      mutex_unlock(&idr_lock);
-> > > 
-> > >      /* Make the driver uncallable. */
-> > >      down_write(&chip->ops_sem);
-> > >      if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> > >          tpm2_shutdown(chip, TPM2_SU_CLEAR);
-> > >      chip->ops = NULL;
-> > >      up_write(&chip->ops_sem);
-> > > }
-> > > 
-> > > The request cannot be deliver because the anonymous fd has been closed
-> > > already.
-> > The driver must always be able to process requests until
-> > tpm_del_char_device completes, so this is triggering an existing bug
-> > in vtpm. This change in core behvior is not going to fix the bug.
-> > 
-> > eg a request from sysfs/etc could come in between vtpm fd closure and
-> > tpm_del_char_device, and it still must be handled properly.
-> > 
-> > I guess you need to have transmit command fail fast once the fd is
-> > closed.
+On Thu, May 25, 2017 at 05:39:20PM -0400, Stefan Berger wrote:
+> Suppress the error logging when the core TPM driver sends commands
+> to the VTPM proxy driver and -EPIPE is returned in case the VTPM
+> proxy driver is 'closed' (closed anonymous file descriptor).  This
+> error code is only returned by the send function and by tpm_transmit
+> when the VTPM proxy driver is being used.
 > 
-> It doesn't hang. Everything is torn down immediately. What is primarily
-> annoying are these two log messages:
-> tpm tpm0: tpm_transmit: tpm_send: error -32
-> tpm tpm0: transmit returned -32 while stopping the TPM
-> 
-> 
->     Stefan
+> Signed-off-by: Stefan Berger <stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 
-It's been a while since I've looked into vtpm code. Why was fd closed
-before the above? I can go this through myself once I'm back in Finland
-next week. Just have forgotten this detail and do not have time to study
-this right now.
+This have to hold up until some time next week as I have to make sure
+that I understand that this is the right choice, which requirest to
+study vtpm implementation.
+
+I'm travelling right now.
 
 /Jarkko
+
+> ---
+>  drivers/char/tpm/tpm-interface.c | 4 ++--
+>  drivers/char/tpm/tpm2-cmd.c      | 2 +-
+>  2 files changed, 3 insertions(+), 3 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index d711186..4826fcf 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -429,11 +429,11 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+>  		goto out;
+>  
+>  	rc = chip->ops->send(chip, (u8 *) buf, count);
+> -	if (rc < 0) {
+> +	if (rc < 0 && rc != -EPIPE)
+>  		dev_err(&chip->dev,
+>  			"tpm_transmit: tpm_send: error %d\n", rc);
+> +	if (rc < 0)
+>  		goto out;
+> -	}
+>  
+>  	if (chip->flags & TPM_CHIP_FLAG_IRQ)
+>  		goto out_recv;
+> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+> index 3ee6883..3a99643 100644
+> --- a/drivers/char/tpm/tpm2-cmd.c
+> +++ b/drivers/char/tpm/tpm2-cmd.c
+> @@ -840,7 +840,7 @@ void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type)
+>  	/* In places where shutdown command is sent there's no much we can do
+>  	 * except print the error code on a system failure.
+>  	 */
+> -	if (rc < 0)
+> +	if (rc < 0 && rc != -EPIPE)
+>  		dev_warn(&chip->dev, "transmit returned %d while stopping the TPM",
+>  			 rc);
+>  }
+> -- 
+> 2.4.3
+> 
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
