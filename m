@@ -1,19 +1,17 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3] Add "shutdown" to "struct class".
-Date: Thu, 25 May 2017 15:40:11 -0700
-Message-ID: <20170525224011.whm56yzautdo74cj@intel.com>
-References: <20170515173438.13420-1-joshz@google.com>
-	<20170525130930.GA16244@kroah.com>
-	<CAHSjozAkGo1OnjK8HO3m1YyAwamd4CNZ9rUNiwmBeQz6Gau9VA@mail.gmail.com>
-	<20170525160925.GA25318@kroah.com>
-	<CAHSjozC4N7ShgCqNPbvycrhe17e3NKVik92Gy0vAHqBvBm-oAA@mail.gmail.com>
-	<20170525164118.GA28995@kroah.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH RFC] tpm: migrate pubek_show to struct
+ tpm_buf
+Date: Thu, 25 May 2017 16:40:50 -0600
+Message-ID: <20170525224050.GA15715@obsidianresearch.com>
+References: <20170525211105.843-1-jarkko.sakkinen@linux.intel.com>
+	<20170525211613.GA14802@obsidianresearch.com>
+	<20170525222801.mayost6gxcggurjo@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170525164118.GA28995-U8xfFu+wG4EAvxtiuMwx3w@public.gmane.org>
+In-Reply-To: <20170525222801.mayost6gxcggurjo-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,56 +20,42 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Cc: Greg KH <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Josh,
+On Thu, May 25, 2017 at 03:28:01PM -0700, Jarkko Sakkinen wrote:
+> On Thu, May 25, 2017 at 03:16:13PM -0600, Jason Gunthorpe wrote:
+> > On Thu, May 25, 2017 at 02:11:04PM -0700, Jarkko Sakkinen wrote:
+> > >  	struct tpm_chip *chip = to_tpm_chip(dev);
+> > > +	char anti_replay[20];
+> > >  
+> > > -	tpm_cmd.header.in = tpm_readpubek_header;
+> > > -	err = tpm_transmit_cmd(chip, NULL, &tpm_cmd, READ_PUBEK_RESULT_SIZE,
+> > > +	rc = tpm_buf_init(&tpm_buf, TPM_TAG_RQU_COMMAND, TPM_ORD_READPUBEK);
+> > > +	if (rc)
+> > > +		return rc;
+> > > +
+> > > +	/* The checksum is ignored so it doesn't matter what the contents are.
+> > > +	 */
+> > > +	tpm_buf_append(&tpm_buf, anti_replay, sizeof(anti_replay));
+> > 
+> > It does matter, we do not want to leak random kernel memory incase it
+> > has something sensitive. Zero anti_replay.
+> 
+> If there was a leak it has existed before this change as tpm_cmd was
+> also allocated from stack. And there is not leak because the checksum is
+> not printed.
 
-On Thu, May 25, 2017 at 06:41:18PM +0200, Greg Kroah-Hartman wrote:
-> On Thu, May 25, 2017 at 09:24:30AM -0700, Josh Zimmerman wrote:
-> > On Thu, May 25, 2017 at 9:09 AM, Greg Kroah-Hartman
-> > <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org> wrote:
-> > > On Thu, May 25, 2017 at 08:40:28AM -0700, Josh Zimmerman wrote:
-> > >> Thanks, Greg.
-> > >>
-> > >> Greg, Jarkko: Do either of you you have any objections to me
-> > >> backporting these changes to 4.4 and 4.9? I'd like to make sure that
-> > >> at least the couple most recent LTS kernels have this patch.
-> > >
-> > > Why?  What bug does this solve?
-> > If a TPM2 device has power removed without a TPM2_Shutdown being
-> > issued, it will increment its "dictionary attack" counter. After that
-> > counter reaches a certain value, the TPM2 device will lock the user
-> > out. Adding the shutdown callback allows the TPM kernel driver to send
-> > TPM2_Shutdown to all TPM2 devices.
-> 
-> Is all of that in the tpm patch description?  If so, great, if not,
-> please add it.
-> 
-> > > If it meets the rules of
-> > > Documentation/stable_kernel_rules.txt (or whereever that file moved to),
-> > > that's fine with me.
-> > Documentation/process/stable-kernel-rules.rst, right? To comply with
-> > option 1 referred to there (Adding the appropriate "Cc:" to the
-> > description), should I send a new patch email or just reply to this
-> > one and quote the relevant part? (I don't believe the document
-> > specifies.)
-> 
-> You (or who ever applies these patches) needs to add the cc: stable tag
-> to them.  I suggest resend these, as a patch series, with that in it, so
-> that it all makes more sense and the tpm maintainer has an easy job of
-> it.
-> 
-> thanks,
-> 
-> greg k-h
+It leaks stack memory to the TPM which is not OK.
 
-Can you send one more patch set with these two patches and Cc-tags and
-refined descriptions where needed. If you do this, I will apply them to
-my tree and send PR to James Morris. Thank you.
+> I think better idea would be to move struct tpm_readpubek_params_out
+> declaration here and use it to refer different fields. Previously
+> this
 
-/Jarkko
+That would be better..
+
+Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
