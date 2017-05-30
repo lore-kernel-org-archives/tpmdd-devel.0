@@ -1,45 +1,66 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm, tpmrm: Mark tpmrm_write as static
-Date: Tue, 30 May 2017 07:46:20 +0300
-Message-ID: <20170530044501.pckpqfkzp3h54bqm@intel.com>
-References: <20170525054305.15721-1-peterhuewe@gmx.de>
+Subject: Re: [PATCH v3] tpm: vtpm_proxy: Suppress error logging when in
+ closed state
+Date: Tue, 30 May 2017 07:51:20 +0300
+Message-ID: <20170530045120.wqe2nsop5ppzdcjn@intel.com>
+References: <1495751353-28500-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170525054305.15721-1-peterhuewe@gmx.de>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Peter Huewe <peterhuewe@gmx.de>
-Cc: jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+In-Reply-To: <1495751353-28500-1-git-send-email-stefanb@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, jgunthorpe@obsidianresearch.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, May 25, 2017 at 07:43:05AM +0200, Peter Huewe wrote:
-> sparse complains that tpmrm_write can be made static, and since it is
-> right we make it static.
+On Thu, May 25, 2017 at 06:29:13PM -0400, Stefan Berger wrote:
+> Suppress the error logging when the core TPM driver sends commands
+> to the VTPM proxy driver and -EPIPE is returned in case the VTPM
+> proxy driver is 'closed' (closed anonymous file descriptor).  This
+> error code is only returned by the send function and by tpm_transmit
+> when the VTPM proxy driver is being used.
 > 
-> Signed-off-by: Peter Huewe <peterhuewe@gmx.de>
+> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Reviwed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
 /Jarkko
 
 > ---
->  drivers/char/tpm/tpmrm-dev.c | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
+>  drivers/char/tpm/tpm-interface.c | 5 +++--
+>  drivers/char/tpm/tpm2-cmd.c      | 2 +-
+>  2 files changed, 4 insertions(+), 3 deletions(-)
 > 
-> diff --git a/drivers/char/tpm/tpmrm-dev.c b/drivers/char/tpm/tpmrm-dev.c
-> index c636e7f..1a0e97a 100644
-> --- a/drivers/char/tpm/tpmrm-dev.c
-> +++ b/drivers/char/tpm/tpmrm-dev.c
-> @@ -45,7 +45,7 @@ static int tpmrm_release(struct inode *inode, struct file *file)
->  	return 0;
->  }
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index d711186..d2b4df6 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -430,8 +430,9 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
 >  
-> -ssize_t tpmrm_write(struct file *file, const char __user *buf,
-> +static ssize_t tpmrm_write(struct file *file, const char __user *buf,
->  		   size_t size, loff_t *off)
->  {
->  	struct file_priv *fpriv = file->private_data;
+>  	rc = chip->ops->send(chip, (u8 *) buf, count);
+>  	if (rc < 0) {
+> -		dev_err(&chip->dev,
+> -			"tpm_transmit: tpm_send: error %d\n", rc);
+> +		if (rc != -EPIPE)
+> +			dev_err(&chip->dev,
+> +				"%s: tpm_send: error %d\n", __func__, rc);
+>  		goto out;
+>  	}
+>  
+> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+> index 3ee6883..3a99643 100644
+> --- a/drivers/char/tpm/tpm2-cmd.c
+> +++ b/drivers/char/tpm/tpm2-cmd.c
+> @@ -840,7 +840,7 @@ void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type)
+>  	/* In places where shutdown command is sent there's no much we can do
+>  	 * except print the error code on a system failure.
+>  	 */
+> -	if (rc < 0)
+> +	if (rc < 0 && rc != -EPIPE)
+>  		dev_warn(&chip->dev, "transmit returned %d while stopping the TPM",
+>  			 rc);
+>  }
 > -- 
-> 2.10.2
+> 2.4.3
 > 
