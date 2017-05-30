@@ -1,114 +1,77 @@
-From: Roberto Sassu <roberto.sassu@huawei.com>
-Subject: Re: [PATCH v2 2/5] tpm: introduce tpm_pcr_algo_to_crypto() and
- tpm_pcr_algo_from_crypto()
-Date: Tue, 30 May 2017 12:24:21 +0200
-Message-ID: <c484dc54-7d19-9d60-bd17-4ac47f1bc218@huawei.com>
+From: Mimi Zohar <zohar@linux.vnet.ibm.com>
+Subject: Re: [Linux-ima-devel] [PATCH v2 3/5] tpm: pass multiple digests to
+ tpm_pcr_extend()
+Date: Tue, 30 May 2017 07:25:47 -0400
+Message-ID: <1496143547.3841.517.camel@linux.vnet.ibm.com>
 References: <20170505142152.29795-1-roberto.sassu@huawei.com>
- <20170505142152.29795-3-roberto.sassu@huawei.com>
- <20170515111629.urjvbhqzohv4vakc@intel.com>
- <0deed9be-d0c3-3a69-d510-1c8aa3513ba8@huawei.com>
- <20170520132217.t7n7l2pjn7i63hbm@intel.com>
- <0b04a33c-248b-6597-473f-c5bc4ccaba62@huawei.com>
- <20170524173354.puyulkjmio3jgs2l@intel.com>
- <20170524202523.grpg7ocrwwuzxsbg@intel.com>
+         <20170505142152.29795-4-roberto.sassu@huawei.com>
+         <1496114943.3841.480.camel@linux.vnet.ibm.com>
+         <97c6930e-8b4d-9578-e210-68987e4d7503@huawei.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="windows-1252"; format=flowed
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: 8bit
 Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170524202523.grpg7ocrwwuzxsbg@intel.com>
+In-Reply-To: <97c6930e-8b4d-9578-e210-68987e4d7503@huawei.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org
+To: Roberto Sassu <roberto.sassu@huawei.com>, tpmdd-devel@lists.sourceforge.net
+Cc: linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 5/24/2017 10:25 PM, Jarkko Sakkinen wrote:
-> On Wed, May 24, 2017 at 10:33:54AM -0700, Jarkko Sakkinen wrote:
->> On Mon, May 22, 2017 at 09:21:28AM +0200, Roberto Sassu wrote:
->>> On 5/20/2017 3:22 PM, Jarkko Sakkinen wrote:
->>>> On Mon, May 15, 2017 at 04:22:22PM +0200, Roberto Sassu wrote:
->>>>> On 5/15/2017 1:16 PM, Jarkko Sakkinen wrote:
->>>>>> On Fri, May 05, 2017 at 04:21:49PM +0200, Roberto Sassu wrote:
->>>>>>> tpm_pcr_algorithms() returns to its callers the IDs of the hash algorithms
->>>>>>> supported by the TPM. This patch introduces tpm_pcr_algo_to_crypto(),
->>>>>>> so that the callers can use the crypto subsystem to calculate the digest
->>>>>>> to be passed to tpm_pcr_extend().
->>>>>>>
->>>>>>> tpm_pcr_algo_from_crypto(), implemented for completeness, is instead used
->>>>>>
->>>>>> What do you mean by completeness? Please, never add unused stuff.
->>>>>>
->>>>>>> by tpm2_seal_trusted() to perform the opposite conversion.
->>>>>>>
->>>>>>> Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
->>>>>>> ---
->>>>>>> v2
->>>>>>>
->>>>>>> - fixed return values of tpm2_pcr_algo_to_crypto() and
->>>>>>>   tpm2_pcr_algo_from_crypto() if TPM support is disabled in the kernel
->>>>>>
->>>>>> Change Log only to the cover letter.
->>>>>>
->>>>>>>  drivers/char/tpm/tpm-interface.c | 51 ++++++++++++++++++++++++++++++++++++++++
->>>>>>>  drivers/char/tpm/tpm2-cmd.c      | 42 +++++++++------------------------
->>>>>>>  include/linux/tpm.h              | 13 ++++++++++
->>>>>>>  3 files changed, 75 insertions(+), 31 deletions(-)
->>>>>>
->>>>>> This commit is just deadly wrong in so many ways.
->>>>>>
->>>>>> I would suggest to make extend always just take crypto ID in so you
->>>>>> don't have to add these bizarre conversion functions.
->>>>>
->>>>> The reason of this choice (as I explained in the cover letter)
->>>>> is that TPM users might want to produce an event log with
->>>>> the TCG format (which includes the TPM algorithm ID). Also,
->>>>> TPM IDs should be preferred because, with them, TPM users
->>>>> can calculate a digest directly with the TPM.
->>>>>
->>>>> Taking crypto IDs means relying on the fact that there
->>>>> is always a mapping between TPM IDs and crypto IDs.
->>>>> Otherwise, tpm_pcr_algorithms() cannot return the algorithms
->>>>> to its callers and PCRs cannot be extended. If TPM IDs are used,
->>>>> TPM users have two alternatives: calculate the digest with
->>>>> the TPM, or pass a SHA1 digest to tpm_pcr_extend(), so that
->>>>> it can be padded to extend remanining PCR banks.
->>>>>
->>>>> However, this second option will work only when the TPM driver
->>>>> determines the size of an algorithm without relying on the crypto
->>>>> subsystem. At the moment, if a TPM ID is not mapped to a crypto ID,
->>>>> tpm2_pcr_extend() ignores the digest.
->>>>>
->>>>> Roberto
->>>>
->>>> What if tpm_pcr_algorithms would convert TPM IDs to crypto IDs?
->>>>
->>>> Externally other subsystems would have to then deal with only crypto
->>>> IDs.
->>>
->>> Then, other subsystems cannot:
->>>
->>> - use the TPM to calculate a digest
->>> - create an event log with the TCG format
->>>
->>> Roberto
->>
->> Can you open this up a bit? What is the use case that you canno
->> implement?
->>
->> /Jarkko
->
-> The most important question is: are this used *right now*. If not, it is
-> a definitive NAK. We don't want any future-proof code to the kernel.
-> Always do the lowest common denominator in terms of generality and we
-> will refactor from there when need arises.
+On Tue, 2017-05-30 at 09:28 +0200, Roberto Sassu wrote:
+> On 5/30/2017 5:29 AM, Mimi Zohar wrote:
+> > On Fri, 2017-05-05 at 16:21 +0200, Roberto Sassu wrote:
 
-This is still being discussed.
 
-If we use crypto IDs, as you suggested, what it should be passed
-to tpm_pcr_extend()? Or, probably to a new function (Mimi said that
-changing the parameters of an existing function is not bisect-safe).
+> >> @@ -876,29 +925,46 @@ static int tpm1_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash,
+> >>   * isn't, protect against the chip disappearing, by incrementing
+> >>   * the module usage count.
+> >>   */
+> >> -int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
+> >> +int tpm_pcr_extend(u32 chip_num, int pcr_idx, int count,
+> >> +		   struct tpm2_digest *digests)
+> >>  {
+> >>  	int rc;
+> >>  	struct tpm_chip *chip;
+> >>  	struct tpm2_digest digest_list[ARRAY_SIZE(chip->active_banks)];
+> >> -	u32 count = 0;
+> >> +	struct tpm2_digest *digests_ptr = digests;
+> >> +	u32 filled_count = 0;
+> >> +	u8 *hash;
+> >>  	int i;
+> >>
+> >>  	chip = tpm_chip_find_get(chip_num);
+> >>  	if (chip == NULL)
+> >>  		return -ENODEV;
+> >>
+> >> -	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+> >> +	rc = tpm_pcr_check_input(chip, count, digests);
+> >> +	if (rc < 0) {
+> >> +		dev_dbg(&chip->dev, "%s: invalid arguments\n", __func__);
+> >> +		tpm_put_ops(chip);
+> >
+> > This rejects the TPM extend, if ANY of the algorithms are unknown.
+> > Suppose that the standards were updated, TPM vendors add support for
+> > the new algorithm, but the kernel has not been updated to reflect the
+> > new algorithms supported.  As the measurement hash already been added
+> > to the IMA measurement list, verifying the measurement list against a
+> > TPM quote will fail, not just for the unknown algorithm, but for all
+> > algorithms.  Something is very broken with this approach.
+> 
+> The alternative is to extend remaining banks with a digest,
+> for example the first passed by the caller. I will modify
+> the patch, if everyone agrees on that.
 
-Roberto
+The solution you're proposing is similar to the original solution of
+extending the TPM with a padded/truncated SHA1 hash, but this time it
+might not be a padded/truncated SHA1 hash, but a different algorithm.
+So the attestation server will then need to know which hash algorithm
+was used to extend each of the TPM banks - a padded/truncated digest
+value or the real digest value.
 
--- 
-HUAWEI TECHNOLOGIES Duesseldorf GmbH, HRB 56063
-Managing Director: Bo PENG, Qiuen PENG, Shengli WANG
+The only issue, from the kernel's perspective, will be determining the
+algorithm's digest size as the kernel has no knowledge of it.  On TPM
+registration/initialization, if you're not already querying the TPM
+for the algorithm digest sizes, you will need to do so.
+
+Mimi
+
