@@ -1,110 +1,42 @@
-From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Subject: [PATCH v5] tpm: Issue a TPM2_Shutdown for TPM2
- devices.
-Date: Tue, 30 May 2017 12:00:54 -0700
-Message-ID: <CAHSjozB2_6m6dKw4b9VqvsWzQBuQsbzBPuKuLz2Ek0gMF7Oi=g@mail.gmail.com>
+From: "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+Subject: [PATCH] char: tmp: fix potential null pointer dereference
+Date: Tue, 30 May 2017 16:51:23 -0500
+Message-ID: <20170530215123.GA7484@embeddedgus>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+Sender: linux-kernel-owner@vger.kernel.org
+To: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-If a TPM2 loses power without a TPM2_Shutdown command being issued (a
-"disorderly reboot"), it may lose some state that has yet to be
-persisted to NVRam, and will increment the DA counter. After the DA
-counter gets sufficiently large, the TPM will lock the user out.
+NULL check at line 147: if (chip) {, implies chip might be NULL.
+Function dev_get_drvdata() dereference pointer chip.
+Move pointer priv assignment inside the IF block that checks
+pointer chip.
 
-NOTE: This only changes behavior on TPM2 devices. Since TPM1 uses sysfs,
-and sysfs relies on implicit locking on chip->ops, it is not safe to
-allow this code to run in TPM1, or to add sysfs support to TPM2, until
-that locking is made explicit.
-
-Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-
-----
-v2:
-  - Properly split changes between this and another commit
-  - Use proper locking primitive.
-  - Fix commenting style
-v3:
-  - Re-fix commenting style
-v4:
-  - Update description and tags (Reviewed-by, Cc).
-v5:
-  - Update documentation.
+Addresses-Coverity-ID: 1397646
+Signed-off-by: Gustavo A. R. Silva <garsilva@embeddedor.com>
 ---
- drivers/char/tpm/tpm-chip.c  | 23 +++++++++++++++++++++++
- drivers/char/tpm/tpm-sysfs.c |  3 +++
- 2 files changed, 26 insertions(+)
+ drivers/char/tpm/tpm_atmel.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index 9dec9f551b83..75a734c5cac5 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -143,6 +143,28 @@ static void tpm_devs_release(struct device *dev)
- }
-
- /**
-+ * tpm_shutdown() - prepare the TPM device for loss of power.
-+ * @dev: device to which the chip is associated.
-+ *
-+ * Issues a TPM2_Shutdown command prior to loss of power, as required by the
-+ * TPM 2.0 spec.
-+ *
-+ * XXX: This codepath relies on the fact that sysfs is not enabled for
-+ * TPM2: sysfs uses an implicit lock on chip->ops, so this could race if TPM2
-+ * has sysfs support enabled before TPM sysfs's implicit locking is fixed.
-+ */
-+static void tpm_shutdown(struct device *dev)
-+{
-+ struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
-+ if (chip->flags & TPM_CHIP_FLAG_TPM2) {
-+ down_write(&chip->ops_sem);
-+ tpm2_shutdown(chip, TPM_SU_CLEAR);
-+ chip->ops = NULL;
-+ up_write(&chip->ops_sem);
-+ }
-+}
-+
-+/**
-  * tpm_chip_alloc() - allocate a new struct tpm_chip instance
-  * @pdev: device to which the chip is associated
-  *        At this point pdev mst be initialized, but does not have to
-@@ -181,6 +203,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
-  device_initialize(&chip->devs);
-
-  chip->dev.class = tpm_class;
-+ chip->dev.class.shutdown = tpm_shutdown;
-  chip->dev.release = tpm_dev_release;
-  chip->dev.parent = pdev;
-  chip->dev.groups = chip->groups;
-diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
-index 55405dbe43fa..59bd0b7b5959 100644
---- a/drivers/char/tpm/tpm-sysfs.c
-+++ b/drivers/char/tpm/tpm-sysfs.c
-@@ -294,6 +294,9 @@ static const struct attribute_group tpm_dev_group = {
-
- void tpm_sysfs_add_device(struct tpm_chip *chip)
+diff --git a/drivers/char/tpm/tpm_atmel.c b/drivers/char/tpm/tpm_atmel.c
+index 0d322ab..0826efd 100644
+--- a/drivers/char/tpm/tpm_atmel.c
++++ b/drivers/char/tpm/tpm_atmel.c
+@@ -142,9 +142,10 @@ static struct platform_device *pdev;
+ static void atml_plat_remove(void)
  {
-+ /* XXX: If you wish to remove this restriction, you must first update
-+ * tpm_sysfs to explicitly lock chip->ops.
-+ */
-  if (chip->flags & TPM_CHIP_FLAG_TPM2)
-  return;
-
+ 	struct tpm_chip *chip = dev_get_drvdata(&pdev->dev);
+-	struct tpm_atmel_priv *priv = dev_get_drvdata(&chip->dev);
++	struct tpm_atmel_priv *priv;
+ 
+ 	if (chip) {
++		priv = dev_get_drvdata(&chip->dev);
+ 		tpm_chip_unregister(chip);
+ 		if (priv->have_region)
+ 			atmel_release_region(priv->base, priv->region_size);
 -- 
-2.13.0.219.gdb65acc882-goog
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+2.5.0
