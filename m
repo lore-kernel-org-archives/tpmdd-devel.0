@@ -1,121 +1,147 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v2 2/5] tpm: introduce tpm_pcr_algo_to_crypto() and
- tpm_pcr_algo_from_crypto()
-Date: Wed, 31 May 2017 14:40:41 +0300
-Message-ID: <20170531114040.p3wwkc3soomweyd5@intel.com>
-References: <20170505142152.29795-1-roberto.sassu@huawei.com>
- <20170505142152.29795-3-roberto.sassu@huawei.com>
- <20170515111629.urjvbhqzohv4vakc@intel.com>
- <0deed9be-d0c3-3a69-d510-1c8aa3513ba8@huawei.com>
- <20170520132217.t7n7l2pjn7i63hbm@intel.com>
- <0b04a33c-248b-6597-473f-c5bc4ccaba62@huawei.com>
- <20170524173354.puyulkjmio3jgs2l@intel.com>
- <20170524202523.grpg7ocrwwuzxsbg@intel.com>
- <c484dc54-7d19-9d60-bd17-4ac47f1bc218@huawei.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v4 1/2] tpm: Issue a TPM2_Shutdown for
+ TPM2 devices.
+Date: Wed, 31 May 2017 15:01:03 +0300
+Message-ID: <20170531120103.y6qf4v6hktzdbysx@intel.com>
+References: <CAHSjozDnf5Nm9Nw=kKBQRRYYmEozT-m=XN-bxwLbk8Rs+=pduA@mail.gmail.com>
+	<20170530050701.drf6geqplnfezllv@intel.com>
+	<CAHSjozABcEdQjpWQR3RV4B-cQ-Wfj_k7Bdr8pvG=CnD+RpU9zw@mail.gmail.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <c484dc54-7d19-9d60-bd17-4ac47f1bc218@huawei.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Roberto Sassu <roberto.sassu@huawei.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org
+In-Reply-To: <CAHSjozABcEdQjpWQR3RV4B-cQ-Wfj_k7Bdr8pvG=CnD+RpU9zw-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, May 30, 2017 at 12:24:21PM +0200, Roberto Sassu wrote:
-> On 5/24/2017 10:25 PM, Jarkko Sakkinen wrote:
-> > On Wed, May 24, 2017 at 10:33:54AM -0700, Jarkko Sakkinen wrote:
-> > > On Mon, May 22, 2017 at 09:21:28AM +0200, Roberto Sassu wrote:
-> > > > On 5/20/2017 3:22 PM, Jarkko Sakkinen wrote:
-> > > > > On Mon, May 15, 2017 at 04:22:22PM +0200, Roberto Sassu wrote:
-> > > > > > On 5/15/2017 1:16 PM, Jarkko Sakkinen wrote:
-> > > > > > > On Fri, May 05, 2017 at 04:21:49PM +0200, Roberto Sassu wrote:
-> > > > > > > > tpm_pcr_algorithms() returns to its callers the IDs of the hash algorithms
-> > > > > > > > supported by the TPM. This patch introduces tpm_pcr_algo_to_crypto(),
-> > > > > > > > so that the callers can use the crypto subsystem to calculate the digest
-> > > > > > > > to be passed to tpm_pcr_extend().
-> > > > > > > > 
-> > > > > > > > tpm_pcr_algo_from_crypto(), implemented for completeness, is instead used
-> > > > > > > 
-> > > > > > > What do you mean by completeness? Please, never add unused stuff.
-> > > > > > > 
-> > > > > > > > by tpm2_seal_trusted() to perform the opposite conversion.
-> > > > > > > > 
-> > > > > > > > Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
-> > > > > > > > ---
-> > > > > > > > v2
-> > > > > > > > 
-> > > > > > > > - fixed return values of tpm2_pcr_algo_to_crypto() and
-> > > > > > > >   tpm2_pcr_algo_from_crypto() if TPM support is disabled in the kernel
-> > > > > > > 
-> > > > > > > Change Log only to the cover letter.
-> > > > > > > 
-> > > > > > > >  drivers/char/tpm/tpm-interface.c | 51 ++++++++++++++++++++++++++++++++++++++++
-> > > > > > > >  drivers/char/tpm/tpm2-cmd.c      | 42 +++++++++------------------------
-> > > > > > > >  include/linux/tpm.h              | 13 ++++++++++
-> > > > > > > >  3 files changed, 75 insertions(+), 31 deletions(-)
-> > > > > > > 
-> > > > > > > This commit is just deadly wrong in so many ways.
-> > > > > > > 
-> > > > > > > I would suggest to make extend always just take crypto ID in so you
-> > > > > > > don't have to add these bizarre conversion functions.
-> > > > > > 
-> > > > > > The reason of this choice (as I explained in the cover letter)
-> > > > > > is that TPM users might want to produce an event log with
-> > > > > > the TCG format (which includes the TPM algorithm ID). Also,
-> > > > > > TPM IDs should be preferred because, with them, TPM users
-> > > > > > can calculate a digest directly with the TPM.
-> > > > > > 
-> > > > > > Taking crypto IDs means relying on the fact that there
-> > > > > > is always a mapping between TPM IDs and crypto IDs.
-> > > > > > Otherwise, tpm_pcr_algorithms() cannot return the algorithms
-> > > > > > to its callers and PCRs cannot be extended. If TPM IDs are used,
-> > > > > > TPM users have two alternatives: calculate the digest with
-> > > > > > the TPM, or pass a SHA1 digest to tpm_pcr_extend(), so that
-> > > > > > it can be padded to extend remanining PCR banks.
-> > > > > > 
-> > > > > > However, this second option will work only when the TPM driver
-> > > > > > determines the size of an algorithm without relying on the crypto
-> > > > > > subsystem. At the moment, if a TPM ID is not mapped to a crypto ID,
-> > > > > > tpm2_pcr_extend() ignores the digest.
-> > > > > > 
-> > > > > > Roberto
-> > > > > 
-> > > > > What if tpm_pcr_algorithms would convert TPM IDs to crypto IDs?
-> > > > > 
-> > > > > Externally other subsystems would have to then deal with only crypto
-> > > > > IDs.
-> > > > 
-> > > > Then, other subsystems cannot:
-> > > > 
-> > > > - use the TPM to calculate a digest
-> > > > - create an event log with the TCG format
-> > > > 
-> > > > Roberto
-> > > 
-> > > Can you open this up a bit? What is the use case that you canno
-> > > implement?
-> > > 
-> > > /Jarkko
-> > 
-> > The most important question is: are this used *right now*. If not, it is
-> > a definitive NAK. We don't want any future-proof code to the kernel.
-> > Always do the lowest common denominator in terms of generality and we
-> > will refactor from there when need arises.
+On Tue, May 30, 2017 at 12:00:53PM -0700, Josh Zimmerman wrote:
+> On Mon, May 29, 2017 at 10:07 PM, Jarkko Sakkinen
+> <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
+> > On Thu, May 25, 2017 at 04:20:28PM -0700, Josh Zimmerman wrote:
+> >> If a TPM2 loses power without a TPM2_Shutdown command being issued (a
+> >> "disorderly reboot"), it may lose some state that has yet to be
+> >> persisted to NVRam, and will increment the DA counter. After the DA
+> >> counter gets sufficiently large, the TPM will lock the user out.
+> >>
+> >> NOTE: This only changes behavior on TPM2 devices. Since TPM1 uses sysfs,
+> >> and sysfs relies on implicit locking on chip->ops, it is not safe to
+> >> allow this code to run in TPM1, or to add sysfs support to TPM2, until
+> >> that locking is made explicit.
+> >>
+> >> Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+> >> Reviewed-by: Jarko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> >> Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+> >
+> > Still have some remarks.
+> >
+> >> ----
+> >> v2:
+> >>   - Properly split changes between this and another commit
+> >>   - Use proper locking primitive.
+> >>   - Fix commenting style
+> >> v3:
+> >>   - Re-fix commenting style
+> >> v4:
+> >>   - Update description and tags (Reviewed-by, Cc).
+> >> ---
+> >> ---
+> >>  drivers/char/tpm/tpm-chip.c  | 20 ++++++++++++++++++++
+> >>  drivers/char/tpm/tpm-sysfs.c |  3 +++
+> >>  2 files changed, 23 insertions(+)
+> >>
+> >> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> >> index 9dec9f551b83..272a42e77574 100644
+> >> --- a/drivers/char/tpm/tpm-chip.c
+> >> +++ b/drivers/char/tpm/tpm-chip.c
+> >> @@ -142,6 +142,25 @@ static void tpm_devs_release(struct device *dev)
+> >>         put_device(&chip->dev);
+> >>  }
+> >>
+> >> +static void tpm_shutdown(struct device *dev)
+> >> +{
+> >> +       struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
+> >> +       /* TPM 2.0 requires that the TPM2_Shutdown() command be issued prior to
+> >> +        * loss of power. If it is not, the DA counter will be incremented and,
+> >> +        * eventually, the user will be locked out of their TPM.
+> >> +        * XXX: This codepath relies on the fact that sysfs is not enabled for
+> >> +        * TPM2: sysfs uses an implicit lock on chip->ops, so this use could
+> >> +        * race if TPM2 has sysfs support enabled before TPM sysfs's implicit
+> >> +        * locking is fixed.
+> >> +        */
+> >
+> > The comment should be either deleted or a kdoc.
+> Done.
 > 
-> This is still being discussed.
-> 
-> If we use crypto IDs, as you suggested, what it should be passed
-> to tpm_pcr_extend()? Or, probably to a new function (Mimi said that
-> changing the parameters of an existing function is not bisect-safe).
-> 
-> Roberto
-> 
-> -- 
-> HUAWEI TECHNOLOGIES Duesseldorf GmbH, HRB 56063
-> Managing Director: Bo PENG, Qiuen PENG, Shengli WANG
+> >> +       if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+> >> +               down_write(&chip->ops_sem);
+> >> +               tpm2_shutdown(chip, TPM_SU_CLEAR);
+> >> +               chip->ops = NULL;
+> >> +               up_write(&chip->ops_sem);
+> >> +       }
+> >> +}
+> >
+> > Would be a better idea to rename tpm2_shutdown as tpm_shutdown and call
+> > it unconditionally in tpm_del_char_device.
+> I'm not sure quite what you mean here. Are you suggesting that
+> tpm_del_char_device should unconditionally call the tpm_shutdown that
+> this patch introduces?  Or that the tpm2_shutdown function from
+> drivers/char/tpm/tpm2-cmd.c (which right now just sends the
+> TPM2_Shutdown command) be renamed to tpm_shutdown?
 
-Parameters should be changed when it makes sense to do so. It makes
-sense in this case.
+The second option. In addition can make that your patch set applies to
+security/next so I can merge both. I realized that the first patch does
+not apply so that needs a resend too.
+
+> >> +
+> >>  /**
+> >>   * tpm_chip_alloc() - allocate a new struct tpm_chip instance
+> >>   * @pdev: device to which the chip is associated
+> >> @@ -181,6 +200,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+> >>         device_initialize(&chip->devs);
+> >>
+> >>         chip->dev.class = tpm_class;
+> >> +       chip->dev.class.shutdown = tpm_shutdown;
+> >>         chip->dev.release = tpm_dev_release;
+> >>         chip->dev.parent = pdev;
+> >>         chip->dev.groups = chip->groups;
+> >> diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+> >> index 55405dbe43fa..5e5ff7eb6f7e 100644
+> >> --- a/drivers/char/tpm/tpm-sysfs.c
+> >> +++ b/drivers/char/tpm/tpm-sysfs.c
+> >> @@ -294,6 +294,9 @@ static const struct attribute_group tpm_dev_group = {
+> >>
+> >>  void tpm_sysfs_add_device(struct tpm_chip *chip)
+> >>  {
+> >> +       /* XXX: Before this restriction is removed, tpm_sysfs must be updated
+> >> +        * to explicitly lock chip->ops.
+> >> +        */
+> >
+> > Not sure about this remark. Most, if not all, attributes in tpm-sysfs.c
+> > are useless attributes as you can use /dev/tpm0 to retrieve their
+> > values.
+> This is again in reference to
+> https://patchwork.kernel.org/patch/9516631/; if at some point in the
+> future a developer wishes to enable sysfs support for TPM2.0, the
+> implicit locking must be fixed.
+> 
+> I've attempted to clarify the phrasing here.
+> 
+> Josh
+
+OK lets keep it!
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
