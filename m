@@ -1,17 +1,16 @@
-From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH v4 1/2] tpm: Issue a TPM2_Shutdown for
- TPM2 devices.
-Date: Wed, 31 May 2017 15:08:38 -0700
-Message-ID: <CAHSjozDjRnhhuu8tgWi7jreUDMjWZr_udfN_weYEu6t1w4H52w@mail.gmail.com>
-References: <CAHSjozDnf5Nm9Nw=kKBQRRYYmEozT-m=XN-bxwLbk8Rs+=pduA@mail.gmail.com>
-	<20170530050701.drf6geqplnfezllv@intel.com>
-	<CAHSjozABcEdQjpWQR3RV4B-cQ-Wfj_k7Bdr8pvG=CnD+RpU9zw@mail.gmail.com>
-	<20170531120103.y6qf4v6hktzdbysx@intel.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH v4 2/2] Add "shutdown" to "struct class".
+Date: Wed, 31 May 2017 16:18:11 -0600
+Message-ID: <20170531221811.GA12603@obsidianresearch.com>
+References: <CAHSjozD_NjH0Ta=ELCOqG6ezX=qgteumKBnN2ceqE4ty2FaAZQ@mail.gmail.com>
+	<20170530075419.766mlyxomxrzbxz6@intel.com>
+	<CAHSjozBDNX-bEQGjUtjqJzG_kuSWgxmrjPmdA=nfYhr1DFGgYg@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170531120103.y6qf4v6hktzdbysx-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <CAHSjozBDNX-bEQGjUtjqJzG_kuSWgxmrjPmdA=nfYhr1DFGgYg-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,139 +19,38 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, May 31, 2017 at 5:01 AM, Jarkko Sakkinen
-<jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
-> On Tue, May 30, 2017 at 12:00:53PM -0700, Josh Zimmerman wrote:
->> On Mon, May 29, 2017 at 10:07 PM, Jarkko Sakkinen
->> <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
->> > On Thu, May 25, 2017 at 04:20:28PM -0700, Josh Zimmerman wrote:
->> >> If a TPM2 loses power without a TPM2_Shutdown command being issued (a
->> >> "disorderly reboot"), it may lose some state that has yet to be
->> >> persisted to NVRam, and will increment the DA counter. After the DA
->> >> counter gets sufficiently large, the TPM will lock the user out.
->> >>
->> >> NOTE: This only changes behavior on TPM2 devices. Since TPM1 uses sysfs,
->> >> and sysfs relies on implicit locking on chip->ops, it is not safe to
->> >> allow this code to run in TPM1, or to add sysfs support to TPM2, until
->> >> that locking is made explicit.
->> >>
->> >> Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
->> >> Reviewed-by: Jarko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
->> >> Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
->> >
->> > Still have some remarks.
->> >
->> >> ----
->> >> v2:
->> >>   - Properly split changes between this and another commit
->> >>   - Use proper locking primitive.
->> >>   - Fix commenting style
->> >> v3:
->> >>   - Re-fix commenting style
->> >> v4:
->> >>   - Update description and tags (Reviewed-by, Cc).
->> >> ---
->> >> ---
->> >>  drivers/char/tpm/tpm-chip.c  | 20 ++++++++++++++++++++
->> >>  drivers/char/tpm/tpm-sysfs.c |  3 +++
->> >>  2 files changed, 23 insertions(+)
->> >>
->> >> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
->> >> index 9dec9f551b83..272a42e77574 100644
->> >> --- a/drivers/char/tpm/tpm-chip.c
->> >> +++ b/drivers/char/tpm/tpm-chip.c
->> >> @@ -142,6 +142,25 @@ static void tpm_devs_release(struct device *dev)
->> >>         put_device(&chip->dev);
->> >>  }
->> >>
->> >> +static void tpm_shutdown(struct device *dev)
->> >> +{
->> >> +       struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
->> >> +       /* TPM 2.0 requires that the TPM2_Shutdown() command be issued prior to
->> >> +        * loss of power. If it is not, the DA counter will be incremented and,
->> >> +        * eventually, the user will be locked out of their TPM.
->> >> +        * XXX: This codepath relies on the fact that sysfs is not enabled for
->> >> +        * TPM2: sysfs uses an implicit lock on chip->ops, so this use could
->> >> +        * race if TPM2 has sysfs support enabled before TPM sysfs's implicit
->> >> +        * locking is fixed.
->> >> +        */
->> >
->> > The comment should be either deleted or a kdoc.
->> Done.
->>
->> >> +       if (chip->flags & TPM_CHIP_FLAG_TPM2) {
->> >> +               down_write(&chip->ops_sem);
->> >> +               tpm2_shutdown(chip, TPM_SU_CLEAR);
->> >> +               chip->ops = NULL;
->> >> +               up_write(&chip->ops_sem);
->> >> +       }
->> >> +}
->> >
->> > Would be a better idea to rename tpm2_shutdown as tpm_shutdown and call
->> > it unconditionally in tpm_del_char_device.
->> I'm not sure quite what you mean here. Are you suggesting that
->> tpm_del_char_device should unconditionally call the tpm_shutdown that
->> this patch introduces?  Or that the tpm2_shutdown function from
->> drivers/char/tpm/tpm2-cmd.c (which right now just sends the
->> TPM2_Shutdown command) be renamed to tpm_shutdown?
->
-> The second option.
-I'm afraid I don't quite understand.  I believe that tpm2_shutdown is
-currently quite specific to the TPM2 devices. It can also be called
-when preparing for hibernation, in which case we may not want to NULL
-out chip->ops. Can you please explain again what you'd like me to
-accomplish by making this change?
+On Wed, May 31, 2017 at 03:01:13PM -0700, Josh Zimmerman wrote:
 
-> In addition can make that your patch set applies to
-> security/next so I can merge both. I realized that the first patch does
-> not apply so that needs a resend too.
-Replied in the other thread.  This patch appears to apply cleanly on
-the branch I mentioned there.
+> >> +               if (dev->class && dev->class->shutdown) {
+> >> +                       if (initcall_debug)
+> >> +                               dev_info(dev, "shutdown\n");
+> >> +                       dev->class->shutdown(dev);
+> >> +               }
+> >>                 if (dev->bus && dev->bus->shutdown) {
+> 
+> I just looked again at this line, which I am suddenly skeptical of. Is there
+> any reason to run _both_ the class and the bus or driver shutdown
+> functions? In the code as-is, only the bus or the driver function will
+> execute. Right now, this patch will change that behavior. I suspect I
+> should just add the appropriate "else", but I'm not sure if there is
+> some reason to prefer the behavior as implemented in this version of
+> the patch.
 
->
->> >> +
->> >>  /**
->> >>   * tpm_chip_alloc() - allocate a new struct tpm_chip instance
->> >>   * @pdev: device to which the chip is associated
->> >> @@ -181,6 +200,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
->> >>         device_initialize(&chip->devs);
->> >>
->> >>         chip->dev.class = tpm_class;
->> >> +       chip->dev.class.shutdown = tpm_shutdown;
->> >>         chip->dev.release = tpm_dev_release;
->> >>         chip->dev.parent = pdev;
->> >>         chip->dev.groups = chip->groups;
->> >> diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
->> >> index 55405dbe43fa..5e5ff7eb6f7e 100644
->> >> --- a/drivers/char/tpm/tpm-sysfs.c
->> >> +++ b/drivers/char/tpm/tpm-sysfs.c
->> >> @@ -294,6 +294,9 @@ static const struct attribute_group tpm_dev_group = {
->> >>
->> >>  void tpm_sysfs_add_device(struct tpm_chip *chip)
->> >>  {
->> >> +       /* XXX: Before this restriction is removed, tpm_sysfs must be updated
->> >> +        * to explicitly lock chip->ops.
->> >> +        */
->> >
->> > Not sure about this remark. Most, if not all, attributes in tpm-sysfs.c
->> > are useless attributes as you can use /dev/tpm0 to retrieve their
->> > values.
->> This is again in reference to
->> https://patchwork.kernel.org/patch/9516631/; if at some point in the
->> future a developer wishes to enable sysfs support for TPM2.0, the
->> implicit locking must be fixed.
->>
->> I've attempted to clarify the phrasing here.
->>
->> Josh
->
-> OK lets keep it!
->
-> /Jarkko
+Yes, I think the else should be there.
+
+>From what I could tell, the intent is that the most generic will then
+call the least generic in the proper order, eg tpm class shutdown full
+should then call bus and driver shutdown, if they are defined.
+
+This allows each step to inject some action both before and after
+calling the lower level steps, and follows the same pattern used
+elsewhere.
+
+Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
