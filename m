@@ -1,63 +1,66 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v4 2/2] Add "shutdown" to "struct class".
-Date: Thu, 1 Jun 2017 20:07:21 +0300
-Message-ID: <20170601170721.uyjhkjtuey6p3gmt@intel.com>
-References: <CAHSjozD_NjH0Ta=ELCOqG6ezX=qgteumKBnN2ceqE4ty2FaAZQ@mail.gmail.com>
-	<20170530075419.766mlyxomxrzbxz6@intel.com>
-	<CAHSjozBDNX-bEQGjUtjqJzG_kuSWgxmrjPmdA=nfYhr1DFGgYg@mail.gmail.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v3] tpm: vtpm_proxy: Suppress error logging when in
+ closed state
+Date: Thu, 1 Jun 2017 20:14:20 +0300
+Message-ID: <20170601171420.djihd2nst7j74rdh@intel.com>
+References: <1495751353-28500-1-git-send-email-stefanb@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <CAHSjozBDNX-bEQGjUtjqJzG_kuSWgxmrjPmdA=nfYhr1DFGgYg-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
+In-Reply-To: <1495751353-28500-1-git-send-email-stefanb@linux.vnet.ibm.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, jgunthorpe@obsidianresearch.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, May 31, 2017 at 03:01:13PM -0700, Josh Zimmerman wrote:
-> On Tue, May 30, 2017 at 12:54 AM, Jarkko Sakkinen
-> <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
-> > On Thu, May 25, 2017 at 04:20:30PM -0700, Josh Zimmerman wrote:
-> >> The TPM class has some common shutdown code that must be executed for
-> >> all drivers. This adds some needed functionality for that.
-> >>
-> >> Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-> >> Acked-by: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>
-> >> Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-> >
-> > Does not apply yet to security-next (ancestor missing).
+On Thu, May 25, 2017 at 06:29:13PM -0400, Stefan Berger wrote:
+> Suppress the error logging when the core TPM driver sends commands
+> to the VTPM proxy driver and -EPIPE is returned in case the VTPM
+> proxy driver is 'closed' (closed anonymous file descriptor).  This
+> error code is only returned by the send function and by tpm_transmit
+> when the VTPM proxy driver is being used.
 > 
-> Hm, it applied cleanly for me to the "next" branch of
-> git://git.kernel.org/pub/scm/linux/kernel/git/jmorris/linux-security.git.
-> Are you referring to something else with "security-next"?
+> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+> ---
+>  drivers/char/tpm/tpm-interface.c | 5 +++--
+>  drivers/char/tpm/tpm2-cmd.c      | 2 +-
+>  2 files changed, 4 insertions(+), 3 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index d711186..d2b4df6 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -430,8 +430,9 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+>  
+>  	rc = chip->ops->send(chip, (u8 *) buf, count);
+>  	if (rc < 0) {
+> -		dev_err(&chip->dev,
+> -			"tpm_transmit: tpm_send: error %d\n", rc);
+> +		if (rc != -EPIPE)
+> +			dev_err(&chip->dev,
+> +				"%s: tpm_send: error %d\n", __func__, rc);
+>  		goto out;
+>  	}
+>  
+> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+> index 3ee6883..3a99643 100644
+> --- a/drivers/char/tpm/tpm2-cmd.c
+> +++ b/drivers/char/tpm/tpm2-cmd.c
+> @@ -840,7 +840,7 @@ void tpm2_shutdown(struct tpm_chip *chip, u16 shutdown_type)
+>  	/* In places where shutdown command is sent there's no much we can do
+>  	 * except print the error code on a system failure.
+>  	 */
+> -	if (rc < 0)
+> +	if (rc < 0 && rc != -EPIPE)
+>  		dev_warn(&chip->dev, "transmit returned %d while stopping the TPM",
+>  			 rc);
+>  }
+> -- 
+> 2.4.3
+> 
 
-Hmm...
-
-I get 
-
-$ git am -3 ~/Downloads/v5-2-2-Add-shutdown-to-struct-class-..patch 
-Applying: Add "shutdown" to "struct class".
-error: patch fragment without header at line 7: @@ -407,6 +408,7 @@ struct class {
-error: could not build fake ancestor
-Patch failed at 0001 Add "shutdown" to "struct class".
-The copy of the patch that failed is found in: .git/rebase-apply/patch
-When you have resolved this problem, run "git am --continue".
-If you prefer to skip this patch, run "git am --skip" instead.
-To restore the original branch and stop patching, run "git am --abort".
-
-My tree rebased to latest security/next
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkine@linux.intel.com>
+Tested-by: Jarkko Sakkinen <jarkko.sakkine@linux.intel.com>
 
 /Jarkko
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
