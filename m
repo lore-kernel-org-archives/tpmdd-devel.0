@@ -1,16 +1,16 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH v5 2/2] Add "shutdown" to "struct class".
-Date: Thu, 1 Jun 2017 11:04:41 -0600
-Message-ID: <20170601170441.GA6571@obsidianresearch.com>
-References: <CAHSjozA+xfUM-NmbP7Kb5B=T+u6qaEFzMWeF6OxX2N7-xHLAVQ@mail.gmail.com>
-	<20170601163905.GA2694@obsidianresearch.com>
-	<CAHSjozBfU0Lmp_SnA5GcmACWxG4E1NdEcb9v7gcs5CLREuRNUA@mail.gmail.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v4 2/2] Add "shutdown" to "struct class".
+Date: Thu, 1 Jun 2017 20:07:21 +0300
+Message-ID: <20170601170721.uyjhkjtuey6p3gmt@intel.com>
+References: <CAHSjozD_NjH0Ta=ELCOqG6ezX=qgteumKBnN2ceqE4ty2FaAZQ@mail.gmail.com>
+	<20170530075419.766mlyxomxrzbxz6@intel.com>
+	<CAHSjozBDNX-bEQGjUtjqJzG_kuSWgxmrjPmdA=nfYhr1DFGgYg@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <CAHSjozBfU0Lmp_SnA5GcmACWxG4E1NdEcb9v7gcs5CLREuRNUA-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
+In-Reply-To: <CAHSjozBDNX-bEQGjUtjqJzG_kuSWgxmrjPmdA=nfYhr1DFGgYg-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -23,44 +23,40 @@ To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jun 01, 2017 at 09:55:20AM -0700, Josh Zimmerman wrote:
-> On Thu, Jun 1, 2017 at 9:39 AM, Jason Gunthorpe
-> <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote:
-> > On Thu, Jun 01, 2017 at 09:33:43AM -0700, Josh Zimmerman wrote:
+On Wed, May 31, 2017 at 03:01:13PM -0700, Josh Zimmerman wrote:
+> On Tue, May 30, 2017 at 12:54 AM, Jarkko Sakkinen
+> <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
+> > On Thu, May 25, 2017 at 04:20:30PM -0700, Josh Zimmerman wrote:
+> >> The TPM class has some common shutdown code that must be executed for
+> >> all drivers. This adds some needed functionality for that.
+> >>
+> >> Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+> >> Acked-by: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>
+> >> Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 > >
-> >> -               if (dev->bus && dev->bus->shutdown) {
-> >> +               if (dev->class && dev->class->shutdown) {
-> >> +                       if (initcall_debug)
-> >> +                               dev_info(dev, "shutdown\n");
-> >> +                       dev->class->shutdown(dev);
-> >> +               } else if (dev->bus && dev->bus->shutdown) {
-> >>                         if (initcall_debug)
-> >>                                 dev_info(dev, "shutdown\n");
-> >>                         dev->bus->shutdown(dev);
-> >
-> > Looking at this closer, now you definately have to change the TPM
-> > patch to call through to the other shutdown methods. We can say
-> > current TPM drivers have no driver->shutdown, but we cannot be sure
-> > about the bus->shutdown, so may as well call both from tpm's
-> > class->shutdown.
-
-> Why can't we be sure? Could bus->shutdown methods be registered
-> outside of the drivers/char/tpm/ tree?
-
-Yes.
-
-> > I would say this should be done after the tpm2_shutdown completes as
-> > lower level shutdowns could remove register access.
+> > Does not apply yet to security-next (ancestor missing).
 > 
-> This doesn't necessarily work.  The spec states that tpm2_shutdown
-> must be the last command issued for an orderly shutdown, so if we
-> call
+> Hm, it applied cleanly for me to the "next" branch of
+> git://git.kernel.org/pub/scm/linux/kernel/git/jmorris/linux-security.git.
+> Are you referring to something else with "security-next"?
 
-After tpm2_shutdown is called ops must be null'd then we call down the
-rest of the shutdown methods which can no longer issue TPM commands
-due to ops being NULL.
+Hmm...
 
-Jason
+I get 
+
+$ git am -3 ~/Downloads/v5-2-2-Add-shutdown-to-struct-class-..patch 
+Applying: Add "shutdown" to "struct class".
+error: patch fragment without header at line 7: @@ -407,6 +408,7 @@ struct class {
+error: could not build fake ancestor
+Patch failed at 0001 Add "shutdown" to "struct class".
+The copy of the patch that failed is found in: .git/rebase-apply/patch
+When you have resolved this problem, run "git am --continue".
+If you prefer to skip this patch, run "git am --skip" instead.
+To restore the original branch and stop patching, run "git am --abort".
+
+My tree rebased to latest security/next
+
+/Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
