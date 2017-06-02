@@ -1,145 +1,211 @@
-From: Stefan Berger <stefanb@linux.vnet.ibm.com>
-Subject: Re: [PATCH v6 2/3] tpm: vtpm_proxy: Implement request_locality
- function.
-Date: Thu, 1 Jun 2017 20:34:31 -0400
-Message-ID: <22d2ce2e-6636-82ad-3099-5f947bc70e05@linux.vnet.ibm.com>
-References: <1495661981-27249-1-git-send-email-stefanb@linux.vnet.ibm.com>
- <1495661981-27249-3-git-send-email-stefanb@linux.vnet.ibm.com>
- <20170524222130.cqnt433dbrr3t43i@intel.com>
- <a8636210-c4eb-38b2-feca-8a09cee48bbb@linux.vnet.ibm.com>
- <20170525000936.djj37wyqieorjfva@intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170525000936.djj37wyqieorjfva@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, jgunthorpe@obsidianresearch.com
+From: Azhar Shaikh <azhar.shaikh@intel.com>
+Subject: [PATCH v2] tpm: Enable CLKRUN protocol for Braswell systems
+Date: Thu,  1 Jun 2017 19:04:04 -0700
+Message-ID: <1496369044-38234-1-git-send-email-azhar.shaikh@intel.com>
+References: <1496344432-76640-1-git-send-email-azhar.shaikh@intel.com>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <1496344432-76640-1-git-send-email-azhar.shaikh@intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+Cc: linux-security-module@vger.kernel.org, azhar.shaikh@intel.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 05/24/2017 08:09 PM, Jarkko Sakkinen wrote:
-> On Wed, May 24, 2017 at 07:03:27PM -0400, Stefan Berger wrote:
->> On 05/24/2017 06:21 PM, Jarkko Sakkinen wrote:
->>> On Wed, May 24, 2017 at 05:39:40PM -0400, Stefan Berger wrote:
->>>> Implement the request_locality function. To set the locality on the
->>>> backend we define vendor-specific TPM 1.2 and TPM 2 ordinals and send
->>>> a command to the backend to set the locality for the next commands.
->>>>
->>>> To avoid recursing into requesting the locality, we set the
->>>> TPM_TRANSMIT_RAW flag when calling tpm_transmit_cmd. To avoid recursing
->>>> into TPM 2 space related commands, we set the space parameter to NULL.
->>>>
->>>> Signed-off-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
->>>> ---
->>>>    drivers/char/tpm/tpm-interface.c  |  1 +
->>>>    drivers/char/tpm/tpm_vtpm_proxy.c | 36 ++++++++++++++++++++++++++++++++++++
->>>>    include/uapi/linux/vtpm_proxy.h   |  4 ++++
->>>>    3 files changed, 41 insertions(+)
->>>>
->>>> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
->>>> index 2eacda2..876d45f 100644
->>>> --- a/drivers/char/tpm/tpm-interface.c
->>>> +++ b/drivers/char/tpm/tpm-interface.c
->>>> @@ -537,6 +537,7 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, struct tpm_space *space,
->>>>    	return 0;
->>>>    }
->>>> +EXPORT_SYMBOL_GPL(tpm_transmit_cmd);
->>>>    #define TPM_DIGEST_SIZE 20
->>>>    #define TPM_RET_CODE_IDX 6
->>>> diff --git a/drivers/char/tpm/tpm_vtpm_proxy.c b/drivers/char/tpm/tpm_vtpm_proxy.c
->>>> index 751059d..66024bf 100644
->>>> --- a/drivers/char/tpm/tpm_vtpm_proxy.c
->>>> +++ b/drivers/char/tpm/tpm_vtpm_proxy.c
->>>> @@ -371,6 +371,41 @@ static bool vtpm_proxy_tpm_req_canceled(struct tpm_chip  *chip, u8 status)
->>>>    	return ret;
->>>>    }
->>>> +static int vtpm_proxy_request_locality(struct tpm_chip *chip, int locality)
->>>> +{
->>>> +	struct tpm_buf buf;
->>>> +	int rc;
->>>> +	const struct tpm_output_header *header;
->>>> +
->>>> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
->>>> +		rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS,
->>>> +				  TPM2_CC_SET_LOCALITY);
->>> I would always go with this branch.
->>>
->>>> +	else
->>>> +		rc = tpm_buf_init(&buf, TPM_TAG_RQU_COMMAND,
->>>> +				  TPM_ORD_SET_LOCALITY);
->>>> +	if (rc)
->>>> +		return rc;
->>>> +	tpm_buf_append_u8(&buf, locality);
->>>> +
->>>> +	rc = tpm_transmit_cmd(chip, NULL, buf.data, tpm_buf_length(&buf), 0,
->>>> +			      TPM_TRANSMIT_UNLOCKED | TPM_TRANSMIT_RAW,
->>>> +			      "attempting to set locality");
->>>> +	if (rc < 0) {
->>>> +		locality = rc;
->>>> +		goto out;
->>>> +	}
->>>> +
->>>> +	header = (const struct tpm_output_header *)buf.data;
->>>> +	rc = be32_to_cpu(header->return_code);
->>>> +	if (rc)
->>>> +		locality = -1;
->>>> +
->>>> +out:
->>>> +	tpm_buf_destroy(&buf);
->>>> +
->>>> +	return locality;
->>>> +}
->>>> +
->>>>    static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
->>>>    	.flags = TPM_OPS_AUTO_STARTUP,
->>>>    	.recv = vtpm_proxy_tpm_op_recv,
->>>> @@ -380,6 +415,7 @@ static const struct tpm_class_ops vtpm_proxy_tpm_ops = {
->>>>    	.req_complete_mask = VTPM_PROXY_REQ_COMPLETE_FLAG,
->>>>    	.req_complete_val = VTPM_PROXY_REQ_COMPLETE_FLAG,
->>>>    	.req_canceled = vtpm_proxy_tpm_req_canceled,
->>>> +	.request_locality = vtpm_proxy_request_locality,
->>>>    };
->>>>    /*
->>>> diff --git a/include/uapi/linux/vtpm_proxy.h b/include/uapi/linux/vtpm_proxy.h
->>>> index a69e991..58ac73c 100644
->>>> --- a/include/uapi/linux/vtpm_proxy.h
->>>> +++ b/include/uapi/linux/vtpm_proxy.h
->>>> @@ -46,4 +46,8 @@ struct vtpm_proxy_new_dev {
->>>>    #define VTPM_PROXY_IOC_NEW_DEV	_IOWR(0xa1, 0x00, struct vtpm_proxy_new_dev)
->>>> +/* vendor specific commands to set locality */
->>>> +#define TPM2_CC_SET_LOCALITY	0x20001000
->>>> +#define TPM_ORD_SET_LOCALITY	0x20001000
->>>> +
->>>>    #endif /* _UAPI_LINUX_VTPM_PROXY_H */
->>>> -- 
->>>> 2.4.3
->>> What practical benefit you get from these two constants? I understand
->>> the value range but not so much the redundant code.
->> If you want to change this, please go ahead and give it a sinle name.
->> For the code branches above I think that we should at least send a TPM 1.2
->> formatted command in case of TPM 1.2 and a TPM 2 formatted one in case of
->> TPM 2. It seems just 'proper.'
->>
->>     Stefan
-> Agreed. I will make these changes no need to send new series.
+To overcome a hardware limitation on Intel Braswell systems,
+disable CLKRUN protocol during TPM transactions and re-enable
+once the transaction is completed.
 
-I pushed an update to the test suite, which may help the cause to accept 
-this series.
+Signed-off-by: Azhar Shaikh <azhar.shaikh@intel.com>
+---
+Changes from v1:
+- Add CONFIG_X86 around disable_lpc_clk_run () and enable_lpc_clk_run() to avoid
+- build breakage on architectures which do not implement kmap_atomic_pfn()
 
-https://github.com/stefanberger/linux-vtpm-tests
+ drivers/char/tpm/tpm.h     | 20 ++++++++++
+ drivers/char/tpm/tpm_tis.c | 94 ++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 114 insertions(+)
 
-Patch 3/3 should probably not return -EFAULT in case of the user trying 
-to send the SetLocality command via /dev/tpm%d but rather -EPIPE to get 
-the logging of the error suppressed, even though that doesn't seem to be 
-the right error code.
-
-
-   Stefan
-
->
-> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
->
-> /Jarkko
->
-
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 4b4c8dee3096..98032a22317e 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -36,6 +36,10 @@
+ #include <linux/highmem.h>
+ #include <crypto/hash_info.h>
+ 
++#ifdef CONFIG_X86
++#include <asm/intel-family.h>
++#endif
++
+ enum tpm_const {
+ 	TPM_MINOR = 224,	/* officially assigned */
+ 	TPM_BUFSIZE = 4096,
+@@ -436,6 +440,22 @@ struct tpm_buf {
+ 	u8 *data;
+ };
+ 
++#define INTEL_LEGACY_BLK_BASE_ADDR	0xFED08000
++#define LPC_CNTRL_REG_OFFSET		0x84
++#define LPC_CLKRUN_EN			(1 << 2)
++
++#ifdef CONFIG_X86
++static inline bool is_bsw(void)
++{
++	return ((boot_cpu_data.x86_model == INTEL_FAM6_ATOM_AIRMONT) ? 1 : 0);
++}
++#else
++static inline bool is_bsw(void)
++{
++	return false;
++}
++#endif
++
+ static inline int tpm_buf_init(struct tpm_buf *buf, u16 tag, u32 ordinal)
+ {
+ 	struct tpm_input_header *head;
+diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+index c7e1384f1b08..0c1496340a18 100644
+--- a/drivers/char/tpm/tpm_tis.c
++++ b/drivers/char/tpm/tpm_tis.c
+@@ -89,13 +89,79 @@ static inline int is_itpm(struct acpi_device *dev)
+ }
+ #endif
+ 
++#ifdef CONFIG_X86
++/**
++ * disable_lpc_clk_run() - clear LPC CLKRUN_EN i.e. clocks will be free running
++ */
++static void disable_lpc_clk_run(void)
++{
++	u32 clkrun_val;
++	void __iomem *ilb_base_addr = NULL;
++
++	ilb_base_addr = (void __iomem *)
++		kmap_atomic_pfn(INTEL_LEGACY_BLK_BASE_ADDR >> PAGE_SHIFT);
++
++	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
++
++	/* Disable LPC CLKRUN# */
++	clkrun_val &= ~LPC_CLKRUN_EN;
++	iowrite32(clkrun_val, ilb_base_addr + LPC_CNTRL_REG_OFFSET);
++
++	kunmap_atomic(ilb_base_addr);
++	/*
++	 * Write any random value on port 0x80 which is on LPC, to make
++	 * sure LPC clock is running before sending any TPM command.
++	 */
++	outb(0x80, 0xCC);
++}
++
++/**
++ * enable_lpc_clk_run() - set LPC CLKRUN_EN i.e. clocks can be turned off
++ */
++static void enable_lpc_clk_run(void)
++{
++	u32 clkrun_val;
++	void __iomem *ilb_base_addr = NULL;
++
++	ilb_base_addr = (void __iomem *)
++		kmap_atomic_pfn(INTEL_LEGACY_BLK_BASE_ADDR >> PAGE_SHIFT);
++
++	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
++
++	/* Enable LPC CLKRUN# */
++	clkrun_val |= LPC_CLKRUN_EN;
++	iowrite32(clkrun_val, ilb_base_addr + LPC_CNTRL_REG_OFFSET);
++
++	kunmap_atomic(ilb_base_addr);
++	/*
++	 * Write any random value on port 0x80 which is on LPC, to make
++	 * sure LPC clock is running before sending any TPM command.
++	 */
++	outb(0x80, 0xCC);
++}
++#else
++static void disable_lpc_clk_run(void)
++{
++}
++static void enable_lpc_clk_run(void)
++{
++}
++#endif
++
+ static int tpm_tcg_read_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
+ 			      u8 *result)
+ {
+ 	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+ 
++	if (is_bsw())
++		disable_lpc_clk_run();
++
+ 	while (len--)
+ 		*result++ = ioread8(phy->iobase + addr);
++
++	if (is_bsw())
++		enable_lpc_clk_run();
++
+ 	return 0;
+ }
+ 
+@@ -104,8 +170,15 @@ static int tpm_tcg_write_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
+ {
+ 	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+ 
++	if (is_bsw())
++		disable_lpc_clk_run();
++
+ 	while (len--)
+ 		iowrite8(*value++, phy->iobase + addr);
++
++	if (is_bsw())
++		enable_lpc_clk_run();
++
+ 	return 0;
+ }
+ 
+@@ -113,7 +186,14 @@ static int tpm_tcg_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
+ {
+ 	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+ 
++	if (is_bsw())
++		disable_lpc_clk_run();
++
+ 	*result = ioread16(phy->iobase + addr);
++
++	if (is_bsw())
++		enable_lpc_clk_run();
++
+ 	return 0;
+ }
+ 
+@@ -121,7 +201,14 @@ static int tpm_tcg_read32(struct tpm_tis_data *data, u32 addr, u32 *result)
+ {
+ 	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+ 
++	if (is_bsw())
++		disable_lpc_clk_run();
++
+ 	*result = ioread32(phy->iobase + addr);
++
++	if (is_bsw())
++		enable_lpc_clk_run();
++
+ 	return 0;
+ }
+ 
+@@ -129,7 +216,14 @@ static int tpm_tcg_write32(struct tpm_tis_data *data, u32 addr, u32 value)
+ {
+ 	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+ 
++	if (is_bsw())
++		disable_lpc_clk_run();
++
+ 	iowrite32(value, phy->iobase + addr);
++
++	if (is_bsw())
++		enable_lpc_clk_run();
++
+ 	return 0;
+ }
+ 
+-- 
+1.9.1
