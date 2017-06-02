@@ -1,211 +1,120 @@
-From: Azhar Shaikh <azhar.shaikh@intel.com>
-Subject: [PATCH v2] tpm: Enable CLKRUN protocol for Braswell systems
-Date: Thu,  1 Jun 2017 19:04:04 -0700
-Message-ID: <1496369044-38234-1-git-send-email-azhar.shaikh@intel.com>
-References: <1496344432-76640-1-git-send-email-azhar.shaikh@intel.com>
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <1496344432-76640-1-git-send-email-azhar.shaikh@intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
-Cc: linux-security-module@vger.kernel.org, azhar.shaikh@intel.com
+From: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Subject: [PATCH v6 1/2] tpm: Issue a TPM2_Shutdown for TPM2
+ devices.
+Date: Fri, 2 Jun 2017 14:55:52 -0700
+Message-ID: <CAHSjozDmqAbMzJuQDv9ATKf0=X=iRPK83WHWu6Ehoj8023DBtQ@mail.gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-To overcome a hardware limitation on Intel Braswell systems,
-disable CLKRUN protocol during TPM transactions and re-enable
-once the transaction is completed.
+If a TPM2 loses power without a TPM2_Shutdown command being issued (a
+"disorderly reboot"), it may lose some state that has yet to be
+persisted to NVRam, and will increment the DA counter. After the DA
+counter gets sufficiently large, the TPM will lock the user out.
 
-Signed-off-by: Azhar Shaikh <azhar.shaikh@intel.com>
+NOTE: This only changes behavior on TPM2 devices. Since TPM1 uses sysfs,
+and sysfs relies on implicit locking on chip->ops, it is not safe to
+allow this code to run in TPM1, or to add sysfs support to TPM2, until
+that locking is made explicit.
+
+Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+
+----
+v2:
+  - Properly split changes between this and another commit
+  - Use proper locking primitive.
+  - Fix commenting style
+v3:
+  - Re-fix commenting style
+v4:
+  - Update description and tags (Reviewed-by, Cc).
+v5:
+  - Update documentation.
+v6:
+  - Call device or bus shutdown from tpm_shutdown.
 ---
-Changes from v1:
-- Add CONFIG_X86 around disable_lpc_clk_run () and enable_lpc_clk_run() to avoid
-- build breakage on architectures which do not implement kmap_atomic_pfn()
+ drivers/char/tpm/tpm-chip.c  | 31 +++++++++++++++++++++++++++++++
+ drivers/char/tpm/tpm-sysfs.c |  3 +++
+ 2 files changed, 34 insertions(+)
 
- drivers/char/tpm/tpm.h     | 20 ++++++++++
- drivers/char/tpm/tpm_tis.c | 94 ++++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 114 insertions(+)
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 9dec9f551b83..62691d266f22 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -142,6 +142,36 @@ static void tpm_devs_release(struct device *dev)
+        put_device(&chip->dev);
+ }
 
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 4b4c8dee3096..98032a22317e 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -36,6 +36,10 @@
- #include <linux/highmem.h>
- #include <crypto/hash_info.h>
- 
-+#ifdef CONFIG_X86
-+#include <asm/intel-family.h>
-+#endif
-+
- enum tpm_const {
- 	TPM_MINOR = 224,	/* officially assigned */
- 	TPM_BUFSIZE = 4096,
-@@ -436,6 +440,22 @@ struct tpm_buf {
- 	u8 *data;
- };
- 
-+#define INTEL_LEGACY_BLK_BASE_ADDR	0xFED08000
-+#define LPC_CNTRL_REG_OFFSET		0x84
-+#define LPC_CLKRUN_EN			(1 << 2)
-+
-+#ifdef CONFIG_X86
-+static inline bool is_bsw(void)
-+{
-+	return ((boot_cpu_data.x86_model == INTEL_FAM6_ATOM_AIRMONT) ? 1 : 0);
-+}
-+#else
-+static inline bool is_bsw(void)
-+{
-+	return false;
-+}
-+#endif
-+
- static inline int tpm_buf_init(struct tpm_buf *buf, u16 tag, u32 ordinal)
- {
- 	struct tpm_input_header *head;
-diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index c7e1384f1b08..0c1496340a18 100644
---- a/drivers/char/tpm/tpm_tis.c
-+++ b/drivers/char/tpm/tpm_tis.c
-@@ -89,13 +89,79 @@ static inline int is_itpm(struct acpi_device *dev)
- }
- #endif
- 
-+#ifdef CONFIG_X86
 +/**
-+ * disable_lpc_clk_run() - clear LPC CLKRUN_EN i.e. clocks will be free running
++ * tpm_shutdown() - prepare the TPM device for loss of power.
++ * @dev: device to which the chip is associated.
++ *
++ * Issues a TPM2_Shutdown command prior to loss of power, as required by the
++ * TPM 2.0 spec.
++ *
++ * XXX: This codepath relies on the fact that sysfs is not enabled for
++ * TPM2: sysfs uses an implicit lock on chip->ops, so this could race if TPM2
++ * has sysfs support enabled before TPM sysfs's implicit locking is fixed.
 + */
-+static void disable_lpc_clk_run(void)
++static void tpm_shutdown(struct device *dev)
 +{
-+	u32 clkrun_val;
-+	void __iomem *ilb_base_addr = NULL;
++       struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
 +
-+	ilb_base_addr = (void __iomem *)
-+		kmap_atomic_pfn(INTEL_LEGACY_BLK_BASE_ADDR >> PAGE_SHIFT);
-+
-+	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-+
-+	/* Disable LPC CLKRUN# */
-+	clkrun_val &= ~LPC_CLKRUN_EN;
-+	iowrite32(clkrun_val, ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-+
-+	kunmap_atomic(ilb_base_addr);
-+	/*
-+	 * Write any random value on port 0x80 which is on LPC, to make
-+	 * sure LPC clock is running before sending any TPM command.
-+	 */
-+	outb(0x80, 0xCC);
++       if (chip->flags & TPM_CHIP_FLAG_TPM2) {
++               down_write(&chip->ops_sem);
++               tpm2_shutdown(chip, TPM_SU_CLEAR);
++               chip->ops = NULL;
++               up_write(&chip->ops_sem);
++       }
++       // Allow bus- and device-specific code to run. Note: since chip->ops
++       // is NULL, more-specific shutdown code will not be able to issue TPM
++       // commands.
++       if (dev->bus->shutdown)
++               dev->bus->shutdown(dev);
++       else if (dev->driver && dev->driver->shutdown)
++               dev->driver->shutdown(dev);
 +}
 +
-+/**
-+ * enable_lpc_clk_run() - set LPC CLKRUN_EN i.e. clocks can be turned off
-+ */
-+static void enable_lpc_clk_run(void)
-+{
-+	u32 clkrun_val;
-+	void __iomem *ilb_base_addr = NULL;
-+
-+	ilb_base_addr = (void __iomem *)
-+		kmap_atomic_pfn(INTEL_LEGACY_BLK_BASE_ADDR >> PAGE_SHIFT);
-+
-+	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-+
-+	/* Enable LPC CLKRUN# */
-+	clkrun_val |= LPC_CLKRUN_EN;
-+	iowrite32(clkrun_val, ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-+
-+	kunmap_atomic(ilb_base_addr);
-+	/*
-+	 * Write any random value on port 0x80 which is on LPC, to make
-+	 * sure LPC clock is running before sending any TPM command.
-+	 */
-+	outb(0x80, 0xCC);
-+}
-+#else
-+static void disable_lpc_clk_run(void)
-+{
-+}
-+static void enable_lpc_clk_run(void)
-+{
-+}
-+#endif
-+
- static int tpm_tcg_read_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
- 			      u8 *result)
+ /**
+  * tpm_chip_alloc() - allocate a new struct tpm_chip instance
+  * @pdev: device to which the chip is associated
+@@ -181,6 +211,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+        device_initialize(&chip->devs);
+
+        chip->dev.class = tpm_class;
++       chip->dev.class.shutdown = tpm_shutdown;
+        chip->dev.release = tpm_dev_release;
+        chip->dev.parent = pdev;
+        chip->dev.groups = chip->groups;
+diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+index 55405dbe43fa..59bd0b7b5959 100644
+--- a/drivers/char/tpm/tpm-sysfs.c
++++ b/drivers/char/tpm/tpm-sysfs.c
+@@ -294,6 +294,9 @@ static const struct attribute_group tpm_dev_group = {
+
+ void tpm_sysfs_add_device(struct tpm_chip *chip)
  {
- 	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
- 
-+	if (is_bsw())
-+		disable_lpc_clk_run();
-+
- 	while (len--)
- 		*result++ = ioread8(phy->iobase + addr);
-+
-+	if (is_bsw())
-+		enable_lpc_clk_run();
-+
- 	return 0;
- }
- 
-@@ -104,8 +170,15 @@ static int tpm_tcg_write_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
- {
- 	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
- 
-+	if (is_bsw())
-+		disable_lpc_clk_run();
-+
- 	while (len--)
- 		iowrite8(*value++, phy->iobase + addr);
-+
-+	if (is_bsw())
-+		enable_lpc_clk_run();
-+
- 	return 0;
- }
- 
-@@ -113,7 +186,14 @@ static int tpm_tcg_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
- {
- 	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
- 
-+	if (is_bsw())
-+		disable_lpc_clk_run();
-+
- 	*result = ioread16(phy->iobase + addr);
-+
-+	if (is_bsw())
-+		enable_lpc_clk_run();
-+
- 	return 0;
- }
- 
-@@ -121,7 +201,14 @@ static int tpm_tcg_read32(struct tpm_tis_data *data, u32 addr, u32 *result)
- {
- 	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
- 
-+	if (is_bsw())
-+		disable_lpc_clk_run();
-+
- 	*result = ioread32(phy->iobase + addr);
-+
-+	if (is_bsw())
-+		enable_lpc_clk_run();
-+
- 	return 0;
- }
- 
-@@ -129,7 +216,14 @@ static int tpm_tcg_write32(struct tpm_tis_data *data, u32 addr, u32 value)
- {
- 	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
- 
-+	if (is_bsw())
-+		disable_lpc_clk_run();
-+
- 	iowrite32(value, phy->iobase + addr);
-+
-+	if (is_bsw())
-+		enable_lpc_clk_run();
-+
- 	return 0;
- }
- 
++       /* XXX: If you wish to remove this restriction, you must first update
++        * tpm_sysfs to explicitly lock chip->ops.
++        */
+        if (chip->flags & TPM_CHIP_FLAG_TPM2)
+                return;
+
 -- 
-1.9.1
+2.13.0.506.g27d5fe0cd-goog
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
