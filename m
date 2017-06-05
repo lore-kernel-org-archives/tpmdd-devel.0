@@ -1,18 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v4 2/2] Add "shutdown" to "struct class".
-Date: Mon, 5 Jun 2017 15:48:34 +0300
-Message-ID: <20170605124834.e6myswydwvvscaao@intel.com>
-References: <CAHSjozD_NjH0Ta=ELCOqG6ezX=qgteumKBnN2ceqE4ty2FaAZQ@mail.gmail.com>
-	<20170530075419.766mlyxomxrzbxz6@intel.com>
-	<CAHSjozBDNX-bEQGjUtjqJzG_kuSWgxmrjPmdA=nfYhr1DFGgYg@mail.gmail.com>
-	<20170601170721.uyjhkjtuey6p3gmt@intel.com>
-	<CAHSjozDaMwGspg=hhTGR7CUa+tMV7qC8FAssMKin9h_bFcysaA@mail.gmail.com>
+Subject: Re: [PATCH v2] tpm: Enable CLKRUN protocol for
+ Braswell systems
+Date: Mon, 5 Jun 2017 16:32:14 +0300
+Message-ID: <20170605133214.ah77n5pmapoddoxy@intel.com>
+References: <1496344432-76640-1-git-send-email-azhar.shaikh@intel.com>
+	<1496369044-38234-1-git-send-email-azhar.shaikh@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <CAHSjozDaMwGspg=hhTGR7CUa+tMV7qC8FAssMKin9h_bFcysaA-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
+In-Reply-To: <1496369044-38234-1-git-send-email-azhar.shaikh-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -21,84 +19,234 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
+To: Azhar Shaikh <azhar.shaikh-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Does your patches in my tree if you try it yourself?
+On Thu, Jun 01, 2017 at 07:04:04PM -0700, Azhar Shaikh wrote:
+> To overcome a hardware limitation on Intel Braswell systems,
+> disable CLKRUN protocol during TPM transactions and re-enable
+> once the transaction is completed.
+> 
+> Signed-off-by: Azhar Shaikh <azhar.shaikh-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+> ---
+> Changes from v1:
+> - Add CONFIG_X86 around disable_lpc_clk_run () and enable_lpc_clk_run() to avoid
+> - build breakage on architectures which do not implement kmap_atomic_pfn()
+> 
+>  drivers/char/tpm/tpm.h     | 20 ++++++++++
+>  drivers/char/tpm/tpm_tis.c | 94 ++++++++++++++++++++++++++++++++++++++++++++++
+>  2 files changed, 114 insertions(+)
+> 
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 4b4c8dee3096..98032a22317e 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -36,6 +36,10 @@
+>  #include <linux/highmem.h>
+>  #include <crypto/hash_info.h>
+>  
+> +#ifdef CONFIG_X86
+> +#include <asm/intel-family.h>
+> +#endif
 
-Very weird...
+#ifdef's are not necessary here.
+
+> +
+>  enum tpm_const {
+>  	TPM_MINOR = 224,	/* officially assigned */
+>  	TPM_BUFSIZE = 4096,
+> @@ -436,6 +440,22 @@ struct tpm_buf {
+>  	u8 *data;
+>  };
+>  
+> +#define INTEL_LEGACY_BLK_BASE_ADDR	0xFED08000
+> +#define LPC_CNTRL_REG_OFFSET		0x84
+> +#define LPC_CLKRUN_EN			(1 << 2)
+> +
+> +#ifdef CONFIG_X86
+> +static inline bool is_bsw(void)
+> +{
+> +	return ((boot_cpu_data.x86_model == INTEL_FAM6_ATOM_AIRMONT) ? 1 : 0);
+> +}
+> +#else
+> +static inline bool is_bsw(void)
+> +{
+> +	return false;
+> +}
+> +#endif
+
+Move these to tpm_tis.c right before disable_lpc_clk_run().
+
+> +
+>  static inline int tpm_buf_init(struct tpm_buf *buf, u16 tag, u32 ordinal)
+>  {
+>  	struct tpm_input_header *head;
+> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+> index c7e1384f1b08..0c1496340a18 100644
+> --- a/drivers/char/tpm/tpm_tis.c
+> +++ b/drivers/char/tpm/tpm_tis.c
+> @@ -89,13 +89,79 @@ static inline int is_itpm(struct acpi_device *dev)
+>  }
+>  #endif
+>  
+> +#ifdef CONFIG_X86
+> +/**
+> + * disable_lpc_clk_run() - clear LPC CLKRUN_EN i.e. clocks will be free running
+> + */
+> +static void disable_lpc_clk_run(void)
+> +{
+> +	u32 clkrun_val;
+> +	void __iomem *ilb_base_addr = NULL;
+> +
+> +	ilb_base_addr = (void __iomem *)
+> +		kmap_atomic_pfn(INTEL_LEGACY_BLK_BASE_ADDR >> PAGE_SHIFT);
+> +
+> +	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
+> +
+> +	/* Disable LPC CLKRUN# */
+> +	clkrun_val &= ~LPC_CLKRUN_EN;
+> +	iowrite32(clkrun_val, ilb_base_addr + LPC_CNTRL_REG_OFFSET);
+> +
+> +	kunmap_atomic(ilb_base_addr);
+> +	/*
+> +	 * Write any random value on port 0x80 which is on LPC, to make
+> +	 * sure LPC clock is running before sending any TPM command.
+> +	 */
+> +	outb(0x80, 0xCC);
+> +}
+
+You said that this code does not work compared to a version that does
+only static ioremap.
+
+I compared this to the other version. One of the major differences is
+that outb() is done before releasing the mapping. Don't know or
+understand what difference that would make but it is a semantic
+difference.
+
+Another observation is that should you have wmb() before outb() to make
+sure that all the write operations are complete?
+
+> +
+> +/**
+> + * enable_lpc_clk_run() - set LPC CLKRUN_EN i.e. clocks can be turned off
+> + */
+> +static void enable_lpc_clk_run(void)
+> +{
+> +	u32 clkrun_val;
+> +	void __iomem *ilb_base_addr = NULL;
+> +
+> +	ilb_base_addr = (void __iomem *)
+> +		kmap_atomic_pfn(INTEL_LEGACY_BLK_BASE_ADDR >> PAGE_SHIFT);
+> +
+> +	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
+> +
+> +	/* Enable LPC CLKRUN# */
+> +	clkrun_val |= LPC_CLKRUN_EN;
+> +	iowrite32(clkrun_val, ilb_base_addr + LPC_CNTRL_REG_OFFSET);
+> +
+> +	kunmap_atomic(ilb_base_addr);
+> +	/*
+> +	 * Write any random value on port 0x80 which is on LPC, to make
+> +	 * sure LPC clock is running before sending any TPM command.
+> +	 */
+> +	outb(0x80, 0xCC);
+> +}
+> +#else
+> +static void disable_lpc_clk_run(void)
+> +{
+> +}
+> +static void enable_lpc_clk_run(void)
+> +{
+> +}
+> +#endif
+> +
+>  static int tpm_tcg_read_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
+>  			      u8 *result)
+>  {
+>  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+>  
+> +	if (is_bsw())
+> +		disable_lpc_clk_run();
+
+Do is_bsw() instead inside so that this can be unconditionally called.
+
+> +
+>  	while (len--)
+>  		*result++ = ioread8(phy->iobase + addr);
+> +
+> +	if (is_bsw())
+> +		enable_lpc_clk_run();
+> +
+>  	return 0;
+>  }
+>  
+> @@ -104,8 +170,15 @@ static int tpm_tcg_write_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
+>  {
+>  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+>  
+> +	if (is_bsw())
+> +		disable_lpc_clk_run();
+> +
+>  	while (len--)
+>  		iowrite8(*value++, phy->iobase + addr);
+> +
+> +	if (is_bsw())
+> +		enable_lpc_clk_run();
+> +
+>  	return 0;
+>  }
+>  
+> @@ -113,7 +186,14 @@ static int tpm_tcg_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
+>  {
+>  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+>  
+> +	if (is_bsw())
+> +		disable_lpc_clk_run();
+> +
+>  	*result = ioread16(phy->iobase + addr);
+> +
+> +	if (is_bsw())
+> +		enable_lpc_clk_run();
+> +
+>  	return 0;
+>  }
+>  
+> @@ -121,7 +201,14 @@ static int tpm_tcg_read32(struct tpm_tis_data *data, u32 addr, u32 *result)
+>  {
+>  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+>  
+> +	if (is_bsw())
+> +		disable_lpc_clk_run();
+> +
+>  	*result = ioread32(phy->iobase + addr);
+> +
+> +	if (is_bsw())
+> +		enable_lpc_clk_run();
+> +
+>  	return 0;
+>  }
+>  
+> @@ -129,7 +216,14 @@ static int tpm_tcg_write32(struct tpm_tis_data *data, u32 addr, u32 value)
+>  {
+>  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+>  
+> +	if (is_bsw())
+> +		disable_lpc_clk_run();
+> +
+>  	iowrite32(value, phy->iobase + addr);
+> +
+> +	if (is_bsw())
+> +		enable_lpc_clk_run();
+> +
+>  	return 0;
+>  }
+>  
+> -- 
+> 1.9.1
+> 
 
 /Jarkko
-
-On Fri, Jun 02, 2017 at 03:00:22PM -0700, Josh Zimmerman wrote:
-> Quite strange. Here's what I see.
-> 
-> $ git pull
-> Already up-to-date.
-> $ git branch
->   master
-> * next
-> $ git am -3 /tmp/v6-0001-tpm-Issue-a-TPM2_Shutdown-for-TPM2-devices.patch
-> Applying: tpm: Issue a TPM2_Shutdown for TPM2 devices.
-> $ git am -3 /tmp/v6-0002-Add-shutdown-to-struct-class.patch  # This is
-> identical to v5
-> Applying: Add "shutdown" to "struct class".
-> $ git status
-> On branch next
-> Your branch is ahead of 'origin/next' by 2 commits.
->   (use "git push" to publish your local commits)
-> 
-> nothing to commit, working tree clean
-> $ git log --oneline | head -n 4
-> 58410b1fef64 Add "shutdown" to "struct class".
-> 84e311a15e94 tpm: Issue a TPM2_Shutdown for TPM2 devices.
-> d68c51e0b377 Sync to mainline for security submaintainers to work against
-> 08332893e37a Linux 4.12-rc2
-> $ git remote -v
-> origin  git://git.kernel.org/pub/scm/linux/kernel/git/jmorris/linux-security.git
-> (fetch)
-> origin  git://git.kernel.org/pub/scm/linux/kernel/git/jmorris/linux-security.git
-> (push)
-> Josh
-> 
-> 
-> On Thu, Jun 1, 2017 at 10:07 AM, Jarkko Sakkinen
-> <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
-> > On Wed, May 31, 2017 at 03:01:13PM -0700, Josh Zimmerman wrote:
-> >> On Tue, May 30, 2017 at 12:54 AM, Jarkko Sakkinen
-> >> <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
-> >> > On Thu, May 25, 2017 at 04:20:30PM -0700, Josh Zimmerman wrote:
-> >> >> The TPM class has some common shutdown code that must be executed for
-> >> >> all drivers. This adds some needed functionality for that.
-> >> >>
-> >> >> Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-> >> >> Acked-by: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>
-> >> >> Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-> >> >
-> >> > Does not apply yet to security-next (ancestor missing).
-> >>
-> >> Hm, it applied cleanly for me to the "next" branch of
-> >> git://git.kernel.org/pub/scm/linux/kernel/git/jmorris/linux-security.git.
-> >> Are you referring to something else with "security-next"?
-> >
-> > Hmm...
-> >
-> > I get
-> >
-> > $ git am -3 ~/Downloads/v5-2-2-Add-shutdown-to-struct-class-..patch
-> > Applying: Add "shutdown" to "struct class".
-> > error: patch fragment without header at line 7: @@ -407,6 +408,7 @@ struct class {
-> > error: could not build fake ancestor
-> > Patch failed at 0001 Add "shutdown" to "struct class".
-> > The copy of the patch that failed is found in: .git/rebase-apply/patch
-> > When you have resolved this problem, run "git am --continue".
-> > If you prefer to skip this patch, run "git am --skip" instead.
-> > To restore the original branch and stop patching, run "git am --abort".
-> >
-> > My tree rebased to latest security/next
-> >
-> > /Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
