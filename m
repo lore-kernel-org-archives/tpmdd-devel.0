@@ -1,16 +1,17 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+From: Matthew Garrett <mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>
 Subject: Re: tpm microconf for LPC?
-Date: Tue, 6 Jun 2017 20:14:58 +0300
-Message-ID: <20170606171458.zpfqrbakqfyfj6lp@intel.com>
+Date: Tue, 6 Jun 2017 18:29:31 +0100
+Message-ID: <20170606172931.GA8186@srcf.ucam.org>
 References: <87h92i6rc1.fsf@redhat.com> <20170424212149.GA3051@srcf.ucam.org>
 	<20170502221738.tspgvkvgq4mnubzj@rhwork>
 	<20170605201101.GA14468@srcf.ucam.org>
+	<20170606171458.zpfqrbakqfyfj6lp@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170605201101.GA14468-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>
+In-Reply-To: <20170606171458.zpfqrbakqfyfj6lp-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,21 +20,25 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Matthew Garrett <mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: Ken Goldman <kgoldman-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, tpmdd-devel <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jun 05, 2017 at 09:11:01PM +0100, Matthew Garrett wrote:
-> I've thrown up a proposal draft at 
-> http://wiki.linuxplumbersconf.org/2017:tpms - please add anything else 
-> that might be worth talking about!
+On Tue, Jun 06, 2017 at 08:14:58PM +0300, Jarkko Sakkinen wrote:
+> On Mon, Jun 05, 2017 at 09:11:01PM +0100, Matthew Garrett wrote:
+> > I've thrown up a proposal draft at 
+> > http://wiki.linuxplumbersconf.org/2017:tpms - please add anything else 
+> > that might be worth talking about!
+> > 
+> > -- 
+> > Matthew Garrett | mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org
 > 
-> -- 
-> Matthew Garrett | mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org
+> A tidbit but should it be "measured boot" and not "verified boot"?
 
-A tidbit but should it be "measured boot" and not "verified boot"?
+Oops yes thank you!
 
-/Jarkko
+-- 
+Matthew Garrett | mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
