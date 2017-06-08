@@ -1,41 +1,48 @@
-From: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
+From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 Subject: Re: [PATCH v3] tpm: Enable CLKRUN protocol for Braswell systems
-Date: Thu, 8 Jun 2017 19:22:59 +0100
-Message-ID: <20170608192259.43150ffa@lxorguk.ukuu.org.uk>
+Date: Thu, 8 Jun 2017 12:39:20 -0600
+Message-ID: <20170608183920.GA7984@obsidianresearch.com>
 References: <1496369044-38234-1-git-send-email-azhar.shaikh@intel.com>
-        <1496870610-29462-1-git-send-email-azhar.shaikh@intel.com>
-        <20170607224444.5043f545@lxorguk.ukuu.org.uk>
-        <5FFFAD06ADE1CA4381B3F0F7C6AF5828910C7B@ORSMSX109.amr.corp.intel.com>
+ <1496870610-29462-1-git-send-email-azhar.shaikh@intel.com>
+ <20170607224444.5043f545@lxorguk.ukuu.org.uk>
+ <5FFFAD06ADE1CA4381B3F0F7C6AF5828910C7B@ORSMSX109.amr.corp.intel.com>
+ <20170608192259.43150ffa@lxorguk.ukuu.org.uk>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <5FFFAD06ADE1CA4381B3F0F7C6AF5828910C7B@ORSMSX109.amr.corp.intel.com>
+Content-Disposition: inline
+In-Reply-To: <20170608192259.43150ffa@lxorguk.ukuu.org.uk>
 Sender: owner-linux-security-module@vger.kernel.org
-To: "Shaikh, Azhar" <azhar.shaikh@intel.com>
-Cc: "jarkko.sakkinen@linux.intel.com" <jarkko.sakkinen@linux.intel.com>, "jgunthorpe@obsidianresearch.com" <jgunthorpe@obsidianresearch.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>
+To: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
+Cc: "Shaikh, Azhar" <azhar.shaikh@intel.com>, "jarkko.sakkinen@linux.intel.com" <jarkko.sakkinen@linux.intel.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-> > > +	outb(0x80, 0xCC);
-> > > +
-> > > +	/* Make sure the above write is completed */
-> > > +	wmb();  
+On Thu, Jun 08, 2017 at 07:22:59PM +0100, Alan Cox wrote:
+> > > > +	outb(0x80, 0xCC);
+> > > > +
+> > > > +	/* Make sure the above write is completed */
+> > > > +	wmb();  
+> > > 
+> > > Why the wmb(). It doesn't do what the comment says! Also this code is x86
+> > > specific
+> > > 
+> > >   
 > > 
-> > Why the wmb(). It doesn't do what the comment says! Also this code is x86
-> > specific
-> > 
-> >   
-> 
-> Memory barrier to enforce the order so that the outb() is completed, which ensures that the LPC clocks are running before sending any TPM command.
+> > Memory barrier to enforce the order so that the outb() is
+> > completed, which ensures that the LPC clocks are running before
+> > sending any TPM command.
+>
+> wmb() doesn't do that. It merely ensures that the write has been posted
+> to the fabric. If as I suspect your LPC bus implements outb() as a
+> non-posted write you don't need the wmb().
 
-wmb() doesn't do that. It merely ensures that the write has been posted
-to the fabric. If as I suspect your LPC bus implements outb() as a
-non-posted write you don't need the wmb(). If it doesn't then you need to
-issue whatever access is needed to the fabric to ensure the post
-completed (eg for PCI if you do an MMIO write you must do an MMIO read
-from the same devfn).
+I think the point here is to bootstrap the sleeping LPC bus clock
+before a TPM command is issued, presumably because the auto-wakeup circuit
+is busted or something.
 
-Secondly outb(0x80, 0xCC) doesn't write 0xCC to port 0x80. It writes 0x80
-to port 0xCC !
+For that purpose all that should be required is strong ordering of the
+outb relative to the other TPM commands at the LPC interface FIFO. I
+also think the wmb is not needed because outb is already defined to be
+strongly in order with respect to writel/readl ?
 
-Alan
+Jason
