@@ -1,61 +1,54 @@
-From: Ken Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: TPM2 resource manager context save
-Date: Fri, 9 Jun 2017 10:29:24 -0400
-Message-ID: <9679ee72-15db-0f20-2610-60672868bba1@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v3] tpm: Enable CLKRUN protocol for Braswell systems
+Date: Sat, 10 Jun 2017 14:06:56 +0300
+Message-ID: <20170610110656.hucthdwxfv3s6zz2@intel.com>
+References: <1496369044-38234-1-git-send-email-azhar.shaikh@intel.com>
+ <1496870610-29462-1-git-send-email-azhar.shaikh@intel.com>
+ <20170607224444.5043f545@lxorguk.ukuu.org.uk>
+ <5FFFAD06ADE1CA4381B3F0F7C6AF5828910C7B@ORSMSX109.amr.corp.intel.com>
+ <20170608192259.43150ffa@lxorguk.ukuu.org.uk>
+ <20170608183920.GA7984@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"; Format="flowed"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Language: en-US
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20170608183920.GA7984@obsidianresearch.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: Alan Cox <gnomes@lxorguk.ukuu.org.uk>, "Shaikh, Azhar" <azhar.shaikh@intel.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-At least a question, maybe a bug ...
+On Thu, Jun 08, 2017 at 12:39:20PM -0600, Jason Gunthorpe wrote:
+> On Thu, Jun 08, 2017 at 07:22:59PM +0100, Alan Cox wrote:
+> > > > > +	outb(0x80, 0xCC);
+> > > > > +
+> > > > > +	/* Make sure the above write is completed */
+> > > > > +	wmb();  
+> > > > 
+> > > > Why the wmb(). It doesn't do what the comment says! Also this code is x86
+> > > > specific
+> > > > 
+> > > >   
+> > > 
+> > > Memory barrier to enforce the order so that the outb() is
+> > > completed, which ensures that the LPC clocks are running before
+> > > sending any TPM command.
+> >
+> > wmb() doesn't do that. It merely ensures that the write has been posted
+> > to the fabric. If as I suspect your LPC bus implements outb() as a
+> > non-posted write you don't need the wmb().
+> 
+> I think the point here is to bootstrap the sleeping LPC bus clock
+> before a TPM command is issued, presumably because the auto-wakeup circuit
+> is busted or something.
+> 
+> For that purpose all that should be required is strong ordering of the
+> outb relative to the other TPM commands at the LPC interface FIFO. I
+> also think the wmb is not needed because outb is already defined to be
+> strongly in order with respect to writel/readl ?
+> 
+> Jason
 
-What is the expected behavior for the resource manager when it receives 
-contextsave for a transient object?
-]
-~~
+writel AFAIK guarantees by itself strong RW ordering.
 
-Use case:
-
-Creating an RSA primary key can take a long time.  I've seen it take 90 
-seconds.  The SRK will probably be made persistent.  However, there are 
-a limited number of persistent object slots.  So the less frequently 
-used EK will likely be created on demand.
-
-To improve performance, an application can context save the EK, and then 
-context load it when needed.  This is a symmetric key operation, and is 
-much faster.  This can work even for a new connection.
-
-~~
-
-When I try the command, write() returns 22, EINVAL
-
-The RM seems to have some special handling for context save in 
-tpm2_cmd.c:tpm2_get_cc_attrs_tbl().  Later, the write() returns EINVAL 
-(22), probably because tpm2_map_command() does not find 
-TPM2_CC_CONTEXT_SAVE in the attribute table.
-
-~~
-
-Question:  Is this expected?  Is it the desired design?
-
-Bug:  IMHO, EINVAL is a poor choice, as the application thinks the 
-write() failed.  In fact, the TPM write() didn't even occur.  Better 
-would be to construct the standard TPM response to an unimplemented 
-command:  TPM_RC_COMMAND_CODE.  This tells the application more 
-accurately what failed - the command code is not permitted.
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+/Jarkko
