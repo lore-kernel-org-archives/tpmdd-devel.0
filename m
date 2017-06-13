@@ -1,50 +1,78 @@
-From: "Gustavo A. R. Silva" <garsilva@embeddedor.com>
-Subject: [PATCH] char: tpm: remove unnecessary NULL check
-Date: Tue, 13 Jun 2017 14:55:42 -0500
-Message-ID: <20170613195542.GA5677@embeddedgus>
-References: <20170613180319.ezszgevmgwno2v5u@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: TPM2 resource manager context save
+Date: Tue, 13 Jun 2017 23:17:51 +0300
+Message-ID: <20170613201751.exrwn4nfizbvw7ng@intel.com>
+References: <9679ee72-15db-0f20-2610-60672868bba1@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170613180319.ezszgevmgwno2v5u@intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+In-Reply-To: <9679ee72-15db-0f20-2610-60672868bba1-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Ken Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Remove unnecessary NULL check.
-Pointer _chip_ cannot be NULL in this instance.
+Hi
 
-Addresses-Coverity-ID: 1397646
-Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Signed-off-by: Gustavo A. R. Silva <garsilva@embeddedor.com>
----
- drivers/char/tpm/tpm_atmel.c | 12 +++++-------
- 1 file changed, 5 insertions(+), 7 deletions(-)
+I'm sorry for such a long delay!
 
-diff --git a/drivers/char/tpm/tpm_atmel.c b/drivers/char/tpm/tpm_atmel.c
-index 0d322ab..66a1452 100644
---- a/drivers/char/tpm/tpm_atmel.c
-+++ b/drivers/char/tpm/tpm_atmel.c
-@@ -144,13 +144,11 @@ static void atml_plat_remove(void)
- 	struct tpm_chip *chip = dev_get_drvdata(&pdev->dev);
- 	struct tpm_atmel_priv *priv = dev_get_drvdata(&chip->dev);
- 
--	if (chip) {
--		tpm_chip_unregister(chip);
--		if (priv->have_region)
--			atmel_release_region(priv->base, priv->region_size);
--		atmel_put_base_addr(priv->iobase);
--		platform_device_unregister(pdev);
--	}
-+	tpm_chip_unregister(chip);
-+	if (priv->have_region)
-+		atmel_release_region(priv->base, priv->region_size);
-+	atmel_put_base_addr(priv->iobase);
-+	platform_device_unregister(pdev);
- }
- 
- static SIMPLE_DEV_PM_OPS(tpm_atml_pm, tpm_pm_suspend, tpm_pm_resume);
--- 
-2.5.0
+On Fri, Jun 09, 2017 at 10:29:24AM -0400, Ken Goldman wrote:
+> At least a question, maybe a bug ...
+> 
+> What is the expected behavior for the resource manager when it receives
+> contextsave for a transient object?
+> ]
+> ~~
+> 
+> Use case:
+> 
+> Creating an RSA primary key can take a long time.  I've seen it take 90
+> seconds.  The SRK will probably be made persistent.  However, there are a
+> limited number of persistent object slots.  So the less frequently used EK
+> will likely be created on demand.
+> 
+> To improve performance, an application can context save the EK, and then
+> context load it when needed.  This is a symmetric key operation, and is much
+> faster.  This can work even for a new connection.
+> 
+> ~~
+> 
+> When I try the command, write() returns 22, EINVAL
+> 
+> The RM seems to have some special handling for context save in
+> tpm2_cmd.c:tpm2_get_cc_attrs_tbl().  Later, the write() returns EINVAL (22),
+
+It's done so that we do not need a special for it: treat it like it was
+part of the handle area.
+
+> probably because tpm2_map_command() does not find TPM2_CC_CONTEXT_SAVE in
+> the attribute table.
+> 
+> ~~
+> 
+> Question:  Is this expected?  Is it the desired design?
+
+Nope but should never happen if there was TPMA_CC for ContextSave.
+
+> Bug:  IMHO, EINVAL is a poor choice, as the application thinks the write()
+> failed.  In fact, the TPM write() didn't even occur.  Better would be to
+> construct the standard TPM response to an unimplemented command:
+> TPM_RC_COMMAND_CODE.  This tells the application more accurately what failed
+> - the command code is not permitted.
+
+Not sure about this.
+
+/Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
