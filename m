@@ -1,62 +1,180 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] char: tmp: fix potential null pointer dereference
-Date: Tue, 13 Jun 2017 21:03:19 +0300
-Message-ID: <20170613180319.ezszgevmgwno2v5u@intel.com>
-References: <20170530215123.GA7484@embeddedgus>
- <20170531121129.f3576lq7peott6gd@intel.com>
- <20170612172544.Horde.Br2grYSXmXw3bfXZefqg8tb@gator4166.hostgator.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v4 2/2] Add "shutdown" to "struct class".
+Date: Tue, 13 Jun 2017 22:11:15 +0300
+Message-ID: <20170613191115.yq63uzuyns2grp55@intel.com>
+References: <CAHSjozD_NjH0Ta=ELCOqG6ezX=qgteumKBnN2ceqE4ty2FaAZQ@mail.gmail.com>
+	<20170530075419.766mlyxomxrzbxz6@intel.com>
+	<CAHSjozBDNX-bEQGjUtjqJzG_kuSWgxmrjPmdA=nfYhr1DFGgYg@mail.gmail.com>
+	<20170601170721.uyjhkjtuey6p3gmt@intel.com>
+	<CAHSjozDaMwGspg=hhTGR7CUa+tMV7qC8FAssMKin9h_bFcysaA@mail.gmail.com>
+	<20170605124834.e6myswydwvvscaao@intel.com>
+	<CAHSjozAhiR0E5FvuZGgJ39hyd9oT3NYeHm=BCdouhCOXBdi+SA@mail.gmail.com>
+	<CAHSjozA4Jpq4JDgmfqMk6p_AHjjW4tpeAehFXBcWxe0WsY3psA@mail.gmail.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170612172544.Horde.Br2grYSXmXw3bfXZefqg8tb@gator4166.hostgator.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: "Gustavo A. R. Silva" <garsilva@embeddedor.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+In-Reply-To: <CAHSjozA4Jpq4JDgmfqMk6p_AHjjW4tpeAehFXBcWxe0WsY3psA-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jun 12, 2017 at 05:25:44PM -0500, Gustavo A. R. Silva wrote:
-> Hi Jarkko,
-> 
-> Please, see my comments below
-> 
-> Quoting Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>:
-> 
-> > On Tue, May 30, 2017 at 04:51:23PM -0500, Gustavo A. R. Silva wrote:
-> > > NULL check at line 147: if (chip) {, implies chip might be NULL.
-> > > Function dev_get_drvdata() dereference pointer chip.
-> > > Move pointer priv assignment inside the IF block that checks
-> > > pointer chip.
-> > > 
-> > > Addresses-Coverity-ID: 1397646
-> > > Signed-off-by: Gustavo A. R. Silva <garsilva@embeddedor.com>
-> > 
-> > It cannot be.
-> > 
-> 
-> I got it.
-> 
-> > /Jarkko
-> > 
-> > > ---
-> > >  drivers/char/tpm/tpm_atmel.c | 3 ++-
-> > >  1 file changed, 2 insertions(+), 1 deletion(-)
-> > > 
-> > > diff --git a/drivers/char/tpm/tpm_atmel.c b/drivers/char/tpm/tpm_atmel.c
-> > > index 0d322ab..0826efd 100644
-> > > --- a/drivers/char/tpm/tpm_atmel.c
-> > > +++ b/drivers/char/tpm/tpm_atmel.c
-> > > @@ -142,9 +142,10 @@ static struct platform_device *pdev;
-> > >  static void atml_plat_remove(void)
-> > >  {
-> > >  	struct tpm_chip *chip = dev_get_drvdata(&pdev->dev);
-> > > -	struct tpm_atmel_priv *priv = dev_get_drvdata(&chip->dev);
-> > > +	struct tpm_atmel_priv *priv;
-> > > 
-> > >  	if (chip) {
-> 
-> So, this NULL check could be removed?
+The maintainer tree for tpmdd is located at
 
-Yes, this would be right way to fix it.
+git://git.infradead.org/users/jjs/linux-tpmdd.git
+
+I just updated my branches to latest security/next but still get the
+complaint about ancestors:
+
+$ git am -3 ~/Downloads/v5-2-2-Add-shutdown-to-struct-class-..patch 
+Applying: Add "shutdown" to "struct class".
+error: patch fragment without header at line 7: @@ -407,6 +408,7 @@ struct class {
+error: could not build fake ancestor
+Patch failed at 0001 Add "shutdown" to "struct class".
+The copy of the patch that failed is found in: .git/rebase-apply/patch
+When you have resolved this problem, run "git am --continue".
+If you prefer to skip this patch, run "git am --skip" instead.
+To restore the original branch and stop patching, run "git am --abort".
+
+I'm postponing my v4.13 PR up until next week as there's no big features
+coming up (so I have more time to wait for fixes) so this still can make
+into that. 
 
 /Jarkko
+
+On Mon, Jun 12, 2017 at 04:08:39PM -0700, Josh Zimmerman wrote:
+> Hi Jarkko,
+> 
+> Were you able to merge my patches? If not can you give me a bit more
+> info about what git repo and branch you're working off of, so I can
+> try to get it to apply to the HEAD of that branch?
+> 
+> Thanks,
+> Josh
+> 
+> 
+> On Mon, Jun 5, 2017 at 11:32 AM, Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org> wrote:
+> > I'm not sure where your tree is, but it applies cleanly to
+> > https://github.com/PeterHuewe/linux-tpmdd (which was linked as the
+> > source of truth from the sourceforge page,
+> > https://sourceforge.net/projects/tpmdd/)
+> >
+> > $ git clone https://github.com/PeterHuewe/linux-tpmdd
+> > Cloning into 'linux-tpmdd'...
+> > remote: Counting objects: 5394697, done.
+> > remote: Compressing objects: 100% (805/805), done.
+> > remote: Total 5394697 (delta 722), reused 285 (delta 285), pack-reused 5393607
+> > Receiving objects: 100% (5394697/5394697), 1.74 GiB | 4.58 MiB/s, done.
+> > Resolving deltas: 100% (4464433/4464433), done.
+> > Checking out files: 100% (59842/59842), done.
+> > $ cd linux-tpmdd/
+> > $ git am -3 /tmp/v6-0001-tpm-Issue-a-TPM2_Shutdown-for-TPM2-devices.patch
+> > Applying: tpm: Issue a TPM2_Shutdown for TPM2 devices.
+> > $ git am -3 /tmp/v6-0002-Add-shutdown-to-struct-class.patch
+> > Applying: Add "shutdown" to "struct class".
+> > $ git log --oneline | head
+> > ba3cbbbe4212 Add "shutdown" to "struct class".
+> > 8314e024633c tpm: Issue a TPM2_Shutdown for TPM2 devices.
+> > 08332893e37a Linux 4.12-rc2
+> > 33c9e9729033 x86: fix 32-bit case of __get_user_asm_u64()
+> > 334a023ee509 Clean up x86 unsafe_get/put_user() type handling
+> > f3926e4c2a4b Merge branch 'for-linus' of
+> > git://git.kernel.org/pub/scm/linux/kernel/git/viro/vfs
+> > 970c305aa802 Merge branch 'sched-urgent-for-linus' of
+> > git://git.kernel.org/pub/scm/linux/kernel/git/tip/tip
+> > e7a3d6274918 Merge branch 'irq-urgent-for-linus' of
+> > git://git.kernel.org/pub/scm/linux/kernel/git/tip/tip
+> > a8c39544a6eb osf_wait4(): fix infoleak
+> > a7cc722fff0b fix unsafe_put_user()
+> > Josh
+> >
+> >
+> > On Mon, Jun 5, 2017 at 5:48 AM, Jarkko Sakkinen
+> > <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
+> >> Does your patches in my tree if you try it yourself?
+> >>
+> >> Very weird...
+> >>
+> >> /Jarkko
+> >>
+> >> On Fri, Jun 02, 2017 at 03:00:22PM -0700, Josh Zimmerman wrote:
+> >>> Quite strange. Here's what I see.
+> >>>
+> >>> $ git pull
+> >>> Already up-to-date.
+> >>> $ git branch
+> >>>   master
+> >>> * next
+> >>> $ git am -3 /tmp/v6-0001-tpm-Issue-a-TPM2_Shutdown-for-TPM2-devices.patch
+> >>> Applying: tpm: Issue a TPM2_Shutdown for TPM2 devices.
+> >>> $ git am -3 /tmp/v6-0002-Add-shutdown-to-struct-class.patch  # This is
+> >>> identical to v5
+> >>> Applying: Add "shutdown" to "struct class".
+> >>> $ git status
+> >>> On branch next
+> >>> Your branch is ahead of 'origin/next' by 2 commits.
+> >>>   (use "git push" to publish your local commits)
+> >>>
+> >>> nothing to commit, working tree clean
+> >>> $ git log --oneline | head -n 4
+> >>> 58410b1fef64 Add "shutdown" to "struct class".
+> >>> 84e311a15e94 tpm: Issue a TPM2_Shutdown for TPM2 devices.
+> >>> d68c51e0b377 Sync to mainline for security submaintainers to work against
+> >>> 08332893e37a Linux 4.12-rc2
+> >>> $ git remote -v
+> >>> origin  git://git.kernel.org/pub/scm/linux/kernel/git/jmorris/linux-security.git
+> >>> (fetch)
+> >>> origin  git://git.kernel.org/pub/scm/linux/kernel/git/jmorris/linux-security.git
+> >>> (push)
+> >>> Josh
+> >>>
+> >>>
+> >>> On Thu, Jun 1, 2017 at 10:07 AM, Jarkko Sakkinen
+> >>> <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
+> >>> > On Wed, May 31, 2017 at 03:01:13PM -0700, Josh Zimmerman wrote:
+> >>> >> On Tue, May 30, 2017 at 12:54 AM, Jarkko Sakkinen
+> >>> >> <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
+> >>> >> > On Thu, May 25, 2017 at 04:20:30PM -0700, Josh Zimmerman wrote:
+> >>> >> >> The TPM class has some common shutdown code that must be executed for
+> >>> >> >> all drivers. This adds some needed functionality for that.
+> >>> >> >>
+> >>> >> >> Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+> >>> >> >> Acked-by: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>
+> >>> >> >> Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+> >>> >> >
+> >>> >> > Does not apply yet to security-next (ancestor missing).
+> >>> >>
+> >>> >> Hm, it applied cleanly for me to the "next" branch of
+> >>> >> git://git.kernel.org/pub/scm/linux/kernel/git/jmorris/linux-security.git.
+> >>> >> Are you referring to something else with "security-next"?
+> >>> >
+> >>> > Hmm...
+> >>> >
+> >>> > I get
+> >>> >
+> >>> > $ git am -3 ~/Downloads/v5-2-2-Add-shutdown-to-struct-class-..patch
+> >>> > Applying: Add "shutdown" to "struct class".
+> >>> > error: patch fragment without header at line 7: @@ -407,6 +408,7 @@ struct class {
+> >>> > error: could not build fake ancestor
+> >>> > Patch failed at 0001 Add "shutdown" to "struct class".
+> >>> > The copy of the patch that failed is found in: .git/rebase-apply/patch
+> >>> > When you have resolved this problem, run "git am --continue".
+> >>> > If you prefer to skip this patch, run "git am --skip" instead.
+> >>> > To restore the original branch and stop patching, run "git am --abort".
+> >>> >
+> >>> > My tree rebased to latest security/next
+> >>> >
+> >>> > /Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
