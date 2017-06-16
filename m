@@ -1,15 +1,13 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v5 2/2] Add "shutdown" to "struct class".
-Date: Fri, 16 Jun 2017 11:14:52 +0200
-Message-ID: <20170616091452.txun2l3zni2zz7ne@intel.com>
-References: <CAHSjozA+xfUM-NmbP7Kb5B=T+u6qaEFzMWeF6OxX2N7-xHLAVQ@mail.gmail.com>
-	<20170616085747.c2wkkgsdjuyju6vm@intel.com>
+From: Josh Zimmerman via tpmdd-devel <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Subject: [PATCH v6 1/2] tpm: Issue a TPM2_Shutdown for TPM2
+ devices.
+Date: Fri, 16 Jun 2017 10:25:30 -0700
+Message-ID: <20170616172531.28464-1-joshz@google.com>
+Reply-To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170616085747.c2wkkgsdjuyju6vm-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,68 +16,106 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
+To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jun 16, 2017 at 10:57:47AM +0200, Jarkko Sakkinen wrote:
-> On Thu, Jun 01, 2017 at 09:33:43AM -0700, Josh Zimmerman wrote:
-> > The TPM class has some common shutdown code that must be executed for
-> > all drivers. This adds some needed functionality for that.
-> > 
-> > Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-> > Acked-by: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>
-> > Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-> > 
-> > -----
-> > v2: Add Signed-off-by.
-> > v3: Remove logically separate change.
-> > v4: Add "acked-by" and "cc".
-> > v5: Execute only one of the class/bus/driver's shutdown functions.
-> 
-> This breaks the patch.
-> 
-> > ---
-> 
-> The changelog should be here.
-> 
-> >  drivers/base/core.c    | 6 +++++-
-> >  include/linux/device.h | 2 ++
-> >  2 files changed, 7 insertions(+), 1 deletion(-)
-> 
-> /Jarkko
+If a TPM2 loses power without a TPM2_Shutdown command being issued (a
+"disorderly reboot"), it may lose some state that has yet to be
+persisted to NVRam, and will increment the DA counter. After the DA
+counter gets sufficiently large, the TPM will lock the user out.
 
+NOTE: This only changes behavior on TPM2 devices. Since TPM1 uses sysfs,
+and sysfs relies on implicit locking on chip->ops, it is not safe to
+allow this code to run in TPM1, or to add sysfs support to TPM2, until
+that locking is made explicit.
 
-It actually doesn't probably break the patch because there are six
-dashes but is incorrectly positioned. You should but right before
-diffstat after three dashes. Git will ignore this part.
+Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 
-Still getting this:
+----
+v2:
+  - Properly split changes between this and another commit
+  - Use proper locking primitive.
+  - Fix commenting style
+v3:
+  - Re-fix commenting style
+v4:
+  - Update description and tags (Reviewed-by, Cc).
+v5:
+  - Update documentation.
+v6:
+  - Call device and/or bus shutdown from tpm_shutdown.
+---
+ drivers/char/tpm/tpm-chip.c  | 31 +++++++++++++++++++++++++++++++
+ drivers/char/tpm/tpm-sysfs.c |  3 +++
+ 2 files changed, 34 insertions(+)
 
-$ git am -3 ~/Downloads/josh.patch
-Applying: Add "shutdown" to "struct class".
-error: patch fragment without header at line 36: @@ -407,6 +408,7 @@ struct class {
-error: could not build fake ancestor
-Patch failed at 0001 Add "shutdown" to "struct class".
-The copy of the patch that failed is found in: .git/rebase-apply/patch
-When you have resolved this problem, run "git am --continue".
-If you prefer to skip this patch, run "git am --skip" instead.
-To restore the original branch and stop patching, run "git am --abort".
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 9dec9f551b83..62691d266f22 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -142,6 +142,36 @@ static void tpm_devs_release(struct device *dev)
+ 	put_device(&chip->dev);
+ }
+ 
++/**
++ * tpm_shutdown() - prepare the TPM device for loss of power.
++ * @dev: device to which the chip is associated.
++ *
++ * Issues a TPM2_Shutdown command prior to loss of power, as required by the
++ * TPM 2.0 spec.
++ *
++ * XXX: This codepath relies on the fact that sysfs is not enabled for
++ * TPM2: sysfs uses an implicit lock on chip->ops, so this could race if TPM2
++ * has sysfs support enabled before TPM sysfs's implicit locking is fixed.
++ */
++static void tpm_shutdown(struct device *dev)
++{
++	struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
++
++	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
++		down_write(&chip->ops_sem);
++		tpm2_shutdown(chip, TPM_SU_CLEAR);
++		chip->ops = NULL;
++		up_write(&chip->ops_sem);
++	}
++	// Allow bus- and device-specific code to run. Note: since chip->ops
++	// is NULL, more-specific shutdown code will not be able to issue TPM
++	// commands.
++	if (dev->bus->shutdown)
++		dev->bus->shutdown(dev);
++	else if (dev->driver && dev->driver->shutdown)
++		dev->driver->shutdown(dev);
++}
++
+ /**
+  * tpm_chip_alloc() - allocate a new struct tpm_chip instance
+  * @pdev: device to which the chip is associated
+@@ -181,6 +211,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+ 	device_initialize(&chip->devs);
+ 
+ 	chip->dev.class = tpm_class;
++	chip->dev.class.shutdown = tpm_shutdown;
+ 	chip->dev.release = tpm_dev_release;
+ 	chip->dev.parent = pdev;
+ 	chip->dev.groups = chip->groups;
+diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+index 55405dbe43fa..59bd0b7b5959 100644
+--- a/drivers/char/tpm/tpm-sysfs.c
++++ b/drivers/char/tpm/tpm-sysfs.c
+@@ -294,6 +294,9 @@ static const struct attribute_group tpm_dev_group = {
+ 
+ void tpm_sysfs_add_device(struct tpm_chip *chip)
+ {
++	/* XXX: If you wish to remove this restriction, you must first update
++	 * tpm_sysfs to explicitly lock chip->ops.
++	 */
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+ 		return;
+ 
+-- 
+2.13.1.518.g3df882009-goog
 
-Look at the comment at the lie 1549:
-
-https://github.com/git/git/blob/master/apply.c
-
-I have no idea how you have exported and sent it but I would recommend
-to use standard git format-patch and git send-email commands to ensure
-the correct results.
-
-Please send the full patch set once you know it will cleanly apply.
-
-You could email it to yourself or some collegue and ask them to apply
-it as a test measure...
-
-/Jarkko
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
