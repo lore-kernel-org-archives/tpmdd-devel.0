@@ -1,21 +1,14 @@
-From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Subject: Re: [PATCH RFC] tpm_crb: Fix AMD Zen on-chip fTPM
- detection
-Date: Fri, 16 Jun 2017 14:41:56 -0600
-Message-ID: <20170616204156.GA4151@obsidianresearch.com>
-References: <20170616182951.398757-1-manuel.lauss@gmail.com>
-	<20170616192544.GA31769@obsidianresearch.com>
-	<CAOLZvyEeiRQ8LfCmq1p70xv9worYfTXDPTgEZrhFcqUev1+h+Q@mail.gmail.com>
-	<20170616195748.GA1624@obsidianresearch.com>
-	<CAOLZvyFUS+Foj0ZycrZS=yWp+=x1mi8yL1-3Bq+mhcav9iesYA@mail.gmail.com>
-	<20170616202718.GB1624@obsidianresearch.com>
-	<CAOLZvyH2rG3RpqPfiMOf68yHC91DdO8UEHXYh4FCb0ZqKJf1dw@mail.gmail.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v6 1/2] tpm: Issue a TPM2_Shutdown for
+ TPM2 devices.
+Date: Sun, 18 Jun 2017 23:53:55 +0200
+Message-ID: <1497822835.2552.2.camel@linux.intel.com>
+References: <20170616172531.28464-1-joshz@google.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <CAOLZvyH2rG3RpqPfiMOf68yHC91DdO8UEHXYh4FCb0ZqKJf1dw-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
+In-Reply-To: <20170616172531.28464-1-joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -24,28 +17,40 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Manuel Lauss <manuel.lauss-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Jun 16, 2017 at 10:35:11PM +0200, Manuel Lauss wrote:
-
-> > What do you mean 'mapping that fails already' ? The report you gave
-> > above shows the failure is on the other region:
-> >
-> >  tpm_crb MSFT0101:00: can't request region for resource [mem 0xdd84f000-0xdd84ffff]
-> 
-> the address seems to change every boot (it's one of the two MSFT0101 devices)
-> but it's always the first call to devm_ioremap_resource() in tpm_crb.c
->  line 454 that fails:
-> 
->         priv->iobase = devm_ioremap_resource(dev, &io_res);
-
-I have no idea why that would fail, based on your proc file it should
-not, you need to figure out what is going on..
-
-Jason
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+T24gRnJpLCAyMDE3LTA2LTE2IGF0IDEwOjI1IC0wNzAwLCBKb3NoIFppbW1lcm1hbiB3cm90ZToK
+PiBJZiBhIFRQTTIgbG9zZXMgcG93ZXIgd2l0aG91dCBhIFRQTTJfU2h1dGRvd24gY29tbWFuZCBi
+ZWluZyBpc3N1ZWQgKGEKPiAiZGlzb3JkZXJseSByZWJvb3QiKSwgaXQgbWF5IGxvc2Ugc29tZSBz
+dGF0ZSB0aGF0IGhhcyB5ZXQgdG8gYmUKPiBwZXJzaXN0ZWQgdG8gTlZSYW0sIGFuZCB3aWxsIGlu
+Y3JlbWVudCB0aGUgREEgY291bnRlci4gQWZ0ZXIgdGhlIERBCj4gY291bnRlciBnZXRzIHN1ZmZp
+Y2llbnRseSBsYXJnZSwgdGhlIFRQTSB3aWxsIGxvY2sgdGhlIHVzZXIgb3V0Lgo+wqAKPiBOT1RF
+OiBUaGlzIG9ubHkgY2hhbmdlcyBiZWhhdmlvciBvbiBUUE0yIGRldmljZXMuIFNpbmNlIFRQTTEg
+dXNlcwpzeXNmcywKPiBhbmQgc3lzZnMgcmVsaWVzIG9uIGltcGxpY2l0IGxvY2tpbmcgb24gY2hp
+cC0+b3BzLCBpdCBpcyBub3Qgc2FmZSB0bwo+IGFsbG93IHRoaXMgY29kZSB0byBydW4gaW4gVFBN
+MSwgb3IgdG8gYWRkIHN5c2ZzIHN1cHBvcnQgdG8gVFBNMiwKdW50aWwKPiB0aGF0IGxvY2tpbmcg
+aXMgbWFkZSBleHBsaWNpdC4KPsKgCj4gU2lnbmVkLW9mZi1ieTogSm9zaCBaaW1tZXJtYW4gPGpv
+c2h6QGdvb2dsZS5jb20+Cj4gQ2M6IHN0YWJsZUB2Z2VyLmtlcm5lbC5vcmcKPsKgCj4gLS0tLQo+
+IHYyOgo+wqDCoMKgLSBQcm9wZXJseSBzcGxpdCBjaGFuZ2VzIGJldHdlZW4gdGhpcyBhbmQgYW5v
+dGhlciBjb21taXQKPsKgwqDCoC0gVXNlIHByb3BlciBsb2NraW5nIHByaW1pdGl2ZS4KPsKgwqDC
+oC0gRml4IGNvbW1lbnRpbmcgc3R5bGUKPiB2MzoKPsKgwqDCoC0gUmUtZml4IGNvbW1lbnRpbmcg
+c3R5bGUKPiB2NDoKPsKgwqDCoC0gVXBkYXRlIGRlc2NyaXB0aW9uIGFuZCB0YWdzIChSZXZpZXdl
+ZC1ieSwgQ2MpLgo+IHY1Ogo+wqDCoMKgLSBVcGRhdGUgZG9jdW1lbnRhdGlvbi4KPiB2NjoKPsKg
+wqDCoC0gQ2FsbCBkZXZpY2UgYW5kL29yIGJ1cyBzaHV0ZG93biBmcm9tIHRwbV9zaHV0ZG93bi4K
+ClRoZSBjaGFuZ2UgbG9nIHNob3VsZCBiZSBhZnRlciB0aGUgZGFzaGVzICpiZWxvdyogcmlnaHQg
+YmVmb3JlIGRpZmYKc3RhdC4gU2luY2UgdGhpcyBpcyAxLzIgSSBzaG91bGQgYmUgYWJlIHRvIGFz
+c3VtZSB0aGF0IEkgY291bGQgYXBwbHkgb24KdGhpcyBhbmQgbm90IGFwcGx5IDIvMi4KCldoeSB0
+aGlzIHBhdGNoIHNldCBkb2VzIG5vdCBoYXZlIGEgY292ZXIgbGV0dGVyPwoKQW55d2F5LCBJIGFw
+cGxpZWQgdGhlc2UgdG8gbXkgbWFzdGVyIGFuZCBpZiB0aGV5IGRvbid0IGJyZWFrIGFueXRoaW5n
+CkknbSBpbmNsdWRpbmcgdGhlbSB0byBteSA0LjEzIHB1bGwgcmVxdWVzdC4gSSBsZWZ0IHRoZSBj
+b21taXQgbWVzc2FnZXMKdG8gdGhlIGZvcm0gdGhhdCB0aGV5IHR1cm4gb3V0IGlmIEkganVzdCBn
+aXQgYW0gLTMgdGhlIG1ib3ggZmlsZXMuCgpOZXh0IHRpbWUsIGRvIGEgZ2l0IGFtIHNhbml0eSBj
+aGVjayBpZiB5b3UgaGF2ZSBjaGFuZ2Vsb2dzIGluIHlvdXIKcGF0Y2hlcy4KCi9KYXJra28KCi0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLQpDaGVjayBvdXQgdGhlIHZpYnJhbnQgdGVjaCBjb21tdW5pdHkg
+b24gb25lIG9mIHRoZSB3b3JsZCdzIG1vc3QKZW5nYWdpbmcgdGVjaCBzaXRlcywgU2xhc2hkb3Qu
+b3JnISBodHRwOi8vc2RtLmxpbmsvc2xhc2hkb3QKX19fX19fX19fX19fX19fX19fX19fX19fX19f
+X19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0CnRwbWRkLWRldmVs
+QGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0
+cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
