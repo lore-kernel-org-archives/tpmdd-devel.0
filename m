@@ -1,89 +1,245 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v6 1/2] tpm: Issue a TPM2_Shutdown for
- TPM2 devices.
-Date: Mon, 19 Jun 2017 01:26:47 +0200
-Message-ID: <1497828407.2552.8.camel@linux.intel.com>
-References: <20170616172531.28464-1-joshz@google.com>
-	<1497828091.2552.6.camel@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v4] tpm: Enable CLKRUN protocol for Braswell systems
+Date: Mon, 19 Jun 2017 01:52:36 +0200
+Message-ID: <1497829956.2552.10.camel@linux.intel.com>
+References: <1496369044-38234-1-git-send-email-azhar.shaikh@intel.com>
+         <1497469141-137479-1-git-send-email-azhar.shaikh@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <1497828091.2552.6.camel-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: 7bit
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <1497469141-137479-1-git-send-email-azhar.shaikh@intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Azhar Shaikh <azhar.shaikh@intel.com>, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+Cc: linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gTW9uLCAyMDE3LTA2LTE5IGF0IDAxOjIxICswMjAwLCBKYXJra28gU2Fra2luZW4gd3JvdGU6
-Cj4gSG9sZCBvbi4KPiAKPiBPbiBGcmksIDIwMTctMDYtMTYgYXQgMTA6MjUgLTA3MDAsIEpvc2gg
-WmltbWVybWFuIHdyb3RlOgo+ID4gSWYgYSBUUE0yIGxvc2VzIHBvd2VyIHdpdGhvdXQgYSBUUE0y
-X1NodXRkb3duIGNvbW1hbmQgYmVpbmcgaXNzdWVkCj4gPiAoYQo+ID4gImRpc29yZGVybHkgcmVi
-b290IiksIGl0IG1heSBsb3NlIHNvbWUgc3RhdGUgdGhhdCBoYXMgeWV0IHRvIGJlCj4gPiBwZXJz
-aXN0ZWQgdG8gTlZSYW0sIGFuZCB3aWxsIGluY3JlbWVudCB0aGUgREEgY291bnRlci4gQWZ0ZXIg
-dGhlIERBCj4gPiBjb3VudGVyIGdldHMgc3VmZmljaWVudGx5IGxhcmdlLCB0aGUgVFBNIHdpbGwg
-bG9jayB0aGUgdXNlciBvdXQuCj4gPiDCoAo+ID4gTk9URTogVGhpcyBvbmx5IGNoYW5nZXMgYmVo
-YXZpb3Igb24gVFBNMiBkZXZpY2VzLiBTaW5jZSBUUE0xIHVzZXMKPiAKPiBzeXNmcywKPiA+IGFu
-ZCBzeXNmcyByZWxpZXMgb24gaW1wbGljaXQgbG9ja2luZyBvbiBjaGlwLT5vcHMsIGl0IGlzIG5v
-dCBzYWZlCj4gPiB0bwo+ID4gYWxsb3cgdGhpcyBjb2RlIHRvIHJ1biBpbiBUUE0xLCBvciB0byBh
-ZGQgc3lzZnMgc3VwcG9ydCB0byBUUE0yLAo+IAo+IHVudGlsCj4gPiB0aGF0IGxvY2tpbmcgaXMg
-bWFkZSBleHBsaWNpdC4KPiA+IMKgCj4gPiBTaWduZWQtb2ZmLWJ5OiBKb3NoIFppbW1lcm1hbiA8
-am9zaHpAZ29vZ2xlLmNvbT4KPiA+IENjOiBzdGFibGVAdmdlci5rZXJuZWwub3JnCj4gPiDCoAo+
-ID4gLS0tLQo+ID4gdjI6Cj4gPiDCoMKgwqAtIFByb3Blcmx5IHNwbGl0IGNoYW5nZXMgYmV0d2Vl
-biB0aGlzIGFuZCBhbm90aGVyIGNvbW1pdAo+ID4gwqDCoMKgLSBVc2UgcHJvcGVyIGxvY2tpbmcg
-cHJpbWl0aXZlLgo+ID4gwqDCoMKgLSBGaXggY29tbWVudGluZyBzdHlsZQo+ID4gdjM6Cj4gPiDC
-oMKgwqAtIFJlLWZpeCBjb21tZW50aW5nIHN0eWxlCj4gPiB2NDoKPiA+IMKgwqDCoC0gVXBkYXRl
-IGRlc2NyaXB0aW9uIGFuZCB0YWdzIChSZXZpZXdlZC1ieSwgQ2MpLgo+ID4gdjU6Cj4gPiDCoMKg
-wqAtIFVwZGF0ZSBkb2N1bWVudGF0aW9uLgo+ID4gdjY6Cj4gPiDCoMKgwqAtIENhbGwgZGV2aWNl
-IGFuZC9vciBidXMgc2h1dGRvd24gZnJvbSB0cG1fc2h1dGRvd24uCj4gPiAtLS0KPiA+IMKgwqBk
-cml2ZXJzL2NoYXIvdHBtL3RwbS1jaGlwLmPCoMKgfCAzMSArKysrKysrKysrKysrKysrKysrKysr
-KysrKysrKysrCj4gPiDCoMKgZHJpdmVycy9jaGFyL3RwbS90cG0tc3lzZnMuYyB8wqDCoDMgKysr
-Cj4gPiDCoMKgMiBmaWxlcyBjaGFuZ2VkLCAzNCBpbnNlcnRpb25zKCspCj4gPiDCoAo+ID4gZGlm
-ZiAtLWdpdCBhL2RyaXZlcnMvY2hhci90cG0vdHBtLWNoaXAuYyBiL2RyaXZlcnMvY2hhci90cG0v
-dHBtLQo+IAo+IGNoaXAuYwo+ID4gaW5kZXggOWRlYzlmNTUxYjgzLi42MjY5MWQyNjZmMjIgMTAw
-NjQ0Cj4gPiAtLS0gYS9kcml2ZXJzL2NoYXIvdHBtL3RwbS1jaGlwLmMKPiA+ICsrKyBiL2RyaXZl
-cnMvY2hhci90cG0vdHBtLWNoaXAuYwo+ID4gQEAgLTE0Miw2ICsxNDIsMzYgQEAgc3RhdGljIHZv
-aWQgdHBtX2RldnNfcmVsZWFzZShzdHJ1Y3QgZGV2aWNlCj4gPiAqZGV2KQo+ID4gwqDCoAlwdXRf
-ZGV2aWNlKCZjaGlwLT5kZXYpOwo+ID4gwqDCoH0KPiA+IMKgwqAKPiA+ICsvKioKPiA+ICsgKiB0
-cG1fc2h1dGRvd24oKSAtIHByZXBhcmUgdGhlIFRQTSBkZXZpY2UgZm9yIGxvc3Mgb2YgcG93ZXIu
-Cj4gPiArICogQGRldjogZGV2aWNlIHRvIHdoaWNoIHRoZSBjaGlwIGlzIGFzc29jaWF0ZWQuCj4g
-PiArICoKPiA+ICsgKiBJc3N1ZXMgYSBUUE0yX1NodXRkb3duIGNvbW1hbmQgcHJpb3IgdG8gbG9z
-cyBvZiBwb3dlciwgYXMKPiAKPiByZXF1aXJlZCBieSB0aGUKPiA+ICsgKiBUUE0gMi4wIHNwZWMu
-Cj4gPiArICoKPiA+ICsgKiBYWFg6IFRoaXMgY29kZXBhdGggcmVsaWVzIG9uIHRoZSBmYWN0IHRo
-YXQgc3lzZnMgaXMgbm90IGVuYWJsZWQKPiAKPiBmb3IKPiA+ICsgKiBUUE0yOiBzeXNmcyB1c2Vz
-IGFuIGltcGxpY2l0IGxvY2sgb24gY2hpcC0+b3BzLCBzbyB0aGlzIGNvdWxkCj4gCj4gcmFjZSBp
-ZiBUUE0yCj4gPiArICogaGFzIHN5c2ZzIHN1cHBvcnQgZW5hYmxlZCBiZWZvcmUgVFBNIHN5c2Zz
-J3MgaW1wbGljaXQgbG9ja2luZwo+ID4gaXMKPiAKPiBmaXhlZC4KPiA+ICsgKi8KPiA+ICtzdGF0
-aWMgdm9pZCB0cG1fc2h1dGRvd24oc3RydWN0IGRldmljZSAqZGV2KQo+ID4gK3sKPiA+ICsJc3Ry
-dWN0IHRwbV9jaGlwICpjaGlwID0gY29udGFpbmVyX29mKGRldiwgc3RydWN0IHRwbV9jaGlwLAo+
-IAo+IGRldik7Cj4gPiArCj4gPiArCWlmIChjaGlwLT5mbGFncyAmIFRQTV9DSElQX0ZMQUdfVFBN
-Mikgewo+ID4gKwkJZG93bl93cml0ZSgmY2hpcC0+b3BzX3NlbSk7Cj4gPiArCQl0cG0yX3NodXRk
-b3duKGNoaXAsIFRQTV9TVV9DTEVBUik7Cj4gPiArCQljaGlwLT5vcHMgPSBOVUxMOwo+ID4gKwkJ
-dXBfd3JpdGUoJmNoaXAtPm9wc19zZW0pOwo+ID4gKwl9Cj4gPiArCS8vIEFsbG93IGJ1cy0gYW5k
-IGRldmljZS1zcGVjaWZpYyBjb2RlIHRvIHJ1bi4gTm90ZTogc2luY2UKPiAKPiBjaGlwLT5vcHMK
-PiA+ICsJLy8gaXMgTlVMTCwgbW9yZS1zcGVjaWZpYyBzaHV0ZG93biBjb2RlIHdpbGwgbm90IGJl
-IGFibGUKPiA+IHRvCj4gCj4gaXNzdWUgVFBNCj4gPiArCS8vIGNvbW1hbmRzLgo+ID4gKwlpZiAo
-ZGV2LT5idXMtPnNodXRkb3duKQo+ID4gKwkJZGV2LT5idXMtPnNodXRkb3duKGRldik7Cj4gPiAr
-CWVsc2UgaWYgKGRldi0+ZHJpdmVyICYmIGRldi0+ZHJpdmVyLT5zaHV0ZG93bikKPiA+ICsJCWRl
-di0+ZHJpdmVyLT5zaHV0ZG93bihkZXYpOwo+IAo+IFdURiBpcyB0aGlzIHBhcnQuCj4gCj4gQW5k
-IHdoeSB3ZSBoYXZlIG5vdyBkdXBsaWNhdGUgY29kZT8/Cj4gCj4gSSdtIGRyb3BwaW5nIHRoZXNl
-IHBhdGNoZXMgZm9yIG5vdyBmcm9tIG15IG1hc3RlciBicmFuY2guIEkgZG9uJ3QKPiB1bmRlcnN0
-YW5kIHdoYXQgaXMgZ29pbmcgb24uLi4KPiAKPiAvSmFya2tvCgoKVGhpcyBzZXJpZXMgaXMgdG9v
-IGJyb2tlbiB0byBiZSBtZXJnZWQgOi0oIEkgZXhwZWN0IGNvdmVyIGxldHRlciBmb3IKdGhlIG5l
-eHQgdmVyc2lvbi4uLgoKRmVlbHMgd2VpcmQgdGhhdCB5b3UgaGF2ZSB0byBjYWxsIGZyYW1ld29y
-ayBmdW5jdGlvbnMgbGlrZSB0aGF0IGluIHRoZQpkcml2ZXIuIFlvdSBtdXN0IGhhdmUgYnJpbGxp
-YW50IHJlYXNvbiB0byBkbyBzbyBhbmQgdGhhdCBzaG91bGQgYmUgdmVyeQp3ZWxsIGRvY3VtZW50
-ZWQgaW4gdGhlIGNvZGUuIFRoaXMgaXMgdGVycmlibGUuLi4KCi9KYXJra28KCi0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLQpDaGVjayBvdXQgdGhlIHZpYnJhbnQgdGVjaCBjb21tdW5pdHkgb24gb25lIG9m
-IHRoZSB3b3JsZCdzIG1vc3QKZW5nYWdpbmcgdGVjaCBzaXRlcywgU2xhc2hkb3Qub3JnISBodHRw
-Oi8vc2RtLmxpbmsvc2xhc2hkb3QKX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNv
-dXJjZWZvcmdlLm5ldApodHRwczovL2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5m
-by90cG1kZC1kZXZlbAo=
+On Wed, 2017-06-14 at 12:39 -0700, Azhar Shaikh wrote:
+> To overcome a hardware limitation on Intel Braswell systems,
+> disable CLKRUN protocol during TPM transactions and re-enable
+> once the transaction is completed.
+> 
+> Signed-off-by: Azhar Shaikh <azhar.shaikh@intel.com>
+
+Does not merge to my tree:
+
+git://git.infradead.org/users/jjs/linux-tpmdd.git
+
+Please fix.
+
+/Jarkko
+
+> ---
+> Changes from v1:
+> - Add CONFIG_X86 around disable_lpc_clk_run() and enable_lpc_clk_run() to avoid
+> - build breakage on architectures which do not implement kmap_atomic_pfn()
+> 
+> Changes from v2:
+> - Use ioremap()/iounmap() instead of kmap_atomic_pfn()/kunmap_atomic()
+> - Move is_bsw() and all macros from tpm.h to tpm_tis.c file.
+> - Add the is_bsw() check in disable_lpc_clk_run() and enable_lpc_clk_run()
+> - instead of adding it in each read/write API.
+> 
+> Changes from v3:
+> - Move the code under #ifdef CONFIG_X86 and create stub functions for everything else
+> - Rename the functions disable_lpc_clk_run() -> tpm_platform_begin_xfer() and
+> - enable_lpc_clk_run() -> tpm_platform_end_xfer()
+> - Remove wmb()
+> - Correct the parameters for outb()
+> 
+>  drivers/char/tpm/tpm.h     |   4 ++
+>  drivers/char/tpm/tpm_tis.c | 112 +++++++++++++++++++++++++++++++++++++++++++++
+>  2 files changed, 116 insertions(+)
+> 
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 4b4c8dee3096..6b769fbc4407 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -36,6 +36,10 @@
+>  #include <linux/highmem.h>
+>  #include <crypto/hash_info.h>
+>  
+> +#ifdef CONFIG_X86
+> +#include <asm/intel-family.h>
+> +#endif
+> +
+>  enum tpm_const {
+>  	TPM_MINOR = 224,	/* officially assigned */
+>  	TPM_BUFSIZE = 4096,
+> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+> index c7e1384f1b08..ce6f1a8b0510 100644
+> --- a/drivers/char/tpm/tpm_tis.c
+> +++ b/drivers/char/tpm/tpm_tis.c
+> @@ -89,13 +89,93 @@ static inline int is_itpm(struct acpi_device *dev)
+>  }
+>  #endif
+>  
+> +#ifdef CONFIG_X86
+> +#define INTEL_LEGACY_BLK_BASE_ADDR      0xFED08000
+> +#define ILB_REMAP_SIZE			0x100
+> +#define LPC_CNTRL_REG_OFFSET            0x84
+> +#define LPC_CLKRUN_EN                   (1 << 2)
+> +
+> +void __iomem *ilb_base_addr;
+> +
+> +static inline bool is_bsw(void)
+> +{
+> +	return ((boot_cpu_data.x86_model == INTEL_FAM6_ATOM_AIRMONT) ? 1 : 0);
+> +}
+> +
+> +/**
+> + * tpm_platform_begin_xfer() - clear LPC CLKRUN_EN i.e. clocks will be running
+> + */
+> +static void tpm_platform_begin_xfer(void)
+> +{
+> +	u32 clkrun_val;
+> +
+> +	if (!is_bsw())
+> +		return;
+> +
+> +	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
+> +
+> +	/* Disable LPC CLKRUN# */
+> +	clkrun_val &= ~LPC_CLKRUN_EN;
+> +	iowrite32(clkrun_val, ilb_base_addr + LPC_CNTRL_REG_OFFSET);
+> +
+> +	/*
+> +	 * Write any random value on port 0x80 which is on LPC, to make
+> +	 * sure LPC clock is running before sending any TPM command.
+> +	 */
+> +	outb(0xCC, 0x80);
+> +
+> +}
+> +
+> +/**
+> + * tpm_platform_end_xfer() - set LPC CLKRUN_EN i.e. clocks can be turned off
+> + */
+> +static void tpm_platform_end_xfer(void)
+> +{
+> +	u32 clkrun_val;
+> +
+> +	if (!is_bsw())
+> +		return;
+> +
+> +	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
+> +
+> +	/* Enable LPC CLKRUN# */
+> +	clkrun_val |= LPC_CLKRUN_EN;
+> +	iowrite32(clkrun_val, ilb_base_addr + LPC_CNTRL_REG_OFFSET);
+> +
+> +	/*
+> +	 * Write any random value on port 0x80 which is on LPC, to make
+> +	 * sure LPC clock is running before sending any TPM command.
+> +	 */
+> +	outb(0xCC, 0x80);
+> +
+> +}
+> +#else
+> +static inline bool is_bsw(void)
+> +{
+> +	return false;
+> +}
+> +
+> +static void tpm_platform_begin_xfer(void)
+> +{
+> +}
+> +
+> +static void tpm_platform_end_xfer(void)
+> +{
+> +}
+> +#endif
+> +
+>  static int tpm_tcg_read_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
+>  			      u8 *result)
+>  {
+>  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+>  
+> +	tpm_platform_begin_xfer();
+> +
+>  	while (len--)
+>  		*result++ = ioread8(phy->iobase + addr);
+> +
+> +	tpm_platform_end_xfer();
+> +
+>  	return 0;
+>  }
+>  
+> @@ -104,8 +184,13 @@ static int tpm_tcg_write_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
+>  {
+>  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+>  
+> +	tpm_platform_begin_xfer();
+> +
+>  	while (len--)
+>  		iowrite8(*value++, phy->iobase + addr);
+> +
+> +	tpm_platform_end_xfer();
+> +
+>  	return 0;
+>  }
+>  
+> @@ -113,7 +198,12 @@ static int tpm_tcg_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
+>  {
+>  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+>  
+> +	tpm_platform_begin_xfer();
+> +
+>  	*result = ioread16(phy->iobase + addr);
+> +
+> +	tpm_platform_end_xfer();
+> +
+>  	return 0;
+>  }
+>  
+> @@ -121,7 +211,12 @@ static int tpm_tcg_read32(struct tpm_tis_data *data, u32 addr, u32 *result)
+>  {
+>  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+>  
+> +	tpm_platform_begin_xfer();
+> +
+>  	*result = ioread32(phy->iobase + addr);
+> +
+> +	tpm_platform_end_xfer();
+> +
+>  	return 0;
+>  }
+>  
+> @@ -129,7 +224,12 @@ static int tpm_tcg_write32(struct tpm_tis_data *data, u32 addr, u32 value)
+>  {
+>  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+>  
+> +	tpm_platform_begin_xfer();
+> +
+>  	iowrite32(value, phy->iobase + addr);
+> +
+> +	tpm_platform_end_xfer();
+> +
+>  	return 0;
+>  }
+>  
+> @@ -191,6 +291,12 @@ static int tpm_tis_pnp_init(struct pnp_dev *pnp_dev,
+>  		acpi_dev_handle = ACPI_HANDLE(&pnp_dev->dev);
+>  	}
+>  
+> +#ifdef CONFIG_X86
+> +	if (is_bsw())
+> +		ilb_base_addr = ioremap(INTEL_LEGACY_BLK_BASE_ADDR,
+> +					ILB_REMAP_SIZE);
+> +#endif
+> +
+>  	return tpm_tis_init(&pnp_dev->dev, &tpm_info, acpi_dev_handle);
+>  }
+>  
+> @@ -214,6 +320,12 @@ static void tpm_tis_pnp_remove(struct pnp_dev *dev)
+>  
+>  	tpm_chip_unregister(chip);
+>  	tpm_tis_remove(chip);
+> +
+> +#ifdef CONFIG_X86
+> +	if (is_bsw())
+> +		iounmap(ilb_base_addr);
+> +#endif
+> +
+>  }
+>  
+>  static struct pnp_driver tis_pnp_driver = {
