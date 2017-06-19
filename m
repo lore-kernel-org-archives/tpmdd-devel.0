@@ -1,248 +1,42 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v5] tpm: Enable CLKRUN protocol for Braswell systems
-Date: Mon, 19 Jun 2017 16:51:40 +0200
-Message-ID: <20170619145140.vreh5zsfy56nggcr@linux.intel.com>
-References: <1496369044-38234-1-git-send-email-azhar.shaikh@intel.com>
- <1497838679-147957-1-git-send-email-azhar.shaikh@intel.com>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH v6 1/2] tpm: Issue a TPM2_Shutdown for
+ TPM2 devices.
+Date: Mon, 19 Jun 2017 09:51:22 -0600
+Message-ID: <20170619155122.GA10188@obsidianresearch.com>
+References: <20170616172531.28464-1-joshz@google.com>
+	<1497828091.2552.6.camel@linux.intel.com>
+	<1497828407.2552.8.camel@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <1497838679-147957-1-git-send-email-azhar.shaikh@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Azhar Shaikh <azhar.shaikh@intel.com>
-Cc: jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+In-Reply-To: <1497828407.2552.8.camel-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sun, Jun 18, 2017 at 07:17:59PM -0700, Azhar Shaikh wrote:
-> To overcome a hardware limitation on Intel Braswell systems,
-> disable CLKRUN protocol during TPM transactions and re-enable
-> once the transaction is completed.
-> 
-> Signed-off-by: Azhar Shaikh <azhar.shaikh@intel.com>
+On Mon, Jun 19, 2017 at 01:26:47AM +0200, Jarkko Sakkinen wrote:
+ 
+> Feels weird that you have to call framework functions like that in the
+> driver. You must have brilliant reason to do so and that should be very
+> well documented in the code. This is terrible...
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Tested-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> (compilation)
+This was all discussed on the list. It the way these callbacks work,
+the higher levels in the callback stack call the lower levels, this
+allows each level the place the next level's callback properly, eg do
+things before/after as necessary.
 
-/Jarkko
+Jason
 
-> ---
-> Changes from v1:
-> - Add CONFIG_X86 around disable_lpc_clk_run() and enable_lpc_clk_run() to avoid
-> - build breakage on architectures which do not implement kmap_atomic_pfn()
-> 
-> Changes from v2:
-> - Use ioremap()/iounmap() instead of kmap_atomic_pfn()/kunmap_atomic()
-> - Move is_bsw() and all macros from tpm.h to tpm_tis.c file.
-> - Add the is_bsw() check in disable_lpc_clk_run() and enable_lpc_clk_run()
-> - instead of adding it in each read/write API.
-> 
-> Changes from v3:
-> - Move the code under #ifdef CONFIG_X86 and create stub functions for everything else
-> - Rename the functions disable_lpc_clk_run() -> tpm_platform_begin_xfer() and
-> - enable_lpc_clk_run() -> tpm_platform_end_xfer()
-> - Remove wmb()
-> - Correct the parameters for outb()
-> 
-> Changes from v4:
-> - Rebased to apply on git://git.infradead.org/users/jjs/linux-tpmdd.git
-> 
->  drivers/char/tpm/tpm.h     |   4 ++
->  drivers/char/tpm/tpm_tis.c | 112 +++++++++++++++++++++++++++++++++++++++++++++
->  2 files changed, 116 insertions(+)
-> 
-> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> index 1df0521138d3..cdd261383dea 100644
-> --- a/drivers/char/tpm/tpm.h
-> +++ b/drivers/char/tpm/tpm.h
-> @@ -36,6 +36,10 @@
->  #include <linux/highmem.h>
->  #include <crypto/hash_info.h>
->  
-> +#ifdef CONFIG_X86
-> +#include <asm/intel-family.h>
-> +#endif
-> +
->  enum tpm_const {
->  	TPM_MINOR = 224,	/* officially assigned */
->  	TPM_BUFSIZE = 4096,
-> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-> index b14d4aa97af8..506e62ca3576 100644
-> --- a/drivers/char/tpm/tpm_tis.c
-> +++ b/drivers/char/tpm/tpm_tis.c
-> @@ -132,13 +132,93 @@ static int check_acpi_tpm2(struct device *dev)
->  }
->  #endif
->  
-> +#ifdef CONFIG_X86
-> +#define INTEL_LEGACY_BLK_BASE_ADDR      0xFED08000
-> +#define ILB_REMAP_SIZE			0x100
-> +#define LPC_CNTRL_REG_OFFSET            0x84
-> +#define LPC_CLKRUN_EN                   (1 << 2)
-> +
-> +void __iomem *ilb_base_addr;
-> +
-> +static inline bool is_bsw(void)
-> +{
-> +	return ((boot_cpu_data.x86_model == INTEL_FAM6_ATOM_AIRMONT) ? 1 : 0);
-> +}
-> +
-> +/**
-> + * tpm_platform_begin_xfer() - clear LPC CLKRUN_EN i.e. clocks will be running
-> + */
-> +static void tpm_platform_begin_xfer(void)
-> +{
-> +	u32 clkrun_val;
-> +
-> +	if (!is_bsw())
-> +		return;
-> +
-> +	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-> +
-> +	/* Disable LPC CLKRUN# */
-> +	clkrun_val &= ~LPC_CLKRUN_EN;
-> +	iowrite32(clkrun_val, ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-> +
-> +	/*
-> +	 * Write any random value on port 0x80 which is on LPC, to make
-> +	 * sure LPC clock is running before sending any TPM command.
-> +	 */
-> +	outb(0xCC, 0x80);
-> +
-> +}
-> +
-> +/**
-> + * tpm_platform_end_xfer() - set LPC CLKRUN_EN i.e. clocks can be turned off
-> + */
-> +static void tpm_platform_end_xfer(void)
-> +{
-> +	u32 clkrun_val;
-> +
-> +	if (!is_bsw())
-> +		return;
-> +
-> +	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-> +
-> +	/* Enable LPC CLKRUN# */
-> +	clkrun_val |= LPC_CLKRUN_EN;
-> +	iowrite32(clkrun_val, ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-> +
-> +	/*
-> +	 * Write any random value on port 0x80 which is on LPC, to make
-> +	 * sure LPC clock is running before sending any TPM command.
-> +	 */
-> +	outb(0xCC, 0x80);
-> +
-> +}
-> +#else
-> +static inline bool is_bsw(void)
-> +{
-> +	return false;
-> +}
-> +
-> +static void tpm_platform_begin_xfer(void)
-> +{
-> +}
-> +
-> +static void tpm_platform_end_xfer(void)
-> +{
-> +}
-> +#endif
-> +
->  static int tpm_tcg_read_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
->  			      u8 *result)
->  {
->  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
->  
-> +	tpm_platform_begin_xfer();
-> +
->  	while (len--)
->  		*result++ = ioread8(phy->iobase + addr);
-> +
-> +	tpm_platform_end_xfer();
-> +
->  	return 0;
->  }
->  
-> @@ -147,8 +227,13 @@ static int tpm_tcg_write_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
->  {
->  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
->  
-> +	tpm_platform_begin_xfer();
-> +
->  	while (len--)
->  		iowrite8(*value++, phy->iobase + addr);
-> +
-> +	tpm_platform_end_xfer();
-> +
->  	return 0;
->  }
->  
-> @@ -156,7 +241,12 @@ static int tpm_tcg_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
->  {
->  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
->  
-> +	tpm_platform_begin_xfer();
-> +
->  	*result = ioread16(phy->iobase + addr);
-> +
-> +	tpm_platform_end_xfer();
-> +
->  	return 0;
->  }
->  
-> @@ -164,7 +254,12 @@ static int tpm_tcg_read32(struct tpm_tis_data *data, u32 addr, u32 *result)
->  {
->  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
->  
-> +	tpm_platform_begin_xfer();
-> +
->  	*result = ioread32(phy->iobase + addr);
-> +
-> +	tpm_platform_end_xfer();
-> +
->  	return 0;
->  }
->  
-> @@ -172,7 +267,12 @@ static int tpm_tcg_write32(struct tpm_tis_data *data, u32 addr, u32 value)
->  {
->  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
->  
-> +	tpm_platform_begin_xfer();
-> +
->  	iowrite32(value, phy->iobase + addr);
-> +
-> +	tpm_platform_end_xfer();
-> +
->  	return 0;
->  }
->  
-> @@ -230,6 +330,12 @@ static int tpm_tis_pnp_init(struct pnp_dev *pnp_dev,
->  	else
->  		tpm_info.irq = -1;
->  
-> +#ifdef CONFIG_X86
-> +	if (is_bsw())
-> +		ilb_base_addr = ioremap(INTEL_LEGACY_BLK_BASE_ADDR,
-> +					ILB_REMAP_SIZE);
-> +#endif
-> +
->  	return tpm_tis_init(&pnp_dev->dev, &tpm_info);
->  }
->  
-> @@ -253,6 +359,12 @@ static void tpm_tis_pnp_remove(struct pnp_dev *dev)
->  
->  	tpm_chip_unregister(chip);
->  	tpm_tis_remove(chip);
-> +
-> +#ifdef CONFIG_X86
-> +	if (is_bsw())
-> +		iounmap(ilb_base_addr);
-> +#endif
-> +
->  }
->  
->  static struct pnp_driver tis_pnp_driver = {
-> -- 
-> 1.9.1
-> 
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
