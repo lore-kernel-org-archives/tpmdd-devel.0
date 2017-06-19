@@ -1,19 +1,20 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH v6 1/2] tpm: Issue a TPM2_Shutdown for
  TPM2 devices.
-Date: Tue, 20 Jun 2017 00:21:22 +0200
-Message-ID: <20170619222122.55m5goanayw3gkeo@linux.intel.com>
+Date: Tue, 20 Jun 2017 00:38:40 +0200
+Message-ID: <20170619223840.a66extf3r5ylmpnb@linux.intel.com>
 References: <20170616172531.28464-1-joshz@google.com>
 	<1497828091.2552.6.camel@linux.intel.com>
 	<1497828407.2552.8.camel@linux.intel.com>
 	<20170619155122.GA10188@obsidianresearch.com>
 	<20170619221220.kfk5dldducxvou5b@linux.intel.com>
+	<20170619222122.55m5goanayw3gkeo@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170619221220.kfk5dldducxvou5b-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+In-Reply-To: <20170619222122.55m5goanayw3gkeo-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -26,54 +27,55 @@ To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.or
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jun 20, 2017 at 12:12:20AM +0200, Jarkko Sakkinen wrote:
-> On Mon, Jun 19, 2017 at 09:51:22AM -0600, Jason Gunthorpe wrote:
-> > On Mon, Jun 19, 2017 at 01:26:47AM +0200, Jarkko Sakkinen wrote:
-> >  
-> > > Feels weird that you have to call framework functions like that in the
-> > > driver. You must have brilliant reason to do so and that should be very
-> > > well documented in the code. This is terrible...
-> > 
-> > This was all discussed on the list. It the way these callbacks work,
-> > the higher levels in the callback stack call the lower levels, this
-> > allows each level the place the next level's callback properly, eg do
-> > things before/after as necessary.
-> > 
-> > Jason
-> 
-> I tried to look up for discussion from the patchwork. These had appeared
-> in v6. I guess I have to backtrack the discussions from my maidir
-> because I honestly don't understand why class shutdown would have to
-> call bus callback explicitly. There's nothing in the commit message
-> about this nor  is there any comment in the code.
-> 
-> This must be fairly recent development that I've missed?
-> 
-> /Jarkko
-
-Found it:
-
-"Looking at this closer, now you definately have to change the TPM
-patch to call through to the other shutdown methods. We can say
-current TPM drivers have no driver->shutdown, but we cannot be sure
-about the bus->shutdown, so may as well call both from tpm's
-class->shutdown.
-
-I would say this should be done after the tpm2_shutdown completes as
-lower level shutdowns could remove register access.
-
-Jason"
-
-And makes sense.
-
-This patch is a NAK for two reasons:
-
-1. No comment explaining this.
-2. Patches are broken and they are in wrong order and cover letter is
-   missing
-
-/Jarkko
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+T24gVHVlLCBKdW4gMjAsIDIwMTcgYXQgMTI6MjE6MjJBTSArMDIwMCwgSmFya2tvIFNha2tpbmVu
+IHdyb3RlOgo+IE9uIFR1ZSwgSnVuIDIwLCAyMDE3IGF0IDEyOjEyOjIwQU0gKzAyMDAsIEphcmtr
+byBTYWtraW5lbiB3cm90ZToKPiA+IE9uIE1vbiwgSnVuIDE5LCAyMDE3IGF0IDA5OjUxOjIyQU0g
+LTA2MDAsIEphc29uIEd1bnRob3JwZSB3cm90ZToKPiA+ID4gT24gTW9uLCBKdW4gMTksIDIwMTcg
+YXQgMDE6MjY6NDdBTSArMDIwMCwgSmFya2tvIFNha2tpbmVuIHdyb3RlOgo+ID4gPiAgCj4gPiA+
+ID4gRmVlbHMgd2VpcmQgdGhhdCB5b3UgaGF2ZSB0byBjYWxsIGZyYW1ld29yayBmdW5jdGlvbnMg
+bGlrZSB0aGF0IGluIHRoZQo+ID4gPiA+IGRyaXZlci4gWW91IG11c3QgaGF2ZSBicmlsbGlhbnQg
+cmVhc29uIHRvIGRvIHNvIGFuZCB0aGF0IHNob3VsZCBiZSB2ZXJ5Cj4gPiA+ID4gd2VsbCBkb2N1
+bWVudGVkIGluIHRoZSBjb2RlLiBUaGlzIGlzIHRlcnJpYmxlLi4uCj4gPiA+IAo+ID4gPiBUaGlz
+IHdhcyBhbGwgZGlzY3Vzc2VkIG9uIHRoZSBsaXN0LiBJdCB0aGUgd2F5IHRoZXNlIGNhbGxiYWNr
+cyB3b3JrLAo+ID4gPiB0aGUgaGlnaGVyIGxldmVscyBpbiB0aGUgY2FsbGJhY2sgc3RhY2sgY2Fs
+bCB0aGUgbG93ZXIgbGV2ZWxzLCB0aGlzCj4gPiA+IGFsbG93cyBlYWNoIGxldmVsIHRoZSBwbGFj
+ZSB0aGUgbmV4dCBsZXZlbCdzIGNhbGxiYWNrIHByb3Blcmx5LCBlZyBkbwo+ID4gPiB0aGluZ3Mg
+YmVmb3JlL2FmdGVyIGFzIG5lY2Vzc2FyeS4KPiA+ID4gCj4gPiA+IEphc29uCj4gPiAKPiA+IEkg
+dHJpZWQgdG8gbG9vayB1cCBmb3IgZGlzY3Vzc2lvbiBmcm9tIHRoZSBwYXRjaHdvcmsuIFRoZXNl
+IGhhZCBhcHBlYXJlZAo+ID4gaW4gdjYuIEkgZ3Vlc3MgSSBoYXZlIHRvIGJhY2t0cmFjayB0aGUg
+ZGlzY3Vzc2lvbnMgZnJvbSBteSBtYWlkaXIKPiA+IGJlY2F1c2UgSSBob25lc3RseSBkb24ndCB1
+bmRlcnN0YW5kIHdoeSBjbGFzcyBzaHV0ZG93biB3b3VsZCBoYXZlIHRvCj4gPiBjYWxsIGJ1cyBj
+YWxsYmFjayBleHBsaWNpdGx5LiBUaGVyZSdzIG5vdGhpbmcgaW4gdGhlIGNvbW1pdCBtZXNzYWdl
+Cj4gPiBhYm91dCB0aGlzIG5vciAgaXMgdGhlcmUgYW55IGNvbW1lbnQgaW4gdGhlIGNvZGUuCj4g
+PiAKPiA+IFRoaXMgbXVzdCBiZSBmYWlybHkgcmVjZW50IGRldmVsb3BtZW50IHRoYXQgSSd2ZSBt
+aXNzZWQ/Cj4gPiAKPiA+IC9KYXJra28KPiAKPiBGb3VuZCBpdDoKPiAKPiAiTG9va2luZyBhdCB0
+aGlzIGNsb3Nlciwgbm93IHlvdSBkZWZpbmF0ZWx5IGhhdmUgdG8gY2hhbmdlIHRoZSBUUE0KPiBw
+YXRjaCB0byBjYWxsIHRocm91Z2ggdG8gdGhlIG90aGVyIHNodXRkb3duIG1ldGhvZHMuIFdlIGNh
+biBzYXkKPiBjdXJyZW50IFRQTSBkcml2ZXJzIGhhdmUgbm8gZHJpdmVyLT5zaHV0ZG93biwgYnV0
+IHdlIGNhbm5vdCBiZSBzdXJlCj4gYWJvdXQgdGhlIGJ1cy0+c2h1dGRvd24sIHNvIG1heSBhcyB3
+ZWxsIGNhbGwgYm90aCBmcm9tIHRwbSdzCj4gY2xhc3MtPnNodXRkb3duLgo+IAo+IEkgd291bGQg
+c2F5IHRoaXMgc2hvdWxkIGJlIGRvbmUgYWZ0ZXIgdGhlIHRwbTJfc2h1dGRvd24gY29tcGxldGVz
+IGFzCj4gbG93ZXIgbGV2ZWwgc2h1dGRvd25zIGNvdWxkIHJlbW92ZSByZWdpc3RlciBhY2Nlc3Mu
+Cj4gCj4gSmFzb24iCj4gCj4gQW5kIG1ha2VzIHNlbnNlLgo+IAo+IFRoaXMgcGF0Y2ggaXMgYSBO
+QUsgZm9yIHR3byByZWFzb25zOgo+IAo+IDEuIE5vIGNvbW1lbnQgZXhwbGFpbmluZyB0aGlzLgo+
+IDIuIFBhdGNoZXMgYXJlIGJyb2tlbiBhbmQgdGhleSBhcmUgaW4gd3Jvbmcgb3JkZXIgYW5kIGNv
+dmVyIGxldHRlciBpcwo+ICAgIG1pc3NpbmcKPiAKPiAvSmFya2tvCgpJICp0cmllZCogdG8gYXBw
+bHkgdGhlbSBteXNlbGYgYWZ0ZXIgc2VuZGluZyB0aGlzIGluIG9yZGVyIHRvIGJlIGhlbHBmdWwK
+YnV0IHRoZXkgaGF2ZSBjb21waWxhdGlvbiBlcnJvcnM6Cgpkcml2ZXJzL2NoYXIvdHBtL3RwbS1j
+aGlwLmM6IEluIGZ1bmN0aW9uIOKAmHRwbV9zaHV0ZG93buKAmToKZHJpdmVycy9jaGFyL3RwbS90
+cG0tY2hpcC5jOjE2MjoyMzogZXJyb3I6IOKAmFRQTV9TVV9DTEVBUuKAmSB1bmRlY2xhcmVkIChm
+aXJzdCB1c2UgaW4gdGhpcyBmdW5jdGlvbikKICAgdHBtMl9zaHV0ZG93bihjaGlwLCBUUE1fU1Vf
+Q0xFQVIpOwogICAgICAgICAgICAgICAgICAgICAgIF5+fn5+fn5+fn5+fgpkcml2ZXJzL2NoYXIv
+dHBtL3RwbS1jaGlwLmM6MTYyOjIzOiBub3RlOiBlYWNoIHVuZGVjbGFyZWQgaWRlbnRpZmllciBp
+cyByZXBvcnRlZCBvbmx5IG9uY2UgZm9yIGVhY2ggZnVuY3Rpb24gaXQgYXBwZWFycyBpbgpkcml2
+ZXJzL2NoYXIvdHBtL3RwbS1jaGlwLmM6IEluIGZ1bmN0aW9uIOKAmHRwbV9jaGlwX2FsbG9j4oCZ
+Ogpkcml2ZXJzL2NoYXIvdHBtL3RwbS1jaGlwLmM6MjE0OjE3OiBlcnJvcjog4oCYY2hpcC0+ZGV2
+LmNsYXNz4oCZIGlzIGEgcG9pbnRlcjsgZGlkIHlvdSBtZWFuIHRvIHVzZSDigJgtPuKAmT8KICBj
+aGlwLT5kZXYuY2xhc3Muc2h1dGRvd24gPSB0cG1fc2h1dGRvd247CgovSmFya2tvCgotLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0KQ2hlY2sgb3V0IHRoZSB2aWJyYW50IHRlY2ggY29tbXVuaXR5IG9uIG9u
+ZSBvZiB0aGUgd29ybGQncyBtb3N0CmVuZ2FnaW5nIHRlY2ggc2l0ZXMsIFNsYXNoZG90Lm9yZyEg
+aHR0cDovL3NkbS5saW5rL3NsYXNoZG90Cl9fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
+X19fX19fX19fX19fX19fCnRwbWRkLWRldmVsIG1haWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0
+cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9saXN0cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlz
+dGluZm8vdHBtZGQtZGV2ZWwK
