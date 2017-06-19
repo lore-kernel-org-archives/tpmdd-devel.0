@@ -1,245 +1,67 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v4] tpm: Enable CLKRUN protocol for Braswell systems
-Date: Mon, 19 Jun 2017 01:52:36 +0200
-Message-ID: <1497829956.2552.10.camel@linux.intel.com>
-References: <1496369044-38234-1-git-send-email-azhar.shaikh@intel.com>
-         <1497469141-137479-1-git-send-email-azhar.shaikh@intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] tpm_crb: initialise priv->cmd_size sooner
+Date: Mon, 19 Jun 2017 02:13:38 +0200
+Message-ID: <1497831218.2552.12.camel@linux.intel.com>
+References: <20170616194848.232936-1-manuel.lauss@gmail.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="UTF-8"
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <1497469141-137479-1-git-send-email-azhar.shaikh@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Azhar Shaikh <azhar.shaikh@intel.com>, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
-Cc: linux-security-module@vger.kernel.org
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170616194848.232936-1-manuel.lauss-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Manuel Lauss <manuel.lauss-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, 2017-06-14 at 12:39 -0700, Azhar Shaikh wrote:
-> To overcome a hardware limitation on Intel Braswell systems,
-> disable CLKRUN protocol during TPM transactions and re-enable
-> once the transaction is completed.
+On Fri, 2017-06-16 at 21:48 +0200, Manuel Lauss wrote:
+> priv->cmd_size is never initialised if  the cmd and rsp buffers reside
+> at different addresses.  Move initialisation to right after the buffer
+> was mapped.
 > 
-> Signed-off-by: Azhar Shaikh <azhar.shaikh@intel.com>
+> This bug was introduced by commit aa77ea0e43dc5bb0c1dcc9bad76afa
+> ("tpm/tpm_crb: cache cmd_size register value.").
 
-Does not merge to my tree:
+Please, use a Fixes tag.
 
-git://git.infradead.org/users/jjs/linux-tpmdd.git
+> Signed-off-by: Manuel Lauss <manuel.lauss-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+> ---
+>  drivers/char/tpm/tpm_crb.c | 4 ++--
+>  1 file changed, 2 insertions(+), 2 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+> index b917b9d5f710..17d846d00417 100644
+> --- a/drivers/char/tpm/tpm_crb.c
+> +++ b/drivers/char/tpm/tpm_crb.c
+> @@ -495,6 +495,8 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+>  		goto out;
+>  	}
+>  
+> +	priv->cmd_size = cmd_size;
+> +
 
-Please fix.
+Should be done only if rsp is succesfully mapped.
+
+>  	memcpy_fromio(&rsp_pa, &priv->regs_t->ctrl_rsp_pa, 8);
+>  	rsp_pa = le64_to_cpu(rsp_pa);
+>  	rsp_size = crb_fixup_cmd_size(dev, &io_res, rsp_pa,
+> @@ -515,8 +517,6 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+>  		goto out;
+>  	}
+>  
+> -	priv->cmd_size = cmd_size;
+> -
+>  	priv->rsp = priv->cmd;
+>  
+>  out:
 
 /Jarkko
 
-> ---
-> Changes from v1:
-> - Add CONFIG_X86 around disable_lpc_clk_run() and enable_lpc_clk_run() to avoid
-> - build breakage on architectures which do not implement kmap_atomic_pfn()
-> 
-> Changes from v2:
-> - Use ioremap()/iounmap() instead of kmap_atomic_pfn()/kunmap_atomic()
-> - Move is_bsw() and all macros from tpm.h to tpm_tis.c file.
-> - Add the is_bsw() check in disable_lpc_clk_run() and enable_lpc_clk_run()
-> - instead of adding it in each read/write API.
-> 
-> Changes from v3:
-> - Move the code under #ifdef CONFIG_X86 and create stub functions for everything else
-> - Rename the functions disable_lpc_clk_run() -> tpm_platform_begin_xfer() and
-> - enable_lpc_clk_run() -> tpm_platform_end_xfer()
-> - Remove wmb()
-> - Correct the parameters for outb()
-> 
->  drivers/char/tpm/tpm.h     |   4 ++
->  drivers/char/tpm/tpm_tis.c | 112 +++++++++++++++++++++++++++++++++++++++++++++
->  2 files changed, 116 insertions(+)
-> 
-> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> index 4b4c8dee3096..6b769fbc4407 100644
-> --- a/drivers/char/tpm/tpm.h
-> +++ b/drivers/char/tpm/tpm.h
-> @@ -36,6 +36,10 @@
->  #include <linux/highmem.h>
->  #include <crypto/hash_info.h>
->  
-> +#ifdef CONFIG_X86
-> +#include <asm/intel-family.h>
-> +#endif
-> +
->  enum tpm_const {
->  	TPM_MINOR = 224,	/* officially assigned */
->  	TPM_BUFSIZE = 4096,
-> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-> index c7e1384f1b08..ce6f1a8b0510 100644
-> --- a/drivers/char/tpm/tpm_tis.c
-> +++ b/drivers/char/tpm/tpm_tis.c
-> @@ -89,13 +89,93 @@ static inline int is_itpm(struct acpi_device *dev)
->  }
->  #endif
->  
-> +#ifdef CONFIG_X86
-> +#define INTEL_LEGACY_BLK_BASE_ADDR      0xFED08000
-> +#define ILB_REMAP_SIZE			0x100
-> +#define LPC_CNTRL_REG_OFFSET            0x84
-> +#define LPC_CLKRUN_EN                   (1 << 2)
-> +
-> +void __iomem *ilb_base_addr;
-> +
-> +static inline bool is_bsw(void)
-> +{
-> +	return ((boot_cpu_data.x86_model == INTEL_FAM6_ATOM_AIRMONT) ? 1 : 0);
-> +}
-> +
-> +/**
-> + * tpm_platform_begin_xfer() - clear LPC CLKRUN_EN i.e. clocks will be running
-> + */
-> +static void tpm_platform_begin_xfer(void)
-> +{
-> +	u32 clkrun_val;
-> +
-> +	if (!is_bsw())
-> +		return;
-> +
-> +	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-> +
-> +	/* Disable LPC CLKRUN# */
-> +	clkrun_val &= ~LPC_CLKRUN_EN;
-> +	iowrite32(clkrun_val, ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-> +
-> +	/*
-> +	 * Write any random value on port 0x80 which is on LPC, to make
-> +	 * sure LPC clock is running before sending any TPM command.
-> +	 */
-> +	outb(0xCC, 0x80);
-> +
-> +}
-> +
-> +/**
-> + * tpm_platform_end_xfer() - set LPC CLKRUN_EN i.e. clocks can be turned off
-> + */
-> +static void tpm_platform_end_xfer(void)
-> +{
-> +	u32 clkrun_val;
-> +
-> +	if (!is_bsw())
-> +		return;
-> +
-> +	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-> +
-> +	/* Enable LPC CLKRUN# */
-> +	clkrun_val |= LPC_CLKRUN_EN;
-> +	iowrite32(clkrun_val, ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-> +
-> +	/*
-> +	 * Write any random value on port 0x80 which is on LPC, to make
-> +	 * sure LPC clock is running before sending any TPM command.
-> +	 */
-> +	outb(0xCC, 0x80);
-> +
-> +}
-> +#else
-> +static inline bool is_bsw(void)
-> +{
-> +	return false;
-> +}
-> +
-> +static void tpm_platform_begin_xfer(void)
-> +{
-> +}
-> +
-> +static void tpm_platform_end_xfer(void)
-> +{
-> +}
-> +#endif
-> +
->  static int tpm_tcg_read_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
->  			      u8 *result)
->  {
->  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
->  
-> +	tpm_platform_begin_xfer();
-> +
->  	while (len--)
->  		*result++ = ioread8(phy->iobase + addr);
-> +
-> +	tpm_platform_end_xfer();
-> +
->  	return 0;
->  }
->  
-> @@ -104,8 +184,13 @@ static int tpm_tcg_write_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
->  {
->  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
->  
-> +	tpm_platform_begin_xfer();
-> +
->  	while (len--)
->  		iowrite8(*value++, phy->iobase + addr);
-> +
-> +	tpm_platform_end_xfer();
-> +
->  	return 0;
->  }
->  
-> @@ -113,7 +198,12 @@ static int tpm_tcg_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
->  {
->  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
->  
-> +	tpm_platform_begin_xfer();
-> +
->  	*result = ioread16(phy->iobase + addr);
-> +
-> +	tpm_platform_end_xfer();
-> +
->  	return 0;
->  }
->  
-> @@ -121,7 +211,12 @@ static int tpm_tcg_read32(struct tpm_tis_data *data, u32 addr, u32 *result)
->  {
->  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
->  
-> +	tpm_platform_begin_xfer();
-> +
->  	*result = ioread32(phy->iobase + addr);
-> +
-> +	tpm_platform_end_xfer();
-> +
->  	return 0;
->  }
->  
-> @@ -129,7 +224,12 @@ static int tpm_tcg_write32(struct tpm_tis_data *data, u32 addr, u32 value)
->  {
->  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
->  
-> +	tpm_platform_begin_xfer();
-> +
->  	iowrite32(value, phy->iobase + addr);
-> +
-> +	tpm_platform_end_xfer();
-> +
->  	return 0;
->  }
->  
-> @@ -191,6 +291,12 @@ static int tpm_tis_pnp_init(struct pnp_dev *pnp_dev,
->  		acpi_dev_handle = ACPI_HANDLE(&pnp_dev->dev);
->  	}
->  
-> +#ifdef CONFIG_X86
-> +	if (is_bsw())
-> +		ilb_base_addr = ioremap(INTEL_LEGACY_BLK_BASE_ADDR,
-> +					ILB_REMAP_SIZE);
-> +#endif
-> +
->  	return tpm_tis_init(&pnp_dev->dev, &tpm_info, acpi_dev_handle);
->  }
->  
-> @@ -214,6 +320,12 @@ static void tpm_tis_pnp_remove(struct pnp_dev *dev)
->  
->  	tpm_chip_unregister(chip);
->  	tpm_tis_remove(chip);
-> +
-> +#ifdef CONFIG_X86
-> +	if (is_bsw())
-> +		iounmap(ilb_base_addr);
-> +#endif
-> +
->  }
->  
->  static struct pnp_driver tis_pnp_driver = {
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
