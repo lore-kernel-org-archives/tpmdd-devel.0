@@ -1,89 +1,44 @@
-From: Josh Zimmerman via tpmdd-devel <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Subject: Re: [PATCH v6 1/2] tpm: Issue a TPM2_Shutdown for
- TPM2 devices.
-Date: Mon, 19 Jun 2017 15:44:55 -0700
-Message-ID: <CAHSjozDy0dsGPkyXzVsDabjtbM4-QkzoE2fH1gDONXETyA19RA@mail.gmail.com>
-References: <20170616172531.28464-1-joshz@google.com>
-	<1497828091.2552.6.camel@linux.intel.com>
-	<1497828407.2552.8.camel@linux.intel.com>
-	<20170619155122.GA10188@obsidianresearch.com>
-	<20170619221220.kfk5dldducxvou5b@linux.intel.com>
-	<20170619222122.55m5goanayw3gkeo@linux.intel.com>
-	<20170619223840.a66extf3r5ylmpnb@linux.intel.com>
-Reply-To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+From: James Morris <jmorris@namei.org>
+Subject: Re: [GIT PULL] tpmdd fixes for 4.13
+Date: Tue, 20 Jun 2017 11:22:00 +1000 (AEST)
+Message-ID: <alpine.LRH.2.20.1706201121401.10628@namei.org>
+References: <1497833925.14670.3.camel@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170619223840.a66extf3r5ylmpnb-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
+Content-Type: multipart/mixed; BOUNDARY="1665246916-843631732-1497921720=:10628"
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <1497833925.14670.3.camel@linux.intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-U29ycnkgYWJvdXQgdGhlIG1lc3MuIEknbSBhIGJpdCBzd2FtcGVkIHRvZGF5LCBidXQgSSdsbCB3
-b3JrIG9uCmNsZWFuaW5nIHVwIHRoZSBwYXRjaCBmb3JtYXR0aW5nICYgY29tbWl0IG1lc3NhZ2Ug
-YW5kIGZpeCB0aGUKY29tcGlsYXRpb24gcHJvYmxlbSBsYXRlciB0b2RheSBvciB0b21vcnJvdy4g
-KEl0IGRpZCBidWlsZCBvbiBteQpjaGVja291dCBvZiB0aGUgdHBtZGQgYnJhbmNoLi4uIGd1ZXNz
-IEkgZGlkbid0IHB1bGwgaW4gc29tZSBpbXBvcnRhbnQKY2hhbmdlLikKSm9zaAoKCk9uIE1vbiwg
-SnVuIDE5LCAyMDE3IGF0IDM6MzggUE0sIEphcmtrbyBTYWtraW5lbgo8amFya2tvLnNha2tpbmVu
-QGxpbnV4LmludGVsLmNvbT4gd3JvdGU6Cj4gT24gVHVlLCBKdW4gMjAsIDIwMTcgYXQgMTI6MjE6
-MjJBTSArMDIwMCwgSmFya2tvIFNha2tpbmVuIHdyb3RlOgo+PiBPbiBUdWUsIEp1biAyMCwgMjAx
-NyBhdCAxMjoxMjoyMEFNICswMjAwLCBKYXJra28gU2Fra2luZW4gd3JvdGU6Cj4+ID4gT24gTW9u
-LCBKdW4gMTksIDIwMTcgYXQgMDk6NTE6MjJBTSAtMDYwMCwgSmFzb24gR3VudGhvcnBlIHdyb3Rl
-Ogo+PiA+ID4gT24gTW9uLCBKdW4gMTksIDIwMTcgYXQgMDE6MjY6NDdBTSArMDIwMCwgSmFya2tv
-IFNha2tpbmVuIHdyb3RlOgo+PiA+ID4KPj4gPiA+ID4gRmVlbHMgd2VpcmQgdGhhdCB5b3UgaGF2
-ZSB0byBjYWxsIGZyYW1ld29yayBmdW5jdGlvbnMgbGlrZSB0aGF0IGluIHRoZQo+PiA+ID4gPiBk
-cml2ZXIuIFlvdSBtdXN0IGhhdmUgYnJpbGxpYW50IHJlYXNvbiB0byBkbyBzbyBhbmQgdGhhdCBz
-aG91bGQgYmUgdmVyeQo+PiA+ID4gPiB3ZWxsIGRvY3VtZW50ZWQgaW4gdGhlIGNvZGUuIFRoaXMg
-aXMgdGVycmlibGUuLi4KPj4gPiA+Cj4+ID4gPiBUaGlzIHdhcyBhbGwgZGlzY3Vzc2VkIG9uIHRo
-ZSBsaXN0LiBJdCB0aGUgd2F5IHRoZXNlIGNhbGxiYWNrcyB3b3JrLAo+PiA+ID4gdGhlIGhpZ2hl
-ciBsZXZlbHMgaW4gdGhlIGNhbGxiYWNrIHN0YWNrIGNhbGwgdGhlIGxvd2VyIGxldmVscywgdGhp
-cwo+PiA+ID4gYWxsb3dzIGVhY2ggbGV2ZWwgdGhlIHBsYWNlIHRoZSBuZXh0IGxldmVsJ3MgY2Fs
-bGJhY2sgcHJvcGVybHksIGVnIGRvCj4+ID4gPiB0aGluZ3MgYmVmb3JlL2FmdGVyIGFzIG5lY2Vz
-c2FyeS4KPj4gPiA+Cj4+ID4gPiBKYXNvbgo+PiA+Cj4+ID4gSSB0cmllZCB0byBsb29rIHVwIGZv
-ciBkaXNjdXNzaW9uIGZyb20gdGhlIHBhdGNod29yay4gVGhlc2UgaGFkIGFwcGVhcmVkCj4+ID4g
-aW4gdjYuIEkgZ3Vlc3MgSSBoYXZlIHRvIGJhY2t0cmFjayB0aGUgZGlzY3Vzc2lvbnMgZnJvbSBt
-eSBtYWlkaXIKPj4gPiBiZWNhdXNlIEkgaG9uZXN0bHkgZG9uJ3QgdW5kZXJzdGFuZCB3aHkgY2xh
-c3Mgc2h1dGRvd24gd291bGQgaGF2ZSB0bwo+PiA+IGNhbGwgYnVzIGNhbGxiYWNrIGV4cGxpY2l0
-bHkuIFRoZXJlJ3Mgbm90aGluZyBpbiB0aGUgY29tbWl0IG1lc3NhZ2UKPj4gPiBhYm91dCB0aGlz
-IG5vciAgaXMgdGhlcmUgYW55IGNvbW1lbnQgaW4gdGhlIGNvZGUuCj4+ID4KPj4gPiBUaGlzIG11
-c3QgYmUgZmFpcmx5IHJlY2VudCBkZXZlbG9wbWVudCB0aGF0IEkndmUgbWlzc2VkPwo+PiA+Cj4+
-ID4gL0phcmtrbwo+Pgo+PiBGb3VuZCBpdDoKPj4KPj4gIkxvb2tpbmcgYXQgdGhpcyBjbG9zZXIs
-IG5vdyB5b3UgZGVmaW5hdGVseSBoYXZlIHRvIGNoYW5nZSB0aGUgVFBNCj4+IHBhdGNoIHRvIGNh
-bGwgdGhyb3VnaCB0byB0aGUgb3RoZXIgc2h1dGRvd24gbWV0aG9kcy4gV2UgY2FuIHNheQo+PiBj
-dXJyZW50IFRQTSBkcml2ZXJzIGhhdmUgbm8gZHJpdmVyLT5zaHV0ZG93biwgYnV0IHdlIGNhbm5v
-dCBiZSBzdXJlCj4+IGFib3V0IHRoZSBidXMtPnNodXRkb3duLCBzbyBtYXkgYXMgd2VsbCBjYWxs
-IGJvdGggZnJvbSB0cG0ncwo+PiBjbGFzcy0+c2h1dGRvd24uCj4+Cj4+IEkgd291bGQgc2F5IHRo
-aXMgc2hvdWxkIGJlIGRvbmUgYWZ0ZXIgdGhlIHRwbTJfc2h1dGRvd24gY29tcGxldGVzIGFzCj4+
-IGxvd2VyIGxldmVsIHNodXRkb3ducyBjb3VsZCByZW1vdmUgcmVnaXN0ZXIgYWNjZXNzLgo+Pgo+
-PiBKYXNvbiIKPj4KPj4gQW5kIG1ha2VzIHNlbnNlLgo+Pgo+PiBUaGlzIHBhdGNoIGlzIGEgTkFL
-IGZvciB0d28gcmVhc29uczoKPj4KPj4gMS4gTm8gY29tbWVudCBleHBsYWluaW5nIHRoaXMuCj4+
-IDIuIFBhdGNoZXMgYXJlIGJyb2tlbiBhbmQgdGhleSBhcmUgaW4gd3Jvbmcgb3JkZXIgYW5kIGNv
-dmVyIGxldHRlciBpcwo+PiAgICBtaXNzaW5nCj4+Cj4+IC9KYXJra28KPgo+IEkgKnRyaWVkKiB0
-byBhcHBseSB0aGVtIG15c2VsZiBhZnRlciBzZW5kaW5nIHRoaXMgaW4gb3JkZXIgdG8gYmUgaGVs
-cGZ1bAo+IGJ1dCB0aGV5IGhhdmUgY29tcGlsYXRpb24gZXJyb3JzOgo+Cj4gZHJpdmVycy9jaGFy
-L3RwbS90cG0tY2hpcC5jOiBJbiBmdW5jdGlvbiDigJh0cG1fc2h1dGRvd27igJk6Cj4gZHJpdmVy
-cy9jaGFyL3RwbS90cG0tY2hpcC5jOjE2MjoyMzogZXJyb3I6IOKAmFRQTV9TVV9DTEVBUuKAmSB1
-bmRlY2xhcmVkIChmaXJzdCB1c2UgaW4gdGhpcyBmdW5jdGlvbikKPiAgICB0cG0yX3NodXRkb3du
-KGNoaXAsIFRQTV9TVV9DTEVBUik7Cj4gICAgICAgICAgICAgICAgICAgICAgICBefn5+fn5+fn5+
-fn4KPiBkcml2ZXJzL2NoYXIvdHBtL3RwbS1jaGlwLmM6MTYyOjIzOiBub3RlOiBlYWNoIHVuZGVj
-bGFyZWQgaWRlbnRpZmllciBpcyByZXBvcnRlZCBvbmx5IG9uY2UgZm9yIGVhY2ggZnVuY3Rpb24g
-aXQgYXBwZWFycyBpbgo+IGRyaXZlcnMvY2hhci90cG0vdHBtLWNoaXAuYzogSW4gZnVuY3Rpb24g
-4oCYdHBtX2NoaXBfYWxsb2PigJk6Cj4gZHJpdmVycy9jaGFyL3RwbS90cG0tY2hpcC5jOjIxNDox
-NzogZXJyb3I6IOKAmGNoaXAtPmRldi5jbGFzc+KAmSBpcyBhIHBvaW50ZXI7IGRpZCB5b3UgbWVh
-biB0byB1c2Ug4oCYLT7igJk/Cj4gICBjaGlwLT5kZXYuY2xhc3Muc2h1dGRvd24gPSB0cG1fc2h1
-dGRvd247Cj4KPiAvSmFya2tvCgotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KQ2hlY2sgb3V0IHRoZSB2
-aWJyYW50IHRlY2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29ybGQncyBtb3N0CmVuZ2FnaW5n
-IHRlY2ggc2l0ZXMsIFNsYXNoZG90Lm9yZyEgaHR0cDovL3NkbS5saW5rL3NsYXNoZG90Cl9fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fCnRwbWRkLWRldmVsIG1h
-aWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9saXN0
-cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwK
+  This message is in MIME format.  The first part should be readable text,
+  while the remaining parts are likely unreadable without MIME-aware tools.
+
+--1665246916-843631732-1497921720=:10628
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8BIT
+
+On Mon, 19 Jun 2017, Jarkko Sakkinen wrote:
+
+> Hi
+> 
+> Here are thpdates for 4.13.
+> 
+> Major changes:
+> 
+> - Releasing and relinquishing of locality in tpm_vtpm_proxy for each
+>   command/response sequence.
+> - Consolidating platform and ACPI driver in tpm_tis.
+> - Sanitize endian conversions for TPM 1.2 commands i.e. call
+>   cpu_to_be32() in place when required. Do not have it in the constant
+>   definition.
+
+Pulled to -next, thanks.
+
+
+-- 
+James Morris
+<jmorris@namei.org>
+
+--1665246916-843631732-1497921720=:10628--
