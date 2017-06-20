@@ -1,22 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v6 1/2] tpm: Issue a TPM2_Shutdown for
- TPM2 devices.
-Date: Tue, 20 Jun 2017 17:05:41 +0200
-Message-ID: <20170620150541.x5b7vkxyb3w55gjq@linux.intel.com>
-References: <20170616172531.28464-1-joshz@google.com>
-	<1497828091.2552.6.camel@linux.intel.com>
-	<1497828407.2552.8.camel@linux.intel.com>
-	<20170619155122.GA10188@obsidianresearch.com>
-	<20170619221220.kfk5dldducxvou5b@linux.intel.com>
-	<20170619222122.55m5goanayw3gkeo@linux.intel.com>
-	<20170619223840.a66extf3r5ylmpnb@linux.intel.com>
-	<CAHSjozDy0dsGPkyXzVsDabjtbM4-QkzoE2fH1gDONXETyA19RA@mail.gmail.com>
+Subject: Re: [PATCH][tpm-next] tpm_tis: make ilb_base_addr
+ static
+Date: Tue, 20 Jun 2017 17:06:52 +0200
+Message-ID: <20170620150652.s5hrk4mffm2vmuek@linux.intel.com>
+References: <20170620102202.7132-1-colin.king@canonical.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <CAHSjozDy0dsGPkyXzVsDabjtbM4-QkzoE2fH1gDONXETyA19RA-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
+In-Reply-To: <20170620102202.7132-1-colin.king-Z7WLFzj8eWMS+FvcfC7Uqw@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -25,71 +18,48 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
+To: Colin King <colin.king-Z7WLFzj8eWMS+FvcfC7Uqw@public.gmane.org>
+Cc: kernel-janitors-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Tm8gd29ycmllcy4gSnVzdCBmaXggdGhlbSBhbmQgSSB3aWxsIGluY2x1ZGUgdG8gbXkgbmV4dCBw
-dWxsIHJlcXVlc3QhCgovSmFya2tvCgpPbiBNb24sIEp1biAxOSwgMjAxNyBhdCAwMzo0NDo1NVBN
-IC0wNzAwLCBKb3NoIFppbW1lcm1hbiB3cm90ZToKPiBTb3JyeSBhYm91dCB0aGUgbWVzcy4gSSdt
-IGEgYml0IHN3YW1wZWQgdG9kYXksIGJ1dCBJJ2xsIHdvcmsgb24KPiBjbGVhbmluZyB1cCB0aGUg
-cGF0Y2ggZm9ybWF0dGluZyAmIGNvbW1pdCBtZXNzYWdlIGFuZCBmaXggdGhlCj4gY29tcGlsYXRp
-b24gcHJvYmxlbSBsYXRlciB0b2RheSBvciB0b21vcnJvdy4gKEl0IGRpZCBidWlsZCBvbiBteQo+
-IGNoZWNrb3V0IG9mIHRoZSB0cG1kZCBicmFuY2guLi4gZ3Vlc3MgSSBkaWRuJ3QgcHVsbCBpbiBz
-b21lIGltcG9ydGFudAo+IGNoYW5nZS4pCj4gSm9zaAo+IAo+IAo+IE9uIE1vbiwgSnVuIDE5LCAy
-MDE3IGF0IDM6MzggUE0sIEphcmtrbyBTYWtraW5lbgo+IDxqYXJra28uc2Fra2luZW5AbGludXgu
-aW50ZWwuY29tPiB3cm90ZToKPiA+IE9uIFR1ZSwgSnVuIDIwLCAyMDE3IGF0IDEyOjIxOjIyQU0g
-KzAyMDAsIEphcmtrbyBTYWtraW5lbiB3cm90ZToKPiA+PiBPbiBUdWUsIEp1biAyMCwgMjAxNyBh
-dCAxMjoxMjoyMEFNICswMjAwLCBKYXJra28gU2Fra2luZW4gd3JvdGU6Cj4gPj4gPiBPbiBNb24s
-IEp1biAxOSwgMjAxNyBhdCAwOTo1MToyMkFNIC0wNjAwLCBKYXNvbiBHdW50aG9ycGUgd3JvdGU6
-Cj4gPj4gPiA+IE9uIE1vbiwgSnVuIDE5LCAyMDE3IGF0IDAxOjI2OjQ3QU0gKzAyMDAsIEphcmtr
-byBTYWtraW5lbiB3cm90ZToKPiA+PiA+ID4KPiA+PiA+ID4gPiBGZWVscyB3ZWlyZCB0aGF0IHlv
-dSBoYXZlIHRvIGNhbGwgZnJhbWV3b3JrIGZ1bmN0aW9ucyBsaWtlIHRoYXQgaW4gdGhlCj4gPj4g
-PiA+ID4gZHJpdmVyLiBZb3UgbXVzdCBoYXZlIGJyaWxsaWFudCByZWFzb24gdG8gZG8gc28gYW5k
-IHRoYXQgc2hvdWxkIGJlIHZlcnkKPiA+PiA+ID4gPiB3ZWxsIGRvY3VtZW50ZWQgaW4gdGhlIGNv
-ZGUuIFRoaXMgaXMgdGVycmlibGUuLi4KPiA+PiA+ID4KPiA+PiA+ID4gVGhpcyB3YXMgYWxsIGRp
-c2N1c3NlZCBvbiB0aGUgbGlzdC4gSXQgdGhlIHdheSB0aGVzZSBjYWxsYmFja3Mgd29yaywKPiA+
-PiA+ID4gdGhlIGhpZ2hlciBsZXZlbHMgaW4gdGhlIGNhbGxiYWNrIHN0YWNrIGNhbGwgdGhlIGxv
-d2VyIGxldmVscywgdGhpcwo+ID4+ID4gPiBhbGxvd3MgZWFjaCBsZXZlbCB0aGUgcGxhY2UgdGhl
-IG5leHQgbGV2ZWwncyBjYWxsYmFjayBwcm9wZXJseSwgZWcgZG8KPiA+PiA+ID4gdGhpbmdzIGJl
-Zm9yZS9hZnRlciBhcyBuZWNlc3NhcnkuCj4gPj4gPiA+Cj4gPj4gPiA+IEphc29uCj4gPj4gPgo+
-ID4+ID4gSSB0cmllZCB0byBsb29rIHVwIGZvciBkaXNjdXNzaW9uIGZyb20gdGhlIHBhdGNod29y
-ay4gVGhlc2UgaGFkIGFwcGVhcmVkCj4gPj4gPiBpbiB2Ni4gSSBndWVzcyBJIGhhdmUgdG8gYmFj
-a3RyYWNrIHRoZSBkaXNjdXNzaW9ucyBmcm9tIG15IG1haWRpcgo+ID4+ID4gYmVjYXVzZSBJIGhv
-bmVzdGx5IGRvbid0IHVuZGVyc3RhbmQgd2h5IGNsYXNzIHNodXRkb3duIHdvdWxkIGhhdmUgdG8K
-PiA+PiA+IGNhbGwgYnVzIGNhbGxiYWNrIGV4cGxpY2l0bHkuIFRoZXJlJ3Mgbm90aGluZyBpbiB0
-aGUgY29tbWl0IG1lc3NhZ2UKPiA+PiA+IGFib3V0IHRoaXMgbm9yICBpcyB0aGVyZSBhbnkgY29t
-bWVudCBpbiB0aGUgY29kZS4KPiA+PiA+Cj4gPj4gPiBUaGlzIG11c3QgYmUgZmFpcmx5IHJlY2Vu
-dCBkZXZlbG9wbWVudCB0aGF0IEkndmUgbWlzc2VkPwo+ID4+ID4KPiA+PiA+IC9KYXJra28KPiA+
-Pgo+ID4+IEZvdW5kIGl0Ogo+ID4+Cj4gPj4gIkxvb2tpbmcgYXQgdGhpcyBjbG9zZXIsIG5vdyB5
-b3UgZGVmaW5hdGVseSBoYXZlIHRvIGNoYW5nZSB0aGUgVFBNCj4gPj4gcGF0Y2ggdG8gY2FsbCB0
-aHJvdWdoIHRvIHRoZSBvdGhlciBzaHV0ZG93biBtZXRob2RzLiBXZSBjYW4gc2F5Cj4gPj4gY3Vy
-cmVudCBUUE0gZHJpdmVycyBoYXZlIG5vIGRyaXZlci0+c2h1dGRvd24sIGJ1dCB3ZSBjYW5ub3Qg
-YmUgc3VyZQo+ID4+IGFib3V0IHRoZSBidXMtPnNodXRkb3duLCBzbyBtYXkgYXMgd2VsbCBjYWxs
-IGJvdGggZnJvbSB0cG0ncwo+ID4+IGNsYXNzLT5zaHV0ZG93bi4KPiA+Pgo+ID4+IEkgd291bGQg
-c2F5IHRoaXMgc2hvdWxkIGJlIGRvbmUgYWZ0ZXIgdGhlIHRwbTJfc2h1dGRvd24gY29tcGxldGVz
-IGFzCj4gPj4gbG93ZXIgbGV2ZWwgc2h1dGRvd25zIGNvdWxkIHJlbW92ZSByZWdpc3RlciBhY2Nl
-c3MuCj4gPj4KPiA+PiBKYXNvbiIKPiA+Pgo+ID4+IEFuZCBtYWtlcyBzZW5zZS4KPiA+Pgo+ID4+
-IFRoaXMgcGF0Y2ggaXMgYSBOQUsgZm9yIHR3byByZWFzb25zOgo+ID4+Cj4gPj4gMS4gTm8gY29t
-bWVudCBleHBsYWluaW5nIHRoaXMuCj4gPj4gMi4gUGF0Y2hlcyBhcmUgYnJva2VuIGFuZCB0aGV5
-IGFyZSBpbiB3cm9uZyBvcmRlciBhbmQgY292ZXIgbGV0dGVyIGlzCj4gPj4gICAgbWlzc2luZwo+
-ID4+Cj4gPj4gL0phcmtrbwo+ID4KPiA+IEkgKnRyaWVkKiB0byBhcHBseSB0aGVtIG15c2VsZiBh
-ZnRlciBzZW5kaW5nIHRoaXMgaW4gb3JkZXIgdG8gYmUgaGVscGZ1bAo+ID4gYnV0IHRoZXkgaGF2
-ZSBjb21waWxhdGlvbiBlcnJvcnM6Cj4gPgo+ID4gZHJpdmVycy9jaGFyL3RwbS90cG0tY2hpcC5j
-OiBJbiBmdW5jdGlvbiDigJh0cG1fc2h1dGRvd27igJk6Cj4gPiBkcml2ZXJzL2NoYXIvdHBtL3Rw
-bS1jaGlwLmM6MTYyOjIzOiBlcnJvcjog4oCYVFBNX1NVX0NMRUFS4oCZIHVuZGVjbGFyZWQgKGZp
-cnN0IHVzZSBpbiB0aGlzIGZ1bmN0aW9uKQo+ID4gICAgdHBtMl9zaHV0ZG93bihjaGlwLCBUUE1f
-U1VfQ0xFQVIpOwo+ID4gICAgICAgICAgICAgICAgICAgICAgICBefn5+fn5+fn5+fn4KPiA+IGRy
-aXZlcnMvY2hhci90cG0vdHBtLWNoaXAuYzoxNjI6MjM6IG5vdGU6IGVhY2ggdW5kZWNsYXJlZCBp
-ZGVudGlmaWVyIGlzIHJlcG9ydGVkIG9ubHkgb25jZSBmb3IgZWFjaCBmdW5jdGlvbiBpdCBhcHBl
-YXJzIGluCj4gPiBkcml2ZXJzL2NoYXIvdHBtL3RwbS1jaGlwLmM6IEluIGZ1bmN0aW9uIOKAmHRw
-bV9jaGlwX2FsbG9j4oCZOgo+ID4gZHJpdmVycy9jaGFyL3RwbS90cG0tY2hpcC5jOjIxNDoxNzog
-ZXJyb3I6IOKAmGNoaXAtPmRldi5jbGFzc+KAmSBpcyBhIHBvaW50ZXI7IGRpZCB5b3UgbWVhbiB0
-byB1c2Ug4oCYLT7igJk/Cj4gPiAgIGNoaXAtPmRldi5jbGFzcy5zaHV0ZG93biA9IHRwbV9zaHV0
-ZG93bjsKPiA+Cj4gPiAvSmFya2tvCgotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KQ2hlY2sgb3V0IHRo
-ZSB2aWJyYW50IHRlY2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29ybGQncyBtb3N0CmVuZ2Fn
-aW5nIHRlY2ggc2l0ZXMsIFNsYXNoZG90Lm9yZyEgaHR0cDovL3NkbS5saW5rL3NsYXNoZG90Cl9f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fCnRwbWRkLWRldmVs
-IG1haWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9s
-aXN0cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwK
+On Tue, Jun 20, 2017 at 11:22:02AM +0100, Colin King wrote:
+> From: Colin Ian King <colin.king-Z7WLFzj8eWMS+FvcfC7Uqw@public.gmane.org>
+> 
+> The pointer ilb_base_addr does not need to be in global scope, so make
+> it static.
+> 
+> Cleans up sparse warning:
+> "symbol 'ilb_base_addr' was not declared. Should it be static?"
+> 
+> Signed-off-by: Colin Ian King <colin.king-Z7WLFzj8eWMS+FvcfC7Uqw@public.gmane.org>
+
+Thanks Colin.
+
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+
+/Jarkko
+
+> ---
+>  drivers/char/tpm/tpm_tis.c | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+> index 506e62ca3576..c915d65c1909 100644
+> --- a/drivers/char/tpm/tpm_tis.c
+> +++ b/drivers/char/tpm/tpm_tis.c
+> @@ -138,7 +138,7 @@ static int check_acpi_tpm2(struct device *dev)
+>  #define LPC_CNTRL_REG_OFFSET            0x84
+>  #define LPC_CLKRUN_EN                   (1 << 2)
+>  
+> -void __iomem *ilb_base_addr;
+> +static void __iomem *ilb_base_addr;
+>  
+>  static inline bool is_bsw(void)
+>  {
+> -- 
+> 2.11.0
+> 
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
