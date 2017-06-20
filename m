@@ -1,21 +1,14 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v6 1/2] tpm: Issue a TPM2_Shutdown for
- TPM2 devices.
-Date: Tue, 20 Jun 2017 10:44:28 +0200
-Message-ID: <20170620084409.odpal3ijqxpamoyx@linux.intel.com>
-References: <20170616172531.28464-1-joshz@google.com>
-	<1497828091.2552.6.camel@linux.intel.com>
-	<1497828407.2552.8.camel@linux.intel.com>
-	<20170619155122.GA10188@obsidianresearch.com>
-	<20170619221220.kfk5dldducxvou5b@linux.intel.com>
-	<20170619222122.55m5goanayw3gkeo@linux.intel.com>
-	<20170619223840.a66extf3r5ylmpnb@linux.intel.com>
+Subject: [PATCH 1/2] tpm: fix a kernel memory leak in
+ tpm-sysfs.c
+Date: Tue, 20 Jun 2017 11:38:02 +0200
+Message-ID: <20170620093804.23803-2-jarkko.sakkinen@linux.intel.com>
+References: <20170620093804.23803-1-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170619223840.a66extf3r5ylmpnb-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+In-Reply-To: <20170620093804.23803-1-jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -24,64 +17,45 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: srajiv-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gVHVlLCBKdW4gMjAsIDIwMTcgYXQgMTI6Mzg6NDBBTSArMDIwMCwgSmFya2tvIFNha2tpbmVu
-IHdyb3RlOgo+IE9uIFR1ZSwgSnVuIDIwLCAyMDE3IGF0IDEyOjIxOjIyQU0gKzAyMDAsIEphcmtr
-byBTYWtraW5lbiB3cm90ZToKPiA+IE9uIFR1ZSwgSnVuIDIwLCAyMDE3IGF0IDEyOjEyOjIwQU0g
-KzAyMDAsIEphcmtrbyBTYWtraW5lbiB3cm90ZToKPiA+ID4gT24gTW9uLCBKdW4gMTksIDIwMTcg
-YXQgMDk6NTE6MjJBTSAtMDYwMCwgSmFzb24gR3VudGhvcnBlIHdyb3RlOgo+ID4gPiA+IE9uIE1v
-biwgSnVuIDE5LCAyMDE3IGF0IDAxOjI2OjQ3QU0gKzAyMDAsIEphcmtrbyBTYWtraW5lbiB3cm90
-ZToKPiA+ID4gPiAgCj4gPiA+ID4gPiBGZWVscyB3ZWlyZCB0aGF0IHlvdSBoYXZlIHRvIGNhbGwg
-ZnJhbWV3b3JrIGZ1bmN0aW9ucyBsaWtlIHRoYXQgaW4gdGhlCj4gPiA+ID4gPiBkcml2ZXIuIFlv
-dSBtdXN0IGhhdmUgYnJpbGxpYW50IHJlYXNvbiB0byBkbyBzbyBhbmQgdGhhdCBzaG91bGQgYmUg
-dmVyeQo+ID4gPiA+ID4gd2VsbCBkb2N1bWVudGVkIGluIHRoZSBjb2RlLiBUaGlzIGlzIHRlcnJp
-YmxlLi4uCj4gPiA+ID4gCj4gPiA+ID4gVGhpcyB3YXMgYWxsIGRpc2N1c3NlZCBvbiB0aGUgbGlz
-dC4gSXQgdGhlIHdheSB0aGVzZSBjYWxsYmFja3Mgd29yaywKPiA+ID4gPiB0aGUgaGlnaGVyIGxl
-dmVscyBpbiB0aGUgY2FsbGJhY2sgc3RhY2sgY2FsbCB0aGUgbG93ZXIgbGV2ZWxzLCB0aGlzCj4g
-PiA+ID4gYWxsb3dzIGVhY2ggbGV2ZWwgdGhlIHBsYWNlIHRoZSBuZXh0IGxldmVsJ3MgY2FsbGJh
-Y2sgcHJvcGVybHksIGVnIGRvCj4gPiA+ID4gdGhpbmdzIGJlZm9yZS9hZnRlciBhcyBuZWNlc3Nh
-cnkuCj4gPiA+ID4gCj4gPiA+ID4gSmFzb24KPiA+ID4gCj4gPiA+IEkgdHJpZWQgdG8gbG9vayB1
-cCBmb3IgZGlzY3Vzc2lvbiBmcm9tIHRoZSBwYXRjaHdvcmsuIFRoZXNlIGhhZCBhcHBlYXJlZAo+
-ID4gPiBpbiB2Ni4gSSBndWVzcyBJIGhhdmUgdG8gYmFja3RyYWNrIHRoZSBkaXNjdXNzaW9ucyBm
-cm9tIG15IG1haWRpcgo+ID4gPiBiZWNhdXNlIEkgaG9uZXN0bHkgZG9uJ3QgdW5kZXJzdGFuZCB3
-aHkgY2xhc3Mgc2h1dGRvd24gd291bGQgaGF2ZSB0bwo+ID4gPiBjYWxsIGJ1cyBjYWxsYmFjayBl
-eHBsaWNpdGx5LiBUaGVyZSdzIG5vdGhpbmcgaW4gdGhlIGNvbW1pdCBtZXNzYWdlCj4gPiA+IGFi
-b3V0IHRoaXMgbm9yICBpcyB0aGVyZSBhbnkgY29tbWVudCBpbiB0aGUgY29kZS4KPiA+ID4gCj4g
-PiA+IFRoaXMgbXVzdCBiZSBmYWlybHkgcmVjZW50IGRldmVsb3BtZW50IHRoYXQgSSd2ZSBtaXNz
-ZWQ/Cj4gPiA+IAo+ID4gPiAvSmFya2tvCj4gPiAKPiA+IEZvdW5kIGl0Ogo+ID4gCj4gPiAiTG9v
-a2luZyBhdCB0aGlzIGNsb3Nlciwgbm93IHlvdSBkZWZpbmF0ZWx5IGhhdmUgdG8gY2hhbmdlIHRo
-ZSBUUE0KPiA+IHBhdGNoIHRvIGNhbGwgdGhyb3VnaCB0byB0aGUgb3RoZXIgc2h1dGRvd24gbWV0
-aG9kcy4gV2UgY2FuIHNheQo+ID4gY3VycmVudCBUUE0gZHJpdmVycyBoYXZlIG5vIGRyaXZlci0+
-c2h1dGRvd24sIGJ1dCB3ZSBjYW5ub3QgYmUgc3VyZQo+ID4gYWJvdXQgdGhlIGJ1cy0+c2h1dGRv
-d24sIHNvIG1heSBhcyB3ZWxsIGNhbGwgYm90aCBmcm9tIHRwbSdzCj4gPiBjbGFzcy0+c2h1dGRv
-d24uCj4gPiAKPiA+IEkgd291bGQgc2F5IHRoaXMgc2hvdWxkIGJlIGRvbmUgYWZ0ZXIgdGhlIHRw
-bTJfc2h1dGRvd24gY29tcGxldGVzIGFzCj4gPiBsb3dlciBsZXZlbCBzaHV0ZG93bnMgY291bGQg
-cmVtb3ZlIHJlZ2lzdGVyIGFjY2Vzcy4KPiA+IAo+ID4gSmFzb24iCj4gPiAKPiA+IEFuZCBtYWtl
-cyBzZW5zZS4KPiA+IAo+ID4gVGhpcyBwYXRjaCBpcyBhIE5BSyBmb3IgdHdvIHJlYXNvbnM6Cj4g
-PiAKPiA+IDEuIE5vIGNvbW1lbnQgZXhwbGFpbmluZyB0aGlzLgo+ID4gMi4gUGF0Y2hlcyBhcmUg
-YnJva2VuIGFuZCB0aGV5IGFyZSBpbiB3cm9uZyBvcmRlciBhbmQgY292ZXIgbGV0dGVyIGlzCj4g
-PiAgICBtaXNzaW5nCj4gPiAKPiA+IC9KYXJra28KPiAKPiBJICp0cmllZCogdG8gYXBwbHkgdGhl
-bSBteXNlbGYgYWZ0ZXIgc2VuZGluZyB0aGlzIGluIG9yZGVyIHRvIGJlIGhlbHBmdWwKPiBidXQg
-dGhleSBoYXZlIGNvbXBpbGF0aW9uIGVycm9yczoKPiAKPiBkcml2ZXJzL2NoYXIvdHBtL3RwbS1j
-aGlwLmM6IEluIGZ1bmN0aW9uIOKAmHRwbV9zaHV0ZG93buKAmToKPiBkcml2ZXJzL2NoYXIvdHBt
-L3RwbS1jaGlwLmM6MTYyOjIzOiBlcnJvcjog4oCYVFBNX1NVX0NMRUFS4oCZIHVuZGVjbGFyZWQg
-KGZpcnN0IHVzZSBpbiB0aGlzIGZ1bmN0aW9uKQo+ICAgIHRwbTJfc2h1dGRvd24oY2hpcCwgVFBN
-X1NVX0NMRUFSKTsKPiAgICAgICAgICAgICAgICAgICAgICAgIF5+fn5+fn5+fn5+fgo+IGRyaXZl
-cnMvY2hhci90cG0vdHBtLWNoaXAuYzoxNjI6MjM6IG5vdGU6IGVhY2ggdW5kZWNsYXJlZCBpZGVu
-dGlmaWVyIGlzIHJlcG9ydGVkIG9ubHkgb25jZSBmb3IgZWFjaCBmdW5jdGlvbiBpdCBhcHBlYXJz
-IGluCj4gZHJpdmVycy9jaGFyL3RwbS90cG0tY2hpcC5jOiBJbiBmdW5jdGlvbiDigJh0cG1fY2hp
-cF9hbGxvY+KAmToKPiBkcml2ZXJzL2NoYXIvdHBtL3RwbS1jaGlwLmM6MjE0OjE3OiBlcnJvcjog
-4oCYY2hpcC0+ZGV2LmNsYXNz4oCZIGlzIGEgcG9pbnRlcjsgZGlkIHlvdSBtZWFuIHRvIHVzZSDi
-gJgtPuKAmT8KPiAgIGNoaXAtPmRldi5jbGFzcy5zaHV0ZG93biA9IHRwbV9zaHV0ZG93bjsKPiAK
-PiAvSmFya2tvCgpUaGVyZSdzIG9uZSBtb3JlIHRoaW5nIHRoYXQgSSBub3RpY2VkLiBCZWZvcmUg
-SSBjYW4gQ2MgdGhlc2UgdG8gdGhlCnN0YWJsZSB0aGVzZSBjb21taXRzIHJlcXVpcmUgdGhlIEZp
-eGVzIHRhZy4KCi9KYXJra28KCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpDaGVjayBvdXQgdGhlIHZp
-YnJhbnQgdGVjaCBjb21tdW5pdHkgb24gb25lIG9mIHRoZSB3b3JsZCdzIG1vc3QKZW5nYWdpbmcg
-dGVjaCBzaXRlcywgU2xhc2hkb3Qub3JnISBodHRwOi8vc2RtLmxpbmsvc2xhc2hkb3QKX19fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFp
-bGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xpc3Rz
-LnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
+While cleaning up sysfs callback that prints EK we discovered a kernel
+memory leak. This commit fixes the issue by zeroing the buffer used for
+TPM command/response.
+
+The leak happen when we use either tpm_vtpm_proxy, tpm_ibmvtpm or
+xen-tpmfront.
+
+Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Fixes: 0883743825e3 ("TPM: sysfs functions consolidation")
+Reported-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+---
+ drivers/char/tpm/tpm-sysfs.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+index 4bd0997cfa2d..eedb8e47bde2 100644
+--- a/drivers/char/tpm/tpm-sysfs.c
++++ b/drivers/char/tpm/tpm-sysfs.c
+@@ -36,9 +36,10 @@ static ssize_t pubek_show(struct device *dev, struct device_attribute *attr,
+ 	ssize_t err;
+ 	int i, rc;
+ 	char *str = buf;
+-
+ 	struct tpm_chip *chip = to_tpm_chip(dev);
+ 
++	memset(&tpm_cmd, 0, sizeof(tpm_cmd));
++
+ 	tpm_cmd.header.in = tpm_readpubek_header;
+ 	err = tpm_transmit_cmd(chip, NULL, &tpm_cmd, READ_PUBEK_RESULT_SIZE,
+ 			       READ_PUBEK_RESULT_MIN_BODY_SIZE, 0,
+-- 
+2.11.0
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
