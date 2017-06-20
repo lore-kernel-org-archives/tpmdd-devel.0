@@ -1,66 +1,26 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: consolidate the TPM startup code
-Date: Tue, 20 Jun 2017 22:55:29 +0200
-Message-ID: <20170620205529.ku3nueglj3mqkd3s@linux.intel.com>
+From: Ken Goldman <kgold@linux.vnet.ibm.com>
+Subject: Re: [tpmdd-devel] [PATCH] tpm: consolidate the TPM startup code
+Date: Tue, 20 Jun 2017 16:58:19 -0400
+Message-ID: <ba8acc37-f751-ddbf-48a0-e5ece6cecbd2@linux.vnet.ibm.com>
 References: <20170620181334.28363-1-jarkko.sakkinen@linux.intel.com>
-	<20170620193152.GA3368@obsidianresearch.com>
+ <20170620193152.GA3368@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset=windows-1252; format=flowed
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170620193152.GA3368-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, stefanb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170620193152.GA3368@obsidianresearch.com>
+Content-Language: en-US
+Sender: owner-linux-security-module@vger.kernel.org
+Cc: linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jun 20, 2017 at 01:31:52PM -0600, Jason Gunthorpe wrote:
-> On Tue, Jun 20, 2017 at 08:13:34PM +0200, Jarkko Sakkinen wrote:
-> > Consolidated all the "manual" TPM startup code to a single function
-> > in order to make code flows a bit cleaner and migrate to tpm_buf.
-> > 
-> > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> >  drivers/char/tpm/tpm-interface.c | 67 +++++++++++++++++++++++++---------------
-> >  drivers/char/tpm/tpm.h           |  6 +---
-> >  drivers/char/tpm/tpm2-cmd.c      | 32 +------------------
-> >  3 files changed, 44 insertions(+), 61 deletions(-)
+On 6/20/2017 3:31 PM, Jason Gunthorpe wrote:
+>> 
+>> +#define TPM_ORD_STARTUP 153 +#define TPM_ST_CLEAR 1
 > 
-> Makes sense to me
-> 
-> > diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> > index d2b4df6d9894..fbef47d8bd06 100644
-> > +++ b/drivers/char/tpm/tpm-interface.c
-> > @@ -540,6 +540,47 @@ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, struct tpm_space *space,
-> >  }
-> >  EXPORT_SYMBOL_GPL(tpm_transmit_cmd);
-> >  
-> > +#define TPM_ORD_STARTUP 153
-> > +#define TPM_ST_CLEAR 1
-> 
-> We should really have a tpm1.h and tpm2.h that has all these various
+> We should really have a tpm1.h and tpm2.h that has all these various 
 > constants and things instead of open coding them randomly all over..
-> 
-> Jason
 
-I agree.
+While you're doing that, perhaps put the ordinal numbers in hex.  The
+TPM 1.2 spec uses both hex and decimal, but TPM 2.0 uses hex.
 
-Is this patch acceptable to be applied?
-
-Stefan, can you peer test this with a TPM emulator? For convenient testing
-I created 'readpubek' branch that includes also my readpubek bug fixes.
-Seeing that the module loads and you can output pubek sysfs attribute is
-sufficient for seeing that all the three patches work.
-
-/Jarkko
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
