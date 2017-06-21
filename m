@@ -1,110 +1,27 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v6 1/2] tpm: Issue a TPM2_Shutdown for
- TPM2 devices.
-Date: Wed, 21 Jun 2017 09:37:13 +0200
-Message-ID: <20170621073713.wqo5oizybxoxp7da@linux.intel.com>
-References: <20170616172531.28464-1-joshz@google.com>
-	<1497828091.2552.6.camel@linux.intel.com>
-	<1497828407.2552.8.camel@linux.intel.com>
-	<20170619155122.GA10188@obsidianresearch.com>
-	<20170619221220.kfk5dldducxvou5b@linux.intel.com>
-	<20170619222122.55m5goanayw3gkeo@linux.intel.com>
-	<20170619223840.a66extf3r5ylmpnb@linux.intel.com>
-	<CAHSjozDy0dsGPkyXzVsDabjtbM4-QkzoE2fH1gDONXETyA19RA@mail.gmail.com>
-	<20170620150541.x5b7vkxyb3w55gjq@linux.intel.com>
+From: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Subject: Re: [PATCH v2] tpm: consolidate the TPM startup code
+Date: Wed, 21 Jun 2017 07:04:53 -0400
+Message-ID: <1ff1a552-15a9-d8a6-3bcd-3c0f9ff6d71e@linux.vnet.ibm.com>
+References: <20170621073134.7436-1-jarkko.sakkinen@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170620150541.x5b7vkxyb3w55gjq-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20170621073134.7436-1-jarkko.sakkinen@linux.intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net
+Cc: linux-security-module@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-V2hpbGUgeW91IHN0aWxsIGhhdmUgdG8gd29yayBvbiB0aGlzLCBjb3VsZCB5b3UgbmFtZSB0aGUg
-ZnVuY3Rpb24gYXMKdHBtX2NsYXNzX3NodXRkb3duKCkgdG8gYmV0dGVyIGNsYWFyaWZ5IGl0cyBw
-dXJwb3NlPyBPdGhlcndpc2UsIHRoaW5ncwpzdGFydCB0byBsb29rIGEgYml0IGNvbmZ1c2luZy4g
-VGhhbmtzLgoKL0phcmtrbwoKT24gVHVlLCBKdW4gMjAsIDIwMTcgYXQgMDU6MDU6NDFQTSArMDIw
-MCwgSmFya2tvIFNha2tpbmVuIHdyb3RlOgo+IE5vIHdvcnJpZXMuIEp1c3QgZml4IHRoZW0gYW5k
-IEkgd2lsbCBpbmNsdWRlIHRvIG15IG5leHQgcHVsbCByZXF1ZXN0IQo+IAo+IC9KYXJra28KPiAK
-PiBPbiBNb24sIEp1biAxOSwgMjAxNyBhdCAwMzo0NDo1NVBNIC0wNzAwLCBKb3NoIFppbW1lcm1h
-biB3cm90ZToKPiA+IFNvcnJ5IGFib3V0IHRoZSBtZXNzLiBJJ20gYSBiaXQgc3dhbXBlZCB0b2Rh
-eSwgYnV0IEknbGwgd29yayBvbgo+ID4gY2xlYW5pbmcgdXAgdGhlIHBhdGNoIGZvcm1hdHRpbmcg
-JiBjb21taXQgbWVzc2FnZSBhbmQgZml4IHRoZQo+ID4gY29tcGlsYXRpb24gcHJvYmxlbSBsYXRl
-ciB0b2RheSBvciB0b21vcnJvdy4gKEl0IGRpZCBidWlsZCBvbiBteQo+ID4gY2hlY2tvdXQgb2Yg
-dGhlIHRwbWRkIGJyYW5jaC4uLiBndWVzcyBJIGRpZG4ndCBwdWxsIGluIHNvbWUgaW1wb3J0YW50
-Cj4gPiBjaGFuZ2UuKQo+ID4gSm9zaAo+ID4gCj4gPiAKPiA+IE9uIE1vbiwgSnVuIDE5LCAyMDE3
-IGF0IDM6MzggUE0sIEphcmtrbyBTYWtraW5lbgo+ID4gPGphcmtrby5zYWtraW5lbkBsaW51eC5p
-bnRlbC5jb20+IHdyb3RlOgo+ID4gPiBPbiBUdWUsIEp1biAyMCwgMjAxNyBhdCAxMjoyMToyMkFN
-ICswMjAwLCBKYXJra28gU2Fra2luZW4gd3JvdGU6Cj4gPiA+PiBPbiBUdWUsIEp1biAyMCwgMjAx
-NyBhdCAxMjoxMjoyMEFNICswMjAwLCBKYXJra28gU2Fra2luZW4gd3JvdGU6Cj4gPiA+PiA+IE9u
-IE1vbiwgSnVuIDE5LCAyMDE3IGF0IDA5OjUxOjIyQU0gLTA2MDAsIEphc29uIEd1bnRob3JwZSB3
-cm90ZToKPiA+ID4+ID4gPiBPbiBNb24sIEp1biAxOSwgMjAxNyBhdCAwMToyNjo0N0FNICswMjAw
-LCBKYXJra28gU2Fra2luZW4gd3JvdGU6Cj4gPiA+PiA+ID4KPiA+ID4+ID4gPiA+IEZlZWxzIHdl
-aXJkIHRoYXQgeW91IGhhdmUgdG8gY2FsbCBmcmFtZXdvcmsgZnVuY3Rpb25zIGxpa2UgdGhhdCBp
-biB0aGUKPiA+ID4+ID4gPiA+IGRyaXZlci4gWW91IG11c3QgaGF2ZSBicmlsbGlhbnQgcmVhc29u
-IHRvIGRvIHNvIGFuZCB0aGF0IHNob3VsZCBiZSB2ZXJ5Cj4gPiA+PiA+ID4gPiB3ZWxsIGRvY3Vt
-ZW50ZWQgaW4gdGhlIGNvZGUuIFRoaXMgaXMgdGVycmlibGUuLi4KPiA+ID4+ID4gPgo+ID4gPj4g
-PiA+IFRoaXMgd2FzIGFsbCBkaXNjdXNzZWQgb24gdGhlIGxpc3QuIEl0IHRoZSB3YXkgdGhlc2Ug
-Y2FsbGJhY2tzIHdvcmssCj4gPiA+PiA+ID4gdGhlIGhpZ2hlciBsZXZlbHMgaW4gdGhlIGNhbGxi
-YWNrIHN0YWNrIGNhbGwgdGhlIGxvd2VyIGxldmVscywgdGhpcwo+ID4gPj4gPiA+IGFsbG93cyBl
-YWNoIGxldmVsIHRoZSBwbGFjZSB0aGUgbmV4dCBsZXZlbCdzIGNhbGxiYWNrIHByb3Blcmx5LCBl
-ZyBkbwo+ID4gPj4gPiA+IHRoaW5ncyBiZWZvcmUvYWZ0ZXIgYXMgbmVjZXNzYXJ5Lgo+ID4gPj4g
-PiA+Cj4gPiA+PiA+ID4gSmFzb24KPiA+ID4+ID4KPiA+ID4+ID4gSSB0cmllZCB0byBsb29rIHVw
-IGZvciBkaXNjdXNzaW9uIGZyb20gdGhlIHBhdGNod29yay4gVGhlc2UgaGFkIGFwcGVhcmVkCj4g
-PiA+PiA+IGluIHY2LiBJIGd1ZXNzIEkgaGF2ZSB0byBiYWNrdHJhY2sgdGhlIGRpc2N1c3Npb25z
-IGZyb20gbXkgbWFpZGlyCj4gPiA+PiA+IGJlY2F1c2UgSSBob25lc3RseSBkb24ndCB1bmRlcnN0
-YW5kIHdoeSBjbGFzcyBzaHV0ZG93biB3b3VsZCBoYXZlIHRvCj4gPiA+PiA+IGNhbGwgYnVzIGNh
-bGxiYWNrIGV4cGxpY2l0bHkuIFRoZXJlJ3Mgbm90aGluZyBpbiB0aGUgY29tbWl0IG1lc3NhZ2UK
-PiA+ID4+ID4gYWJvdXQgdGhpcyBub3IgIGlzIHRoZXJlIGFueSBjb21tZW50IGluIHRoZSBjb2Rl
-Lgo+ID4gPj4gPgo+ID4gPj4gPiBUaGlzIG11c3QgYmUgZmFpcmx5IHJlY2VudCBkZXZlbG9wbWVu
-dCB0aGF0IEkndmUgbWlzc2VkPwo+ID4gPj4gPgo+ID4gPj4gPiAvSmFya2tvCj4gPiA+Pgo+ID4g
-Pj4gRm91bmQgaXQ6Cj4gPiA+Pgo+ID4gPj4gIkxvb2tpbmcgYXQgdGhpcyBjbG9zZXIsIG5vdyB5
-b3UgZGVmaW5hdGVseSBoYXZlIHRvIGNoYW5nZSB0aGUgVFBNCj4gPiA+PiBwYXRjaCB0byBjYWxs
-IHRocm91Z2ggdG8gdGhlIG90aGVyIHNodXRkb3duIG1ldGhvZHMuIFdlIGNhbiBzYXkKPiA+ID4+
-IGN1cnJlbnQgVFBNIGRyaXZlcnMgaGF2ZSBubyBkcml2ZXItPnNodXRkb3duLCBidXQgd2UgY2Fu
-bm90IGJlIHN1cmUKPiA+ID4+IGFib3V0IHRoZSBidXMtPnNodXRkb3duLCBzbyBtYXkgYXMgd2Vs
-bCBjYWxsIGJvdGggZnJvbSB0cG0ncwo+ID4gPj4gY2xhc3MtPnNodXRkb3duLgo+ID4gPj4KPiA+
-ID4+IEkgd291bGQgc2F5IHRoaXMgc2hvdWxkIGJlIGRvbmUgYWZ0ZXIgdGhlIHRwbTJfc2h1dGRv
-d24gY29tcGxldGVzIGFzCj4gPiA+PiBsb3dlciBsZXZlbCBzaHV0ZG93bnMgY291bGQgcmVtb3Zl
-IHJlZ2lzdGVyIGFjY2Vzcy4KPiA+ID4+Cj4gPiA+PiBKYXNvbiIKPiA+ID4+Cj4gPiA+PiBBbmQg
-bWFrZXMgc2Vuc2UuCj4gPiA+Pgo+ID4gPj4gVGhpcyBwYXRjaCBpcyBhIE5BSyBmb3IgdHdvIHJl
-YXNvbnM6Cj4gPiA+Pgo+ID4gPj4gMS4gTm8gY29tbWVudCBleHBsYWluaW5nIHRoaXMuCj4gPiA+
-PiAyLiBQYXRjaGVzIGFyZSBicm9rZW4gYW5kIHRoZXkgYXJlIGluIHdyb25nIG9yZGVyIGFuZCBj
-b3ZlciBsZXR0ZXIgaXMKPiA+ID4+ICAgIG1pc3NpbmcKPiA+ID4+Cj4gPiA+PiAvSmFya2tvCj4g
-PiA+Cj4gPiA+IEkgKnRyaWVkKiB0byBhcHBseSB0aGVtIG15c2VsZiBhZnRlciBzZW5kaW5nIHRo
-aXMgaW4gb3JkZXIgdG8gYmUgaGVscGZ1bAo+ID4gPiBidXQgdGhleSBoYXZlIGNvbXBpbGF0aW9u
-IGVycm9yczoKPiA+ID4KPiA+ID4gZHJpdmVycy9jaGFyL3RwbS90cG0tY2hpcC5jOiBJbiBmdW5j
-dGlvbiDigJh0cG1fc2h1dGRvd27igJk6Cj4gPiA+IGRyaXZlcnMvY2hhci90cG0vdHBtLWNoaXAu
-YzoxNjI6MjM6IGVycm9yOiDigJhUUE1fU1VfQ0xFQVLigJkgdW5kZWNsYXJlZCAoZmlyc3QgdXNl
-IGluIHRoaXMgZnVuY3Rpb24pCj4gPiA+ICAgIHRwbTJfc2h1dGRvd24oY2hpcCwgVFBNX1NVX0NM
-RUFSKTsKPiA+ID4gICAgICAgICAgICAgICAgICAgICAgICBefn5+fn5+fn5+fn4KPiA+ID4gZHJp
-dmVycy9jaGFyL3RwbS90cG0tY2hpcC5jOjE2MjoyMzogbm90ZTogZWFjaCB1bmRlY2xhcmVkIGlk
-ZW50aWZpZXIgaXMgcmVwb3J0ZWQgb25seSBvbmNlIGZvciBlYWNoIGZ1bmN0aW9uIGl0IGFwcGVh
-cnMgaW4KPiA+ID4gZHJpdmVycy9jaGFyL3RwbS90cG0tY2hpcC5jOiBJbiBmdW5jdGlvbiDigJh0
-cG1fY2hpcF9hbGxvY+KAmToKPiA+ID4gZHJpdmVycy9jaGFyL3RwbS90cG0tY2hpcC5jOjIxNDox
-NzogZXJyb3I6IOKAmGNoaXAtPmRldi5jbGFzc+KAmSBpcyBhIHBvaW50ZXI7IGRpZCB5b3UgbWVh
-biB0byB1c2Ug4oCYLT7igJk/Cj4gPiA+ICAgY2hpcC0+ZGV2LmNsYXNzLnNodXRkb3duID0gdHBt
-X3NodXRkb3duOwo+ID4gPgo+ID4gPiAvSmFya2tvCj4gCj4gLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-Cj4gQ2hlY2sgb3V0IHRoZSB2aWJyYW50IHRlY2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29y
-bGQncyBtb3N0Cj4gZW5nYWdpbmcgdGVjaCBzaXRlcywgU2xhc2hkb3Qub3JnISBodHRwOi8vc2Rt
-Lmxpbmsvc2xhc2hkb3QKPiBfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fXwo+IHRwbWRkLWRldmVsIG1haWxpbmcgbGlzdAo+IHRwbWRkLWRldmVsQGxpc3RzLnNv
-dXJjZWZvcmdlLm5ldAo+IGh0dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3Rp
-bmZvL3RwbWRkLWRldmVsCgotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KQ2hlY2sgb3V0IHRoZSB2aWJy
-YW50IHRlY2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29ybGQncyBtb3N0CmVuZ2FnaW5nIHRl
-Y2ggc2l0ZXMsIFNsYXNoZG90Lm9yZyEgaHR0cDovL3NkbS5saW5rL3NsYXNoZG90Cl9fX19fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fCnRwbWRkLWRldmVsIG1haWxp
-bmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9saXN0cy5z
-b3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwK
+On 06/21/2017 03:31 AM, Jarkko Sakkinen wrote:
+> Consolidated all the "manual" TPM startup code to a single function
+> in order to make code flows a bit cleaner and migrate to tpm_buf.
+>
+> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+
+Tested-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+
+
+FYI:
+swtpm chardev --vtpm-proxy  --tpmstate dir=/tmp --log level=1 --tpm2
+swtpm chardev --vtpm-proxy  --tpmstate dir=/tmp --log level=1
