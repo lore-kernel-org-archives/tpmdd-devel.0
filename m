@@ -1,115 +1,100 @@
-From: Roberto Sassu <roberto.sassu@huawei.com>
-Subject: [PATCH v3 4/6] tpm: replace TPM algorithms IDs with tpm_pcr_bank_info structs in tpm_chip
-Date: Wed, 21 Jun 2017 16:29:39 +0200
-Message-ID: <20170621142941.32674-5-roberto.sassu@huawei.com>
+From: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+Subject: [PATCH v3 2/6] tpm: use tpm2_pcr_read_tpm_buf() in
+ tpm2_do_selftest()
+Date: Wed, 21 Jun 2017 16:29:37 +0200
+Message-ID: <20170621142941.32674-3-roberto.sassu@huawei.com>
 References: <20170621142941.32674-1-roberto.sassu@huawei.com>
 Mime-Version: 1.0
-Content-Type: text/plain
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <20170621142941.32674-1-roberto.sassu@huawei.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org, Roberto Sassu <roberto.sassu@huawei.com>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170621142941.32674-1-roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-This patch replaces the array of TPM algorithms ID, stored in the tpm_chip
-structure, with an array of the new structure tpm_pcr_bank_info.
+tpm2_do_selftest() performs a PCR read during the TPM initialization phase.
+This patch replaces the PCR read code with a call to
+tpm2_pcr_read_tpm_buf(). tpm2_do_selftest() parses the result of the
+TPM command, in order to retrieve the return code.
 
-The array is initialized during the execution of tpm2_get_pcr_allocation(),
-by tpm2_init_pcr_bank_info().
-
-tpm2_pcr_extend() and tpm_pcr_extend() have been modified to use the
-digest size retrieved from the TPM instead of that from the crypto
-subsystem.
-
-Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
+Signed-off-by: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
 ---
- drivers/char/tpm/tpm-interface.c |  4 ++--
- drivers/char/tpm/tpm.h           |  2 +-
- drivers/char/tpm/tpm2-cmd.c      | 22 +++++++++++-----------
- 3 files changed, 14 insertions(+), 14 deletions(-)
+ drivers/char/tpm/tpm2-cmd.c | 32 ++++++++++----------------------
+ 1 file changed, 10 insertions(+), 22 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index d2b4df6..a11598a 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -897,8 +897,8 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
- 		memset(digest_list, 0, sizeof(digest_list));
- 
- 		for (i = 0; i < ARRAY_SIZE(chip->active_banks) &&
--			    chip->active_banks[i] != TPM2_ALG_ERROR; i++) {
--			digest_list[i].alg_id = chip->active_banks[i];
-+		     chip->active_banks[i].alg_id != TPM2_ALG_ERROR; i++) {
-+			digest_list[i].alg_id = chip->active_banks[i].alg_id;
- 			memcpy(digest_list[i].digest, hash, TPM_DIGEST_SIZE);
- 			count++;
- 		}
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index 62c600d..d285bc6 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -208,7 +208,7 @@ struct tpm_chip {
- 	const struct attribute_group *groups[3];
- 	unsigned int groups_cnt;
- 
--	u16 active_banks[7];
-+	struct tpm_pcr_bank_info active_banks[7];
- #ifdef CONFIG_ACPI
- 	acpi_handle acpi_dev_handle;
- 	char ppi_version[TPM_PPI_VERSION_LEN + 1];
 diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index 74a68ea..7bd2cf7 100644
+index afd1b63..6a9fe0d 100644
 --- a/drivers/char/tpm/tpm2-cmd.c
 +++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -301,7 +301,6 @@ int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
- 	struct tpm2_null_auth_area auth_area;
- 	int rc;
+@@ -227,16 +227,6 @@ static const u8 tpm2_ordinal_duration[TPM2_CC_LAST - TPM2_CC_FIRST + 1] = {
+ 	TPM_UNDEFINED		/* 18f */
+ };
+ 
+-#define TPM2_PCR_READ_IN_SIZE \
+-	(sizeof(struct tpm_input_header) + \
+-	 sizeof(struct tpm2_pcr_read_in))
+-
+-static const struct tpm_input_header tpm2_pcrread_header = {
+-	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
+-	.length = cpu_to_be32(TPM2_PCR_READ_IN_SIZE),
+-	.ordinal = cpu_to_be32(TPM2_CC_PCR_READ)
+-};
+-
+ static int tpm2_pcr_read_tpm_buf(struct tpm_chip *chip, int pcr_idx,
+ 				 enum tpm2_algorithms algo, struct tpm_buf *buf,
+ 				 char *msg)
+@@ -938,7 +928,8 @@ static int tpm2_do_selftest(struct tpm_chip *chip)
+ 	unsigned int loops;
+ 	unsigned int delay_msec = 100;
+ 	unsigned long duration;
+-	struct tpm2_cmd cmd;
++	struct tpm_buf buf;
++	tpm_cmd_header *header;
  	int i;
--	int j;
  
- 	if (count > ARRAY_SIZE(chip->active_banks))
- 		return -EINVAL;
-@@ -323,14 +322,10 @@ int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
- 	tpm_buf_append_u32(&buf, count);
+ 	duration = tpm2_calc_ordinal_duration(chip, TPM2_CC_SELF_TEST);
+@@ -951,20 +942,17 @@ static int tpm2_do_selftest(struct tpm_chip *chip)
  
- 	for (i = 0; i < count; i++) {
--		for (j = 0; j < ARRAY_SIZE(tpm2_hash_map); j++) {
--			if (digests[i].alg_id != tpm2_hash_map[j].tpm_id)
--				continue;
--			tpm_buf_append_u16(&buf, digests[i].alg_id);
--			tpm_buf_append(&buf, (const unsigned char
--					      *)&digests[i].digest,
--			       hash_digest_size[tpm2_hash_map[j].crypto_id]);
--		}
-+		/* digests[i].alg_id == chip->active_banks[i].alg_id */
-+		tpm_buf_append_u16(&buf, digests[i].alg_id);
-+		tpm_buf_append(&buf, (const unsigned char *)&digests[i].digest,
-+			       chip->active_banks[i].digest_size);
- 	}
- 
- 	rc = tpm_transmit_cmd(chip, NULL, buf.data, PAGE_SIZE, 0, 0,
-@@ -1076,7 +1071,12 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
- 		}
- 
- 		memcpy(&pcr_selection, marker, sizeof(pcr_selection));
--		chip->active_banks[i] = be16_to_cpu(pcr_selection.hash_alg);
-+		rc =  tpm2_init_pcr_bank_info(chip,
-+					be16_to_cpu(pcr_selection.hash_alg),
-+					&chip->active_banks[i]);
-+		if (rc)
-+			break;
+ 	for (i = 0; i < loops; i++) {
+ 		/* Attempt to read a PCR value */
+-		cmd.header.in = tpm2_pcrread_header;
+-		cmd.params.pcrread_in.pcr_selects_cnt = cpu_to_be32(1);
+-		cmd.params.pcrread_in.hash_alg = cpu_to_be16(TPM2_ALG_SHA1);
+-		cmd.params.pcrread_in.pcr_select_size = TPM2_PCR_SELECT_MIN;
+-		cmd.params.pcrread_in.pcr_select[0] = 0x01;
+-		cmd.params.pcrread_in.pcr_select[1] = 0x00;
+-		cmd.params.pcrread_in.pcr_select[2] = 0x00;
+-
+-		rc = tpm_transmit_cmd(chip, NULL, &cmd, sizeof(cmd), 0, 0,
+-				      NULL);
++		rc = tpm2_pcr_read_tpm_buf(chip, 0, TPM2_ALG_SHA1, &buf, NULL);
++		if (rc >= 0) {
++			header = (tpm_cmd_header *)buf.data;
++			rc = be32_to_cpu(header->out.return_code);
++		}
 +
- 		sizeof_pcr_selection = sizeof(pcr_selection.hash_alg) +
- 			sizeof(pcr_selection.size_of_select) +
- 			pcr_selection.size_of_select;
-@@ -1085,7 +1085,7 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
++		tpm_buf_destroy(&buf);
++
+ 		if (rc < 0)
+ 			break;
  
- out:
- 	if (i < ARRAY_SIZE(chip->active_banks))
--		chip->active_banks[i] = TPM2_ALG_ERROR;
-+		chip->active_banks[i].alg_id = TPM2_ALG_ERROR;
- 
- 	tpm_buf_destroy(&buf);
+-		rc = be32_to_cpu(cmd.header.out.return_code);
+ 		if (rc != TPM2_RC_TESTING)
+ 			break;
  
 -- 
 2.9.3
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
