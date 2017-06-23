@@ -1,271 +1,166 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3 6/6] tpm: pass multiple digests to
- tpm_pcr_extend()
-Date: Fri, 23 Jun 2017 12:37:52 +0200
-Message-ID: <20170623103752.auujqgr3toppalgm@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [PATCH v3 1/6] tpm: use tpm_buf functions to
+ perform a PCR read
+Date: Fri, 23 Jun 2017 12:56:07 +0200
+Message-ID: <20170623105607.vsfltdblwczrj3qv@linux.intel.com>
 References: <20170621142941.32674-1-roberto.sassu@huawei.com>
-	<20170621142941.32674-7-roberto.sassu@huawei.com>
+ <20170621142941.32674-2-roberto.sassu@huawei.com>
+ <20170622101404.blfpqcryrbe35ha4@linux.intel.com>
+ <7cea09d5-e213-8783-fabc-eb47fc601942@huawei.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170621142941.32674-7-roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+In-Reply-To: <7cea09d5-e213-8783-fabc-eb47fc601942@huawei.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Roberto Sassu <roberto.sassu@huawei.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jun 21, 2017 at 04:29:41PM +0200, Roberto Sassu wrote:
-> This patch modifies the parameters of tpm_pcr_extend() by replacing the
-> SHA1 digest with an array of digests and the number of array elements.
+On Thu, Jun 22, 2017 at 01:54:29PM +0200, Roberto Sassu wrote:
+> On 6/22/2017 12:14 PM, Jarkko Sakkinen wrote:
+> > On Wed, Jun 21, 2017 at 04:29:36PM +0200, Roberto Sassu wrote:
+> > > tpm2_pcr_read() now uses tpm_buf functions to build the TPM command
+> > > to read a PCR. Those functions are preferred to passing a tpm2_cmd
+> > > structure, as they provide protection against buffer overflow.
+> > > 
+> > > Also, tpm2_pcr_read() code has been moved to tpm2_pcr_read_tpm_buf().
+> > > Callers have to pass a tpm_buf structure, an algorithm supported by
+> > > the TPM and call tpm_buf_destroy(). The algorithm still cannot be
+> > > passed to the TPM driver interface. This parameter has been introduced
+> > > for determining the digest size of a given algorithm.
+> > > 
+> > > Moving tpm2_pcr_read() code to tpm2_pcr_read_tpm_buf() is necessary
+> > > because callers of the new function obtain different information from
+> > > the output buffer: tpm2_pcr_read() gets the digest, tpm2_do_selftest()
+> > > will get the command return code and tpm2_get_pcr_allocation() will get
+> > > the digest size.
+> > > 
+> > > Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
+> > 
+> > We want to migrate *everything* to use tpm_buf to the point that
+> > tpm_transmit takes tpm_buf as parameter.
+> > 
+> > > ---
+> > >  drivers/char/tpm/tpm2-cmd.c | 54 +++++++++++++++++++++++++++------------------
+> > >  1 file changed, 32 insertions(+), 22 deletions(-)
+> > > 
+> > > diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+> > > index 3a99643..afd1b63 100644
+> > > --- a/drivers/char/tpm/tpm2-cmd.c
+> > > +++ b/drivers/char/tpm/tpm2-cmd.c
+> > > @@ -231,15 +231,37 @@ static const u8 tpm2_ordinal_duration[TPM2_CC_LAST - TPM2_CC_FIRST + 1] = {
+> > >  	(sizeof(struct tpm_input_header) + \
+> > >  	 sizeof(struct tpm2_pcr_read_in))
+> > > 
+> > > -#define TPM2_PCR_READ_RESP_BODY_SIZE \
+> > > -	 sizeof(struct tpm2_pcr_read_out)
+> > > -
+> > >  static const struct tpm_input_header tpm2_pcrread_header = {
+> > >  	.tag = cpu_to_be16(TPM2_ST_NO_SESSIONS),
+> > >  	.length = cpu_to_be32(TPM2_PCR_READ_IN_SIZE),
+> > >  	.ordinal = cpu_to_be32(TPM2_CC_PCR_READ)
+> > >  };
+> > 
+> > Remove this and move tpm2_pcr_read_out declaration before tpm2_pcr_read.
+> > Its only a one shot helper structure for this function. You can take it
+> > of from the union and delete tpm2_pcr_read_in completely.
 > 
-> This completes the changes necessary to correctly extend PCRs of a TPM 2.0.
+> This should be done in the next patch, because tpm2_pcrread_header
+> and tpm2_pcr_read_in are still used by tpm2_do_selftest().
 
-There is not well defined order before you are in the mainline.
+OK, understood.
 
-> Each PCR bank will be extended with a digest calculated with the PCR bank
-> algorithm. If the digest for a PCR bank has not been provided, the TPM
-> driver pads/truncates the first digest, to extend that bank. TPM users
-> should indicate in the event log in which sequence digests were passed
-> to the TPM driver (if they didn't provide all the digests), or should
-> pass to the driver a digest for each PCR bank.
+> > > +static int tpm2_pcr_read_tpm_buf(struct tpm_chip *chip, int pcr_idx,
+> > > +				 enum tpm2_algorithms algo, struct tpm_buf *buf,
+> > > +				 char *msg)
+> > 
+> > This wrapper is unnecessary especially since the fallback path is still
+> > in the responsiblity of the caller.
 > 
-> Callers of tpm_pcr_extend(), pcrlock() and ima_pcr_extend(), have been
-> modified to pass the new arguments. They pass to tpm_pcr_extend() an array
-> with one element, containing the same SHA1 digest they were passing before
-> this patch.
-> 
-> Signed-off-by: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+> Please have a look at patches 2/6 and 3/6. It will be more clear why
+> this change is necessary. Alternatively, instead of tpm_buf, I can add
+> the command return code and the digest size as parameters of this
+> function.
 
-Please just do a function that takes crypto ID.
+Look at tpm_transmit_cmd(). It returns the TPM error. You return
+positive number from this function it is a TPM error. Digest size
+could be an additional parameter, yes.
+
+This is how it works elsewhere in the subsystem so it would be also
+coherent.
+
+> > > +{
+> > > +	int rc;
+> > > +	u8 pcr_select[TPM2_PCR_SELECT_MIN] = {0};
+> > > +
+> > > +	if (pcr_idx >= TPM2_PLATFORM_PCR)
+> > > +		return -EINVAL;
+> > > +
+> > > +	rc = tpm_buf_init(buf, TPM2_ST_NO_SESSIONS, TPM2_CC_PCR_READ);
+> > > +	if (rc)
+> > > +		return rc;
+> > > +
+> > > +	pcr_select[pcr_idx >> 3] = 1 << (pcr_idx & 0x7);
+> > > +
+> > > +	tpm_buf_append_u32(buf, 1);
+> > > +	tpm_buf_append_u16(buf, algo);
+> > > +	tpm_buf_append_u8(buf, TPM2_PCR_SELECT_MIN);
+> > > +	tpm_buf_append(buf, (const unsigned char *)pcr_select,
+> > > +		       sizeof(pcr_select));
+> > > +
+> > > +	return tpm_transmit_cmd(chip, NULL, buf->data, PAGE_SIZE, 0, 0, msg);
+> > > +}
+> > > +
+> > >  /**
+> > >   * tpm2_pcr_read() - read a PCR value
+> > >   * @chip:	TPM chip to use.
+> > > @@ -251,29 +273,17 @@ static const struct tpm_input_header tpm2_pcrread_header = {
+> > >  int tpm2_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
+> > >  {
+> > >  	int rc;
+> > > -	struct tpm2_cmd cmd;
+> > > -	u8 *buf;
+> > > -
+> > > -	if (pcr_idx >= TPM2_PLATFORM_PCR)
+> > > -		return -EINVAL;
+> > > -
+> > > -	cmd.header.in = tpm2_pcrread_header;
+> > > -	cmd.params.pcrread_in.pcr_selects_cnt = cpu_to_be32(1);
+> > > -	cmd.params.pcrread_in.hash_alg = cpu_to_be16(TPM2_ALG_SHA1);
+> > > -	cmd.params.pcrread_in.pcr_select_size = TPM2_PCR_SELECT_MIN;
+> > > -
+> > > -	memset(cmd.params.pcrread_in.pcr_select, 0,
+> > > -	       sizeof(cmd.params.pcrread_in.pcr_select));
+> > > -	cmd.params.pcrread_in.pcr_select[pcr_idx >> 3] = 1 << (pcr_idx & 0x7);
+> > > +	struct tpm_buf buf;
+> > > +	struct tpm2_pcr_read_out *out;
+> > > 
+> > > -	rc = tpm_transmit_cmd(chip, NULL, &cmd, sizeof(cmd),
+> > > -			      TPM2_PCR_READ_RESP_BODY_SIZE,
+> > > -			      0, "attempting to read a pcr value");
+> > > +	rc = tpm2_pcr_read_tpm_buf(chip, pcr_idx, TPM2_ALG_SHA1, &buf,
+> > > +				   "attempting to read a pcr value");
+> > >  	if (rc == 0) {
+> > > -		buf = cmd.params.pcrread_out.digest;
+> > > -		memcpy(res_buf, buf, TPM_DIGEST_SIZE);
+> > > +		out = (struct tpm2_pcr_read_out *)&buf.data[TPM_HEADER_SIZE];
+> > > +		memcpy(res_buf, out->digest, TPM_DIGEST_SIZE);
+> > 
+> > I think that when changes are made that involve TPM_DIGEST_SIZE, it
+> > should be simply replaced with SHA1_DIGEST_SIZE. It's just a constant
+> > that makes reading the code harder.
+> 
+> Ok. Should I also replace TPM_DIGEST_SIZE in tpm2_pcr_read_out
+> with SHA512_DIGEST_SIZE, given that the algorithm can be specified?
+> 
+> Thanks
+> 
+> Roberto
+
+You can declare it as u8 digest[] (or whatever the fiel name was).
+
+Once the first two patches are in shape I'll test and apply them
+to my tree so we step further with this.
 
 /Jarkko
-
-
-> ---
->  drivers/char/tpm/tpm-interface.c   | 51 ++++++++++++++++++++++++++++++++------
->  drivers/char/tpm/tpm.h             |  6 -----
->  include/linux/tpm.h                | 12 +++++++--
->  security/integrity/ima/ima_queue.c |  4 ++-
->  security/keys/trusted.c            |  6 ++---
->  5 files changed, 59 insertions(+), 20 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index cf0cdb2..3b0d7a2 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -871,44 +871,79 @@ static int tpm1_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash,
->  	return rc;
->  }
->  
-> +static u32 tpm_get_digest_size(struct tpm_chip *chip, enum tpm2_algorithms algo)
-> +{
-> +	int i;
-> +
-> +	for (i = 0; i < ARRAY_SIZE(chip->active_banks) &&
-> +	     chip->active_banks[i].alg_id != TPM2_ALG_ERROR; i++)
-> +		if (chip->active_banks[i].alg_id == algo)
-> +			return chip->active_banks[i].digest_size;
-> +
-> +	/* Callers should have checked which algorithms the TPM supports,
-> +	 * or should have provided a SHA1 digest, which is always supported.
-> +	 * If the passed algorithm is unknown, return the size of SHA1.
-> +	 */
-> +	return hash_digest_size[HASH_ALGO_SHA1];
-> +}
-> +
->  /**
->   * tpm_pcr_extend - extend pcr value with hash
->   * @chip_num:	tpm idx # or AN&
->   * @pcr_idx:	pcr idx to extend
-> - * @hash:	hash value used to extend pcr value
-> + * @count:	number of digests
-> + * @digests:	array of digests
->   *
->   * The TPM driver should be built-in, but for whatever reason it
->   * isn't, protect against the chip disappearing, by incrementing
->   * the module usage count.
->   */
-> -int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
-> +int tpm_pcr_extend(u32 chip_num, int pcr_idx, u32 count,
-> +		   struct tpm2_digest *digests)
->  {
->  	int rc;
->  	struct tpm_chip *chip;
->  	struct tpm2_digest digest_list[ARRAY_SIZE(chip->active_banks)];
-> -	u32 count = 0;
-> -	int i;
-> +	u32 first_digest_size;
-> +	int i, j;
-> +
-> +	if (count == 0)
-> +		return -EINVAL;
->  
->  	chip = tpm_chip_find_get(chip_num);
->  	if (chip == NULL)
->  		return -ENODEV;
->  
-> +	first_digest_size = tpm_get_digest_size(chip, digests[0].alg_id);
-> +
->  	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
->  		memset(digest_list, 0, sizeof(digest_list));
->  
->  		for (i = 0; i < ARRAY_SIZE(chip->active_banks) &&
->  		     chip->active_banks[i].alg_id != TPM2_ALG_ERROR; i++) {
-> +			struct tpm_pcr_bank_info *bank = &chip->active_banks[i];
-> +			u8 *cur_digest = digests[0].digest;
-> +			u32 cur_digest_size = first_digest_size;
-> +
-> +			for (j = 0; j < count; j++) {
-> +				if (digests[j].alg_id == bank->alg_id) {
-> +					cur_digest = digests[j].digest;
-> +					cur_digest_size = bank->digest_size;
-> +					break;
-> +				}
-> +			}
-> +
->  			digest_list[i].alg_id = chip->active_banks[i].alg_id;
-> -			memcpy(digest_list[i].digest, hash, TPM_DIGEST_SIZE);
-> -			count++;
-> +			memcpy(digest_list[i].digest, cur_digest,
-> +			       cur_digest_size);
->  		}
->  
-> -		rc = tpm2_pcr_extend(chip, pcr_idx, count, digest_list);
-> +		rc = tpm2_pcr_extend(chip, pcr_idx, i, digest_list);
->  		tpm_put_ops(chip);
->  		return rc;
->  	}
->  
-> -	rc = tpm1_pcr_extend(chip, pcr_idx, hash,
-> +	rc = tpm1_pcr_extend(chip, pcr_idx, digests[0].digest,
->  			     "attempting extend a PCR value");
->  	tpm_put_ops(chip);
->  	return rc;
-> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> index 75ec0d1..7c2f30b 100644
-> --- a/drivers/char/tpm/tpm.h
-> +++ b/drivers/char/tpm/tpm.h
-> @@ -34,7 +34,6 @@
->  #include <linux/acpi.h>
->  #include <linux/cdev.h>
->  #include <linux/highmem.h>
-> -#include <crypto/hash_info.h>
->  
->  enum tpm_const {
->  	TPM_MINOR = 224,	/* officially assigned */
-> @@ -386,11 +385,6 @@ struct tpm_cmd_t {
->  	tpm_cmd_params	params;
->  } __packed;
->  
-> -struct tpm2_digest {
-> -	u16 alg_id;
-> -	u8 digest[SHA512_DIGEST_SIZE];
-> -} __packed;
-> -
->  /* A string buffer type for constructing TPM commands. This is based on the
->   * ideas of string buffer code in security/keys/trusted.h but is heap based
->   * in order to keep the stack usage minimal.
-> diff --git a/include/linux/tpm.h b/include/linux/tpm.h
-> index 49ec8fc..254d632 100644
-> --- a/include/linux/tpm.h
-> +++ b/include/linux/tpm.h
-> @@ -36,6 +36,11 @@ struct tpm_chip;
->  struct trusted_key_payload;
->  struct trusted_key_options;
->  
-> +struct tpm2_digest {
-> +	u16 alg_id;
-> +	u8 digest[SHA512_DIGEST_SIZE];
-> +} __packed;
-> +
->  enum TPM_OPS_FLAGS {
->  	TPM_OPS_AUTO_STARTUP = BIT(0),
->  };
-> @@ -76,7 +81,8 @@ struct tpm_pcr_bank_info {
->  
->  extern int tpm_is_tpm2(u32 chip_num);
->  extern int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf);
-> -extern int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash);
-> +extern int tpm_pcr_extend(u32 chip_num, int pcr_idx, u32 count,
-> +			  struct tpm2_digest *digests);
->  extern int tpm_get_pcr_banks_info(u32 chip_num,
->  				  struct tpm_pcr_bank_info *active_banks);
->  extern int tpm_send(u32 chip_num, void *cmd, size_t buflen);
-> @@ -95,7 +101,9 @@ static inline int tpm_is_tpm2(u32 chip_num)
->  static inline int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf) {
->  	return -ENODEV;
->  }
-> -static inline int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash) {
-> +static inline int tpm_pcr_extend(u32 chip_num, int pcr_idx, u32 count,
-> +				 struct tpm2_digest *digests)
-> +{
->  	return -ENODEV;
->  }
->  static inline int tpm_get_pcr_banks_info(u32 chip_num,
-> diff --git a/security/integrity/ima/ima_queue.c b/security/integrity/ima/ima_queue.c
-> index d9aa5ab..f628968 100644
-> --- a/security/integrity/ima/ima_queue.c
-> +++ b/security/integrity/ima/ima_queue.c
-> @@ -140,12 +140,14 @@ unsigned long ima_get_binary_runtime_size(void)
->  
->  static int ima_pcr_extend(const u8 *hash, int pcr)
->  {
-> +	struct tpm2_digest digestarg = {.alg_id = TPM2_ALG_SHA1};
->  	int result = 0;
->  
->  	if (!ima_used_chip)
->  		return result;
->  
-> -	result = tpm_pcr_extend(TPM_ANY_NUM, pcr, hash);
-> +	memcpy(digestarg.digest, hash, IMA_DIGEST_SIZE);
-> +	result = tpm_pcr_extend(TPM_ANY_NUM, pcr, 1, &digestarg);
->  	if (result != 0)
->  		pr_err("Error Communicating to TPM chip, result: %d\n", result);
->  	return result;
-> diff --git a/security/keys/trusted.c b/security/keys/trusted.c
-> index 435e86e..d6c0db8 100644
-> --- a/security/keys/trusted.c
-> +++ b/security/keys/trusted.c
-> @@ -377,15 +377,15 @@ static int trusted_tpm_send(const u32 chip_num, unsigned char *cmd,
->   */
->  static int pcrlock(const int pcrnum)
->  {
-> -	unsigned char hash[SHA1_DIGEST_SIZE];
-> +	struct tpm2_digest digestarg = {.alg_id = TPM2_ALG_SHA1};
->  	int ret;
->  
->  	if (!capable(CAP_SYS_ADMIN))
->  		return -EPERM;
-> -	ret = tpm_get_random(TPM_ANY_NUM, hash, SHA1_DIGEST_SIZE);
-> +	ret = tpm_get_random(TPM_ANY_NUM, digestarg.digest, SHA1_DIGEST_SIZE);
->  	if (ret != SHA1_DIGEST_SIZE)
->  		return ret;
-> -	return tpm_pcr_extend(TPM_ANY_NUM, pcrnum, hash) ? -EINVAL : 0;
-> +	return tpm_pcr_extend(TPM_ANY_NUM, pcrnum, 1, &digestarg) ? -EINVAL : 0;
->  }
->  
->  /*
-> -- 
-> 2.9.3
-> 
-> 
-> ------------------------------------------------------------------------------
-> Check out the vibrant tech community on one of the world's most
-> engaging tech sites, Slashdot.org! http://sdm.link/slashdot
-> _______________________________________________
-> tpmdd-devel mailing list
-> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
