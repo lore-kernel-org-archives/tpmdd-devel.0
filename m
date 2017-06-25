@@ -1,7 +1,8 @@
 From: Josh Zimmerman via tpmdd-devel <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Subject: [PATCH v7 1/2] Add "shutdown" to "struct class".
-Date: Sun, 25 Jun 2017 14:53:23 -0700
-Message-ID: <20170625215324.17467-2-joshz@google.com>
+Subject: [PATCH v7 2/2] tpm: Issue a TPM2_Shutdown for TPM2
+ devices.
+Date: Sun, 25 Jun 2017 14:53:24 -0700
+Message-ID: <20170625215324.17467-3-joshz@google.com>
 References: <20170625215324.17467-1-joshz@google.com>
 Reply-To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 Mime-Version: 1.0
@@ -20,62 +21,107 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The TPM class has some common shutdown code that must be executed for
-all drivers. This adds some needed functionality for that.
+If a TPM2 loses power without a TPM2_Shutdown command being issued (a
+"disorderly reboot"), it may lose some state that has yet to be
+persisted to NVRam, and will increment the DA counter. After the DA
+counter gets sufficiently large, the TPM will lock the user out.
+
+NOTE: This only changes behavior on TPM2 devices. Since TPM1 uses sysfs,
+and sysfs relies on implicit locking on chip->ops, it is not safe to
+allow this code to run in TPM1, or to add sysfs support to TPM2, until
+that locking is made explicit.
 
 Signed-off-by: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Acked-by: Greg Kroah-Hartman <gregkh-hQyY1W1yCW8ekmWlsbkhG0B+6BGkLq7r@public.gmane.org>
 Cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 Fixes: 74d6b3ceaa17 ("tpm: fix suspend/resume paths for TPM 2.0")
 ---
-v2: Add Signed-off-by.
-v3: Remove logically separate change.
-v4: Add "acked-by" and "cc".
-v5: Execute only one of the class/bus/driver's shutdown functions.
-v6: (None in this patch, all were in the other of this patch series)
-v7: Re-ordered this patch and the other.
+v2:
+  - Properly split changes between this and another commit
+  - Use proper locking primitive.
+  - Fix commenting style
+v3:
+  - Re-fix commenting style
+v4:
+  - Update description and tags (Reviewed-by, Cc).
+v5:
+  - Update documentation.
+v6:
+  - Call device and/or bus shutdown from tpm_shutdown.
+v7:
+  - Fix build
+  - Rename function
+  - Fix missing NULL check
 
- drivers/base/core.c    | 6 +++++-
- include/linux/device.h | 2 ++
- 2 files changed, 7 insertions(+), 1 deletion(-)
+ drivers/char/tpm/tpm-chip.c  | 34 ++++++++++++++++++++++++++++++++++
+ drivers/char/tpm/tpm-sysfs.c |  3 +++
+ 2 files changed, 37 insertions(+)
 
-diff --git a/drivers/base/core.c b/drivers/base/core.c
-index bbecaf9293be..d3228cb7d12f 100644
---- a/drivers/base/core.c
-+++ b/drivers/base/core.c
-@@ -2667,7 +2667,11 @@ void device_shutdown(void)
- 		pm_runtime_get_noresume(dev);
- 		pm_runtime_barrier(dev);
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 322b8a51ffc6..67ec9d3d04f5 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -142,6 +142,39 @@ static void tpm_devs_release(struct device *dev)
+ 	put_device(&chip->dev);
+ }
  
--		if (dev->bus && dev->bus->shutdown) {
-+		if (dev->class && dev->class->shutdown) {
-+			if (initcall_debug)
-+				dev_info(dev, "shutdown\n");
-+			dev->class->shutdown(dev);
-+		} else if (dev->bus && dev->bus->shutdown) {
- 			if (initcall_debug)
- 				dev_info(dev, "shutdown\n");
- 			dev->bus->shutdown(dev);
-diff --git a/include/linux/device.h b/include/linux/device.h
-index 9ef518af5515..f240baac2001 100644
---- a/include/linux/device.h
-+++ b/include/linux/device.h
-@@ -378,6 +378,7 @@ int subsys_virtual_register(struct bus_type *subsys,
-  * @suspend:	Used to put the device to sleep mode, usually to a low power
-  *		state.
-  * @resume:	Used to bring the device from the sleep mode.
-+ * @shutdown:	Called at shut-down time to quiesce the device.
-  * @ns_type:	Callbacks so sysfs can detemine namespaces.
-  * @namespace:	Namespace of the device belongs to this class.
-  * @pm:		The default device power management operations of this class.
-@@ -407,6 +408,7 @@ struct class {
++/**
++ * tpm_class_shutdown() - prepare the TPM device for loss of power.
++ * @dev: device to which the chip is associated.
++ *
++ * Issues a TPM2_Shutdown command prior to loss of power, as required by the
++ * TPM 2.0 spec.
++ * Then, calls bus- and device- specific shutdown code.
++ *
++ * XXX: This codepath relies on the fact that sysfs is not enabled for
++ * TPM2: sysfs uses an implicit lock on chip->ops, so this could race if TPM2
++ * has sysfs support enabled before TPM sysfs's implicit locking is fixed.
++ */
++static int tpm_class_shutdown(struct device *dev)
++{
++	struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
++
++	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
++		down_write(&chip->ops_sem);
++		tpm2_shutdown(chip, TPM2_SU_CLEAR);
++		chip->ops = NULL;
++		up_write(&chip->ops_sem);
++	}
++	/* Allow bus- and device-specific code to run. Note: since chip->ops
++	 * is NULL, more-specific shutdown code will not be able to issue TPM
++	 * commands.
++	 */
++	if (dev->bus && dev->bus->shutdown)
++		dev->bus->shutdown(dev);
++	else if (dev->driver && dev->driver->shutdown)
++		dev->driver->shutdown(dev);
++	return 0;
++}
++
+ /**
+  * tpm_chip_alloc() - allocate a new struct tpm_chip instance
+  * @pdev: device to which the chip is associated
+@@ -181,6 +214,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+ 	device_initialize(&chip->devs);
  
- 	int (*suspend)(struct device *dev, pm_message_t state);
- 	int (*resume)(struct device *dev);
-+	int (*shutdown)(struct device *dev);
+ 	chip->dev.class = tpm_class;
++	chip->dev.class->shutdown = tpm_class_shutdown;
+ 	chip->dev.release = tpm_dev_release;
+ 	chip->dev.parent = pdev;
+ 	chip->dev.groups = chip->groups;
+diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+index eedb8e47bde2..86f38d239476 100644
+--- a/drivers/char/tpm/tpm-sysfs.c
++++ b/drivers/char/tpm/tpm-sysfs.c
+@@ -295,6 +295,9 @@ static const struct attribute_group tpm_dev_group = {
  
- 	const struct kobj_ns_type_operations *ns_type;
- 	const void *(*namespace)(struct device *dev);
+ void tpm_sysfs_add_device(struct tpm_chip *chip)
+ {
++	/* XXX: If you wish to remove this restriction, you must first update
++	 * tpm_sysfs to explicitly lock chip->ops.
++	 */
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+ 		return;
+ 
 -- 
 2.13.1.611.g7e3b11ae1-goog
 
