@@ -1,116 +1,211 @@
-From: Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: [PATCH v3 3/6] tpm: introduce tpm_pcr_bank_info
- structure with digest_size from TPM
-Date: Tue, 27 Jun 2017 11:24:18 -0400
-Message-ID: <1498577058.3387.103.camel@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v3 0/6] Updated API for TPM 2.0 PCR extend
+Date: Wed, 28 Jun 2017 20:10:43 +0300
+Message-ID: <20170628171043.uqlx6roznq4tqpwv@linux.intel.com>
 References: <20170621142941.32674-1-roberto.sassu@huawei.com>
-	<20170621142941.32674-4-roberto.sassu@huawei.com>
+ <20170624090325.kbqhwkrx5qvtxveg@linux.intel.com>
+ <989430a6-973f-6610-fb0a-f9e4b01b0d8e@huawei.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170621142941.32674-4-roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Roberto Sassu <roberto.sassu-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <989430a6-973f-6610-fb0a-f9e4b01b0d8e@huawei.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Roberto Sassu <roberto.sassu@huawei.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gV2VkLCAyMDE3LTA2LTIxIGF0IDE2OjI5ICswMjAwLCBSb2JlcnRvIFNhc3N1IHdyb3RlOgo+
-IFRoaXMgcGF0Y2ggaW50cm9kdWNlcyB0aGUgbmV3IHN0cnVjdHVyZSB0cG1fcGNyX2JhbmtfaW5m
-byB0byBzdG9yZQo+IGluZm9ybWF0aW9uIHJlZ2FyZGluZyBQQ1IgYmFua3MuIFRoZSBuZXh0IHBh
-dGNoIHdpbGwgcmVwbGFjZSB0aGUgYXJyYXkgb2YKPiBUUE0gYWxnb3JpdGhtcyBJRHMgd2l0aCBh
-biBhcnJheSBvZiB0aGUgbmV3IHN0cnVjdHVyZS4KPiAKPiB0cG1fcGNyX2JhbmtfaW5mbyBjb250
-YWlucyB0aGUgVFBNIGFsZ29yaXRobSBJRCwgdGhlIGRpZ2VzdCBzaXplIGFuZCwKPiBvcHRpb25h
-bGx5LCB0aGUgY29ycmVzcG9uZGluZyBjcnlwdG8gSUQsIGlmIGEgbWFwcGluZyBleGlzdHMuIFRo
-ZXNlCj4gaW5mb3JtYXRpb24gd2lsbCBiZSB1c2VkIGJ5IElNQSB0byBjYWxjdWxhdGUgdGhlIGRp
-Z2VzdCBvZiBhbiBldmVudAo+IGFuZCB0byBwcm92aWRlIG1lYXN1cmVtZW50cyBsb2dzIHRvIHVz
-ZXJzcGFjZSBhcHBsaWNhdGlvbnMuIFRoZSBuZXcKPiBzdHJ1Y3R1cmUgaGFzIGJlZW4gZGVmaW5l
-ZCBpbiBpbmNsdWRlL2xpbnV4L3RwbS5oLCBhcyBpdCB3aWxsIGJlIHBhc3NlZAo+IHRvIGZ1bmN0
-aW9ucyBvdXRzaWRlIHRoZSBUUE0gZHJpdmVyLgo+IAo+IFRoZSBwdXJwb3NlIG9mIHRoaXMgcGF0
-Y2ggaXMgdG8gZml4IGEgc2VyaW91cyBpc3N1ZSBpbiB0cG0yX3Bjcl9leHRlbmQoKToKPiBpZiB0
-aGUgbWFwcGluZyBiZXR3ZWVuIGEgVFBNIGFsZ29yaXRobSBhbmQgYSBjcnlwdG8gYWxnb3JpdGht
-IGlzIG5vdAo+IGRlZmluZWQsIHRoZSBQQ1IgYmFuayB3aXRoIHRoZSB1bmtub3duIGFsZ29yaXRo
-bSBpcyBub3QgZXh0ZW5kZWQuCj4gVGhpcyBnaXZlcyB0aGUgb3Bwb3J0dW5pdHkgdG8gYW4gYXR0
-YWNrZXIgdG8gcmVwbHkgdG8gcmVtb3RlIGF0dGVzdGF0aW9uCj4gcmVxdWVzdHMgd2l0aCBhIGxp
-c3Qgb2YgZmFrZSBtZWFzdXJlbWVudHMuIEluc3RlYWQsIHRoZSBkaWdlc3Qgc2l6ZQo+IGlzIHJl
-dHJpZXZlZCBmcm9tIHRoZSBvdXRwdXQgYnVmZmVyIG9mIGEgUENSIHJlYWQsIHdpdGhvdXQgcmVs
-eWluZwo+IG9uIHRoZSBjcnlwdG8gc3Vic3lzdGVtLgo+IAo+IFNpZ25lZC1vZmYtYnk6IFJvYmVy
-dG8gU2Fzc3UgPHJvYmVydG8uc2Fzc3VAaHVhd2VpLmNvbT4KClRvIGFkZHJlc3Mgc29tZSBvZiBK
-YXJra28ncyBjb21tZW50cywgSSB3b3VsZCByZXBsYWNlIGFjdGl2ZV9iYW5rcwp3aXRoIGEgc3Ry
-dWN0dXJlLCBuYW1lZCBmb3IgZXhhbXBsZSBhY3RpdmVfYmFua19pbmZvLCBjb250YWluaW5nIHRo
-ZQpleGlzdGluZyBhY3RpdmVfYmFuayBhbGdfaWQgYW5kIGp1c3QgdGhlIGRpZ2VzdCBzaXplLiDC
-oEEgc3Vic2VxdWVudApwYXRjaCB3b3VsZCBpbmNsdWRlIHRoZSBjcnlwdG9faWQsIGFzc3VtaW5n
-IGl0IGlzIG5lZWRlZC4KCldoZW4gYSBwYXRjaCBkZWZpbmVzIGEgbmV3IGZpZWxkL2Z1bmN0aW9u
-LCBhdCBsZWFzdCBvbmUgdXNhZ2Ugb2YgdGhhdApmaWVsZC9mdW5jdGlvbiBzaG91bGQgYmUgaW5j
-bHVkZWQgaW4gdGhlIHBhdGNoLiDCoEluIHRoaXMgY2FzZSwgeW91Cm1pZ2h0IHdhbnQgdG8gdmVy
-aWZ5IHRoZSBkaWdlc3Qgc2l6ZSByZXR1cm5lZCBieSB0aGUgVFBNIGlzIGFzCmV4cGVjdGVkLCBj
-b21wYXJpbmcgaXQgd2l0aCB0aGUgY3J5cHRvIGRpZ2VzdCBzaXplLgoKTWltaQoKPiAtLS0KPiAg
-ZHJpdmVycy9jaGFyL3RwbS90cG0uaCAgICAgIHwgMTEgLS0tLS0tLS0tLS0KPiAgZHJpdmVycy9j
-aGFyL3RwbS90cG0yLWNtZC5jIHwgMzAgKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrCj4g
-IGluY2x1ZGUvbGludXgvdHBtLmggICAgICAgICB8IDE5ICsrKysrKysrKysrKysrKysrKysKPiAg
-MyBmaWxlcyBjaGFuZ2VkLCA0OSBpbnNlcnRpb25zKCspLCAxMSBkZWxldGlvbnMoLSkKPiAKPiBk
-aWZmIC0tZ2l0IGEvZHJpdmVycy9jaGFyL3RwbS90cG0uaCBiL2RyaXZlcnMvY2hhci90cG0vdHBt
-LmgKPiBpbmRleCAxZGYwNTIxLi42MmM2MDBkIDEwMDY0NAo+IC0tLSBhL2RyaXZlcnMvY2hhci90
-cG0vdHBtLmgKPiArKysgYi9kcml2ZXJzL2NoYXIvdHBtL3RwbS5oCj4gQEAgLTk4LDE3ICs5OCw2
-IEBAIGVudW0gdHBtMl9yZXR1cm5fY29kZXMgewo+ICAJVFBNMl9SQ19SRUZFUkVOQ0VfSDAJPSAw
-eDA5MTAsCj4gIH07Cj4gCj4gLWVudW0gdHBtMl9hbGdvcml0aG1zIHsKPiAtCVRQTTJfQUxHX0VS
-Uk9SCQk9IDB4MDAwMCwKPiAtCVRQTTJfQUxHX1NIQTEJCT0gMHgwMDA0LAo+IC0JVFBNMl9BTEdf
-S0VZRURIQVNICT0gMHgwMDA4LAo+IC0JVFBNMl9BTEdfU0hBMjU2CQk9IDB4MDAwQiwKPiAtCVRQ
-TTJfQUxHX1NIQTM4NAkJPSAweDAwMEMsCj4gLQlUUE0yX0FMR19TSEE1MTIJCT0gMHgwMDBELAo+
-IC0JVFBNMl9BTEdfTlVMTAkJPSAweDAwMTAsCj4gLQlUUE0yX0FMR19TTTNfMjU2CT0gMHgwMDEy
-LAo+IC19Owo+IC0KPiAgZW51bSB0cG0yX2NvbW1hbmRfY29kZXMgewo+ICAJVFBNMl9DQ19GSVJT
-VAkJPSAweDAxMUYsCj4gIAlUUE0yX0NDX1NFTEZfVEVTVAk9IDB4MDE0MywKPiBkaWZmIC0tZ2l0
-IGEvZHJpdmVycy9jaGFyL3RwbS90cG0yLWNtZC5jIGIvZHJpdmVycy9jaGFyL3RwbS90cG0yLWNt
-ZC5jCj4gaW5kZXggNmE5ZmUwZC4uNzRhNjhlYSAxMDA2NDQKPiAtLS0gYS9kcml2ZXJzL2NoYXIv
-dHBtL3RwbTItY21kLmMKPiArKysgYi9kcml2ZXJzL2NoYXIvdHBtL3RwbTItY21kLmMKPiBAQCAt
-OTkyLDYgKzk5MiwzNiBAQCBpbnQgdHBtMl9wcm9iZShzdHJ1Y3QgdHBtX2NoaXAgKmNoaXApCj4g
-IH0KPiAgRVhQT1JUX1NZTUJPTF9HUEwodHBtMl9wcm9iZSk7Cj4gCj4gK3N0YXRpYyBpbnQgdHBt
-Ml9pbml0X3Bjcl9iYW5rX2luZm8oc3RydWN0IHRwbV9jaGlwICpjaGlwLCB1MTYgYWxnX2lkLAo+
-ICsJCQkJICAgc3RydWN0IHRwbV9wY3JfYmFua19pbmZvICphY3RpdmVfYmFuaykKPiArewo+ICsJ
-c3RydWN0IHRwbV9idWYgYnVmOwo+ICsJc3RydWN0IHRwbTJfcGNyX3JlYWRfb3V0ICpwY3JyZWFk
-X291dDsKPiArCWludCByYyA9IDA7Cj4gKwlpbnQgaTsKPiArCj4gKwlhY3RpdmVfYmFuay0+YWxn
-X2lkID0gYWxnX2lkOwo+ICsKPiArCXJjID0gdHBtMl9wY3JfcmVhZF90cG1fYnVmKGNoaXAsIDAs
-IGFsZ19pZCwgJmJ1ZiwgTlVMTCk7Cj4gKwlpZiAocmMpCj4gKwkJZ290byBvdXQ7Cj4gKwo+ICsJ
-cGNycmVhZF9vdXQgPSAoc3RydWN0IHRwbTJfcGNyX3JlYWRfb3V0ICopJmJ1Zi5kYXRhW1RQTV9I
-RUFERVJfU0laRV07Cj4gKwo+ICsJYWN0aXZlX2JhbmstPmRpZ2VzdF9zaXplID0gYmUxNl90b19j
-cHUocGNycmVhZF9vdXQtPmRpZ2VzdF9zaXplKTsKPiArCWFjdGl2ZV9iYW5rLT5jcnlwdG9faWQg
-PSBIQVNIX0FMR09fX0xBU1Q7Cj4gKwo+ICsJZm9yIChpID0gMDsgaSA8IEFSUkFZX1NJWkUodHBt
-Ml9oYXNoX21hcCk7IGkrKykgewo+ICsJCWlmIChhY3RpdmVfYmFuay0+YWxnX2lkICE9IHRwbTJf
-aGFzaF9tYXBbaV0udHBtX2lkKQo+ICsJCQljb250aW51ZTsKPiArCj4gKwkJYWN0aXZlX2Jhbmst
-PmNyeXB0b19pZCA9IHRwbTJfaGFzaF9tYXBbaV0uY3J5cHRvX2lkOwo+ICsJfQo+ICtvdXQ6Cj4g
-Kwl0cG1fYnVmX2Rlc3Ryb3koJmJ1Zik7Cj4gKwlyZXR1cm4gcmM7Cj4gK30KPiArCj4gIHN0cnVj
-dCB0cG0yX3Bjcl9zZWxlY3Rpb24gewo+ICAJX19iZTE2ICBoYXNoX2FsZzsKPiAgCXU4ICBzaXpl
-X29mX3NlbGVjdDsKPiBkaWZmIC0tZ2l0IGEvaW5jbHVkZS9saW51eC90cG0uaCBiL2luY2x1ZGUv
-bGludXgvdHBtLmgKPiBpbmRleCA1YTA5MGY1Li5mZjA2NzM4IDEwMDY0NAo+IC0tLSBhL2luY2x1
-ZGUvbGludXgvdHBtLmgKPiArKysgYi9pbmNsdWRlL2xpbnV4L3RwbS5oCj4gQEAgLTIyLDYgKzIy
-LDggQEAKPiAgI2lmbmRlZiBfX0xJTlVYX1RQTV9IX18KPiAgI2RlZmluZSBfX0xJTlVYX1RQTV9I
-X18KPiAKPiArI2luY2x1ZGUgPGNyeXB0by9oYXNoX2luZm8uaD4KPiArCj4gICNkZWZpbmUgVFBN
-X0RJR0VTVF9TSVpFIDIwCS8qIE1heCBUUE0gdjEuMiBQQ1Igc2l6ZSAqLwo+IAo+ICAvKgo+IEBA
-IC0zNyw2ICszOSwxNyBAQCBlbnVtIFRQTV9PUFNfRkxBR1Mgewo+ICAJVFBNX09QU19BVVRPX1NU
-QVJUVVAgPSBCSVQoMCksCj4gIH07Cj4gCj4gK2VudW0gdHBtMl9hbGdvcml0aG1zIHsKPiArCVRQ
-TTJfQUxHX0VSUk9SCQk9IDB4MDAwMCwKPiArCVRQTTJfQUxHX1NIQTEJCT0gMHgwMDA0LAo+ICsJ
-VFBNMl9BTEdfS0VZRURIQVNICT0gMHgwMDA4LAo+ICsJVFBNMl9BTEdfU0hBMjU2CQk9IDB4MDAw
-QiwKPiArCVRQTTJfQUxHX1NIQTM4NAkJPSAweDAwMEMsCj4gKwlUUE0yX0FMR19TSEE1MTIJCT0g
-MHgwMDBELAo+ICsJVFBNMl9BTEdfTlVMTAkJPSAweDAwMTAsCj4gKwlUUE0yX0FMR19TTTNfMjU2
-CT0gMHgwMDEyLAo+ICt9Owo+ICsKPiAgc3RydWN0IHRwbV9jbGFzc19vcHMgewo+ICAJdW5zaWdu
-ZWQgaW50IGZsYWdzOwo+ICAJY29uc3QgdTggcmVxX2NvbXBsZXRlX21hc2s7Cj4gQEAgLTUyLDYg
-KzY1LDEyIEBAIHN0cnVjdCB0cG1fY2xhc3Nfb3BzIHsKPiAgCXZvaWQgKCpyZWxpbnF1aXNoX2xv
-Y2FsaXR5KShzdHJ1Y3QgdHBtX2NoaXAgKmNoaXAsIGludCBsb2MpOwo+ICB9Owo+IAo+ICtzdHJ1
-Y3QgdHBtX3Bjcl9iYW5rX2luZm8gewo+ICsJZW51bSB0cG0yX2FsZ29yaXRobXMgYWxnX2lkOwo+
-ICsJZW51bSBoYXNoX2FsZ28gY3J5cHRvX2lkOwo+ICsJdTMyIGRpZ2VzdF9zaXplOwo+ICt9Owo+
-ICsKPiAgI2lmIGRlZmluZWQoQ09ORklHX1RDR19UUE0pIHx8IGRlZmluZWQoQ09ORklHX1RDR19U
-UE1fTU9EVUxFKQo+IAo+ICBleHRlcm4gaW50IHRwbV9pc190cG0yKHUzMiBjaGlwX251bSk7CgoK
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tCkNoZWNrIG91dCB0aGUgdmlicmFudCB0ZWNoIGNvbW11bml0
-eSBvbiBvbmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAplbmdhZ2luZyB0ZWNoIHNpdGVzLCBTbGFzaGRv
-dC5vcmchIGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdApfX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fX19fX19fX19fX19fX19fXwp0cG1kZC1kZXZlbCBtYWlsaW5nIGxpc3QKdHBtZGQtZGV2
-ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0L2xp
-c3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
+On Mon, Jun 26, 2017 at 09:21:46AM +0200, Roberto Sassu wrote:
+> On 6/24/2017 11:03 AM, Jarkko Sakkinen wrote:
+> > On Wed, Jun 21, 2017 at 04:29:35PM +0200, Roberto Sassu wrote:
+> > > The first version of the patch set can be retrieved at the URL:
+> > > 
+> > > https://sourceforge.net/p/tpmdd/mailman/message/35756302/
+> > > 
+> > > The patches should be applied on top of the next branch of
+> > > linux-security.git (commit cdac74d).
+> > > 
+> > > This patch set updates the TPM driver API for extending Platform
+> > > Configuration Registers (PCRs). These are special TPM registers which
+> > > cannot be written directly, but can only be updated through the extend
+> > > operation, by passing a digest as input:
+> > > 
+> > > PCR_value_new = hash_func(PCR_value_old | digest)
+> > > 
+> > > While TPM 1.2 can only use SHA1 as hash function, TPM 2.0 can support
+> > > multiple algorithms. On a TPM 2.0, PCR values extended with the same
+> > > algorithm are stored in a location called bank.
+> > > 
+> > > Currently, PCRs can only be extended from the kernel with a SHA1 digest,
+> > > through tpm_pcr_extend(). Remaining banks of a TPM 2.0 are extended with
+> > > the SHA1 digest padded with zeros. In order to take advantage of stronger
+> > > algorithms, the TPM driver should allow TPM users to extend a PCR with
+> > > digests calculated with the same algorithm of the PCR bank.
+> > > 
+> > > This patch set first introduces a new structure, called tpm_pcr_bank_info,
+> > > for storing detailed information about each PCR bank:
+> > > 
+> > > - TPM algorithm ID: algorithm identifier, defined by TCG; will be included
+> > >   by TPM users (e.g. IMA) in a measurement event log
+> > > - digest size: digest size for a TPM algorithm; since this is retrieved
+> > >   from the TPM, PCR banks can be extended even if an algorithm is unknown
+> > >   for the crypto subsystem (which currently the TPM driver relies on)
+> > > - crypto ID: will be used by TPM users to calculate a digest, to extend
+> > >   a PCR
+> > > 
+> > > Then, the patch set introduces the new function tpm_get_pcr_banks_info(),
+> > > to pass the information about PCR banks to TPM users, and finally, modifies
+> > > the parameters of tpm_pcr_extend(), so that TPM users can pass multiple
+> > > digests.
+> > > 
+> > > Given this definition of the tpm2_digest structure:
+> > > 
+> > > struct tpm2_digest {
+> > >     u16 alg_id;
+> > >     u8 digest[SHA512_DIGEST_SIZE];
+> > > } __packed;
+> > > 
+> > > there will be two methods to extend PCRs:
+> > > 
+> > > 1) by passing only one tpm2_digest structure containing a SHA1 digest
+> > >    (as it is done in the patch 6/6); in this case, the SHA1 digest
+> > >    is padded with zeros
+> > > 
+> > > 2) by calling tpm_get_pcr_banks_info() to obtain PCR banks information,
+> > >    and by calling tpm_pcr_extend() with as many tpm2_digest structures as
+> > >    the number of tpm_pcr_bank_info structures retrieved in the first step
+> > >    (if a digest for a TPM algorithm is missing, the TPM driver
+> > >    pads/truncates the first digest provided by the TPM user)
+> > > 
+> > > 
+> > > API Usage Examples
+> > > 
+> > > In the following examples, an application extends PCR 16 with the digest
+> > > of an event (e.g. record of a software measurement), with the methods
+> > > described above.
+> > > 
+> > > 
+> > > void app_calc_event_digest(struct crypto_shash *tfm, char *event,
+> > >                            u8 *digest)
+> > > {
+> > >     SHASH_DESC_ON_STACK(shash, tfm);
+> > > 
+> > >     shash->tfm = tfm;
+> > >     shash->flags = 0;
+> > > 
+> > >     crypto_shash_init(shash);
+> > >     crypto_shash_update(shash, event, strlen(event));
+> > >     crypto_shash_final(shash, digest);
+> > > }
+> > > 
+> > > void app_pcr_extend_method_1(void)
+> > > {
+> > >     char *event = "application event";
+> > >     struct tpm2_digest digestarg = {.alg_id = TPM2_ALG_SHA1};
+> > > 
+> > >     /* calculate event digest with current hash algorithm */
+> > >     struct crypto_shash *tfm = crypto_alloc_shash("sha1", 0, 0);
+> > > 
+> > >     app_calc_event_digest(tfm, event, digestarg.digest);
+> > > 
+> > >     /* extend all PCR banks with SHA1 digest*/
+> > >     tpm_pcr_extend(TPM_ANY_NUM, 16, 1, &digestarg);
+> > > }
+> > > 
+> > > void app_pcr_extend_method_2(void)
+> > > {
+> > >     /* declare static arrays, limit is known */
+> > >     struct tpm_pcr_bank_info active_banks[TPM_ACTIVE_BANKS_MAX];
+> > >     struct tpm2_digest digest_array[TPM_ACTIVE_BANKS_MAX];
+> > >     int i, num_algo;
+> > > 
+> > >     /* obtain algorithms supported by the TPM */
+> > >     num_algo = tpm_get_pcr_banks_info(TPM_ANY_NUM, active_banks);
+> > > 
+> > >     for (i = 0; i < num_algo; i++) {
+> > >         char *event = "application event";
+> > > 
+> > >         /* calculate event digest with current hash algorithm */
+> > >         const char *algo_name = hash_algo_name[active_banks[i].crypto_id];
+> > >         struct crypto_shash *tfm = crypto_alloc_shash(algo_name, 0, 0);
+> > > 
+> > >         app_calc_event_digest(tfm, event, digest_array[i].digest);
+> > >         digest_array[i].alg_id = active_banks[i].alg_id;
+> > >     }
+> > > 
+> > >     /* extend all PCR banks with calculated digests */
+> > >     tpm_pcr_extend(TPM_ANY_NUM, 16, num_algo, digest_array);
+> > > }
+> > > 
+> > > 
+> > > Changelog
+> > > 
+> > > v3
+> > > 
+> > > - introduced new structure tpm_pcr_bank_info
+> > > - read a PCR to obtain the digest size for each TPM algorithm
+> > > - tpm_pcr_algorithms() replaced by tpm_get_pcr_banks_info()
+> > > - removed tpm_pcr_algo_to_crypto() and tpm_pcr_algo_from_crypto()
+> > > - modification of tpm_pcr_extend() parameters and of callers of the
+> > >   function done in the same patch
+> > > - removed tpm_pcr_check_input()
+> > > 
+> > > v2
+> > > 
+> > > - tpm_pcr_algorithms() returns supported algorithms also for TPM 1.2
+> > > - fixed return values of tpm2_pcr_algo_to_crypto() and
+> > >   tpm2_pcr_algo_from_crypto() if TPM support is disabled in the kernel
+> > > - tpm_pcr_extend() arguments checked by tpm_pcr_check_input()
+> > > - modified parameters of tpm_pcr_extend()
+> > > 
+> > > Roberto Sassu (6):
+> > >   tpm: use tpm_buf functions to perform a PCR read
+> > >   tpm: use tpm2_pcr_read_tpm_buf() in tpm2_do_selftest()
+> > >   tpm: introduce tpm_pcr_bank_info structure with digest_size from TPM
+> > >   tpm: replace TPM algorithms IDs with tpm_pcr_bank_info structs in
+> > >     tpm_chip
+> > >   tpm: introduce tpm_get_pcr_banks_info()
+> > >   tpm: pass multiple digests to tpm_pcr_extend()
+> > > 
+> > >  drivers/char/tpm/tpm-interface.c   |  88 ++++++++++++++++++++++---
+> > >  drivers/char/tpm/tpm.h             |  19 +-----
+> > >  drivers/char/tpm/tpm2-cmd.c        | 132 ++++++++++++++++++++++---------------
+> > >  include/linux/tpm.h                |  39 ++++++++++-
+> > >  security/integrity/ima/ima_queue.c |   4 +-
+> > >  security/keys/trusted.c            |   6 +-
+> > >  6 files changed, 202 insertions(+), 86 deletions(-)
+> > > 
+> > > --
+> > > 2.9.3
+> > > 
+> > > --
+> > > To unsubscribe from this list: send the line "unsubscribe keyrings" in
+> > > the body of a message to majordomo@vger.kernel.org
+> > > More majordomo info at  http://vger.kernel.org/majordomo-info.html
+> > 
+> > 
+> > To move this forward and be more constructive here's how I see it
+> > should be done (along the lines, draft):
+> > 
+> > int tpm_pcr_extend(u32 chip_num, int pcr_idx, unsigned int alg,
+> > 		   const u8 *hash);
+> > 
+> > The paramater 'alg' is crypto ID as specified by crypto subsystem.
+> 
+> You cannot pass one digest at time. Suppose that you want to extend
+> the SHA1 and SHA256 banks, each with a digest calculated with the
+> same algorithm. If you pass a SHA1 digest first, also the SHA256 bank
+> will be extended with the padded SHA1 digest.
+
+Is this required by IMA somehow? Don't really understand the scenario
+where you would extend first with SHA1 and subsequently with SHA256.
+
+> Regarding crypto IDs, it has been decided that IMA will include
+> TPM algorithm IDs in the event log. So both IDs should be passed
+> to IMA somehow.
+
+Don't really understand why TPM algorithm IDs are so important for IMA.
+
+> Roberto
+
+/Jarkko
