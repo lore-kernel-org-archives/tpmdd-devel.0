@@ -1,74 +1,108 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [Linux-ima-devel] [PATCH v3 0/6] Updated API for TPM 2.0 PCR
- extend
-Date: Wed, 28 Jun 2017 20:28:51 +0300
-Message-ID: <20170628172851.fuap4ennmdj473yu@linux.intel.com>
-References: <20170621142941.32674-1-roberto.sassu@huawei.com>
- <20170624090325.kbqhwkrx5qvtxveg@linux.intel.com>
- <1498480439.3387.45.camel@linux.vnet.ibm.com>
+Subject: Re: [PATCH v2] tpm: Fix the ioremap() call for Braswell systems
+Date: Thu, 29 Jun 2017 01:11:38 +0300
+Message-ID: <20170628221138.bp4hkbal3wxdeekr@linux.intel.com>
+References: <1498156197-180919-1-git-send-email-azhar.shaikh@intel.com>
+ <1498167121-77638-1-git-send-email-azhar.shaikh@intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1498480439.3387.45.camel@linux.vnet.ibm.com>
+In-Reply-To: <1498167121-77638-1-git-send-email-azhar.shaikh@intel.com>
 Sender: owner-linux-security-module@vger.kernel.org
-To: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Cc: Roberto Sassu <roberto.sassu@huawei.com>, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org, Kenneth Goldman <kgoldman@us.ibm.com>
+To: Azhar Shaikh <azhar.shaikh@intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jun 26, 2017 at 08:33:59AM -0400, Mimi Zohar wrote:
-> On Sat, 2017-06-24 at 11:03 +0200, Jarkko Sakkinen wrote:
-> > On Wed, Jun 21, 2017 at 04:29:35PM +0200, Roberto Sassu wrote:
+On Thu, Jun 22, 2017 at 02:32:01PM -0700, Azhar Shaikh wrote:
+> ioremap() for Intel Braswell processors was done in
+> tpm_tis_pnp_init(). But before this function gets called,
+> platform driver 'tis_drv' gets registered and its probe function
+> tpm_tis_plat_probe() is invoked, which does a TPM
+> access. Now for Braswell processors tpm_platform_begin_xfer()
+> will do an ioread32() without having a mapped address, which
+> will lead to a bad I/O access warning.
+> Hence move the ioremap() call from tpm_tis_pnp_init() to init_tis()
+> before registering the 'tis_drv' or basically before any TPM access.
+> Accordingly also move the iounmap() call from tpm_tis_pnp_remove()
+> to cleanup_tis() after all TPM access are completed.
 > 
-> 
-> > To move this forward and be more constructive here's how I see it
-> > should be done (along the lines, draft):
-> > 
-> > int tpm_pcr_extend(u32 chip_num, int pcr_idx, unsigned int alg,
-> > 		   const u8 *hash);
-> > 
-> > The paramater 'alg' is crypto ID as specified by crypto subsystem.
-> 
-> Based on Kenneth Goldman's input, the new IMA TPM-2.0 crypto hash
-> agile measurement list will contain the TPM crypto hash algorithm ids
-> (TPM crypto-ID). 
+> Signed-off-by: Azhar Shaikh <azhar.shaikh@intel.com>
 
-Doesn't this lock you to TPM? 
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
-If you seriously want to do this, I guess it is fine by me but I'm just
-wondering why the measurement list couldn't use something with more
-loose binding to TPM.
-
-> > TPM driver must have a precompiled table of mappings for crypto IDs
-> > and TPM algorithm IDs.
+> ---
+> Changes from v1:
+> - Do error handling in init_ts().
+> - Update the commit message.
 > 
-> We could map the TPM crypto-IDs to the crypto subsystem IDs and then
-> map them back, but is that necessary?
+>  drivers/char/tpm/tpm_tis.c | 25 +++++++++++++------------
+>  1 file changed, 13 insertions(+), 12 deletions(-)
 > 
-> > 
-> > In addition it must have dynamically acquired list of TPM alg IDs.
-> > For those algs that static mapping does not exist it must extend
-> > them like we do now everything else except SHA-1 (Naynas changes).
+> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+> index 506e62ca3576..d97ce22267fb 100644
+> --- a/drivers/char/tpm/tpm_tis.c
+> +++ b/drivers/char/tpm/tpm_tis.c
+> @@ -330,12 +330,6 @@ static int tpm_tis_pnp_init(struct pnp_dev *pnp_dev,
+>  	else
+>  		tpm_info.irq = -1;
+>  
+> -#ifdef CONFIG_X86
+> -	if (is_bsw())
+> -		ilb_base_addr = ioremap(INTEL_LEGACY_BLK_BASE_ADDR,
+> -					ILB_REMAP_SIZE);
+> -#endif
+> -
+>  	return tpm_tis_init(&pnp_dev->dev, &tpm_info);
+>  }
+>  
+> @@ -359,12 +353,6 @@ static void tpm_tis_pnp_remove(struct pnp_dev *dev)
+>  
+>  	tpm_chip_unregister(chip);
+>  	tpm_tis_remove(chip);
+> -
+> -#ifdef CONFIG_X86
+> -	if (is_bsw())
+> -		iounmap(ilb_base_addr);
+> -#endif
+> -
+>  }
+>  
+>  static struct pnp_driver tis_pnp_driver = {
+> @@ -472,6 +460,11 @@ static int __init init_tis(void)
+>  	if (rc)
+>  		goto err_force;
+>  
+> +#ifdef CONFIG_X86
+> +	if (is_bsw())
+> +		ilb_base_addr = ioremap(INTEL_LEGACY_BLK_BASE_ADDR,
+> +					ILB_REMAP_SIZE);
+> +#endif
+>  	rc = platform_driver_register(&tis_drv);
+>  	if (rc)
+>  		goto err_platform;
+> @@ -490,6 +483,10 @@ static int __init init_tis(void)
+>  err_platform:
+>  	if (force_pdev)
+>  		platform_device_unregister(force_pdev);
+> +#ifdef CONFIG_X86
+> +	if (is_bsw())
+> +		iounmap(ilb_base_addr);
+> +#endif
+>  err_force:
+>  	return rc;
+>  }
+> @@ -499,6 +496,10 @@ static void __exit cleanup_tis(void)
+>  	pnp_unregister_driver(&tis_pnp_driver);
+>  	platform_driver_unregister(&tis_drv);
+>  
+> +#ifdef CONFIG_X86
+> +	if (is_bsw())
+> +		iounmap(ilb_base_addr);
+> +#endif
+>  	if (force_pdev)
+>  		platform_device_unregister(force_pdev);
+>  }
+> -- 
+> 1.9.1
 > 
-> Padding/truncating an unknown bank using SHA1 is fine, but at some
-> point, as Roberto pointed out to me, TPM 2.0's might not support SHA-
-> 1.  So for the record, we're hard coding the use of SHA1 for the
-> unknown algorithms whether or not the TPM supports SHA1.
-
-Why doesn't it work to pick algorithm X from the availabe options and
-do truncation/padding for that? Not necessarily SHA1.
-
-> 
-> > There's absolutely no need to pass digest size like you do BTW as it is
-> > defined by the standard.
-> 
-> For algorithms known to the crypto subsystem, that is fine, but for
-> the unknown TPM crypto algorithms, we would need to somehow query the
-> TPM for the digest sizes to create the mapping.
-> 
-> Mimi
-
-There's a TPM command to query TPM algorithms.
-
-/Jarkko
