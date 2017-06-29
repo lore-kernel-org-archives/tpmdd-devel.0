@@ -1,54 +1,30 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v7 0/2] Run TPM2_Shutdown on system
- shutdown
-Date: Thu, 29 Jun 2017 22:54:23 +0300
-Message-ID: <20170629195423.fmh5mxhwbh7aaexa@linux.intel.com>
-References: <20170625215324.17467-1-joshz@google.com>
-	<1498742891.30068.1.camel@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH 1/2] tpm: use tpm_buf functions in tpm2_pcr_read()
+Date: Thu, 29 Jun 2017 22:54:56 +0300
+Message-ID: <20170629195456.yesgplwa74l2e6pc@linux.intel.com>
+References: <20170623134157.30399-1-roberto.sassu@huawei.com>
+ <20170623134157.30399-2-roberto.sassu@huawei.com>
+ <20170628221858.65mybzp6tyzh27g7@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1498742891.30068.1.camel-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
+In-Reply-To: <20170628221858.65mybzp6tyzh27g7@linux.intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Roberto Sassu <roberto.sassu@huawei.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jun 29, 2017 at 04:28:11PM +0300, Jarkko Sakkinen wrote:
-> On Sun, 2017-06-25 at 14:53 -0700, Josh Zimmerman wrote:
-> > This patchset causes all devices in the tpm class to issue TPM2_Shutdown
-> > when the system is shutting down.
+On Thu, Jun 29, 2017 at 01:18:58AM +0300, Jarkko Sakkinen wrote:
+> On Fri, Jun 23, 2017 at 03:41:56PM +0200, Roberto Sassu wrote:
+> > tpm2_pcr_read() now builds the PCR read command buffer with tpm_buf
+> > functions. This solution is preferred to using a tpm2_cmd structure,
+> > as tpm_buf functions provide protection against buffer overflow.
 > > 
-> > As a prerequisite, it adds a "shutdown" method to "struct class".
-> > 
-> > Since this bug can cause users to be locked out of their TPMs, I'd like
-> > this patch included in at least 4.4 and 4.9. 4.1 is nice-to-have but not
-> > essential.
-> > 
-> > gregkh Acked the proposal for stable in v3 of this patch.
-> > 
-> >  drivers/base/core.c          |  6 +++++-
-> >  drivers/char/tpm/tpm-chip.c  | 34 ++++++++++++++++++++++++++++++++++
-> >  drivers/char/tpm/tpm-sysfs.c |  3 +++
-> >  include/linux/device.h       |  2 ++
-> >  4 files changed, 44 insertions(+), 1 deletion(-
+> > Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
 > 
-> Josh,
-> 
-> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
-Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Tested-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
 /Jarkko
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
