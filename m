@@ -1,92 +1,55 @@
-From: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Subject: Re: [Linux-ima-devel] [PATCH v3 0/6] Updated API for TPM 2.0 PCR
- extend
-Date: Wed, 28 Jun 2017 18:28:59 -0400
-Message-ID: <1498688939.4408.19.camel@linux.vnet.ibm.com>
-References: <20170621142941.32674-1-roberto.sassu@huawei.com>
-         <20170624090325.kbqhwkrx5qvtxveg@linux.intel.com>
-         <1498480439.3387.45.camel@linux.vnet.ibm.com>
-         <20170628172851.fuap4ennmdj473yu@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v7 0/2] Run TPM2_Shutdown on system
+ shutdown
+Date: Thu, 29 Jun 2017 16:28:11 +0300
+Message-ID: <1498742891.30068.1.camel@linux.intel.com>
+References: <20170625215324.17467-1-joshz@google.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: 8bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170628172851.fuap4ennmdj473yu@linux.intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: Roberto Sassu <roberto.sassu@huawei.com>, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-kernel@vger.kernel.org, Kenneth Goldman <kgoldman@us.ibm.com>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170625215324.17467-1-joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Josh Zimmerman <joshz-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, 2017-06-28 at 20:28 +0300, Jarkko Sakkinen wrote:
-> On Mon, Jun 26, 2017 at 08:33:59AM -0400, Mimi Zohar wrote:
-> > On Sat, 2017-06-24 at 11:03 +0200, Jarkko Sakkinen wrote:
-> > > On Wed, Jun 21, 2017 at 04:29:35PM +0200, Roberto Sassu wrote:
-> > 
-> > 
-> > > To move this forward and be more constructive here's how I see it
-> > > should be done (along the lines, draft):
-> > > 
-> > > int tpm_pcr_extend(u32 chip_num, int pcr_idx, unsigned int alg,
-> > > 		   const u8 *hash);
-> > > 
-> > > The paramater 'alg' is crypto ID as specified by crypto subsystem.
-> > 
-> > Based on Kenneth Goldman's input, the new IMA TPM-2.0 crypto hash
-> > agile measurement list will contain the TPM crypto hash algorithm ids
-> > (TPM crypto-ID). 
+On Sun, 2017-06-25 at 14:53 -0700, Josh Zimmerman wrote:
+> This patchset causes all devices in the tpm class to issue TPM2_Shutdown
+> when the system is shutting down.
 > 
-> Doesn't this lock you to TPM? 
+> As a prerequisite, it adds a "shutdown" method to "struct class".
 > 
-> If you seriously want to do this, I guess it is fine by me but I'm just
-> wondering why the measurement list couldn't use something with more
-> loose binding to TPM.
-
-I expect Ken will comment ...
-
-> > > TPM driver must have a precompiled table of mappings for crypto IDs
-> > > and TPM algorithm IDs.
-> > 
-> > We could map the TPM crypto-IDs to the crypto subsystem IDs and then
-> > map them back, but is that necessary?
-> > 
-> > > 
-> > > In addition it must have dynamically acquired list of TPM alg IDs.
-> > > For those algs that static mapping does not exist it must extend
-> > > them like we do now everything else except SHA-1 (Naynas changes).
-> > 
-> > Padding/truncating an unknown bank using SHA1 is fine, but at some
-> > point, as Roberto pointed out to me, TPM 2.0's might not support SHA-
-> > 1.  So for the record, we're hard coding the use of SHA1 for the
-> > unknown algorithms whether or not the TPM supports SHA1.
+> Since this bug can cause users to be locked out of their TPMs, I'd like
+> this patch included in at least 4.4 and 4.9. 4.1 is nice-to-have but not
+> essential.
 > 
-> Why doesn't it work to pick algorithm X from the availabe options and
-> do truncation/padding for that? Not necessarily SHA1.
-
-Yes, it does work, as Roberto pointed out in a subsequent post.  For
-TPM 2.0 the first digest algorithm in the IMA hash agile crypto
-header, will be used as the default digest used for truncating/padding
-the other unspecified banks.
-
-In order not to break the existing userspace ABI, we will still need
-to support the existing SHA1 based IMA securityfs measurement lists,
-whether or not SHA1 is included in the hash agile IMA securityfs
-measurement lists. 
-
-> > 
-> > > There's absolutely no need to pass digest size like you do BTW as it is
-> > > defined by the standard.
-> > 
-> > For algorithms known to the crypto subsystem, that is fine, but for
-> > the unknown TPM crypto algorithms, we would need to somehow query the
-> > TPM for the digest sizes to create the mapping.
-> > 
+> gregkh Acked the proposal for stable in v3 of this patch.
 > 
-> There's a TPM command to query TPM algorithms.
+>  drivers/base/core.c          |  6 +++++-
+>  drivers/char/tpm/tpm-chip.c  | 34 ++++++++++++++++++++++++++++++++++
+>  drivers/char/tpm/tpm-sysfs.c |  3 +++
+>  include/linux/device.h       |  2 ++
+>  4 files changed, 44 insertions(+), 1 deletion(-
 
-Right, tpm2_init_pcr_bank_info(), defined in Roberto's patch "tpm:
-introduce tpm_pcr_bank_info structure with digest_size from TPM", gets
-the TPM digest size and stores it in the active bank structure
-(tpm_pcr_bank_info).
+Josh,
 
-Mimi
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 
+I'll rebase my next after testing (and add also Tested-by).
+
+I have one question as you are more familiar with the issue a hand.
+What if you just cut the power from the device, does this affect
+DA counter?
+
+/Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
