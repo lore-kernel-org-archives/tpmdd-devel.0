@@ -1,30 +1,64 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH 2/2] tpm: use tpm2_pcr_read() in
- tpm2_do_selftest()
-Date: Thu, 29 Jun 2017 22:56:07 +0300
-Message-ID: <20170629195607.n7w7houaw5vr7fji@linux.intel.com>
-References: <20170623134157.30399-1-roberto.sassu@huawei.com>
- <20170623134157.30399-3-roberto.sassu@huawei.com>
- <20170628221935.joqqxrohskhq3kj6@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v4 RESEND 1/2] Documentation: tpm: add
+ powered-while-suspended binding documentation
+Date: Mon, 3 Jul 2017 15:57:35 +0300
+Message-ID: <20170703125735.dsrl6bs7ttj27zrt@linux.intel.com>
+References: <20170627102724.23861-1-enric.balletbo@collabora.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Return-path: <devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170628221935.joqqxrohskhq3kj6@linux.intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Roberto Sassu <roberto.sassu@huawei.com>
-Cc: linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+In-Reply-To: <20170627102724.23861-1-enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
+Sender: devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
+Cc: Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>, groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Jun 29, 2017 at 01:19:35AM +0300, Jarkko Sakkinen wrote:
-> On Fri, Jun 23, 2017 at 03:41:57PM +0200, Roberto Sassu wrote:
-> > tpm2_do_selftest() performs a PCR read during the TPM initialization phase.
-> > This patch replaces the PCR read code with a call to tpm2_pcr_read().
-> > 
-> > Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
+On Tue, Jun 27, 2017 at 12:27:23PM +0200, Enric Balletbo i Serra wrote:
+> Add a new powered-while-suspended property to control the behavior of the
+> TPM suspend/resume.
 > 
-> Reviewed-by: Jarkko Sakkinen <jarkko.sakkine@linux.intel.com>
+> Signed-off-by: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
+> Signed-off-by: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+> Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> Acked-by: Rob Herring <robh-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
+> ---
+> Changes since v3.
+>   - Rebased on top of linux-next
+>  Rob Herring
+>   - Split DT binding from code patch as is preferred. 
+> 
+> Did not exist on previous versions.
+> 
+>  Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt | 6 ++++++
+>  1 file changed, 6 insertions(+)
+> 
+> diff --git a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
+> index 8cb638b..85c8216 100644
+> --- a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
+> +++ b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
+> @@ -8,6 +8,12 @@ Required properties:
+>                     the firmware event log
+>  - linux,sml-size : size of the memory allocated for the firmware event log
+>  
+> +Optional properties:
+> +
+> +- powered-while-suspended: present when the TPM is left powered on between
+> +                           suspend and resume (makes the suspend/resume
+> +                           callbacks do nothing).
+> +
+>  Example (for OpenPower Systems with Nuvoton TPM 2.0 on I2C)
+>  ----------------------------------------------------------
+>  
+> -- 
+> 2.9.3
+> 
 
-Tested-by: Jarkko Sakkinen <jarkko.sakkine@linux.intel.com>
+So... should I apply this?
 
 /Jarkko
+--
+To unsubscribe from this list: send the line "unsubscribe devicetree" in
+the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+More majordomo info at  http://vger.kernel.org/majordomo-info.html
