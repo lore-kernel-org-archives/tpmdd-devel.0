@@ -1,8 +1,8 @@
 From: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: [PATCH 2/3] tpm-chip: Return TPM error codes from
- auto_startup functions
-Date: Tue, 4 Jul 2017 15:56:47 +0200
-Message-ID: <20170704135648.7360-2-Alexander.Steffen@infineon.com>
+Subject: [PATCH 3/3] tpm-chip: Export TPM device to user space
+ even when startup failed
+Date: Tue, 4 Jul 2017 15:56:48 +0200
+Message-ID: <20170704135648.7360-3-Alexander.Steffen@infineon.com>
 References: <20170704135648.7360-1-Alexander.Steffen@infineon.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -20,84 +20,74 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The auto_startup functions for TPM1 and TPM2 convert all TPM error codes to
-ENODEV on exit. But since there is only one caller for those functions,
-this code can be consolidated within the caller. Additionally, this allows
-the caller to distinguish between a TPM being present (but returning error
-responses for some commands) and no TPM being present (or the TPM
-malfunctioning completely).
+When one of the commands during the auto_startup sequences does not return
+TPM_RC_SUCCESS, tpm_chip_register misleadingly returns ENODEV, even though
+a TPM device is definitely present.
+
+An error response during those sequences is indeed unexpected, so to
+prevent subsequent errors, the kernel should not make use of the TPM
+device. But user space applications still might be able to communicate with
+the TPM, so they can be used to further diagnose and/or fix the problem. To
+allow this, with this patch the device is still exported to user space,
+even if a TPM error code has been received, but the kernel itself will not
+be allowed to use the device for anything.
+
+This is not a hypothetical scenario, but there are devices in the wild that
+show this behavior. With this fix, those devices can be recovered from
+their failed state.
 
 Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
 ---
- drivers/char/tpm/tpm-chip.c      | 4 +++-
- drivers/char/tpm/tpm-interface.c | 6 ++----
- drivers/char/tpm/tpm2-cmd.c      | 5 ++---
- 3 files changed, 7 insertions(+), 8 deletions(-)
+ drivers/char/tpm/tpm-chip.c | 15 +++++++++------
+ 1 file changed, 9 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index a353b7a..f20fcb7 100644
+index f20fcb7..a4baa56 100644
 --- a/drivers/char/tpm/tpm-chip.c
 +++ b/drivers/char/tpm/tpm-chip.c
-@@ -404,8 +404,10 @@ int tpm_chip_register(struct tpm_chip *chip)
- 			rc = tpm2_auto_startup(chip);
- 		else
- 			rc = tpm1_auto_startup(chip);
--		if (rc)
-+		if (rc < 0)
+@@ -390,7 +390,7 @@ static int tpm_add_legacy_sysfs(struct tpm_chip *chip)
+  *
+  * Creates a character device for the TPM chip and adds sysfs attributes for
+  * the device. As the last step this function adds the chip to the list of TPM
+- * chips available for in-kernel use.
++ * chips available for in-kernel use, if the TPM startup was successful.
+  *
+  * This function should be only called after the chip initialization is
+  * complete.
+@@ -398,6 +398,7 @@ static int tpm_add_legacy_sysfs(struct tpm_chip *chip)
+ int tpm_chip_register(struct tpm_chip *chip)
+ {
+ 	int rc;
++	bool startup_successful = true;
+ 
+ 	if (chip->ops->flags & TPM_OPS_AUTO_STARTUP) {
+ 		if (chip->flags & TPM_CHIP_FLAG_TPM2)
+@@ -407,7 +408,7 @@ int tpm_chip_register(struct tpm_chip *chip)
+ 		if (rc < 0)
  			return rc;
-+		else if (rc > 0)
-+			return -ENODEV;
+ 		else if (rc > 0)
+-			return -ENODEV;
++			startup_successful = false;
  	}
  
  	tpm_sysfs_add_device(chip);
-diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 3123a6e..4784ccc 100644
---- a/drivers/char/tpm/tpm-interface.c
-+++ b/drivers/char/tpm/tpm-interface.c
-@@ -997,7 +997,8 @@ EXPORT_SYMBOL_GPL(tpm_do_selftest);
-  *                     sequence
-  * @chip: TPM chip to use
-  *
-- * Returns 0 on success, < 0 in case of fatal error.
-+ * Returns 0 on success, < 0 in case of fatal error or a value > 0 representing
-+ * a TPM error code.
-  */
- int tpm1_auto_startup(struct tpm_chip *chip)
- {
-@@ -1012,10 +1013,7 @@ int tpm1_auto_startup(struct tpm_chip *chip)
- 		goto out;
+@@ -430,10 +431,12 @@ int tpm_chip_register(struct tpm_chip *chip)
+ 		return rc;
  	}
  
--	return rc;
- out:
--	if (rc > 0)
--		rc = -ENODEV;
- 	return rc;
+-	/* Make the chip available. */
+-	mutex_lock(&idr_lock);
+-	idr_replace(&dev_nums_idr, chip, chip->dev_num);
+-	mutex_unlock(&idr_lock);
++	if (startup_successful) {
++		/* Make the chip available. */
++		mutex_lock(&idr_lock);
++		idr_replace(&dev_nums_idr, chip, chip->dev_num);
++		mutex_unlock(&idr_lock);
++	}
+ 
+ 	return 0;
  }
- 
-diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index f7f34b2a..0a64714 100644
---- a/drivers/char/tpm/tpm2-cmd.c
-+++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -1074,7 +1074,8 @@ static int tpm2_get_cc_attrs_tbl(struct tpm_chip *chip)
-  *                     sequence
-  * @chip: TPM chip to use
-  *
-- * Returns 0 on success, < 0 in case of fatal error.
-+ * Returns 0 on success, < 0 in case of fatal error or a value > 0 representing
-+ * a TPM error code.
-  */
- int tpm2_auto_startup(struct tpm_chip *chip)
- {
-@@ -1109,8 +1110,6 @@ int tpm2_auto_startup(struct tpm_chip *chip)
- 	rc = tpm2_get_cc_attrs_tbl(chip);
- 
- out:
--	if (rc > 0)
--		rc = -ENODEV;
- 	return rc;
- }
- 
 -- 
 2.7.4
 
