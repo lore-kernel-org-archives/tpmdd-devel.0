@@ -1,63 +1,69 @@
-From: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Subject: Re: [tpmdd-devel] [Linux-ima-devel] [PATCH v3 0/6] Updated API for
- TPM 2.0 PCR extend
-Date: Wed, 05 Jul 2017 12:06:42 -0400
-Message-ID: <1499270802.3059.101.camel@linux.vnet.ibm.com>
-References: <20170621142941.32674-1-roberto.sassu@huawei.com>
-         <20170624090325.kbqhwkrx5qvtxveg@linux.intel.com>
-         <1498480439.3387.45.camel@linux.vnet.ibm.com>
-         <20170628172851.fuap4ennmdj473yu@linux.intel.com>
-         <55cf0a07-bee8-a034-4d40-6232bc0eefb8@linux.vnet.ibm.com>
+From: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Subject: Re: [PATCH v4 RESEND 1/2] Documentation: tpm: add powered-while-suspended
+ binding documentation
+Date: Wed, 5 Jul 2017 10:19:02 -0700
+Message-ID: <CAPz6YkWN8jQcJdah8wqM+O-5ST+eZ1qpzQvGerXX_u1Tm6soFg@mail.gmail.com>
+References: <20170627102724.23861-1-enric.balletbo@collabora.com> <20170703125735.dsrl6bs7ttj27zrt@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: 8bit
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <55cf0a07-bee8-a034-4d40-6232bc0eefb8@linux.vnet.ibm.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Ken Goldman <kgold@linux.vnet.ibm.com>
-Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-ima-devel@lists.sourceforge.net
+Return-path: <devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+In-Reply-To: <20170703125735.dsrl6bs7ttj27zrt-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Sender: devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Cc: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>, Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Guenter Roeck <groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, 2017-07-05 at 11:18 -0400, Ken Goldman wrote:
-> On 6/28/2017 1:28 PM, Jarkko Sakkinen wrote:
->  > On Mon, Jun 26, 2017 at 08:33:59AM -0400, Mimi Zohar wrote:
->  >> On Sat, 2017-06-24 at 11:03 +0200, Jarkko Sakkinen wrote:
->  >>> On Wed, Jun 21, 2017 at 04:29:35PM +0200, Roberto Sassu wrote:
+On Mon, Jul 3, 2017 at 5:57 AM, Jarkko Sakkinen
+<jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
+> On Tue, Jun 27, 2017 at 12:27:23PM +0200, Enric Balletbo i Serra wrote:
+>> Add a new powered-while-suspended property to control the behavior of the
+>> TPM suspend/resume.
+>>
+>> Signed-off-by: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
+>> Signed-off-by: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+>> Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+>> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+>> Acked-by: Rob Herring <robh-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
+>> ---
+>> Changes since v3.
+>>   - Rebased on top of linux-next
+>>  Rob Herring
+>>   - Split DT binding from code patch as is preferred.
+>>
+>> Did not exist on previous versions.
+>>
+>>  Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt | 6 ++++++
+>>  1 file changed, 6 insertions(+)
+>>
+>> diff --git a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
+>> index 8cb638b..85c8216 100644
+>> --- a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
+>> +++ b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
+>> @@ -8,6 +8,12 @@ Required properties:
+>>                     the firmware event log
+>>  - linux,sml-size : size of the memory allocated for the firmware event log
+>>
+>> +Optional properties:
+>> +
+>> +- powered-while-suspended: present when the TPM is left powered on between
+>> +                           suspend and resume (makes the suspend/resume
+>> +                           callbacks do nothing).
+>> +
+>>  Example (for OpenPower Systems with Nuvoton TPM 2.0 on I2C)
+>>  ----------------------------------------------------------
+>>
+>> --
+>> 2.9.3
+>>
+>
+> So... should I apply this?
 
->  >>> There's absolutely no need to pass digest size like you do BTW as 
-> it >>> is defined by the standard.
->  >>
->  >> For algorithms known to the crypto subsystem, that is fine, but for
->  >> the unknown TPM crypto algorithms, we would need to somehow query the
->  >> TPM for the digest sizes to create the mapping.
->  >>
->  >> Mimi
->  >
->  > There's a TPM command to query TPM algorithms.
-> 
-> This is true - one getcap to determine the number of algorithms, then a 
-> pcr read, then parse the response structures and match the algorithms to 
-> sizes.
-> 
-> Alternatively, could you create a table mapping the algorithm to the 
-> size?  There are currently 8 approved algorithms, meaning the table is 
-> 32 bytes, probably less code than the queries.
-> 
-> As for an algorithm appearing in the TPM that's not in the table, it 
-> takes a year or more for a new algorithm to appear.  Is that enough time 
-> to patch the device driver?
-> 
-> FYI, the 8 algorithms are:
-> 
-> sha1, sha256, sha384, sha512, sm3-256, sha3-256, sha3-384, sha3-512.
-> 
-> I am only aware of sha1, sha256, and sm3-256 being used in production 
-> hardware TPMs.
+Hi, since you applied the code part, it would make sense to apply the
+documentation too.
 
-New devices aren't being shipped with the most recent kernels.  So
-even if the upstream kernel supports the newer crypto algorithms, that
-doesn't imply that it is available.
-
-A safer method would be to query the TPM for the digest sizes.
-
-Mimi
+>
+> /Jarkko
+--
+To unsubscribe from this list: send the line "unsubscribe devicetree" in
+the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+More majordomo info at  http://vger.kernel.org/majordomo-info.html
