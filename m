@@ -1,69 +1,44 @@
-From: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Subject: Re: [PATCH v4 RESEND 1/2] Documentation: tpm: add powered-while-suspended
- binding documentation
-Date: Wed, 5 Jul 2017 10:19:02 -0700
-Message-ID: <CAPz6YkWN8jQcJdah8wqM+O-5ST+eZ1qpzQvGerXX_u1Tm6soFg@mail.gmail.com>
-References: <20170627102724.23861-1-enric.balletbo@collabora.com> <20170703125735.dsrl6bs7ttj27zrt@linux.intel.com>
+From: Matthew Garrett <mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>
+Subject: TPM microconf at 2017 Linux Plumbers?
+Date: Wed, 5 Jul 2017 19:01:42 +0100
+Message-ID: <20170705180142.GA17827@srcf.ucam.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="UTF-8"
-Return-path: <devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
-In-Reply-To: <20170703125735.dsrl6bs7ttj27zrt-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Sender: devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>, Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Guenter Roeck <groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, trousers-users-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Jul 3, 2017 at 5:57 AM, Jarkko Sakkinen
-<jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
-> On Tue, Jun 27, 2017 at 12:27:23PM +0200, Enric Balletbo i Serra wrote:
->> Add a new powered-while-suspended property to control the behavior of the
->> TPM suspend/resume.
->>
->> Signed-off-by: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
->> Signed-off-by: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
->> Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
->> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
->> Acked-by: Rob Herring <robh-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
->> ---
->> Changes since v3.
->>   - Rebased on top of linux-next
->>  Rob Herring
->>   - Split DT binding from code patch as is preferred.
->>
->> Did not exist on previous versions.
->>
->>  Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt | 6 ++++++
->>  1 file changed, 6 insertions(+)
->>
->> diff --git a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
->> index 8cb638b..85c8216 100644
->> --- a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
->> +++ b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
->> @@ -8,6 +8,12 @@ Required properties:
->>                     the firmware event log
->>  - linux,sml-size : size of the memory allocated for the firmware event log
->>
->> +Optional properties:
->> +
->> +- powered-while-suspended: present when the TPM is left powered on between
->> +                           suspend and resume (makes the suspend/resume
->> +                           callbacks do nothing).
->> +
->>  Example (for OpenPower Systems with Nuvoton TPM 2.0 on I2C)
->>  ----------------------------------------------------------
->>
->> --
->> 2.9.3
->>
->
-> So... should I apply this?
+The TPM microconference at the Linux Plumbers conference last year 
+seemed to be pretty successful, and there's definitely been some 
+progress on some of the issues in the past year. However, we're still 
+some distance from having a good TPM 2 story for userland, and this is 
+becoming a fairly urgent issue. Would people be interested in having 
+another of these events this year? If so, please express your interest 
+at http://wiki.linuxplumbersconf.org/2017:tpms and add any topics that 
+you think are worth discussing. The conference is from September 13th to 
+15th in Los Angeles.
 
-Hi, since you applied the code part, it would make sense to apply the
-documentation too.
+For those of you who weren't there, the Linux Plumbers conference is an 
+event dedicated to bringing together people working on various 
+infrastructural components (the plumbing) of Linux. Microconferences are 
+3 hour long events dedicated to a specific topic, with the focus on 
+identifying problems and having enough people in the room to start 
+figuring out what the solutions should be - the format is typically some 
+short presentations coupled with discussion.
 
->
-> /Jarkko
---
-To unsubscribe from this list: send the line "unsubscribe devicetree" in
-the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-More majordomo info at  http://vger.kernel.org/majordomo-info.html
+-- 
+Matthew Garrett | mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
