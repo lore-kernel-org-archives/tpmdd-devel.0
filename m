@@ -1,44 +1,42 @@
-From: Matthew Garrett <mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>
-Subject: TPM microconf at 2017 Linux Plumbers?
-Date: Wed, 5 Jul 2017 19:01:42 +0100
-Message-ID: <20170705180142.GA17827@srcf.ucam.org>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, trousers-users-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+From: Arvind Yadav <arvind.yadav.cs@gmail.com>
+Subject: [PATCH] tpm: tpm_crb: constify acpi_device_id.
+Date: Thu,  6 Jul 2017 23:18:39 +0530
+Message-ID: <8a670ac215126b76d72861319a0d45e17759ad66.1499363107.git.arvind.yadav.cs@gmail.com>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com
+Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The TPM microconference at the Linux Plumbers conference last year 
-seemed to be pretty successful, and there's definitely been some 
-progress on some of the issues in the past year. However, we're still 
-some distance from having a good TPM 2 story for userland, and this is 
-becoming a fairly urgent issue. Would people be interested in having 
-another of these events this year? If so, please express your interest 
-at http://wiki.linuxplumbersconf.org/2017:tpms and add any topics that 
-you think are worth discussing. The conference is from September 13th to 
-15th in Los Angeles.
+acpi_device_id are not supposed to change at runtime. All functions
+working with acpi_device_id provided by <acpi/acpi_bus.h> work with
+const acpi_device_id. So mark the non-const structs as const.
 
-For those of you who weren't there, the Linux Plumbers conference is an 
-event dedicated to bringing together people working on various 
-infrastructural components (the plumbing) of Linux. Microconferences are 
-3 hour long events dedicated to a specific topic, with the focus on 
-identifying problems and having enough people in the room to start 
-figuring out what the solutions should be - the format is typically some 
-short presentations coupled with discussion.
+File size before:
+   text	   data	    bss	    dec	    hex	filename
+   4198	    608	      0	   4806	   12c6	drivers/char/tpm/tpm_crb.o
 
+File size After adding 'const':
+   text	   data	    bss	    dec	    hex	filename
+   4262	    520	      0	   4782	   12ae	drivers/char/tpm/tpm_crb.o
+
+Signed-off-by: Arvind Yadav <arvind.yadav.cs@gmail.com>
+---
+ drivers/char/tpm/tpm_crb.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+index b917b9d..bf7189e 100644
+--- a/drivers/char/tpm/tpm_crb.c
++++ b/drivers/char/tpm/tpm_crb.c
+@@ -665,7 +665,7 @@ static const struct dev_pm_ops crb_pm = {
+ 	SET_RUNTIME_PM_OPS(crb_pm_runtime_suspend, crb_pm_runtime_resume, NULL)
+ };
+ 
+-static struct acpi_device_id crb_device_ids[] = {
++static const struct acpi_device_id crb_device_ids[] = {
+ 	{"MSFT0101", 0},
+ 	{"", 0},
+ };
 -- 
-Matthew Garrett | mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+2.7.4
