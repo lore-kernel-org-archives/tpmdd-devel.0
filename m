@@ -1,74 +1,56 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v4 RESEND 1/2] Documentation: tpm: add
- powered-while-suspended binding documentation
-Date: Sun, 9 Jul 2017 10:04:03 +0300
-Message-ID: <20170709070403.drxxzllnhagnxhjn@linux.intel.com>
-References: <20170627102724.23861-1-enric.balletbo@collabora.com>
- <20170703125735.dsrl6bs7ttj27zrt@linux.intel.com>
- <CAPz6YkWN8jQcJdah8wqM+O-5ST+eZ1qpzQvGerXX_u1Tm6soFg@mail.gmail.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH] tpm: tpm_crb: constify acpi_device_id.
+Date: Sun, 9 Jul 2017 10:05:15 +0300
+Message-ID: <20170709070515.7dxpf42gqbx3r43q@linux.intel.com>
+References: <8a670ac215126b76d72861319a0d45e17759ad66.1499363107.git.arvind.yadav.cs@gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <CAPz6YkWN8jQcJdah8wqM+O-5ST+eZ1qpzQvGerXX_u1Tm6soFg-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
-Sender: devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-To: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-Cc: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>, Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Guenter Roeck <groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+In-Reply-To: <8a670ac215126b76d72861319a0d45e17759ad66.1499363107.git.arvind.yadav.cs@gmail.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Arvind Yadav <arvind.yadav.cs@gmail.com>
+Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jul 05, 2017 at 10:19:02AM -0700, Sonny Rao wrote:
-> On Mon, Jul 3, 2017 at 5:57 AM, Jarkko Sakkinen
-> <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
-> > On Tue, Jun 27, 2017 at 12:27:23PM +0200, Enric Balletbo i Serra wrote:
-> >> Add a new powered-while-suspended property to control the behavior of the
-> >> TPM suspend/resume.
-> >>
-> >> Signed-off-by: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
-> >> Signed-off-by: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
-> >> Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
-> >> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-> >> Acked-by: Rob Herring <robh-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
-> >> ---
-> >> Changes since v3.
-> >>   - Rebased on top of linux-next
-> >>  Rob Herring
-> >>   - Split DT binding from code patch as is preferred.
-> >>
-> >> Did not exist on previous versions.
-> >>
-> >>  Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt | 6 ++++++
-> >>  1 file changed, 6 insertions(+)
-> >>
-> >> diff --git a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
-> >> index 8cb638b..85c8216 100644
-> >> --- a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
-> >> +++ b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
-> >> @@ -8,6 +8,12 @@ Required properties:
-> >>                     the firmware event log
-> >>  - linux,sml-size : size of the memory allocated for the firmware event log
-> >>
-> >> +Optional properties:
-> >> +
-> >> +- powered-while-suspended: present when the TPM is left powered on between
-> >> +                           suspend and resume (makes the suspend/resume
-> >> +                           callbacks do nothing).
-> >> +
-> >>  Example (for OpenPower Systems with Nuvoton TPM 2.0 on I2C)
-> >>  ----------------------------------------------------------
-> >>
-> >> --
-> >> 2.9.3
-> >>
-> >
-> > So... should I apply this?
+On Thu, Jul 06, 2017 at 11:18:39PM +0530, Arvind Yadav wrote:
+> acpi_device_id are not supposed to change at runtime. All functions
+> working with acpi_device_id provided by <acpi/acpi_bus.h> work with
+> const acpi_device_id. So mark the non-const structs as const.
 > 
-> Hi, since you applied the code part, it would make sense to apply the
-> documentation too.
+> File size before:
+>    text	   data	    bss	    dec	    hex	filename
+>    4198	    608	      0	   4806	   12c6	drivers/char/tpm/tpm_crb.o
+> 
+> File size After adding 'const':
+>    text	   data	    bss	    dec	    hex	filename
+>    4262	    520	      0	   4782	   12ae	drivers/char/tpm/tpm_crb.o
+> 
+> Signed-off-by: Arvind Yadav <arvind.yadav.cs@gmail.com>
 
-I can do it.
+Thanks!
+
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
 /Jarkko
---
-To unsubscribe from this list: send the line "unsubscribe devicetree" in
-the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-More majordomo info at  http://vger.kernel.org/majordomo-info.html
+
+> ---
+>  drivers/char/tpm/tpm_crb.c | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+> index b917b9d..bf7189e 100644
+> --- a/drivers/char/tpm/tpm_crb.c
+> +++ b/drivers/char/tpm/tpm_crb.c
+> @@ -665,7 +665,7 @@ static const struct dev_pm_ops crb_pm = {
+>  	SET_RUNTIME_PM_OPS(crb_pm_runtime_suspend, crb_pm_runtime_resume, NULL)
+>  };
+>  
+> -static struct acpi_device_id crb_device_ids[] = {
+> +static const struct acpi_device_id crb_device_ids[] = {
+>  	{"MSFT0101", 0},
+>  	{"", 0},
+>  };
+> -- 
+> 2.7.4
+> 
