@@ -1,150 +1,74 @@
-From: Nayna Jain <jnayna1-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: Re: [Linux-ima-devel] TPM microconf at 2017 Linux
- Plumbers?
-Date: Fri, 7 Jul 2017 22:51:58 +0530
-Message-ID: <CALAzByGg9LPMViO2+GbEcRXELSJA9XZZT_=3_9hOye3KFtjV_g@mail.gmail.com>
-References: <20170705180142.GA17827@srcf.ucam.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v4 RESEND 1/2] Documentation: tpm: add
+ powered-while-suspended binding documentation
+Date: Sun, 9 Jul 2017 10:04:03 +0300
+Message-ID: <20170709070403.drxxzllnhagnxhjn@linux.intel.com>
+References: <20170627102724.23861-1-enric.balletbo@collabora.com>
+ <20170703125735.dsrl6bs7ttj27zrt@linux.intel.com>
+ <CAPz6YkWN8jQcJdah8wqM+O-5ST+eZ1qpzQvGerXX_u1Tm6soFg@mail.gmail.com>
 Mime-Version: 1.0
-Content-Type: multipart/mixed; boundary="===============4264336232480153269=="
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170705180142.GA17827-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Matthew Garrett <mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>
-Cc: linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, trousers-users-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <CAPz6YkWN8jQcJdah8wqM+O-5ST+eZ1qpzQvGerXX_u1Tm6soFg-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
+Sender: devicetree-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+Cc: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>, Rob Herring <robh+dt-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>, Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, "linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org" <devicetree-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, Mark Rutland <mark.rutland-5wv7dgnIgG8@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Guenter Roeck <groeck-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
---===============4264336232480153269==
-Content-Type: multipart/alternative; boundary="94eb2c05760e7958720553bd78d5"
+On Wed, Jul 05, 2017 at 10:19:02AM -0700, Sonny Rao wrote:
+> On Mon, Jul 3, 2017 at 5:57 AM, Jarkko Sakkinen
+> <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
+> > On Tue, Jun 27, 2017 at 12:27:23PM +0200, Enric Balletbo i Serra wrote:
+> >> Add a new powered-while-suspended property to control the behavior of the
+> >> TPM suspend/resume.
+> >>
+> >> Signed-off-by: Enric Balletbo i Serra <enric.balletbo-ZGY8ohtN/8qB+jHODAdFcQ@public.gmane.org>
+> >> Signed-off-by: Sonny Rao <sonnyrao-F7+t8E8rja9g9hUCZPvPmw@public.gmane.org>
+> >> Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+> >> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> >> Acked-by: Rob Herring <robh-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
+> >> ---
+> >> Changes since v3.
+> >>   - Rebased on top of linux-next
+> >>  Rob Herring
+> >>   - Split DT binding from code patch as is preferred.
+> >>
+> >> Did not exist on previous versions.
+> >>
+> >>  Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt | 6 ++++++
+> >>  1 file changed, 6 insertions(+)
+> >>
+> >> diff --git a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
+> >> index 8cb638b..85c8216 100644
+> >> --- a/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
+> >> +++ b/Documentation/devicetree/bindings/security/tpm/tpm-i2c.txt
+> >> @@ -8,6 +8,12 @@ Required properties:
+> >>                     the firmware event log
+> >>  - linux,sml-size : size of the memory allocated for the firmware event log
+> >>
+> >> +Optional properties:
+> >> +
+> >> +- powered-while-suspended: present when the TPM is left powered on between
+> >> +                           suspend and resume (makes the suspend/resume
+> >> +                           callbacks do nothing).
+> >> +
+> >>  Example (for OpenPower Systems with Nuvoton TPM 2.0 on I2C)
+> >>  ----------------------------------------------------------
+> >>
+> >> --
+> >> 2.9.3
+> >>
+> >
+> > So... should I apply this?
+> 
+> Hi, since you applied the code part, it would make sense to apply the
+> documentation too.
 
---94eb2c05760e7958720553bd78d5
-Content-Type: text/plain; charset="UTF-8"
+I can do it.
 
-Hi Matthew,
-
-I have updated the topic "TPM Performance" in topics of interest. Mimi
-Zohar or George Wilson will be leading it.
-
-Thanks & Regards,
-         - Nayna
-
-On Wed, Jul 5, 2017 at 11:31 PM, Matthew Garrett <mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org>
-wrote:
-
-> The TPM microconference at the Linux Plumbers conference last year
-> seemed to be pretty successful, and there's definitely been some
-> progress on some of the issues in the past year. However, we're still
-> some distance from having a good TPM 2 story for userland, and this is
-> becoming a fairly urgent issue. Would people be interested in having
-> another of these events this year? If so, please express your interest
-> at http://wiki.linuxplumbersconf.org/2017:tpms and add any topics that
-> you think are worth discussing. The conference is from September 13th to
-> 15th in Los Angeles.
->
-> For those of you who weren't there, the Linux Plumbers conference is an
-> event dedicated to bringing together people working on various
-> infrastructural components (the plumbing) of Linux. Microconferences are
-> 3 hour long events dedicated to a specific topic, with the focus on
-> identifying problems and having enough people in the room to start
-> figuring out what the solutions should be - the format is typically some
-> short presentations coupled with discussion.
->
-> --
-> Matthew Garrett | mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org
->
-> ------------------------------------------------------------
-> ------------------
-> Check out the vibrant tech community on one of the world's most
-> engaging tech sites, Slashdot.org! http://sdm.link/slashdot
-> _______________________________________________
-> Linux-ima-devel mailing list
-> Linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-> https://lists.sourceforge.net/lists/listinfo/linux-ima-devel
->
-
---94eb2c05760e7958720553bd78d5
-Content-Type: text/html; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-
-<div dir=3D"ltr"><div><div>Hi Matthew,<br><br>I have updated the topic &quo=
-t;TPM Performance&quot; in topics of interest. Mimi Zohar or George Wilson =
-will be leading it.<br><br></div>Thanks &amp; Regards,<br></div>=C2=A0=C2=
-=A0=C2=A0=C2=A0=C2=A0=C2=A0=C2=A0=C2=A0 - Nayna<br></div><div class=3D"gmai=
-l_extra"><br><div class=3D"gmail_quote">On Wed, Jul 5, 2017 at 11:31 PM, Ma=
-tthew Garrett <span dir=3D"ltr">&lt;<a href=3D"mailto:mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org" =
-target=3D"_blank">mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org</a>&gt;</span> wrote:<br><blockquote =
-class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc solid=
-;padding-left:1ex">The TPM microconference at the Linux Plumbers conference=
- last year<br>
-seemed to be pretty successful, and there&#39;s definitely been some<br>
-progress on some of the issues in the past year. However, we&#39;re still<b=
-r>
-some distance from having a good TPM 2 story for userland, and this is<br>
-becoming a fairly urgent issue. Would people be interested in having<br>
-another of these events this year? If so, please express your interest<br>
-at <a href=3D"http://wiki.linuxplumbersconf.org/2017:tpms" rel=3D"noreferre=
-r" target=3D"_blank">http://wiki.linuxplumbersconf.<wbr>org/2017:tpms</a> a=
-nd add any topics that<br>
-you think are worth discussing. The conference is from September 13th to<br=
->
-15th in Los Angeles.<br>
-<br>
-For those of you who weren&#39;t there, the Linux Plumbers conference is an=
-<br>
-event dedicated to bringing together people working on various<br>
-infrastructural components (the plumbing) of Linux. Microconferences are<br=
->
-3 hour long events dedicated to a specific topic, with the focus on<br>
-identifying problems and having enough people in the room to start<br>
-figuring out what the solutions should be - the format is typically some<br=
->
-short presentations coupled with discussion.<br>
-<span class=3D"HOEnZb"><font color=3D"#888888"><br>
---<br>
-Matthew Garrett | <a href=3D"mailto:mjg59-1xO5oi07KQx4cg9Nei1l7Q@public.gmane.org">mjg59-1xO5oi07KQwrYl1GjR2GXg@public.gmane.org=
-g</a><br>
-<br>
-------------------------------<wbr>------------------------------<wbr>-----=
--------------<br>
-Check out the vibrant tech community on one of the world&#39;s most<br>
-engaging tech sites, Slashdot.org! <a href=3D"http://sdm.link/slashdot" rel=
-=3D"noreferrer" target=3D"_blank">http://sdm.link/slashdot</a><br>
-______________________________<wbr>_________________<br>
-Linux-ima-devel mailing list<br>
-<a href=3D"mailto:Linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org">Linux-ima-devel@li=
-sts.<wbr>sourceforge.net</a><br>
-<a href=3D"https://lists.sourceforge.net/lists/listinfo/linux-ima-devel" re=
-l=3D"noreferrer" target=3D"_blank">https://lists.sourceforge.net/<wbr>lists=
-/listinfo/linux-ima-devel</a><br>
-</font></span></blockquote></div><br></div>
-
---94eb2c05760e7958720553bd78d5--
-
-
---===============4264336232480153269==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
---===============4264336232480153269==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-_______________________________________________
-tpmdd-devel mailing list
-tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-
---===============4264336232480153269==--
+/Jarkko
+--
+To unsubscribe from this list: send the line "unsubscribe devicetree" in
+the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+More majordomo info at  http://vger.kernel.org/majordomo-info.html
