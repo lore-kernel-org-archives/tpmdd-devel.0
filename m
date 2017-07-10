@@ -1,12 +1,15 @@
-From: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
-Subject: [PATCH RFC] tpm_crb: excluding locality registers for
- ARM64
-Date: Mon, 10 Jul 2017 14:52:34 -0500
-Message-ID: <8e465692-c445-0f59-5764-9a5ffb4f56f5@codeaurora.org>
+From: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Subject: Re: [PATCH RFC] tpm_crb: excluding locality registers
+ for ARM64
+Date: Mon, 10 Jul 2017 14:29:57 -0600
+Message-ID: <20170710202957.GA19948@obsidianresearch.com>
+References: <8e465692-c445-0f59-5764-9a5ffb4f56f5@codeaurora.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"; Format="flowed"
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <8e465692-c445-0f59-5764-9a5ffb4f56f5-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -15,77 +18,67 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-Cc: harba-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org, anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org
+To: Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+Cc: harba-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Mon, Jul 10, 2017 at 02:52:34PM -0500, Jiandi An wrote:
+> 
+> Hi Guys,
+> 
+> In this patch https://patchwork.kernel.org/patch/9562247/
+> Are the locality registers in crb_regs_head specific to x86?
 
-Hi Guys,
+IMHO, the ACPI specification for TPM2 has been a disaster. The spec is
+too vauge and weird - this buisness with storing addresses inside a
+buffer inside a memory map is insane.
 
-In this patch https://patchwork.kernel.org/patch/9562247/
-Are the locality registers in crb_regs_head specific to x86?
+This is allowing implementations to do all manner of crazy things that
+make no sense at all.
 
-On ARM64, we don't have locality registers before control area in ACPI 
-IO region.  We are hitting this check and getting the FW_BUG "Bad ACPI 
-memory layout" log.
+> The quick fix that would make it work for ARM64 is to also exclude
+> CRB_FL_CRB_SMC_START.
 
-+	/* The ACPI IO region starts at the head area and continues to include
-+	 * the control area, as one nice sane region except for some older
-+	 * stuff that puts the control area outside the ACPI IO region.
-+	 */
-+	if (!(priv->flags & CRB_FL_ACPI_START)) {
-+		if (buf->control_address == io_res.start +
-+		    sizeof(*priv->regs_h))
-+			priv->regs_h = priv->iobase;
-+		else
-+			dev_warn(dev, FW_BUG "Bad ACPI memory layout");
-+	}
+Well, when the ACPI extension for ACPI_TPM2_COMMAND_BUFFER_WITH_SMC
+was defined, it needs to specify how to handle locality. If it is done
+via the registers in crb_regs_head then the ACPI spec needs to define
+how to locate those registers.
 
-The quick fix that would make it work for ARM64 is to also exclude 
-CRB_FL_CRB_SMC_START.
+I suspect the test you pointed out is just poorly constructed:
 
-- if (!(priv->flags & CRB_FL_ACPI_START)) {
-+ if (!(priv->flags & CRB_FL_ACPI_START ||
-+       priv->flags & CRB_FL_CRB_SMC_START)) {
+        if (!(priv->flags & CRB_FL_ACPI_START)) {
 
-But would like to understand more why the check was only excluding 
-CRB_FL_ACPI_START and getting opinions on this fix.  We don't see 
-locality registers defined in TCG ACPI spec nor how a platform indicates 
-the locality registers are present before control area.
+It should be
 
-I've done similar workaround to bypass x86 specific workaround in common 
-code path.
+   	if (sm == ACPI_TPM2_COMMAND_BUFFER || sm == ACPI_TPM2_MEMORY_MAPPED)
 
-For example, in crb_map_io(),  there is a specific PTT HW bug workaround 
-for x86.
+As those are the only two modes to define the register layout in
+this way.
 
-	/*
-	 * PTT HW bug w/a: wake up the device to access
-	 * possibly not retained registers.
-	 */
-	ret = crb_cmd_ready(dev, priv);
-	if (ret)
-		return ret;
+But, you will still need to implement locality support for
+ACPI_TPM2_COMMAND_BUFFER_WITH_SMC.
 
-crb_cmd_ready() does nothing for devices with ACPI-start method as it 
-does not support goIdle and cmdReady bits and idle state management is 
-not exposed to the host SW.  So I've done similar workaround to bypass 
-by additionally excluding CRB_FL_CRB_SMC_START.
+> For example, in crb_map_io(),  there is a specific PTT HW bug workaround for
+> x86.
+> 
+> 	/*
+> 	 * PTT HW bug w/a: wake up the device to access
+> 	 * possibly not retained registers.
+> 	 */
+> 	ret = crb_cmd_ready(dev, priv);
+> 	if (ret)
+> 		return ret;
+> 
+> crb_cmd_ready() does nothing for devices with ACPI-start method as it does
+> not support goIdle and cmdReady bits and idle state management is not
+> exposed to the host SW.  So I've done similar workaround to bypass by
+> additionally excluding CRB_FL_CRB_SMC_START.
 
-static int __maybe_unused crb_cmd_ready(struct device *dev,
-					struct crb_priv *priv)
-{
-	if ((priv->flags & CRB_FL_ACPI_START) ||
-	    (priv->flags & CRB_FL_CRB_SMC_START))
-		return 0;
+Again, I think these tests are backwards, a work around like this
+should be a while list, not a black list.. So it should refer to
+exactly the sm values the impacted chipsets would use.
 
-
--- 
-Jiandi An
-Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm 
-Technologies, Inc.
-Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a 
-Linux Foundation Collaborative Project.
+Jason
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
