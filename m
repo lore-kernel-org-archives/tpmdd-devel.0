@@ -1,7 +1,7 @@
 From: Josh Zimmerman <joshz@google.com>
-Subject: [PATCH v1 3/4] Add "shutdown" to "struct class".'
-Date: Fri, 14 Jul 2017 12:58:02 -0700
-Message-ID: <20170714195803.7035-4-joshz@google.com>
+Subject: [PATCH v1 4/4] tpm: Issue a TPM2_Shutdown for TPM2 devices.
+Date: Fri, 14 Jul 2017 12:58:03 -0700
+Message-ID: <20170714195803.7035-5-joshz@google.com>
 References: <20170714195803.7035-1-joshz@google.com>
 Return-path: <stable-owner@vger.kernel.org>
 In-Reply-To: <20170714195803.7035-1-joshz@google.com>
@@ -10,51 +10,93 @@ To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthor
 Cc: Josh Zimmerman <joshz@google.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Backport of commit f77af15165847406b15d8f70c382c4cb15846b2a upstream.
+Backport of d1bd4a792d3961a04e6154118816b00167aad91a upstream.
 
-The TPM class has some common shutdown code that must be executed for
-all drivers. This adds some needed functionality for that.
+If a TPM2 loses power without a TPM2_Shutdown command being issued (a
+"disorderly reboot"), it may lose some state that has yet to be
+persisted to NVRam, and will increment the DA counter. After the DA
+counter gets sufficiently large, the TPM will lock the user out.
+
+NOTE: This only changes behavior on TPM2 devices. Since TPM1 uses sysfs,
+and sysfs relies on implicit locking on chip->ops, it is not safe to
+allow this code to run in TPM1, or to add sysfs support to TPM2, until
+that locking is made explicit.
 ---
- drivers/base/core.c    | 6 +++++-
- include/linux/device.h | 2 ++
- 2 files changed, 7 insertions(+), 1 deletion(-)
+ drivers/char/tpm/tpm-chip.c  | 36 ++++++++++++++++++++++++++++++++++++
+ drivers/char/tpm/tpm-sysfs.c |  7 +++++++
+ 2 files changed, 43 insertions(+)
 
-diff --git a/drivers/base/core.c b/drivers/base/core.c
-index f18856f5954b..afe045792796 100644
---- a/drivers/base/core.c
-+++ b/drivers/base/core.c
-@@ -2094,7 +2094,11 @@ void device_shutdown(void)
- 		pm_runtime_get_noresume(dev);
- 		pm_runtime_barrier(dev);
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index f3a887e4f692..6d56877b2e0a 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -124,6 +124,41 @@ static void tpm_dev_release(struct device *dev)
+ 	kfree(chip);
+ }
  
--		if (dev->bus && dev->bus->shutdown) {
-+		if (dev->class && dev->class->shutdown) {
-+			if (initcall_debug)
-+				dev_info(dev, "shutdown\n");
-+			dev->class->shutdown(dev);
-+		} else if (dev->bus && dev->bus->shutdown) {
- 			if (initcall_debug)
- 				dev_info(dev, "shutdown\n");
- 			dev->bus->shutdown(dev);
-diff --git a/include/linux/device.h b/include/linux/device.h
-index b8f411b57dcb..3656df6cf638 100644
---- a/include/linux/device.h
-+++ b/include/linux/device.h
-@@ -368,6 +368,7 @@ int subsys_virtual_register(struct bus_type *subsys,
-  * @suspend:	Used to put the device to sleep mode, usually to a low power
-  *		state.
-  * @resume:	Used to bring the device from the sleep mode.
-+ * @shutdown:  Called at shut-down time to quiesce the device.
-  * @ns_type:	Callbacks so sysfs can detemine namespaces.
-  * @namespace:	Namespace of the device belongs to this class.
-  * @pm:		The default device power management operations of this class.
-@@ -396,6 +397,7 @@ struct class {
++
++/**
++ * tpm_class_shutdown() - prepare the TPM device for loss of power.
++ * @dev: device to which the chip is associated.
++ *
++ * Issues a TPM2_Shutdown command prior to loss of power, as required by the
++ * TPM 2.0 spec.
++ * Then, calls bus- and device- specific shutdown code.
++ *
++ * XXX: This codepath relies on the fact that sysfs is not enabled for
++ * TPM2: sysfs uses an implicit lock on chip->ops, so this could race if TPM2
++ * has sysfs support enabled before TPM sysfs's implicit locking is fixed.
++ */
++static int tpm_class_shutdown(struct device *dev)
++{
++	struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
++
++	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
++		down_write(&chip->ops_sem);
++		tpm2_shutdown(chip, TPM2_SU_CLEAR);
++		chip->ops = NULL;
++		up_write(&chip->ops_sem);
++	}
++	/* Allow bus- and device-specific code to run. Note: since chip->ops
++	 * is NULL, more-specific shutdown code will not be able to issue TPM
++	 * commands.
++	 */
++	if (dev->bus && dev->bus->shutdown)
++		dev->bus->shutdown(dev);
++	else if (dev->driver && dev->driver->shutdown)
++		dev->driver->shutdown(dev);
++	return 0;
++}
++
++
+ /**
+  * tpmm_chip_alloc() - allocate a new struct tpm_chip instance
+  * @dev: device to which the chip is associated
+@@ -166,6 +201,7 @@ struct tpm_chip *tpmm_chip_alloc(struct device *dev,
+ 	dev_set_drvdata(dev, chip);
  
- 	int (*suspend)(struct device *dev, pm_message_t state);
- 	int (*resume)(struct device *dev);
-+	int (*shutdown)(struct device *dev);
+ 	chip->dev.class = tpm_class;
++	chip->dev.class->shutdown = tpm_class_shutdown;
+ 	chip->dev.release = tpm_dev_release;
+ 	chip->dev.parent = dev;
+ #ifdef CONFIG_ACPI
+diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+index 8af4145d10c7..6a4056a3f7ee 100644
+--- a/drivers/char/tpm/tpm-sysfs.c
++++ b/drivers/char/tpm/tpm-sysfs.c
+@@ -284,6 +284,13 @@ static const struct attribute_group tpm_dev_group = {
+ int tpm_sysfs_add_device(struct tpm_chip *chip)
+ {
+ 	int err;
++
++	/* XXX: If you wish to remove this restriction, you must first update
++	 * tpm_sysfs to explicitly lock chip->ops.
++	 */
++	if (chip->flags & TPM_CHIP_FLAG_TPM2)
++		return 0;
++
+ 	err = sysfs_create_group(&chip->dev.parent->kobj,
+ 				 &tpm_dev_group);
  
- 	const struct kobj_ns_type_operations *ns_type;
- 	const void *(*namespace)(struct device *dev);
 -- 
 2.13.2.932.g7449e964c-goog
