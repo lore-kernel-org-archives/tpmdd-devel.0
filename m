@@ -1,17 +1,15 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] msleep() delays - replace with
- usleep_range() in TPM 1.2/2.0 generic drivers
-Date: Sun, 16 Jul 2017 13:49:07 +0300
-Message-ID: <20170716104907.foav6tnuda6gubca@linux.intel.com>
-References: <DF4PR84MB0028CFD4B5EBE9F929B83476F2A90@DF4PR84MB0028.NAMPRD84.PROD.OUTLOOK.COM>
-	<20170710191527.qlurrqit6naoaotp@linux.intel.com>
-	<DF4PR84MB0028BA4AE9C3E4A6E8122D60F2AF0@DF4PR84MB0028.NAMPRD84.PROD.OUTLOOK.COM>
+Subject: Re: [PATCH RFC] tpm_crb: excluding locality registers
+ for ARM64
+Date: Sun, 16 Jul 2017 14:16:19 +0300
+Message-ID: <1500203779.8397.2.camel@linux.intel.com>
+References: <8e465692-c445-0f59-5764-9a5ffb4f56f5@codeaurora.org>
+	<20170710202957.GA19948@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <DF4PR84MB0028BA4AE9C3E4A6E8122D60F2AF0-g2Ljlah8a+id4EXwv3iukNicc1VoeDReZmpNikb/MY7jO8Y7rvWZVA@public.gmane.org>
+In-Reply-To: <20170710202957.GA19948-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,76 +18,81 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
 	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Attak, Hamza" <hamza.attak-ZPxbGqLxI0U@public.gmane.org>
-Cc: "Jacquin, Ludovic" <ludo-ZPxbGqLxI0U@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "Edwards, Nigel" <nigel.edwards-ZPxbGqLxI0U@public.gmane.org>
+To: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, Jiandi An <anjiandi-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org>
+Cc: harba-sgV2jX0FEOL9JmXXK+q4OQ@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Your subject line looks wrong. This cannot be cleanly applied with git
-am.
-
-Please go through https://kernelnewbies.org/FirstKernelPatch
-
-On Wed, Jul 12, 2017 at 12:34:19PM +0000, Attak, Hamza wrote:
-> msleep() delays - replace with usleep_range() in TPM 1.2/2.0 generic drivers
+On Mon, 2017-07-10 at 14:29 -0600, Jason Gunthorpe wrote:
+> On Mon, Jul 10, 2017 at 02:52:34PM -0500, Jiandi An wrote:
+> > 
+> > Hi Guys,
+> > 
+> > In this patch https://patchwork.kernel.org/patch/9562247/
+> > Are the locality registers in crb_regs_head specific to x86?
 > 
-> The patch simply replaces all msleep function calls with usleep_range calls in
-> the generic drivers.
+> IMHO, the ACPI specification for TPM2 has been a disaster. The spec
+> is
+> too vauge and weird - this buisness with storing addresses inside a
+> buffer inside a memory map is insane.
 > 
-> Tested with an Infineon TPM 1.2, using the generic tpm-tis module, for a
-> thousand PCR extends, we see results going from 1m57s unpatched to 40s with
-> the new patch. We obtain similar results when using the original and patched
-> tpm_infineon driver, which is also part of the patch. Similarly with a STM TPM
-> 2.0, using the CRB driver, it takes about 20ms per extend unpatched and around
-> 7ms with the new patch.
+> This is allowing implementations to do all manner of crazy things
+> that
+> make no sense at all.
 > 
-> Note that the PCR consistency is untouched with this patch, each TPM has been
-> tested with 10 million extends and the aggregated PCR value is continuously
-> verified to be correct.
+> > The quick fix that would make it work for ARM64 is to also exclude
+> > CRB_FL_CRB_SMC_START.
 > 
-> As an extension of this work, this could potentially and easily be applied to
-> other vendor's drivers. Still, these changes are not included in the proposed
-> patch as they are untested.
+> Well, when the ACPI extension for ACPI_TPM2_COMMAND_BUFFER_WITH_SMC
+> was defined, it needs to specify how to handle locality. If it is
+> done
+> via the registers in crb_regs_head then the ACPI spec needs to define
+> how to locate those registers.
 > 
-> Signed-off-by: Hamza Attak <hamza-ZPxbGqLxI0U@public.gmane.org>
-> ---
->  drivers/char/tpm/tpm-interface.c | 13 ++++++++-----
->  drivers/char/tpm/tpm2-cmd.c      |  2 +-
->  drivers/char/tpm/tpm_infineon.c  |  9 ++++++---
->  drivers/char/tpm/tpm_tis_core.c  |  9 +++++----
->  4 files changed, 20 insertions(+), 13 deletions(-)
+> I suspect the test you pointed out is just poorly constructed:
 > 
-> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> index bd2128e..513b801 100644
-> --- a/drivers/char/tpm/tpm-interface.c
-> +++ b/drivers/char/tpm/tpm-interface.c
-> @@ -395,7 +395,7 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
->  			goto out;
->  		}
->  
-> -		msleep(TPM_TIMEOUT);	/* CHECK */
-> +		usleep_range(TPM_TIMEOUT * 1000, (TPM_TIMEOUT * 1000) + 300);
+>         if (!(priv->flags & CRB_FL_ACPI_START)) {
+> 
+> It should be
+> 
+>    	if (sm == ACPI_TPM2_COMMAND_BUFFER || sm ==
+> ACPI_TPM2_MEMORY_MAPPED)
+> 
+> As those are the only two modes to define the register layout in
+> this way.
+> 
+> But, you will still need to implement locality support for
+> ACPI_TPM2_COMMAND_BUFFER_WITH_SMC.
+> 
+> > For example, in crb_map_io(),  there is a specific PTT HW bug
+> > workaround for
+> > x86.
+> > 
+> > 	/*
+> > 	 * PTT HW bug w/a: wake up the device to access
+> > 	 * possibly not retained registers.
+> > 	 */
+> > 	ret = crb_cmd_ready(dev, priv);
+> > 	if (ret)
+> > 		return ret;
+> > 
+> > crb_cmd_ready() does nothing for devices with ACPI-start method as
+> > it does
+> > not support goIdle and cmdReady bits and idle state management is
+> > not
+> > exposed to the host SW.  So I've done similar workaround to bypass
+> > by
+> > additionally excluding CRB_FL_CRB_SMC_START.
+> 
+> Again, I think these tests are backwards, a work around like this
+> should be a while list, not a black list.. So it should refer to
+> exactly the sm values the impacted chipsets would use.
+> 
+> Jason
 
-Plese look into.
+I happen have a NUC that reports ACPI_TPM2_START_METHOD but still
+requires that bit to be set always before invoking the ACPI:
 
-https://patchwork.kernel.org/patch/9617823/
-
-Now you are sprinkling magic numbers everywhere.
-
->  		rmb();
->  	} while (time_before(jiffies, stop));
->  
-> @@ -862,7 +862,8 @@ int tpm_do_selftest(struct tpm_chip *chip)
->  			dev_info(
->  			    &chip->dev, HW_ERR
->  			    "TPM command timed out during continue self test");
-> -			msleep(delay_msec);
-> +			usleep_range(delay_msec * 1000,
-> +				(delay_msec * 1000) + 300);
-
-The second line dooes not look properly aligned.
-
-There's probably similar style issues elsewhere in the patch (at least
-spotted one after this).
+https://lkml.org/lkml/2016/10/20/417
 
 /Jarkko
 
