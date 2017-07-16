@@ -1,61 +1,125 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH] tpm: tpm_crb: constify acpi_device_id.
-Date: Sun, 16 Jul 2017 14:24:40 +0300
-Message-ID: <1500204280.8397.4.camel@linux.intel.com>
-References: <8a670ac215126b76d72861319a0d45e17759ad66.1499363107.git.arvind.yadav.cs@gmail.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [PATCH] tpm_tis_spi: Use DMA-safe memory for SPI
+ transfers
+Date: Sun, 16 Jul 2017 14:41:20 +0300
+Message-ID: <1500205280.4514.1.camel@linux.intel.com>
+References: <20170704135609.5064-1-Alexander.Steffen@infineon.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <8a670ac215126b76d72861319a0d45e17759ad66.1499363107.git.arvind.yadav.cs-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
-	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Arvind Yadav <arvind.yadav.cs-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, peterhuewe-Mmb7MZpHnFY@public.gmane.org, tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org, jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Return-path: <stable-owner@vger.kernel.org>
+In-Reply-To: <20170704135609.5064-1-Alexander.Steffen@infineon.com>
+Sender: stable-owner@vger.kernel.org
+To: Alexander Steffen <Alexander.Steffen@infineon.com>, tpmdd-devel@lists.sourceforge.net
+Cc: stable@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, 2017-07-06 at 23:18 +0530, Arvind Yadav wrote:
-> acpi_device_id are not supposed to change at runtime. All functions
-> working with acpi_device_id provided by <acpi/acpi_bus.h> work with
-> const acpi_device_id. So mark the non-const structs as const.
+On Tue, 2017-07-04 at 15:56 +0200, Alexander Steffen wrote:
+> The buffers used as tx_buf/rx_buf in a SPI transfer need to be DMA-safe.
+> This cannot be guaranteed for the buffers passed to tpm_tis_spi_read_bytes
+> and tpm_tis_spi_write_bytes. Therefore, we need to use our own DMA-safe
+> buffer and copy the data to/from it.
 > 
-> File size before:
->    text	   data	    bss	    dec	    hex	filename
->    4198	    608	      0	   4806	   12c6	drivers/char/tpm/tpm_crb.o
-> 
-> File size After adding 'const':
->    text	   data	    bss	    dec	    hex	filename
->    4262	    520	      0	   4782	   12ae	drivers/char/tpm/tpm_crb.o
-> 
-> Signed-off-by: Arvind Yadav <arvind.yadav.cs-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-> ---
->  drivers/char/tpm/tpm_crb.c | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
-> 
-> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> index b917b9d..bf7189e 100644
-> --- a/drivers/char/tpm/tpm_crb.c
-> +++ b/drivers/char/tpm/tpm_crb.c
-> @@ -665,7 +665,7 @@ static const struct dev_pm_ops crb_pm = {
->  	SET_RUNTIME_PM_OPS(crb_pm_runtime_suspend, crb_pm_runtime_resume, NULL)
->  };
->  
-> -static struct acpi_device_id crb_device_ids[] = {
-> +static const struct acpi_device_id crb_device_ids[] = {
->  	{"MSFT0101", 0},
->  	{"", 0},
->  };
+> Fixes: 0edbfea537d1 ("tpm/tpm_tis_spi: Add support for spi phy")
+> Cc: stable@vger.kernel.org
+> Signed-off-by: Alexander Steffen <Alexander.Steffen@infineon.com>
 
-Applied.
+The commit message does not explain much how you are sorting it out and
+how/why it works.
 
 /Jarkko
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+> ---
+>  drivers/char/tpm/tpm_tis_spi.c | 32 ++++++++++++++++++--------------
+>  1 file changed, 18 insertions(+), 14 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
+> index 88fe72a..5321245 100644
+> --- a/drivers/char/tpm/tpm_tis_spi.c
+> +++ b/drivers/char/tpm/tpm_tis_spi.c
+> @@ -46,9 +46,7 @@
+>  struct tpm_tis_spi_phy {
+>  	struct tpm_tis_data priv;
+>  	struct spi_device *spi_device;
+> -
+> -	u8 tx_buf[4];
+> -	u8 rx_buf[4];
+> +	u8 *iobuf;
+>  };
+>  
+>  static inline struct tpm_tis_spi_phy *to_tpm_tis_spi_phy(struct tpm_tis_data *data)
+> @@ -71,14 +69,14 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  	while (len) {
+>  		transfer_len = min_t(u16, len, MAX_SPI_FRAMESIZE);
+>  
+> -		phy->tx_buf[0] = direction | (transfer_len - 1);
+> -		phy->tx_buf[1] = 0xd4;
+> -		phy->tx_buf[2] = addr >> 8;
+> -		phy->tx_buf[3] = addr;
+> +		phy->iobuf[0] = direction | (transfer_len - 1);
+> +		phy->iobuf[1] = 0xd4;
+> +		phy->iobuf[2] = addr >> 8;
+> +		phy->iobuf[3] = addr;
+>  
+>  		memset(&spi_xfer, 0, sizeof(spi_xfer));
+> -		spi_xfer.tx_buf = phy->tx_buf;
+> -		spi_xfer.rx_buf = phy->rx_buf;
+> +		spi_xfer.tx_buf = phy->iobuf;
+> +		spi_xfer.rx_buf = phy->iobuf;
+>  		spi_xfer.len = 4;
+>  		spi_xfer.cs_change = 1;
+>  
+> @@ -88,9 +86,9 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  		if (ret < 0)
+>  			goto exit;
+>  
+> -		if ((phy->rx_buf[3] & 0x01) == 0) {
+> +		if ((phy->iobuf[3] & 0x01) == 0) {
+>  			// handle SPI wait states
+> -			phy->tx_buf[0] = 0;
+> +			phy->iobuf[0] = 0;
+>  
+>  			for (i = 0; i < TPM_RETRY; i++) {
+>  				spi_xfer.len = 1;
+> @@ -99,7 +97,7 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  				ret = spi_sync_locked(phy->spi_device, &m);
+>  				if (ret < 0)
+>  					goto exit;
+> -				if (phy->rx_buf[0] & 0x01)
+> +				if (phy->iobuf[0] & 0x01)
+>  					break;
+>  			}
+>  
+> @@ -115,10 +113,9 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  
+>  		if (direction) {
+>  			spi_xfer.tx_buf = NULL;
+> -			spi_xfer.rx_buf = buffer;
+>  		} else {
+> -			spi_xfer.tx_buf = buffer;
+>  			spi_xfer.rx_buf = NULL;
+> +			memcpy(phy->iobuf, buffer, transfer_len);
+>  		}
+>  
+>  		spi_message_init(&m);
+> @@ -127,6 +124,9 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  		if (ret < 0)
+>  			goto exit;
+>  
+> +		if (direction)
+> +			memcpy(buffer, phy->iobuf, transfer_len);
+> +
+>  		len -= transfer_len;
+>  		buffer += transfer_len;
+>  	}
+> @@ -194,6 +194,10 @@ static int tpm_tis_spi_probe(struct spi_device *dev)
+>  
+>  	phy->spi_device = dev;
+>  
+> +	phy->iobuf = devm_kmalloc(&dev->dev, MAX_SPI_FRAMESIZE, GFP_KERNEL);
+> +	if (!phy->iobuf)
+> +		return -ENOMEM;
+> +
+>  	return tpm_tis_core_init(&dev->dev, &phy->priv, -1, &tpm_spi_phy_ops,
+>  				 NULL);
+>  }
