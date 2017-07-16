@@ -1,114 +1,98 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v1 2/2] tpm: Issue a TPM2_Shutdown for TPM2 devices.
-Date: Sun, 16 Jul 2017 13:42:19 +0300
-Message-ID: <20170716104219.6aert3julby7ic75@linux.intel.com>
-References: <20170713004121.21750-1-joshz@google.com>
- <20170713004121.21750-3-joshz@google.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH] msleep() delays - replace with
+ usleep_range() in TPM 1.2/2.0 generic drivers
+Date: Sun, 16 Jul 2017 13:49:07 +0300
+Message-ID: <20170716104907.foav6tnuda6gubca@linux.intel.com>
+References: <DF4PR84MB0028CFD4B5EBE9F929B83476F2A90@DF4PR84MB0028.NAMPRD84.PROD.OUTLOOK.COM>
+	<20170710191527.qlurrqit6naoaotp@linux.intel.com>
+	<DF4PR84MB0028BA4AE9C3E4A6E8122D60F2AF0@DF4PR84MB0028.NAMPRD84.PROD.OUTLOOK.COM>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <stable-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170713004121.21750-3-joshz@google.com>
-Sender: stable-owner@vger.kernel.org
-To: Josh Zimmerman <joshz@google.com>
-Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, gregkh@linuxfoundation.org, stable@vger.kernel.org
+In-Reply-To: <DF4PR84MB0028BA4AE9C3E4A6E8122D60F2AF0-g2Ljlah8a+id4EXwv3iukNicc1VoeDReZmpNikb/MY7jO8Y7rvWZVA@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+	<mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: "Attak, Hamza" <hamza.attak-ZPxbGqLxI0U@public.gmane.org>
+Cc: "Jacquin, Ludovic" <ludo-ZPxbGqLxI0U@public.gmane.org>, "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "Edwards, Nigel" <nigel.edwards-ZPxbGqLxI0U@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jul 12, 2017 at 05:41:21PM -0700, Josh Zimmerman wrote:
-> Backport of d1bd4a792d3961a04e6154118816b00167aad91a upstream.
-> 
-> If a TPM2 loses power without a TPM2_Shutdown command being issued (a
-> "disorderly reboot"), it may lose some state that has yet to be
-> persisted to NVRam, and will increment the DA counter. After the DA
-> counter gets sufficiently large, the TPM will lock the user out.
-> 
-> NOTE: This only changes behavior on TPM2 devices. Since TPM1 uses sysfs,
-> and sysfs relies on implicit locking on chip->ops, it is not safe to
-> allow this code to run in TPM1, or to add sysfs support to TPM2, until
-> that locking is made explicit.
-> 
-> Signed-off-by: Josh Zimmerman <joshz@google.com>
+Your subject line looks wrong. This cannot be cleanly applied with git
+am.
 
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Please go through https://kernelnewbies.org/FirstKernelPatch
+
+On Wed, Jul 12, 2017 at 12:34:19PM +0000, Attak, Hamza wrote:
+> msleep() delays - replace with usleep_range() in TPM 1.2/2.0 generic drivers
+> 
+> The patch simply replaces all msleep function calls with usleep_range calls in
+> the generic drivers.
+> 
+> Tested with an Infineon TPM 1.2, using the generic tpm-tis module, for a
+> thousand PCR extends, we see results going from 1m57s unpatched to 40s with
+> the new patch. We obtain similar results when using the original and patched
+> tpm_infineon driver, which is also part of the patch. Similarly with a STM TPM
+> 2.0, using the CRB driver, it takes about 20ms per extend unpatched and around
+> 7ms with the new patch.
+> 
+> Note that the PCR consistency is untouched with this patch, each TPM has been
+> tested with 10 million extends and the aggregated PCR value is continuously
+> verified to be correct.
+> 
+> As an extension of this work, this could potentially and easily be applied to
+> other vendor's drivers. Still, these changes are not included in the proposed
+> patch as they are untested.
+> 
+> Signed-off-by: Hamza Attak <hamza-ZPxbGqLxI0U@public.gmane.org>
+> ---
+>  drivers/char/tpm/tpm-interface.c | 13 ++++++++-----
+>  drivers/char/tpm/tpm2-cmd.c      |  2 +-
+>  drivers/char/tpm/tpm_infineon.c  |  9 ++++++---
+>  drivers/char/tpm/tpm_tis_core.c  |  9 +++++----
+>  4 files changed, 20 insertions(+), 13 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index bd2128e..513b801 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -395,7 +395,7 @@ ssize_t tpm_transmit(struct tpm_chip *chip, const u8 *buf, size_t bufsiz,
+>  			goto out;
+>  		}
+>  
+> -		msleep(TPM_TIMEOUT);	/* CHECK */
+> +		usleep_range(TPM_TIMEOUT * 1000, (TPM_TIMEOUT * 1000) + 300);
+
+Plese look into.
+
+https://patchwork.kernel.org/patch/9617823/
+
+Now you are sprinkling magic numbers everywhere.
+
+>  		rmb();
+>  	} while (time_before(jiffies, stop));
+>  
+> @@ -862,7 +862,8 @@ int tpm_do_selftest(struct tpm_chip *chip)
+>  			dev_info(
+>  			    &chip->dev, HW_ERR
+>  			    "TPM command timed out during continue self test");
+> -			msleep(delay_msec);
+> +			usleep_range(delay_msec * 1000,
+> +				(delay_msec * 1000) + 300);
+
+The second line dooes not look properly aligned.
+
+There's probably similar style issues elsewhere in the patch (at least
+spotted one after this).
 
 /Jarkko
 
-
-> ---
->  drivers/char/tpm/tpm-chip.c  | 36 ++++++++++++++++++++++++++++++++++++
->  drivers/char/tpm/tpm-sysfs.c |  5 +++++
->  2 files changed, 41 insertions(+)
-> 
-> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> index a017ccd8cc3b..9ff853229957 100644
-> --- a/drivers/char/tpm/tpm-chip.c
-> +++ b/drivers/char/tpm/tpm-chip.c
-> @@ -130,6 +130,41 @@ static void tpm_dev_release(struct device *dev)
->  	kfree(chip);
->  }
->  
-> +
-> +/**
-> + * tpm_class_shutdown() - prepare the TPM device for loss of power.
-> + * @dev: device to which the chip is associated.
-> + *
-> + * Issues a TPM2_Shutdown command prior to loss of power, as required by the
-> + * TPM 2.0 spec.
-> + * Then, calls bus- and device- specific shutdown code.
-> + *
-> + * XXX: This codepath relies on the fact that sysfs is not enabled for
-> + * TPM2: sysfs uses an implicit lock on chip->ops, so this could race if TPM2
-> + * has sysfs support enabled before TPM sysfs's implicit locking is fixed.
-> + */
-> +static int tpm_class_shutdown(struct device *dev)
-> +{
-> +	struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
-> +
-> +	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
-> +		down_write(&chip->ops_sem);
-> +		tpm2_shutdown(chip, TPM2_SU_CLEAR);
-> +		chip->ops = NULL;
-> +		up_write(&chip->ops_sem);
-> +	}
-> +	/* Allow bus- and device-specific code to run. Note: since chip->ops
-> +	 * is NULL, more-specific shutdown code will not be able to issue TPM
-> +	 * commands.
-> +	 */
-> +	if (dev->bus && dev->bus->shutdown)
-> +		dev->bus->shutdown(dev);
-> +	else if (dev->driver && dev->driver->shutdown)
-> +		dev->driver->shutdown(dev);
-> +	return 0;
-> +}
-> +
-> +
->  /**
->   * tpm_chip_alloc() - allocate a new struct tpm_chip instance
->   * @pdev: device to which the chip is associated
-> @@ -168,6 +203,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
->  	device_initialize(&chip->dev);
->  
->  	chip->dev.class = tpm_class;
-> +	chip->dev.class->shutdown = tpm_class_shutdown;
->  	chip->dev.release = tpm_dev_release;
->  	chip->dev.parent = pdev;
->  	chip->dev.groups = chip->groups;
-> diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
-> index a76ab4af9fb2..774148db0fac 100644
-> --- a/drivers/char/tpm/tpm-sysfs.c
-> +++ b/drivers/char/tpm/tpm-sysfs.c
-> @@ -284,6 +284,11 @@ static const struct attribute_group tpm_dev_group = {
->  
->  void tpm_sysfs_add_device(struct tpm_chip *chip)
->  {
-> +	/* XXX: If you wish to remove this restriction, you must first update
-> +	 * tpm_sysfs to explicitly lock chip->ops.
-> +	 */
-> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> +		return;
->  	/* The sysfs routines rely on an implicit tpm_try_get_ops, device_del
->  	 * is called before ops is null'd and the sysfs core synchronizes this
->  	 * removal so that no callbacks are running or can run again
-> -- 
-> 2.13.2.932.g7449e964c-goog
-> 
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
