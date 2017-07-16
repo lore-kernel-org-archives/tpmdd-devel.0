@@ -1,24 +1,31 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v1 1/2] Add "shutdown" to "struct class".'
-Date: Sun, 16 Jul 2017 13:42:04 +0300
-Message-ID: <20170716104204.p4leji2vpi22xk6u@linux.intel.com>
+Subject: Re: [PATCH v1 2/2] tpm: Issue a TPM2_Shutdown for TPM2 devices.
+Date: Sun, 16 Jul 2017 13:42:19 +0300
+Message-ID: <20170716104219.6aert3julby7ic75@linux.intel.com>
 References: <20170713004121.21750-1-joshz@google.com>
- <20170713004121.21750-2-joshz@google.com>
+ <20170713004121.21750-3-joshz@google.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <stable-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170713004121.21750-2-joshz@google.com>
+In-Reply-To: <20170713004121.21750-3-joshz@google.com>
 Sender: stable-owner@vger.kernel.org
 To: Josh Zimmerman <joshz@google.com>
 Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, gregkh@linuxfoundation.org, stable@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Jul 12, 2017 at 05:41:20PM -0700, Josh Zimmerman wrote:
-> Backport of commit f77af15165847406b15d8f70c382c4cb15846b2a upstream.
+On Wed, Jul 12, 2017 at 05:41:21PM -0700, Josh Zimmerman wrote:
+> Backport of d1bd4a792d3961a04e6154118816b00167aad91a upstream.
 > 
-> The TPM class has some common shutdown code that must be executed for
-> all drivers. This adds some needed functionality for that.
+> If a TPM2 loses power without a TPM2_Shutdown command being issued (a
+> "disorderly reboot"), it may lose some state that has yet to be
+> persisted to NVRam, and will increment the DA counter. After the DA
+> counter gets sufficiently large, the TPM will lock the user out.
+> 
+> NOTE: This only changes behavior on TPM2 devices. Since TPM1 uses sysfs,
+> and sysfs relies on implicit locking on chip->ops, it is not safe to
+> allow this code to run in TPM1, or to add sysfs support to TPM2, until
+> that locking is made explicit.
 > 
 > Signed-off-by: Josh Zimmerman <joshz@google.com>
 
@@ -26,48 +33,82 @@ Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
 /Jarkko
 
+
 > ---
->  drivers/base/core.c    | 6 +++++-
->  include/linux/device.h | 2 ++
->  2 files changed, 7 insertions(+), 1 deletion(-)
+>  drivers/char/tpm/tpm-chip.c  | 36 ++++++++++++++++++++++++++++++++++++
+>  drivers/char/tpm/tpm-sysfs.c |  5 +++++
+>  2 files changed, 41 insertions(+)
 > 
-> diff --git a/drivers/base/core.c b/drivers/base/core.c
-> index ce057a568673..03a82d017cf1 100644
-> --- a/drivers/base/core.c
-> +++ b/drivers/base/core.c
-> @@ -2095,7 +2095,11 @@ void device_shutdown(void)
->  		pm_runtime_get_noresume(dev);
->  		pm_runtime_barrier(dev);
+> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> index a017ccd8cc3b..9ff853229957 100644
+> --- a/drivers/char/tpm/tpm-chip.c
+> +++ b/drivers/char/tpm/tpm-chip.c
+> @@ -130,6 +130,41 @@ static void tpm_dev_release(struct device *dev)
+>  	kfree(chip);
+>  }
 >  
-> -		if (dev->bus && dev->bus->shutdown) {
-> +		if (dev->class && dev->class->shutdown) {
-> +			if (initcall_debug)
-> +				dev_info(dev, "shutdown\n");
-> +			dev->class->shutdown(dev);
-> +		} else if (dev->bus && dev->bus->shutdown) {
->  			if (initcall_debug)
->  				dev_info(dev, "shutdown\n");
->  			dev->bus->shutdown(dev);
-> diff --git a/include/linux/device.h b/include/linux/device.h
-> index bc41e87a969b..df850f723264 100644
-> --- a/include/linux/device.h
-> +++ b/include/linux/device.h
-> @@ -373,6 +373,7 @@ int subsys_virtual_register(struct bus_type *subsys,
->   * @suspend:	Used to put the device to sleep mode, usually to a low power
->   *		state.
->   * @resume:	Used to bring the device from the sleep mode.
-> + * @shutdown:  Called at shut-down time to quiesce the device.
->   * @ns_type:	Callbacks so sysfs can detemine namespaces.
->   * @namespace:	Namespace of the device belongs to this class.
->   * @pm:		The default device power management operations of this class.
-> @@ -401,6 +402,7 @@ struct class {
+> +
+> +/**
+> + * tpm_class_shutdown() - prepare the TPM device for loss of power.
+> + * @dev: device to which the chip is associated.
+> + *
+> + * Issues a TPM2_Shutdown command prior to loss of power, as required by the
+> + * TPM 2.0 spec.
+> + * Then, calls bus- and device- specific shutdown code.
+> + *
+> + * XXX: This codepath relies on the fact that sysfs is not enabled for
+> + * TPM2: sysfs uses an implicit lock on chip->ops, so this could race if TPM2
+> + * has sysfs support enabled before TPM sysfs's implicit locking is fixed.
+> + */
+> +static int tpm_class_shutdown(struct device *dev)
+> +{
+> +	struct tpm_chip *chip = container_of(dev, struct tpm_chip, dev);
+> +
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+> +		down_write(&chip->ops_sem);
+> +		tpm2_shutdown(chip, TPM2_SU_CLEAR);
+> +		chip->ops = NULL;
+> +		up_write(&chip->ops_sem);
+> +	}
+> +	/* Allow bus- and device-specific code to run. Note: since chip->ops
+> +	 * is NULL, more-specific shutdown code will not be able to issue TPM
+> +	 * commands.
+> +	 */
+> +	if (dev->bus && dev->bus->shutdown)
+> +		dev->bus->shutdown(dev);
+> +	else if (dev->driver && dev->driver->shutdown)
+> +		dev->driver->shutdown(dev);
+> +	return 0;
+> +}
+> +
+> +
+>  /**
+>   * tpm_chip_alloc() - allocate a new struct tpm_chip instance
+>   * @pdev: device to which the chip is associated
+> @@ -168,6 +203,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
+>  	device_initialize(&chip->dev);
 >  
->  	int (*suspend)(struct device *dev, pm_message_t state);
->  	int (*resume)(struct device *dev);
-> +	int (*shutdown)(struct device *dev);
+>  	chip->dev.class = tpm_class;
+> +	chip->dev.class->shutdown = tpm_class_shutdown;
+>  	chip->dev.release = tpm_dev_release;
+>  	chip->dev.parent = pdev;
+>  	chip->dev.groups = chip->groups;
+> diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
+> index a76ab4af9fb2..774148db0fac 100644
+> --- a/drivers/char/tpm/tpm-sysfs.c
+> +++ b/drivers/char/tpm/tpm-sysfs.c
+> @@ -284,6 +284,11 @@ static const struct attribute_group tpm_dev_group = {
 >  
->  	const struct kobj_ns_type_operations *ns_type;
->  	const void *(*namespace)(struct device *dev);
+>  void tpm_sysfs_add_device(struct tpm_chip *chip)
+>  {
+> +	/* XXX: If you wish to remove this restriction, you must first update
+> +	 * tpm_sysfs to explicitly lock chip->ops.
+> +	 */
+> +	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+> +		return;
+>  	/* The sysfs routines rely on an implicit tpm_try_get_ops, device_del
+>  	 * is called before ops is null'd and the sysfs core synchronizes this
+>  	 * removal so that no callbacks are running or can run again
 > -- 
 > 2.13.2.932.g7449e964c-goog
 > 
