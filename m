@@ -1,60 +1,65 @@
-From: Josh Zimmerman <joshz@google.com>
-Subject: Re: [PATCH v1 4/4] tpm: Issue a TPM2_Shutdown for TPM2 devices.
-Date: Tue, 18 Jul 2017 09:33:33 -0700
-Message-ID: <CAHSjozD8j3TbRDTSGbstpPHR7748q6woeifc-XUdhNcjyJLZ7A@mail.gmail.com>
-References: <20170714195803.7035-1-joshz@google.com> <20170714195803.7035-5-joshz@google.com>
- <20170718154942.GD30882@kroah.com> <CAHSjozBE-=aCZoBvuHanPWYQKhY3Lj5YTNnnA65Q-GgZ2y1iSQ@mail.gmail.com>
- <20170718162905.GA4809@kroah.com>
+From: Michal =?UTF-8?B?U3VjaMOhbmVr?= <msuchanek@suse.de>
+Subject: tpm: read burstcount from TPM_STS in one 32-bit transaction
+Date: Tue, 25 Jul 2017 15:04:43 +0200
+Message-ID: <20170725150443.7cf8fc91@kitsune.suse.cz>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="UTF-8"
-Return-path: <stable-owner@vger.kernel.org>
-In-Reply-To: <20170718162905.GA4809@kroah.com>
-Sender: stable-owner@vger.kernel.org
-To: Greg KH <gregkh@linuxfoundation.org>
-Cc: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, stable@vger.kernel.org
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Christophe Ricard <christophe.ricard@gmail.com>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, apronin@chromium.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hm, strange. I see them in the archives for linux-stable@, but not in
-my inbox. Perhaps I forgot to Cc myself on those patches.
+Hello,
 
-Thanks!
-Josh
+in commit 9754d45e9970 ("tpm: read burstcount from TPM_STS in one
+32-bit transaction") you change reading of two 8-bit values to one
+32bit read. This is obviously wrong wrt endianess unless the
+underlying tpm_tis_read32 does endian conversion. 
 
+Looking at the implementation 
+static inline int tpm_tis_read32(struct tpm_tis_data *data, u32 addr,
+                                 u32 *result)
+{
+        return data->phy_ops->read32(data, addr, result);
+}
 
-On Tue, Jul 18, 2017 at 9:29 AM, Greg KH <gregkh@linuxfoundation.org> wrote:
-> On Tue, Jul 18, 2017 at 09:11:49AM -0700, Josh Zimmerman wrote:
->> On Tue, Jul 18, 2017 at 8:49 AM, Greg KH <gregkh@linuxfoundation.org> wrote:
->> > On Fri, Jul 14, 2017 at 12:58:03PM -0700, Josh Zimmerman wrote:
->> >> Backport of d1bd4a792d3961a04e6154118816b00167aad91a upstream.
->> >>
->> >> If a TPM2 loses power without a TPM2_Shutdown command being issued (a
->> >> "disorderly reboot"), it may lose some state that has yet to be
->> >> persisted to NVRam, and will increment the DA counter. After the DA
->> >> counter gets sufficiently large, the TPM will lock the user out.
->> >>
->> >> NOTE: This only changes behavior on TPM2 devices. Since TPM1 uses sysfs,
->> >> and sysfs relies on implicit locking on chip->ops, it is not safe to
->> >> allow this code to run in TPM1, or to add sysfs support to TPM2, until
->> >> that locking is made explicit.
->> >> ---
->> >>  drivers/char/tpm/tpm-chip.c  | 36 ++++++++++++++++++++++++++++++++++++
->> >>  drivers/char/tpm/tpm-sysfs.c |  7 +++++++
->> >>  2 files changed, 43 insertions(+)
->> >>
->> >
->> > Again no signed-off-by :(
->>
->> Oops, sorry about that.
->>
->> Did you pull in the two cherry-picks as well? They're needed for these
->> two to build and merge cleanly.
->>
->> I can send a v2 if you need with a corrected signed-off-by and correct
->> number of patches in the cover letter.
->
-> I should have them all now, and you should have gotten emails about
-> it...
->
-> thanks,
->
-> greg k-h
+it calls read32 which has two implementations:
+
+static const struct tpm_tis_phy_ops tpm_tcg = {
+	.read32 = tpm_tcg_read32,
+
+static int tpm_tcg_read32(struct tpm_tis_data *data, u32 addr, u32
+*result) {
+        struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+
+        *result = ioread32(phy->iobase + addr);
+       return 0;
+}
+
+static const struct tpm_tis_phy_ops tpm_spi_phy_ops = {
+	.read32 = tpm_tis_spi_read32,
+
+static int tpm_tis_spi_read32(struct tpm_tis_data *data, u32 addr, u32
+*result) {
+        int rc;
+
+        rc = data->phy_ops->read_bytes(data, addr, sizeof(u32), (u8
+        *)result); if (!rc)
+                *result = le32_to_cpu(*result);
+        return rc;
+}
+
+meaning that unless you are on LE where le32_to_cpu is a noop these
+functions do completely different thing. So presumably this is
+completely broken on BE. 
+
+Presumably only the SPI variant can be actually used with TPM devices
+bolted on after the fact so it is more likely correct for obscure
+hardware. Conseqently tpm_tcg_read32 should use
+le32_to_cpu(ioread32(phy->iobase + addr)) in case somebody manages to
+map a TPM into io-space on a BE machine.
+
+Thanks
+
+Michal
