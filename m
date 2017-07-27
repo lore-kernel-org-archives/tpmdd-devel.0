@@ -1,35 +1,52 @@
-From: <Alexander.Steffen@infineon.com>
-Subject: RE: [tpmdd-devel] [PATCH] tpm_tis_spi: Use DMA-safe memory for SPI
- transfers
-Date: Thu, 27 Jul 2017 13:38:00 +0000
-Message-ID: <13d6ed4b95194cdb99be98edc35b5a9f@MUCSE603.infineon.com>
-References: <20170704135609.5064-1-Alexander.Steffen@infineon.com>
- <20170709211150.GA19327@obsidianresearch.com>
+From: <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+Subject: Re: [PATCH 1/3] tpm-chip: Move idr_replace calls to
+ appropriate places
+Date: Thu, 27 Jul 2017 14:07:49 +0000
+Message-ID: <016fe4c80f0c4b209ac2337500f9dd2b@MUCSE603.infineon.com>
+References: <20170704135648.7360-1-Alexander.Steffen@infineon.com>
+ <20170709212430.GB19327@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <stable-owner@vger.kernel.org>
-In-Reply-To: <20170709211150.GA19327@obsidianresearch.com>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170709212430.GB19327-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
 Content-Language: en-US
-Sender: stable-owner@vger.kernel.org
-To: jgunthorpe@obsidianresearch.com
-Cc: tpmdd-devel@lists.sourceforge.net, stable@vger.kernel.org
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-PiA+ICBzdHJ1Y3QgdHBtX3Rpc19zcGlfcGh5IHsNCj4gPiAgCXN0cnVjdCB0cG1fdGlzX2RhdGEg
-cHJpdjsNCj4gPiAgCXN0cnVjdCBzcGlfZGV2aWNlICpzcGlfZGV2aWNlOw0KPiA+IC0NCj4gPiAt
-CXU4IHR4X2J1Zls0XTsNCj4gPiAtCXU4IHJ4X2J1Zls0XTsNCj4gPiArCXU4ICppb2J1ZjsNCj4g
-DQo+IHRwbV90aXNfc3BpX3BoeSBpcyBhbHJlYWR5IGRldm1fa3phbGxvYydkLCB3aHkgZW1iZWQg
-YW5vdGhlciBrYWxsb2MNCj4gcG9pbnRlciBpbnNpZGUgaXQ/DQoNCkkgd2FzIG1vc3RseSBnb2lu
-ZyBieSB0aGUgZG9jdW1lbnRhdGlvbiBpbiBodHRwczovL3d3dy5rZXJuZWwub3JnL2RvYy9Eb2N1
-bWVudGF0aW9uL0RNQS1BUEktSE9XVE8udHh0LiBBbGxvY2F0aW5nIGEgbmV3IGJ1ZmZlciBlbnN1
-cmVzIHRoYXQgaXQgaXMgY2FjaGVsaW5lLWFsaWduZWQgYW5kIG5vdCBzaGFyZWQgd2l0aCBvdGhl
-ciBkYXRhLCBhcyBhZHZpc2VkOg0KIkV2ZW4gaWYgdGhvc2UgY2xhc3NlcyBvZiBtZW1vcnkgY291
-bGQgcGh5c2ljYWxseSB3b3JrIHdpdGggRE1BLCB5b3UnZCBuZWVkIHRvIGVuc3VyZSB0aGUgSS9P
-IGJ1ZmZlcnMgd2VyZSBjYWNoZWxpbmUtYWxpZ25lZC4iDQoiQWxzbywgc3lzdGVtcyB3aXRoIGNh
-Y2hlcyB0aGF0IGFyZW4ndCBETUEtY29oZXJlbnQgd2lsbCB3b3JrIGJldHRlciB3aGVuIHRoZSB1
-bmRlcmx5aW5nIGJ1ZmZlcnMgZG9uJ3Qgc2hhcmUgY2FjaGUgbGluZXMgd2l0aCBvdGhlciBkYXRh
-LiINCg0KSXMgdGhhdCBzdWZmaWNpZW50IHRvIGp1c3RpZnkgdGhpcyBpbXBsZW1lbnRhdGlvbj8g
-VGhlbiBJIHdpbGwgYWRkIHNvbWUgbW9yZSBleHBsYW5hdGlvbnMgYWxvbmcgdGhvc2UgbGluZXMg
-dG8gdGhlIGNvbW1pdCBtZXNzYWdlIGFuZCByZXN1Ym1pdCB0aGUgcGF0Y2guDQoNCkFsZXhhbmRl
-cg0K
+> > diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> > index 67ec9d3..a353b7a 100644
+> > +++ b/drivers/char/tpm/tpm-chip.c
+> > @@ -327,11 +327,6 @@ static int tpm_add_char_device(struct tpm_chip
+> *chip)
+> >  		}
+> >  	}
+> >
+> > -	/* Make the chip available. */
+> > -	mutex_lock(&idr_lock);
+> > -	idr_replace(&dev_nums_idr, chip, chip->dev_num);
+> > -	mutex_unlock(&idr_lock);
+> 
+> This is actually in the wrong place already, it needs to be done before
+> cdev_device_add - this is because cdev_device_add generates the uevent to
+> userspace which could trigger userspace to use the kernel device. So a patch
+> to move it to the start of this function woud be good. The function would be
+> better described as 'make visible'
+
+I have looked again at the code and I am not sure this is an issue. The call to idr_replace is only necessary to enable in-kernel usage (i.e. RNG, IMA, ...) of the TPM, but it should not affect userspace in any way. So the location of the idr_replace call does not matter much, as long as the TPM is already initialized. In fact, the main purpose of this patch series (please see PATCH 3/3) is to export the device to userspace without calling idr_replace at all under some circumstances.
+
+Or is there something I missed? The only function that ever tries to access the value stored by idr_replace is tpm_chip_find_get. It is usually called with TPM_ANY_NUM, selecting any TPM that might be present. If no TPM is present (or if idr_replace has not been called) the caller needs to deal with the situation already.
+
+Alexander
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
