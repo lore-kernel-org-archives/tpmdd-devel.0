@@ -1,39 +1,37 @@
-From: Michael Ellerman <mpe@ellerman.id.au>
-Subject: Re: [PATCH 2/5] Fix "ERROR: code indent should use tabs where possible"
-Date: Mon, 31 Jul 2017 20:25:03 +1000
-Message-ID: <87bmo06gzk.fsf@concordia.ellerman.id.au>
-References: <20170729072433.13194-1-sz.lin@moxa.com> <20170729072433.13194-3-sz.lin@moxa.com>
+From: David Laight <David.Laight@ACULAB.COM>
+Subject: RE: [PATCH 1/5] Fix packed and aligned attribute warnings.
+Date: Mon, 31 Jul 2017 13:27:47 +0000
+Message-ID: <063D6719AE5E284EB5DD2968C1650D6DD0047420@AcuExch.aculab.com>
+References: <20170729072433.13194-1-sz.lin@moxa.com>
+ <20170729072433.13194-2-sz.lin@moxa.com>
 Mime-Version: 1.0
-Content-Type: text/plain
+Content-Type: text/plain; charset="Windows-1252"
+Content-Transfer-Encoding: 8BIT
 Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <20170729072433.13194-3-sz.lin@moxa.com>
+In-Reply-To: <20170729072433.13194-2-sz.lin@moxa.com>
+Content-Language: en-US
 Sender: linux-kernel-owner@vger.kernel.org
-To: ashleydlai@gmail.com
-Cc: benh@kernel.crashing.org, paulus@samba.org, peterhuewe@gmx.de, tpmdd@selhorst.ne, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linuxppc-dev@lists.ozlabs.org, linux-kernel@vger.kernel.org, SZ Lin <sz.lin@moxa.com>
+To: 'SZ Lin' <sz.lin@moxa.com>, "ashleydlai@gmail.com" <ashleydlai@gmail.com>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "jarkko.sakkinen@linux.intel.com" <jarkko.sakkinen@linux.intel.com>, "jgunthorpe@obsidianresearch.com" <jgunthorpe@obsidianresearch.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "paulus@samba.org" <paulus@samba.org>, "peterhuewe@gmx.de" <peterhuewe@gmx.de>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "tpmdd@selhorst.ne" <tpmdd@selhorst.ne>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-SZ Lin <sz.lin@moxa.com> writes:
+From: SZ Lin
+> Sent: 29 July 2017 08:24
+...
+> diff --git a/drivers/char/tpm/tpm_ibmvtpm.h b/drivers/char/tpm/tpm_ibmvtpm.h
+> index 91dfe766d080..9f708ca3dc84 100644
+> --- a/drivers/char/tpm/tpm_ibmvtpm.h
+> +++ b/drivers/char/tpm/tpm_ibmvtpm.h
+> @@ -25,7 +25,7 @@ struct ibmvtpm_crq {
+>  	__be16 len;
+>  	__be32 data;
+>  	__be64 reserved;
+> -} __attribute__((packed, aligned(8)));
+> +} __packed __aligned(8);
 
-> ERROR: code indent should use tabs where possible
-> +^I^I         "Need to wait for TPM to finish\n");$
->
-> Signed-off-by: SZ Lin <sz.lin@moxa.com>
-> ---
->  drivers/char/tpm/tpm_ibmvtpm.c | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
->
-> diff --git a/drivers/char/tpm/tpm_ibmvtpm.c b/drivers/char/tpm/tpm_ibmvtpm.c
-> index f01d083eced2..23913fc86158 100644
-> --- a/drivers/char/tpm/tpm_ibmvtpm.c
-> +++ b/drivers/char/tpm/tpm_ibmvtpm.c
-> @@ -127,7 +127,7 @@ static int tpm_ibmvtpm_send(struct tpm_chip *chip, u8 *buf, size_t count)
->  
->  	if (ibmvtpm->tpm_processing_cmd) {
->  		dev_info(ibmvtpm->dev,
-> -		         "Need to wait for TPM to finish\n");
-> +			"Need to wait for TPM to finish\n");
+You can't need __packed and __aligned(8) on that structure.
+There are no gaps and you are saying it is always aligned.
 
-There's no reason for that to be on a separate line at all. Just make it
-a single line dev_info( ... );
+So just remove the pointless attributes.
 
-cheers
+	David
