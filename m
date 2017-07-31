@@ -1,25 +1,39 @@
-From: SZ Lin <sz.lin@moxa.com>
-Subject: [PATCH 0/5] tpm: tpm_ibmvtpm: - style fix
-Date: Sat, 29 Jul 2017 15:24:28 +0800
-Message-ID: <20170729072433.13194-1-sz.lin@moxa.com>
+From: Michael Ellerman <mpe@ellerman.id.au>
+Subject: Re: [PATCH 2/5] Fix "ERROR: code indent should use tabs where possible"
+Date: Mon, 31 Jul 2017 20:25:03 +1000
+Message-ID: <87bmo06gzk.fsf@concordia.ellerman.id.au>
+References: <20170729072433.13194-1-sz.lin@moxa.com> <20170729072433.13194-3-sz.lin@moxa.com>
+Mime-Version: 1.0
+Content-Type: text/plain
 Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20170729072433.13194-3-sz.lin@moxa.com>
 Sender: linux-kernel-owner@vger.kernel.org
 To: ashleydlai@gmail.com
-Cc: benh@kernel.crashing.org, paulus@samba.org, mpe@ellerman.id.au, peterhuewe@gmx.de, tpmdd@selhorst.ne, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linuxppc-dev@lists.ozlabs.org, linux-kernel@vger.kernel.org, SZ Lin <sz.lin@moxa.com>
+Cc: benh@kernel.crashing.org, paulus@samba.org, peterhuewe@gmx.de, tpmdd@selhorst.ne, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linuxppc-dev@lists.ozlabs.org, linux-kernel@vger.kernel.org, SZ Lin <sz.lin@moxa.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Fix styling WARNINGs and Errors of tpm_ibmvtpm.c driver by using checkpatch.pl
+SZ Lin <sz.lin@moxa.com> writes:
 
-SZ Lin (5):
-  Fix packed and aligned attribute warnings.
-  Fix "ERROR: code indent should use tabs where possible"
-  Fix 'void function return statements are not generally useful' warning
-  Remove unneccessary 'out of memory' message
-  Use __func__ instead of function name
+> ERROR: code indent should use tabs where possible
+> +^I^I         "Need to wait for TPM to finish\n");$
+>
+> Signed-off-by: SZ Lin <sz.lin@moxa.com>
+> ---
+>  drivers/char/tpm/tpm_ibmvtpm.c | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
+>
+> diff --git a/drivers/char/tpm/tpm_ibmvtpm.c b/drivers/char/tpm/tpm_ibmvtpm.c
+> index f01d083eced2..23913fc86158 100644
+> --- a/drivers/char/tpm/tpm_ibmvtpm.c
+> +++ b/drivers/char/tpm/tpm_ibmvtpm.c
+> @@ -127,7 +127,7 @@ static int tpm_ibmvtpm_send(struct tpm_chip *chip, u8 *buf, size_t count)
+>  
+>  	if (ibmvtpm->tpm_processing_cmd) {
+>  		dev_info(ibmvtpm->dev,
+> -		         "Need to wait for TPM to finish\n");
+> +			"Need to wait for TPM to finish\n");
 
- drivers/char/tpm/tpm_ibmvtpm.c | 23 +++++++++--------------
- drivers/char/tpm/tpm_ibmvtpm.h |  2 +-
- 2 files changed, 10 insertions(+), 15 deletions(-)
+There's no reason for that to be on a separate line at all. Just make it
+a single line dev_info( ... );
 
---
-2.13.3
+cheers
