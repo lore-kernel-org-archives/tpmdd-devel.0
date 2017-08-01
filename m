@@ -1,37 +1,71 @@
-From: David Laight <David.Laight@ACULAB.COM>
-Subject: RE: [PATCH 1/5] Fix packed and aligned attribute warnings.
-Date: Mon, 31 Jul 2017 13:27:47 +0000
-Message-ID: <063D6719AE5E284EB5DD2968C1650D6DD0047420@AcuExch.aculab.com>
-References: <20170729072433.13194-1-sz.lin@moxa.com>
- <20170729072433.13194-2-sz.lin@moxa.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: tpm: read burstcount from TPM_STS in one 32-bit
+ transaction
+Date: Tue, 1 Aug 2017 16:31:45 +0300
+Message-ID: <20170801133145.mqfen3bskzwwabwp@linux.intel.com>
+References: <20170725150443.7cf8fc91@kitsune.suse.cz>
+ <1501004171.3689.25.camel@linux.vnet.ibm.com>
+ <20170725201758.230de968@kitsune.suse.cz>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="Windows-1252"
-Content-Transfer-Encoding: 8BIT
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <20170729072433.13194-2-sz.lin@moxa.com>
-Content-Language: en-US
-Sender: linux-kernel-owner@vger.kernel.org
-To: 'SZ Lin' <sz.lin@moxa.com>, "ashleydlai@gmail.com" <ashleydlai@gmail.com>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "jarkko.sakkinen@linux.intel.com" <jarkko.sakkinen@linux.intel.com>, "jgunthorpe@obsidianresearch.com" <jgunthorpe@obsidianresearch.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "paulus@samba.org" <paulus@samba.org>, "peterhuewe@gmx.de" <peterhuewe@gmx.de>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "tpmdd@selhorst.ne" <tpmdd@selhorst.ne>
+Content-Type: text/plain; charset="iso-8859-1"
+Content-Transfer-Encoding: quoted-printable
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <20170725201758.230de968-6hIufAJW0g4CVLCxKZUutA@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Michal =?iso-8859-1?Q?Such=E1nek?= <msuchanek-l3A5Bk7waGM@public.gmane.org>
+Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: SZ Lin
-> Sent: 29 July 2017 08:24
-...
-> diff --git a/drivers/char/tpm/tpm_ibmvtpm.h b/drivers/char/tpm/tpm_ibmvtpm.h
-> index 91dfe766d080..9f708ca3dc84 100644
-> --- a/drivers/char/tpm/tpm_ibmvtpm.h
-> +++ b/drivers/char/tpm/tpm_ibmvtpm.h
-> @@ -25,7 +25,7 @@ struct ibmvtpm_crq {
->  	__be16 len;
->  	__be32 data;
->  	__be64 reserved;
-> -} __attribute__((packed, aligned(8)));
-> +} __packed __aligned(8);
+On Tue, Jul 25, 2017 at 08:17:58PM +0200, Michal Such=E1nek wrote:
+> On Tue, 25 Jul 2017 10:36:11 -0700
+> James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org> wrote:
+> =
 
-You can't need __packed and __aligned(8) on that structure.
-There are no gaps and you are saying it is always aligned.
+> > On Tue, 2017-07-25 at 15:04 +0200, Michal Such=E1nek wrote:
+> > > Hello,
+> > > =
 
-So just remove the pointless attributes.
+> > > in commit 9754d45e9970 ("tpm: read burstcount from TPM_STS in one
+> > > 32-bit transaction") you change reading of two 8-bit values to one
+> > > 32bit read. This is obviously wrong wrt endianess unless the
+> > > underlying tpm_tis_read32 does endian conversion.=A0  =
 
-	David
+> > =
+
+> > Some of the bus read primitives do do endianness conversions. =A0The
+> > problem is with the SPI attachment, which has unclear endianness. =A0A
+> > standard PCI bus attachment uses ioread32() which automatically
+> > transforms from a little endian bus to the cpu endianness, however SPI
+> > is forced to transfer the bytes one at a time over the serial bus and
+> > then transform. =A0The assumption seems to be that the TIS TPM is
+> > replying in little endian format when SPI connected.
+> > =
+
+> =
+
+> Yes, that makes sense.
+> =
+
+> Thanks for clarification.
+> =
+
+> Michal
+
+Thank you for reporting this and thanks James for explaining this.
+
+I do not have access to PPC hardware with SPI-TPM.
+
+/Jarkko
+
+---------------------------------------------------------------------------=
+---
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
