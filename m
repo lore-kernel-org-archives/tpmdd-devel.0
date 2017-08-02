@@ -1,73 +1,34 @@
-From: George Wilson <ltcgcw-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
-Subject: Re: tpm: read burstcount from TPM_STS in one 32-bit
- transaction
-Date: Tue, 1 Aug 2017 10:59:19 -0500
-Message-ID: <20170801155919.GA26008@us.ibm.com>
-References: <20170725150443.7cf8fc91@kitsune.suse.cz>
- <1501004171.3689.25.camel@linux.vnet.ibm.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="iso-8859-1"
-Content-Transfer-Encoding: quoted-printable
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <1501004171.3689.25.camel-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: Christophe Ricard <christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+From: Arvind Yadav <arvind.yadav.cs@gmail.com>
+Subject: [PATCH 2/3] char: tpm: constify attribute_group structures.
+Date: Wed,  2 Aug 2017 16:50:14 +0530
+Message-ID: <1501672814-2995-1-git-send-email-arvind.yadav.cs@gmail.com>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: arnd@arndb.de, gregkh@linuxfoundation.org, mark.gross@intel.com, peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com
+Cc: linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jul 25, 2017 at 10:36:11AM -0700, James Bottomley wrote:
-> On Tue, 2017-07-25 at 15:04 +0200, Michal Such=E1nek wrote:
-> > Hello,
-> > =
+attribute_group are not supposed to change at runtime. All functions
+working with attribute_group provided by <linux/sysfs.h> work with
+const attribute_group. So mark the non-const structs as const.
 
-> > in commit 9754d45e9970 ("tpm: read burstcount from TPM_STS in one
-> > 32-bit transaction") you change reading of two 8-bit values to one
-> > 32bit read. This is obviously wrong wrt endianess unless the
-> > underlying tpm_tis_read32 does endian conversion.=A0
-> =
-
-> Some of the bus read primitives do do endianness conversions. =A0The
-> problem is with the SPI attachment, which has unclear endianness. =A0A
-> standard PCI bus attachment uses ioread32() which automatically
-> transforms from a little endian bus to the cpu endianness, however SPI
-> is forced to transfer the bytes one at a time over the serial bus and
-> then transform. =A0The assumption seems to be that the TIS TPM is
-> replying in little endian format when SPI connected.
-> =
-
-> We can probably get the PPC people to confirm this, I believe they have
-> a SPI attached TPM.
-
-All the current OpenPOWER hardware designs I'm aware of have the TPM on
-I2C.  Trusted Computing support in OpenPOWER firmware depends on it
-being on I2C.
-
-> =
-
-> James
-> =
-
-> =
-
-> -------------------------------------------------------------------------=
------
-> Check out the vibrant tech community on one of the world's most
-> engaging tech sites, Slashdot.org! http://sdm.link/slashdot
-> _______________________________________________
-> tpmdd-devel mailing list
-> tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-> https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-
-
----------------------------------------------------------------------------=
+Signed-off-by: Arvind Yadav <arvind.yadav.cs@gmail.com>
 ---
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+ drivers/char/tpm/tpm_ppi.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/char/tpm/tpm_ppi.c b/drivers/char/tpm/tpm_ppi.c
+index 86dd852..8e3c062 100644
+--- a/drivers/char/tpm/tpm_ppi.c
++++ b/drivers/char/tpm/tpm_ppi.c
+@@ -325,7 +325,7 @@ static DEVICE_ATTR(transition_action, S_IRUGO,
+ 	&dev_attr_tcg_operations.attr,
+ 	&dev_attr_vs_operations.attr, NULL,
+ };
+-static struct attribute_group ppi_attr_grp = {
++static const struct attribute_group ppi_attr_grp = {
+ 	.name = "ppi",
+ 	.attrs = ppi_attrs
+ };
+-- 
+1.9.1
