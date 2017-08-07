@@ -1,84 +1,97 @@
-From: Jiandi An <anjiandi@codeaurora.org>
-Subject: [PATCH] tpm/tpm_crb: Access locality for only CRB_START method
-Date: Sun,  6 Aug 2017 21:54:15 -0500
-Message-ID: <1502074455-4867-1-git-send-email-anjiandi@codeaurora.org>
+From: Nayna Jain <nayna@linux.vnet.ibm.com>
+Subject: [PATCH] tpm: improve tpm_tis send() performance by ignoring burstcount
+Date: Mon,  7 Aug 2017 07:46:32 -0400
+Message-ID: <20170807114632.1339-1-nayna@linux.vnet.ibm.com>
 Return-path: <linux-kernel-owner@vger.kernel.org>
 Sender: linux-kernel-owner@vger.kernel.org
 To: tpmdd-devel@lists.sourceforge.net
-Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org, anjiandi@codeaurora.org
+Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, patrickc@us.ibm.com, Nayna Jain <nayna@linux.vnet.ibm.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-For ARM64, the locality is handled by Trust Zone in FW.
-The layout does not have crb_regs_head.  It is hitting
-the following line.
-dev_warn(dev, FW_BUG "Bad ACPI memory layout");
+The TPM burstcount status indicates the number of bytes that can
+be sent to the TPM without causing bus wait states.  Effectively,
+it is the number of empty bytes in the command FIFO. Further,
+some TPMs have a static burstcount, when the value remains zero
+until the entire FIFO is empty.
 
-Current code excludes CRB_FL_ACPI_START and when
-CRB_FL_CRB_SMC_START is added around the same time
-locality support is added, it should also be excluded.
-Change the if condition to be only for CRB_FL_CRB_START.
+This patch ignores burstcount, permitting wait states, and thus
+writes the command as fast as the TPM can accept the bytes.
+The performance of a 34 byte extend on a TPM 1.2 improved from
+52 msec to 11 msec.
 
-For goIdle and cmdReady where code was excluding
-CRB_FL_ACPI_START only (do nothing for ACPI start method),
-CRB_FL_CRB_SMC_START was also excluded as ARM64 SMC start
-method does not have TPM_CRB_CTRL_REQ.
-Change the if condition to be only for CRB_FL_CRB_START
-in crb_go_idle() and crb_cmd_ready().
-
-Signed-off-by: Jiandi An <anjiandi@codeaurora.org>
+Suggested-by: Ken Goldman <kgold@linux.vnet.ibm.com> in
+conjunction with the TPM Device Driver work group.
+Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
+Acked-by: Mimi Zohar <zohar@linux.vnet.ibm.com>
 ---
- drivers/char/tpm/tpm_crb.c | 12 ++++++------
- 1 file changed, 6 insertions(+), 6 deletions(-)
+ drivers/char/tpm/tpm_tis_core.c | 45 ++---------------------------------------
+ 1 file changed, 2 insertions(+), 43 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index 8f0a98d..d583c50 100644
---- a/drivers/char/tpm/tpm_crb.c
-+++ b/drivers/char/tpm/tpm_crb.c
-@@ -128,14 +128,14 @@ struct tpm2_crb_smc {
-  * Anyhow, we do not wait here as a consequent CMD_READY request
-  * will be handled correctly even if idle was not completed.
-  *
-- * The function does nothing for devices with ACPI-start method.
-+ * The function does nothing for devices with ACPI-start method
-+ * and SMC-start method.
-  *
-  * Return: 0 always
-  */
- static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+index b617b2eeb080..478cbc0f61c3 100644
+--- a/drivers/char/tpm/tpm_tis_core.c
++++ b/drivers/char/tpm/tpm_tis_core.c
+@@ -255,9 +255,7 @@ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
+ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
  {
--	if ((priv->flags & CRB_FL_ACPI_START) ||
--	    (priv->flags & CRB_FL_CRB_SMC_START))
-+	if (!(priv->flags & CRB_FL_CRB_START))
- 		return 0;
+ 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+-	int rc, status, burstcnt;
+-	size_t count = 0;
+-	bool itpm = priv->flags & TPM_TIS_ITPM_WORKAROUND;
++	int rc, status;
  
- 	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
-@@ -174,14 +174,14 @@ static bool crb_wait_for_reg_32(u32 __iomem *reg, u32 mask, u32 value,
-  * The device should respond within TIMEOUT_C.
-  *
-  * The function does nothing for devices with ACPI-start method
-+ * and SMC-start method.
-  *
-  * Return: 0 on success -ETIME on timeout;
-  */
- static int __maybe_unused crb_cmd_ready(struct device *dev,
- 					struct crb_priv *priv)
- {
--	if ((priv->flags & CRB_FL_ACPI_START) ||
--	    (priv->flags & CRB_FL_CRB_SMC_START))
-+	if (!(priv->flags & CRB_FL_CRB_START))
- 		return 0;
+ 	status = tpm_tis_status(chip);
+ 	if ((status & TPM_STS_COMMAND_READY) == 0) {
+@@ -270,49 +268,10 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ 		}
+ 	}
  
- 	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
-@@ -458,7 +458,7 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
- 	 * the control area, as one nice sane region except for some older
- 	 * stuff that puts the control area outside the ACPI IO region.
- 	 */
--	if (!(priv->flags & CRB_FL_ACPI_START)) {
-+	if (priv->flags & CRB_FL_CRB_START) {
- 		if (buf->control_address == io_res.start +
- 		    sizeof(*priv->regs_h))
- 			priv->regs_h = priv->iobase;
+-	while (count < len - 1) {
+-		burstcnt = get_burstcount(chip);
+-		if (burstcnt < 0) {
+-			dev_err(&chip->dev, "Unable to read burstcount\n");
+-			rc = burstcnt;
+-			goto out_err;
+-		}
+-		burstcnt = min_t(int, burstcnt, len - count - 1);
+-		rc = tpm_tis_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
+-					 burstcnt, buf + count);
+-		if (rc < 0)
+-			goto out_err;
+-
+-		count += burstcnt;
+-
+-		if (wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
+-					&priv->int_queue, false) < 0) {
+-			rc = -ETIME;
+-			goto out_err;
+-		}
+-		status = tpm_tis_status(chip);
+-		if (!itpm && (status & TPM_STS_DATA_EXPECT) == 0) {
+-			rc = -EIO;
+-			goto out_err;
+-		}
+-	}
+-
+-	/* write last byte */
+-	rc = tpm_tis_write8(priv, TPM_DATA_FIFO(priv->locality), buf[count]);
++	rc = tpm_tis_write_bytes(priv, TPM_DATA_FIFO(priv->locality), len, buf);
+ 	if (rc < 0)
+ 		goto out_err;
+ 
+-	if (wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
+-				&priv->int_queue, false) < 0) {
+-		rc = -ETIME;
+-		goto out_err;
+-	}
+-	status = tpm_tis_status(chip);
+-	if (!itpm && (status & TPM_STS_DATA_EXPECT) != 0) {
+-		rc = -EIO;
+-		goto out_err;
+-	}
+-
+ 	return 0;
+ 
+ out_err:
 -- 
-Jiandi An
-Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
-Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
+2.13.3
