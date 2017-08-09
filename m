@@ -1,67 +1,76 @@
-From: Ken Goldman <kgold@linux.vnet.ibm.com>
-Subject: Re: [tpmdd-devel] [PATCH] tpm: improve tpm_tis send() performance by
- ignoring burstcount
-Date: Wed, 9 Aug 2017 16:25:48 -0400
-Message-ID: <db0359cc-5e6b-2055-734a-bd9104e4a99f@linux.vnet.ibm.com>
+From: "Peter Huewe" <PeterHuewe@gmx.de>
+Subject: Aw: Re: [tpmdd-devel] [PATCH] tpm: improve tpm_tis send()
+ performance by ignoring burstcount
+Date: Wed, 9 Aug 2017 22:43:07 +0200
+Message-ID: <trinity-56ff4f3f-5e08-4aac-9353-a7b88fe91f01-1502311387207@3c-app-gmx-bs76>
 References: <20170807114632.1339-1-nayna@linux.vnet.ibm.com>
  <E37DFCB0-2E74-45F6-B2DF-70EF59F310BC@gmx.de>
  <20170808191145.kggmoczd5laiccrn@linux.intel.com>
+ <819e3d38-3f16-a32b-1928-c425b763d5f8@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170808191145.kggmoczd5laiccrn@linux.intel.com>
-Content-Language: en-US
-Sender: owner-linux-security-module@vger.kernel.org
-Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-ima-devel@lists.sourceforge.net
+Content-Type: text/plain; charset=UTF-8
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <819e3d38-3f16-a32b-1928-c425b763d5f8@linux.vnet.ibm.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Ken Goldman <kgold@linux.vnet.ibm.com>
+Cc: linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 8/8/2017 3:11 PM, Jarkko Sakkinen wrote:
- > On Mon, Aug 07, 2017 at 01:52:34PM +0200, Peter Huewe wrote:
+Hi Ken,
 
- >> Are you sure this is a good idea?
- >> On lpc systems this more or less stalls the bus, including 
-keyboard/mouse (if connected via superio lpc).
- >>
- >> On which systems have you tested this?
- >> Spi/Lpc? Architecture?
- >>
- >> This might not be noticable for small transfers, but think about 
-much larger transfers....
- >>
- >> Imho: NACK from my side.
- >>
- >> Thanks,
- >> Peter
- >
- > Thanks Peter, a great insight. TPM could share the bus with other
- > devices. Even if this optimizes the performance for TPM it might cause
- > performance issues elsewhere.
+(speaking on behalf of myself here, not my employer :) )
+> On Mon, Aug 07, 2017 at 01:52:34PM +0200, Peter Huewe wrote:
+>> Imho: NACK from my side.
+> After these viewpoints definitive NACK from my side too...
 
-Does anyone know of platforms where this occurs?
 
-I suspect (but not sure) that the days of SuperIO connecting floppy 
-drives, printer ports, and PS/2 mouse ports on the LPC bus are over, and 
-such legacy systems will not have a TPM. Would SuperIO even support the 
-special TPM LPC bus cycles?
+> I responded to the thread comments separately. However, assuming NACK
+> is the final response, I have a question.
 
-Even then, the wait states of a mhz speed LPC are likely to be usec,
-not noticeable for even a mouse.
+Nothing is ever final :)
 
-Is this a reasonable assumption?
+> The problem is the 5 msec sleep between polls of burst count. In the
+> case of one TPM with an 8 byte FIFO, a 32 byte transfer incurs 4 of
+> these sleeps.
 
-If so, to we affect TPM performance to the point where it's unusable to 
-help a case that is unlikely to appear in current platforms?
+Yes that's bad, especially with current msleep(5) is actually msleep(20).
+However, please also keep in mind SPI tpms show a much higher burst count value,  (255)
+our I2C TPM SLB9645 even shows something in the range of 1k. :)
 
- >
- > One more viewpoint: TCG must added the burst count for a reason (might
- > be very well related what Peter said). Is ignoring it something that TCG
- > recommends? Not following standard exactly in the driver code sometimes
- > makes sense on *small details* but I would not say that this a small
- > detail...
 
-I checked with the TCG's device driver work group (DDWG).  Both the spec 
-editor and 3 TPM vendors - Infineon, Nuvoton, and ST Micro - agreed that 
-ignoring burst count may incur wait states but nothing more.  Operations 
-will still be successful.
+> Would another solution be to reduce the burst count poll and sleep to,
+> e.g., 100 usec or even 10 usec? This would probably help greatly, but
+> till not incur the wait states that triggered the NACK.
 
+Imho the 5ms were an arbitrary chosen value for old old tpms.
+Back then also only msleep was available which was msleep(20) anyway.
+
+
+> My worry is that the scheduler would not be able to context switch that
+> fast, and so we wouldn't actually see usec speed polling.
+> Can a kernel expert offer an opinion?
+If you use sleep it's not guaranteed that you wakeup after exactly xx specified amount of time.
+Just that you sleep at least xx amount of time. Otherwise you would have to do delay/busywaiting.
+
+https://www.kernel.org/doc/Documentation/timers/timers-howto.txt
+
+
+Imho the best option is to
+figure out whether any vendor can determine the "FIFO flush time" i.e. how much time does it take to empty the fifo and fillup the burstcount and use this on the lower bound of an usleep range.
+I don't think tpms are in the range of < 10 us...
+
+@Ken: Maybe can you check in DDWG?
+
+What we often see/saw during some performance optimization tests is something like 
+burstcount 7, burstcount 1, burstcount 7, burstcount 1...
+which is the oposite of what you want to achieve.
+
+You'd like to have something like
+burstcount 8, burstcount 8, burstcount 8....
+
+Unfortunately TPMS don't report their max burstcount (afaik),
+otherwise it would be easy to write a calibration routine for the poll times.
+
+
+Thanks,
+Peter
