@@ -1,40 +1,42 @@
 From: Ken Goldman <kgold@linux.vnet.ibm.com>
-Subject: Re: Aw: Re: [tpmdd-devel] [PATCH] tpm: improve tpm_tis send()
- performance by ignoring burstcount
-Date: Fri, 11 Aug 2017 17:32:12 -0400
-Message-ID: <9cb350b6-32fd-529e-eb31-6800339cddb2@linux.vnet.ibm.com>
+Subject: Re: [Linux-ima-devel] [tpmdd-devel] [PATCH] tpm: improve tpm_tis
+ send() performance by ignoring burstcount
+Date: Fri, 11 Aug 2017 17:42:43 -0400
+Message-ID: <7ec8265f-265d-641a-6da3-d931f8df4819@linux.vnet.ibm.com>
 References: <20170807114632.1339-1-nayna@linux.vnet.ibm.com>
  <E37DFCB0-2E74-45F6-B2DF-70EF59F310BC@gmx.de>
  <20170808191145.kggmoczd5laiccrn@linux.intel.com>
  <db0359cc-5e6b-2055-734a-bd9104e4a99f@linux.vnet.ibm.com>
- <trinity-b615e596-8095-4a0a-9922-3fa9a5724c30-1502312435959@3c-app-gmx-bs76>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Type: text/plain; charset=windows-1252; format=flowed
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <trinity-b615e596-8095-4a0a-9922-3fa9a5724c30-1502312435959@3c-app-gmx-bs76>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <db0359cc-5e6b-2055-734a-bd9104e4a99f@linux.vnet.ibm.com>
 Content-Language: en-US
-Sender: owner-linux-security-module@vger.kernel.org
+Sender: linux-kernel-owner@vger.kernel.org
 Cc: linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 8/9/2017 5:00 PM, Peter Huewe wrote:
-> 
-> Since we are the linux kernel, we do have to care for legacy
-> devices. And a system with LPC, PS2Mouse on SuperIO and a TPM are not
-> that uncommon.
-> 
-> And heck, we even have support for 1.1b TPM devices....
+Following up on this thread based on this week's TCG call ...
 
-Understood.  However, remember that SuperIO is a 1980's device that
-predates the TPM.  Since the TPM requires special LPC bus cycles, it's
-even less likely that an old chipset has an attached TPM.
+1 - burstCount can safely be ignored on writes.  This is explicit in
+most places in the TCG spec.  In places where it is not explicit, it was 
+simply an editorial omission.  We are going through the spec and adding 
+"without incurring wait states."
 
-> Interesting - let me check with Georg tomorrow. Unfortunately I do
-> not have access to my tcg mails from home (since I'm not working :), 
-> but did you _explicitly_ talk about LPC and the system? I'm sure the
-> TPM does not care about the waitstates...
+TCG is willing to publish an errata if that makes developers more 
+comfortable.
 
-Yes, Infineon was one of the 3 TPM vendors who confirmed this.
+2 - These are multi-mhz buses.  The TPM vendors conformed that wait 
+states, even if incurred, will be sub-usec.  I.e., less that a microsecond.
 
+Essentially, the DD is loading the FIFO, and the TPM is unloading the 
+FIFO at processor speeds.
 
+Thus, even if one were worried about an odd system new enough to have a 
+TPM, but old enough to have an LPC attached printer, keyboard, mouse or 
+floppy, the delay in printing or typing will be insignificant.
+
+3 - I asked several platform vendors with long TCG experience, and they 
+said that they know of no motherboards that share the LPC bus with a TPM 
+plus another device.
