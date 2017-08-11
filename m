@@ -1,76 +1,57 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: Re: [tpmdd-devel] [PATCH] tpm: improve tpm_tis send()
- performance by ignoring burstcount
-Date: Fri, 11 Aug 2017 14:14:21 +0300
-Message-ID: <20170811111421.bg2we53rdeecjtac@linux.intel.com>
-References: <20170807114632.1339-1-nayna@linux.vnet.ibm.com>
- <E37DFCB0-2E74-45F6-B2DF-70EF59F310BC@gmx.de>
- <20170808191145.kggmoczd5laiccrn@linux.intel.com>
- <db0359cc-5e6b-2055-734a-bd9104e4a99f@linux.vnet.ibm.com>
- <trinity-b615e596-8095-4a0a-9922-3fa9a5724c30-1502312435959@3c-app-gmx-bs76>
+Subject: Re: [PATCH] Do not disable driver and bus shutdown hook when class
+ shutdown hook is set.
+Date: Fri, 11 Aug 2017 14:50:56 +0300
+Message-ID: <20170811115056.oegv6ziahja56cp4@linux.intel.com>
+References: <20170809213420.2391-1-msuchanek@suse.de>
+ <20170809215202.GA21867@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <trinity-b615e596-8095-4a0a-9922-3fa9a5724c30-1502312435959@3c-app-gmx-bs76>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Peter Huewe <PeterHuewe@gmx.de>
-Cc: Ken Goldman <kgold@linux.vnet.ibm.com>, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+In-Reply-To: <20170809215202.GA21867@obsidianresearch.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: Michal Suchanek <msuchanek@suse.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Aug 09, 2017 at 11:00:36PM +0200, Peter Huewe wrote:
-> Hi Ken,
-> (again speaking only on my behalf, not my employer)
+On Wed, Aug 09, 2017 at 03:52:02PM -0600, Jason Gunthorpe wrote:
+> On Wed, Aug 09, 2017 at 11:34:20PM +0200, Michal Suchanek wrote:
+> > Disabling the driver hook by setting class hook is totally sound design
+> > not prone to error as evidenced by the single implementation of the
+> > class hook.
 > 
-> > Does anyone know of platforms where this occurs?
-> > I suspect (but not sure) that the days of SuperIO connecting floppy
-> > drives, printer ports, and PS/2 mouse ports on the LPC bus are over, and
-> > such legacy systems will not have a TPM. Would SuperIO even support the
-> > special TPM LPC bus cycles?
+> It was done this was for consistency, if you look at the full code:
 > 
-> Since we are the linux kernel, we do have to care for legacy devices.
-> And a system with LPC, PS2Mouse on SuperIO and a TPM are not that uncommon.
+>                 if (dev->class && dev->class->shutdown) {
+>                         if (initcall_debug)
+>                                 dev_info(dev, "shutdown\n");
+>                         dev->class->shutdown(dev);
+>                 } else if (dev->bus && dev->bus->shutdown) {
+>                         if (initcall_debug)
+>                                 dev_info(dev, "shutdown\n");
+>                         dev->bus->shutdown(dev);
+>                 } else if (dev->driver && dev->driver->shutdown) {
+>                         if (initcall_debug)
+>                                 dev_info(dev, "shutdown\n");
+>                         dev->driver->shutdown(dev);
+>                 }
 > 
-> And heck, we even have support for 1.1b TPM devices....
+> The bus disables the driver callback, on the expectation that the bus
+> implementation will do it.
 > 
+> Existing bus implementations do properly chain to driver shutdown (eg
+> look at mmc_bus_shutdown) and it appears to have been written like
+> this so that the bus can insert code before and after calling the
+> driver shutdown.
 > 
-> >> One more viewpoint: TCG must added the burst count for a reason (might
-> >> be very well related what Peter said). Is ignoring it something that TCG
-> >> recommends? Not following standard exactly in the driver code sometimes
-> >> makes sense on *small details* but I would not say that this a small
-> >> detail...
+> Making class act differently from bus seems very confusing, IHMO,
+> which why the TPM patch was written to follow the existing pattern.
 > 
-> > I checked with the TCG's device driver work group (DDWG). Both the spec
-> > editor and 3 TPM vendors - Infineon, Nuvoton, and ST Micro - agreed that
-> > ignoring burst count may incur wait states but nothing more. Operations
-> > will still be successful.
-> 
-> Interesting - let me check with Georg tomorrow.
-> Unfortunately I do not have access to my tcg mails from home (since I'm not working :), 
-> but did you _explicitly_ talk about LPC and the system?
-> I'm sure the TPM does not care about the waitstates...
-> 
-> If my memory does not betray me, 
-> it is actually possible to "freeze up" a system completly by flooding the lpc bus.
-> Let me double check tomorrow...
-> 
-> 
-> In anycase - I really would like to see a much more performant tpm subsystem - 
-> however it will be quite an effort with a lot of legacy testing.
-> (which I unfortunately cannot spend on my private time ... and also of course lacking test systems).
-> 
-> Thanks,
-> Peter
+> Jason
 
-I would like to see tpm_msleep() wrapper to replace current msleep()
-usage across the subsystem before considering this. I.e. wrapper that
-internally uses usleep_range(). This way we can mechanically convert
-everything to a more low latency option.
-
-This should have been done already for patch that Mini and Nayna
-provided instead of open coding stuff.
-
-That change is something that can be applied right now. On the other
-hand, this is a very controversial change.
+There's also more fundamental problem. There are Fixes tags but no
+real regression. Even if this patch made sense I would not consider
+it as a bug fix.
 
 /Jarkko
