@@ -1,81 +1,76 @@
-From: =?UTF-8?Q?Michal_Such=C3=A1nek?= <msuchanek@suse.de>
-Subject: Re: [PATCH] Do not disable driver and bus shutdown hook when class
- shutdown hook is set.
-Date: Fri, 11 Aug 2017 07:04:03 +0200
-Message-ID: <25eaf1ea1d44f7950dbca6b3c4598c48@suse.de>
-References: <20170809213420.2391-1-msuchanek@suse.de>
- <20170809215202.GA21867@obsidianresearch.com>
- <20170810121811.2741dccc@kitsune.suse.cz>
- <20170810163057.GA21485@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: Re: [tpmdd-devel] [PATCH] tpm: improve tpm_tis send()
+ performance by ignoring burstcount
+Date: Fri, 11 Aug 2017 14:14:21 +0300
+Message-ID: <20170811111421.bg2we53rdeecjtac@linux.intel.com>
+References: <20170807114632.1339-1-nayna@linux.vnet.ibm.com>
+ <E37DFCB0-2E74-45F6-B2DF-70EF59F310BC@gmx.de>
+ <20170808191145.kggmoczd5laiccrn@linux.intel.com>
+ <db0359cc-5e6b-2055-734a-bd9104e4a99f@linux.vnet.ibm.com>
+ <trinity-b615e596-8095-4a0a-9922-3fa9a5724c30-1502312435959@3c-app-gmx-bs76>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=UTF-8;
- format=flowed
-Content-Transfer-Encoding: 8bit
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <20170810163057.GA21485@obsidianresearch.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <trinity-b615e596-8095-4a0a-9922-3fa9a5724c30-1502312435959@3c-app-gmx-bs76>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Peter Huewe <PeterHuewe@gmx.de>
+Cc: Ken Goldman <kgold@linux.vnet.ibm.com>, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 2017-08-10 18:30, Jason Gunthorpe wrote:
-> On Thu, Aug 10, 2017 at 12:18:11PM +0200, Michal Suchánek wrote:
+On Wed, Aug 09, 2017 at 11:00:36PM +0200, Peter Huewe wrote:
+> Hi Ken,
+> (again speaking only on my behalf, not my employer)
+> 
+> > Does anyone know of platforms where this occurs?
+> > I suspect (but not sure) that the days of SuperIO connecting floppy
+> > drives, printer ports, and PS/2 mouse ports on the LPC bus are over, and
+> > such legacy systems will not have a TPM. Would SuperIO even support the
+> > special TPM LPC bus cycles?
+> 
+> Since we are the linux kernel, we do have to care for legacy devices.
+> And a system with LPC, PS2Mouse on SuperIO and a TPM are not that uncommon.
+> 
+> And heck, we even have support for 1.1b TPM devices....
+> 
+> 
+> >> One more viewpoint: TCG must added the burst count for a reason (might
+> >> be very well related what Peter said). Is ignoring it something that TCG
+> >> recommends? Not following standard exactly in the driver code sometimes
+> >> makes sense on *small details* but I would not say that this a small
+> >> detail...
+> 
+> > I checked with the TCG's device driver work group (DDWG). Both the spec
+> > editor and 3 TPM vendors - Infineon, Nuvoton, and ST Micro - agreed that
+> > ignoring burst count may incur wait states but nothing more. Operations
+> > will still be successful.
+> 
+> Interesting - let me check with Georg tomorrow.
+> Unfortunately I do not have access to my tcg mails from home (since I'm not working :), 
+> but did you _explicitly_ talk about LPC and the system?
+> I'm sure the TPM does not care about the waitstates...
+> 
+> If my memory does not betray me, 
+> it is actually possible to "freeze up" a system completly by flooding the lpc bus.
+> Let me double check tomorrow...
+> 
+> 
+> In anycase - I really would like to see a much more performant tpm subsystem - 
+> however it will be quite an effort with a lot of legacy testing.
+> (which I unfortunately cannot spend on my private time ... and also of course lacking test systems).
+> 
+> Thanks,
+> Peter
 
->> > Existing bus implementations do properly chain to driver shutdown (eg
->> > look at mmc_bus_shutdown) and it appears to have been written like
->> 
->> Neither isa nor ibmebus does. These are two random buses I tried to
->> look at.
-> 
-> I'm not following, I see this:
-> 
-> static void ibmebus_bus_device_shutdown(struct device *dev)
-> {
->         struct platform_device *of_dev = to_platform_device(dev);
->         struct platform_driver *drv = to_platform_driver(dev->driver);
-> 
->         if (dev->driver && drv->shutdown)
->                 drv->shutdown(of_dev);
-> }
-> 
-> It looks to me like in this case the struct device_driver shutdown is
-> not used, and instead the struct platform_driver shutdown is called.
+I would like to see tpm_msleep() wrapper to replace current msleep()
+usage across the subsystem before considering this. I.e. wrapper that
+internally uses usleep_range(). This way we can mechanically convert
+everything to a more low latency option.
 
-And it is not used even if a device driver sets it and expects it to 
-run.
+This should have been done already for patch that Mini and Nayna
+provided instead of open coding stuff.
 
-> 
->> > this so that the bus can insert code before and after calling the
->> > driver shutdown.
->> 
->> So basically there is bus pre-shutdown and post-shutdown hook jumbled
->> together in one function.
-> 
-> and a redirect, apparently.
-> 
->> While I can understand the concept of post-shutdown hook I wonder
->> what gross hack would require a pre-shutdown hook.
-> 
-> TPM requires pre-shutdown.
+That change is something that can be applied right now. On the other
+hand, this is a very controversial change.
 
-Yes, a class pre-shutdown. Not a bus pre-shutdown, however.
-
-I have no idea what business has a bus driver before a device shuts 
-down.
-
-> 
->> The Linux development process at its best. There is poor design
->> implemented so when touching the code it is extended to worse because
-> 
-> I'm not sure I completely agree, there is obviously a lot going on with
-> bus->shutdown.
-> 
-> If you want to go ahead with your patch then please also rename the
-> class shutdown to shutdown_pre to make it clear it is doing something
-> different.
-
-That makes sense.
-
-Thanks
-
-Michal
+/Jarkko
