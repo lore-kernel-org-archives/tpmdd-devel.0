@@ -1,98 +1,56 @@
-From: Michal Suchanek <msuchanek@suse.de>
-Subject: [PATCH v2] Do not disable driver and bus shutdown hook when class shutdown hook is set.
-Date: Fri, 11 Aug 2017 15:44:43 +0200
-Message-ID: <20170811134443.770-1-msuchanek@suse.de>
+From: Henrique de Moraes Holschuh <hmh@hmh.eng.br>
+Subject: Re: [PATCH] Do not disable driver and bus shutdown hook when class
+ shutdown hook is set.
+Date: Fri, 11 Aug 2017 12:28:57 -0300
+Message-ID: <20170811152857.cgjvlkiilskv76o3@khazad-dum.debian.net>
+References: <20170809213420.2391-1-msuchanek@suse.de>
+ <20170809215202.GA21867@obsidianresearch.com>
+ <20170810121811.2741dccc@kitsune.suse.cz>
+ <20170810163057.GA21485@obsidianresearch.com>
+ <25eaf1ea1d44f7950dbca6b3c4598c48@suse.de>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=iso-8859-1
+Content-Transfer-Encoding: 8bit
 Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <25eaf1ea1d44f7950dbca6b3c4598c48@suse.de>
 Sender: linux-kernel-owner@vger.kernel.org
-To: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "David S. Miller" <davem@davemloft.net>, Andrew Morton <akpm@linux-foundation.org>, "Rafael J. Wysocki" <rafael.j.wysocki@intel.com>, Phil Sutter <phil@nwl.cc>, Josh Zimmerman <joshz@google.com>, Michal Suchanek <msuchanek@suse.de>, Madalin Bucur <madalin.bucur@nxp.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Heiko Carstens <heiko.carstens@de.ibm.com>, Ludovic Desroches <ludovic.desroches@o2linux.fr>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+To: Michal =?iso-8859-1?Q?Such=E1nek?= <msuchanek@suse.de>
+Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-As seen from the implementation of the single class shutdown hook this
-is not very sound design.
+On Fri, 11 Aug 2017, Michal Suchánek wrote:
+> On 2017-08-10 18:30, Jason Gunthorpe wrote:
+> > On Thu, Aug 10, 2017 at 12:18:11PM +0200, Michal Suchánek wrote:
+> > > > Existing bus implementations do properly chain to driver shutdown (eg
+> > > > look at mmc_bus_shutdown) and it appears to have been written like
+> > > 
+> > > Neither isa nor ibmebus does. These are two random buses I tried to
+> > > look at.
+> > 
+> > I'm not following, I see this:
+> > 
+> > static void ibmebus_bus_device_shutdown(struct device *dev)
+> > {
+> >         struct platform_device *of_dev = to_platform_device(dev);
+> >         struct platform_driver *drv = to_platform_driver(dev->driver);
+> > 
+> >         if (dev->driver && drv->shutdown)
+> >                 drv->shutdown(of_dev);
+> > }
+> > 
+> > It looks to me like in this case the struct device_driver shutdown is
+> > not used, and instead the struct platform_driver shutdown is called.
+> 
+> And it is not used even if a device driver sets it and expects it to run.
 
-Rename the class shutdown hook to shutdown_pre to make it clear it runs
-before the driver shutdown hook.
+Which is the kind of landmine it is best avoided in drivers/, so it
+would be nice to get WARN_ON() during device register when
+dev->shutdown() methods *that are going to be ignored* because of
+class/bus handlers are non-NULL...
 
-Signed-off-by: Michal Suchanek <msuchanek@suse.de>
----
-v2: rename class shutdown member to shutdown_pre
----
- drivers/base/core.c         |  9 +++++----
- drivers/char/tpm/tpm-chip.c | 11 ++---------
- include/linux/device.h      |  4 ++--
- 3 files changed, 9 insertions(+), 15 deletions(-)
+Either that, or the device->shutdown() methods should always be called,
+and drivers that should not/need not have them should be fixed...
 
-diff --git a/drivers/base/core.c b/drivers/base/core.c
-index 755451f684bc..13e7c41fd417 100644
---- a/drivers/base/core.c
-+++ b/drivers/base/core.c
-@@ -2664,11 +2664,12 @@ void device_shutdown(void)
- 		pm_runtime_get_noresume(dev);
- 		pm_runtime_barrier(dev);
- 
--		if (dev->class && dev->class->shutdown) {
-+		if (dev->class && dev->class->shutdown_pre) {
- 			if (initcall_debug)
--				dev_info(dev, "shutdown\n");
--			dev->class->shutdown(dev);
--		} else if (dev->bus && dev->bus->shutdown) {
-+				dev_info(dev, "shutdown_pre\n");
-+			dev->class->shutdown_pre(dev);
-+		}
-+		if (dev->bus && dev->bus->shutdown) {
- 			if (initcall_debug)
- 				dev_info(dev, "shutdown\n");
- 			dev->bus->shutdown(dev);
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index 67ec9d3d04f5..0eca20c5a80c 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -164,14 +164,7 @@ static int tpm_class_shutdown(struct device *dev)
- 		chip->ops = NULL;
- 		up_write(&chip->ops_sem);
- 	}
--	/* Allow bus- and device-specific code to run. Note: since chip->ops
--	 * is NULL, more-specific shutdown code will not be able to issue TPM
--	 * commands.
--	 */
--	if (dev->bus && dev->bus->shutdown)
--		dev->bus->shutdown(dev);
--	else if (dev->driver && dev->driver->shutdown)
--		dev->driver->shutdown(dev);
-+
- 	return 0;
- }
- 
-@@ -214,7 +207,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
- 	device_initialize(&chip->devs);
- 
- 	chip->dev.class = tpm_class;
--	chip->dev.class->shutdown = tpm_class_shutdown;
-+	chip->dev.class->shutdown_pre = tpm_class_shutdown;
- 	chip->dev.release = tpm_dev_release;
- 	chip->dev.parent = pdev;
- 	chip->dev.groups = chip->groups;
-diff --git a/include/linux/device.h b/include/linux/device.h
-index beabdbc08420..649b1b72c76a 100644
---- a/include/linux/device.h
-+++ b/include/linux/device.h
-@@ -375,7 +375,7 @@ int subsys_virtual_register(struct bus_type *subsys,
-  * @suspend:	Used to put the device to sleep mode, usually to a low power
-  *		state.
-  * @resume:	Used to bring the device from the sleep mode.
-- * @shutdown:	Called at shut-down time to quiesce the device.
-+ * @shutdown_pre: Called at shut-down time before driver shutdown.
-  * @ns_type:	Callbacks so sysfs can detemine namespaces.
-  * @namespace:	Namespace of the device belongs to this class.
-  * @pm:		The default device power management operations of this class.
-@@ -404,7 +404,7 @@ struct class {
- 
- 	int (*suspend)(struct device *dev, pm_message_t state);
- 	int (*resume)(struct device *dev);
--	int (*shutdown)(struct device *dev);
-+	int (*shutdown_pre)(struct device *dev);
- 
- 	const struct kobj_ns_type_operations *ns_type;
- 	const void *(*namespace)(struct device *dev);
 -- 
-2.10.2
+  Henrique Holschuh
