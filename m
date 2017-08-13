@@ -1,57 +1,112 @@
-From: Ken Goldman <kgold@linux.vnet.ibm.com>
-Subject: Re: Aw: Re: [tpmdd-devel] [PATCH] tpm: improve tpm_tis send()
- performance by ignoring burstcount
-Date: Fri, 11 Aug 2017 17:54:19 -0400
-Message-ID: <b8693dd5-7c28-f8f0-fa27-1f204ef7e64c@linux.vnet.ibm.com>
-References: <20170807114632.1339-1-nayna@linux.vnet.ibm.com>
- <E37DFCB0-2E74-45F6-B2DF-70EF59F310BC@gmx.de>
- <20170808191145.kggmoczd5laiccrn@linux.intel.com>
- <819e3d38-3f16-a32b-1928-c425b763d5f8@linux.vnet.ibm.com>
- <trinity-56ff4f3f-5e08-4aac-9353-a7b88fe91f01-1502311387207@3c-app-gmx-bs76>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
+From: Jiandi An <anjiandi@codeaurora.org>
+Subject: [PATCH v2] tpm/tpm_crb: Access locality for only CRB_START method
+Date: Sat, 12 Aug 2017 20:22:49 -0500
+Message-ID: <1502587369-24436-1-git-send-email-anjiandi@codeaurora.org>
 Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <trinity-56ff4f3f-5e08-4aac-9353-a7b88fe91f01-1502311387207@3c-app-gmx-bs76>
-Content-Language: en-US
 Sender: linux-kernel-owner@vger.kernel.org
-Cc: linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+To: tpmdd-devel@lists.sourceforge.net
+Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org, anjiandi@codeaurora.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 8/9/2017 4:43 PM, Peter Huewe wrote:
-> 
-> Yes that's bad, especially with current msleep(5) is actually
-> msleep(20). However, please also keep in mind SPI tpms show a much
-> higher burst count value,  (255) our I2C TPM SLB9645 even shows
-> something in the range of 1k. :)
+For ARM64, the locality is handled by Trust Zone in FW.
+The layout does not have crb_regs_head.  It is hitting
+the following line.
+dev_warn(dev, FW_BUG "Bad ACPI memory layout");
 
-One of our platforms has a TPM 1.2 with an 8 byte FIFO and a static 
-burst count.  This is where we're debugging.
+Current code excludes CRB_FL_ACPI_START and when
+CRB_FL_CRB_SMC_START is added around the same time
+locality support is added, it should also be excluded.
+Change the if condition to be only for CRB_FL_CRB_START.
 
->> Would another solution be to reduce the burst count poll and sleep
->> to, e.g., 100 usec or even 10 usec? This would probably help
->> greatly, but till not incur the wait states that triggered the
->> NACK.
->
-> If you use sleep it's not guaranteed that you wakeup after exactly xx
-> specified amount of time. Just that you sleep at least xx amount of
-> time. Otherwise you would have to do delay/busywaiting.
+For goIdle and cmdReady where code was excluding
+CRB_FL_ACPI_START only (do nothing for ACPI start method),
+CRB_FL_CRB_SMC_START was also excluded as ARM64 SMC start
+method does not have TPM_CRB_CTRL_REQ.
+Change the if condition to be only for CRB_FL_CRB_START
+in crb_go_idle() and crb_cmd_ready().
 
-Understood.  However, if the DD maintainers will not accept ignoring 
-burstCount, would a short sleep (e.g., 10 usec) be acceptable.
+Signed-off-by: Jiandi An <anjiandi@codeaurora.org>
+---
+v2
+Changed if condition to CRB_FL_CRB_START for go idle
+and crb_cmd_ready per maintainer's comment.
 
-If so, we can benchmark it.
+ drivers/char/tpm/tpm_crb.c | 36 +++++++++++++++++-------------------
+ 1 file changed, 17 insertions(+), 19 deletions(-)
 
-> Imho the best option is to figure out whether any vendor can
-> determine the "FIFO flush time" i.e. how much time does it take to
-> empty the fifo and fillup the burstcount and use this on the lower
-> bound of an usleep range. I don't think tpms are in the range of < 10
-> us...
-> 
-> @Ken: Maybe can you check in DDWG?
-
-I asked this week.
-
-Nuvoton, ST Micro, and Infineon confirmed that the TPM empties a byte 
-from the FIFO in under 1 usec.  So, even with a static burst count, the 
-entire FIFO would empty in under 10 usec.
+diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+index 8f0a98d..7a6735d 100644
+--- a/drivers/char/tpm/tpm_crb.c
++++ b/drivers/char/tpm/tpm_crb.c
+@@ -128,18 +128,16 @@ struct tpm2_crb_smc {
+  * Anyhow, we do not wait here as a consequent CMD_READY request
+  * will be handled correctly even if idle was not completed.
+  *
+- * The function does nothing for devices with ACPI-start method.
++ * The function does nothing for devices with ACPI-start method
++ * and SMC-start method.
+  *
+  * Return: 0 always
+  */
+ static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+ {
+-	if ((priv->flags & CRB_FL_ACPI_START) ||
+-	    (priv->flags & CRB_FL_CRB_SMC_START))
+-		return 0;
+-
+-	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
+-	/* we don't really care when this settles */
++	if (priv->flags & CRB_FL_CRB_START)
++		iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
++		/* we don't really care when this settles */
+ 
+ 	return 0;
+ }
+@@ -174,23 +172,23 @@ static bool crb_wait_for_reg_32(u32 __iomem *reg, u32 mask, u32 value,
+  * The device should respond within TIMEOUT_C.
+  *
+  * The function does nothing for devices with ACPI-start method
++ * and SMC-start method.
+  *
+  * Return: 0 on success -ETIME on timeout;
+  */
+ static int __maybe_unused crb_cmd_ready(struct device *dev,
+ 					struct crb_priv *priv)
+ {
+-	if ((priv->flags & CRB_FL_ACPI_START) ||
+-	    (priv->flags & CRB_FL_CRB_SMC_START))
+-		return 0;
+-
+-	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
+-	if (!crb_wait_for_reg_32(&priv->regs_t->ctrl_req,
+-				 CRB_CTRL_REQ_CMD_READY /* mask */,
+-				 0, /* value */
+-				 TPM2_TIMEOUT_C)) {
+-		dev_warn(dev, "cmdReady timed out\n");
+-		return -ETIME;
++	if (priv->flags & CRB_FL_CRB_START)
++	{
++		iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
++		if (!crb_wait_for_reg_32(&priv->regs_t->ctrl_req,
++					 CRB_CTRL_REQ_CMD_READY /* mask */,
++					 0, /* value */
++					 TPM2_TIMEOUT_C)) {
++			dev_warn(dev, "cmdReady timed out\n");
++			return -ETIME;
++		}
+ 	}
+ 
+ 	return 0;
+@@ -458,7 +456,7 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+ 	 * the control area, as one nice sane region except for some older
+ 	 * stuff that puts the control area outside the ACPI IO region.
+ 	 */
+-	if (!(priv->flags & CRB_FL_ACPI_START)) {
++	if (priv->flags & CRB_FL_CRB_START) {
+ 		if (buf->control_address == io_res.start +
+ 		    sizeof(*priv->regs_h))
+ 			priv->regs_h = priv->iobase;
+-- 
+Jiandi An
+Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
+Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
