@@ -1,114 +1,148 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v2] Do not disable driver and bus shutdown hook when
- class shutdown hook is set.
-Date: Mon, 14 Aug 2017 12:52:39 +0300
-Message-ID: <20170814095239.eujax3ofztdoanxw@linux.intel.com>
-References: <20170811134443.770-1-msuchanek@suse.de>
+Subject: Re: [PATCH v2] tpm/tpm_crb: Access locality for only CRB_START method
+Date: Mon, 14 Aug 2017 13:09:28 +0300
+Message-ID: <20170814100928.7vv3mhd5xpknamnw@linux.intel.com>
+References: <1502587369-24436-1-git-send-email-anjiandi@codeaurora.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170811134443.770-1-msuchanek@suse.de>
+In-Reply-To: <1502587369-24436-1-git-send-email-anjiandi@codeaurora.org>
 Sender: linux-kernel-owner@vger.kernel.org
-To: Michal Suchanek <msuchanek@suse.de>
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "David S. Miller" <davem@davemloft.net>, Andrew Morton <akpm@linux-foundation.org>, "Rafael J. Wysocki" <rafael.j.wysocki@intel.com>, Phil Sutter <phil@nwl.cc>, Josh Zimmerman <joshz@google.com>, Madalin Bucur <madalin.bucur@nxp.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Heiko Carstens <heiko.carstens@de.ibm.com>, Ludovic Desroches <ludovic.desroches@o2linux.fr>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+To: Jiandi An <anjiandi@codeaurora.org>
+Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Aug 11, 2017 at 03:44:43PM +0200, Michal Suchanek wrote:
-> As seen from the implementation of the single class shutdown hook this
-> is not very sound design.
+On Sat, Aug 12, 2017 at 08:22:49PM -0500, Jiandi An wrote:
+> For ARM64, the locality is handled by Trust Zone in FW.
+> The layout does not have crb_regs_head.  It is hitting
+> the following line.
+> dev_warn(dev, FW_BUG "Bad ACPI memory layout");
 > 
-> Rename the class shutdown hook to shutdown_pre to make it clear it runs
-> before the driver shutdown hook.
+> Current code excludes CRB_FL_ACPI_START and when
+> CRB_FL_CRB_SMC_START is added around the same time
+> locality support is added, it should also be excluded.
+> Change the if condition to be only for CRB_FL_CRB_START.
 > 
-> Signed-off-by: Michal Suchanek <msuchanek@suse.de>
-
-Now, at least for me, this makes sense.
-
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-
-/Jarkko
-
+> For goIdle and cmdReady where code was excluding
+> CRB_FL_ACPI_START only (do nothing for ACPI start method),
+> CRB_FL_CRB_SMC_START was also excluded as ARM64 SMC start
+> method does not have TPM_CRB_CTRL_REQ.
+> Change the if condition to be only for CRB_FL_CRB_START
+> in crb_go_idle() and crb_cmd_ready().
+> 
+> Signed-off-by: Jiandi An <anjiandi@codeaurora.org>
 > ---
-> v2: rename class shutdown member to shutdown_pre
-> ---
->  drivers/base/core.c         |  9 +++++----
->  drivers/char/tpm/tpm-chip.c | 11 ++---------
->  include/linux/device.h      |  4 ++--
->  3 files changed, 9 insertions(+), 15 deletions(-)
+> v2
+> Changed if condition to CRB_FL_CRB_START for go idle
+> and crb_cmd_ready per maintainer's comment.
+
+What about platforms with firmware bug that they report only requiring
+ACPI start but actually also require CRB start.
+
+if (sm == ACPI_TPM2_START_METHOD ||
+    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
+	priv->flags |= CRB_FL_ACPI_START;
+
+I've encountered a platform that reports to require start method 2 (ACPI
+start) while it actually requires start method 8.
+
+That's why we have this nasty workaround:
+
+/* The reason for the extra quirk is that the PTT in 4th Gen Core CPUs
+ * report only ACPI start but in practice seems to require both
+ * ACPI start and CRB start.
+ */
+if (sm == ACPI_TPM2_COMMAND_BUFFER || sm == ACPI_TPM2_MEMORY_MAPPED ||
+    !strcmp(acpi_device_hid(device), "MSFT0101"))
+	priv->flags |= CRB_FL_CRB_START;
+
+Also, since start method 8 exist in the spec, it is a legit config.
+
 > 
-> diff --git a/drivers/base/core.c b/drivers/base/core.c
-> index 755451f684bc..13e7c41fd417 100644
-> --- a/drivers/base/core.c
-> +++ b/drivers/base/core.c
-> @@ -2664,11 +2664,12 @@ void device_shutdown(void)
->  		pm_runtime_get_noresume(dev);
->  		pm_runtime_barrier(dev);
+>  drivers/char/tpm/tpm_crb.c | 36 +++++++++++++++++-------------------
+>  1 file changed, 17 insertions(+), 19 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+> index 8f0a98d..7a6735d 100644
+> --- a/drivers/char/tpm/tpm_crb.c
+> +++ b/drivers/char/tpm/tpm_crb.c
+> @@ -128,18 +128,16 @@ struct tpm2_crb_smc {
+>   * Anyhow, we do not wait here as a consequent CMD_READY request
+>   * will be handled correctly even if idle was not completed.
+>   *
+> - * The function does nothing for devices with ACPI-start method.
+> + * The function does nothing for devices with ACPI-start method
+> + * and SMC-start method.
+>   *
+>   * Return: 0 always
+>   */
+>  static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+>  {
+> -	if ((priv->flags & CRB_FL_ACPI_START) ||
+> -	    (priv->flags & CRB_FL_CRB_SMC_START))
+> -		return 0;
+> -
+> -	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
+> -	/* we don't really care when this settles */
+> +	if (priv->flags & CRB_FL_CRB_START)
+> +		iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
+> +		/* we don't really care when this settles */
 >  
-> -		if (dev->class && dev->class->shutdown) {
-> +		if (dev->class && dev->class->shutdown_pre) {
->  			if (initcall_debug)
-> -				dev_info(dev, "shutdown\n");
-> -			dev->class->shutdown(dev);
-> -		} else if (dev->bus && dev->bus->shutdown) {
-> +				dev_info(dev, "shutdown_pre\n");
-> +			dev->class->shutdown_pre(dev);
-> +		}
-> +		if (dev->bus && dev->bus->shutdown) {
->  			if (initcall_debug)
->  				dev_info(dev, "shutdown\n");
->  			dev->bus->shutdown(dev);
-> diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> index 67ec9d3d04f5..0eca20c5a80c 100644
-> --- a/drivers/char/tpm/tpm-chip.c
-> +++ b/drivers/char/tpm/tpm-chip.c
-> @@ -164,14 +164,7 @@ static int tpm_class_shutdown(struct device *dev)
->  		chip->ops = NULL;
->  		up_write(&chip->ops_sem);
->  	}
-> -	/* Allow bus- and device-specific code to run. Note: since chip->ops
-> -	 * is NULL, more-specific shutdown code will not be able to issue TPM
-> -	 * commands.
-> -	 */
-> -	if (dev->bus && dev->bus->shutdown)
-> -		dev->bus->shutdown(dev);
-> -	else if (dev->driver && dev->driver->shutdown)
-> -		dev->driver->shutdown(dev);
-> +
 >  	return 0;
 >  }
+> @@ -174,23 +172,23 @@ static bool crb_wait_for_reg_32(u32 __iomem *reg, u32 mask, u32 value,
+>   * The device should respond within TIMEOUT_C.
+>   *
+>   * The function does nothing for devices with ACPI-start method
+> + * and SMC-start method.
+>   *
+>   * Return: 0 on success -ETIME on timeout;
+>   */
+>  static int __maybe_unused crb_cmd_ready(struct device *dev,
+>  					struct crb_priv *priv)
+>  {
+> -	if ((priv->flags & CRB_FL_ACPI_START) ||
+> -	    (priv->flags & CRB_FL_CRB_SMC_START))
+> -		return 0;
+> -
+> -	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
+> -	if (!crb_wait_for_reg_32(&priv->regs_t->ctrl_req,
+> -				 CRB_CTRL_REQ_CMD_READY /* mask */,
+> -				 0, /* value */
+> -				 TPM2_TIMEOUT_C)) {
+> -		dev_warn(dev, "cmdReady timed out\n");
+> -		return -ETIME;
+> +	if (priv->flags & CRB_FL_CRB_START)
+> +	{
+
+The opening curly brace should be in the same line as the condition
+statement.
+
+> +		iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
+> +		if (!crb_wait_for_reg_32(&priv->regs_t->ctrl_req,
+> +					 CRB_CTRL_REQ_CMD_READY /* mask */,
+> +					 0, /* value */
+> +					 TPM2_TIMEOUT_C)) {
+> +			dev_warn(dev, "cmdReady timed out\n");
+> +			return -ETIME;
+> +		}
+>  	}
 >  
-> @@ -214,7 +207,7 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
->  	device_initialize(&chip->devs);
->  
->  	chip->dev.class = tpm_class;
-> -	chip->dev.class->shutdown = tpm_class_shutdown;
-> +	chip->dev.class->shutdown_pre = tpm_class_shutdown;
->  	chip->dev.release = tpm_dev_release;
->  	chip->dev.parent = pdev;
->  	chip->dev.groups = chip->groups;
-> diff --git a/include/linux/device.h b/include/linux/device.h
-> index beabdbc08420..649b1b72c76a 100644
-> --- a/include/linux/device.h
-> +++ b/include/linux/device.h
-> @@ -375,7 +375,7 @@ int subsys_virtual_register(struct bus_type *subsys,
->   * @suspend:	Used to put the device to sleep mode, usually to a low power
->   *		state.
->   * @resume:	Used to bring the device from the sleep mode.
-> - * @shutdown:	Called at shut-down time to quiesce the device.
-> + * @shutdown_pre: Called at shut-down time before driver shutdown.
->   * @ns_type:	Callbacks so sysfs can detemine namespaces.
->   * @namespace:	Namespace of the device belongs to this class.
->   * @pm:		The default device power management operations of this class.
-> @@ -404,7 +404,7 @@ struct class {
->  
->  	int (*suspend)(struct device *dev, pm_message_t state);
->  	int (*resume)(struct device *dev);
-> -	int (*shutdown)(struct device *dev);
-> +	int (*shutdown_pre)(struct device *dev);
->  
->  	const struct kobj_ns_type_operations *ns_type;
->  	const void *(*namespace)(struct device *dev);
+>  	return 0;
+> @@ -458,7 +456,7 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+>  	 * the control area, as one nice sane region except for some older
+>  	 * stuff that puts the control area outside the ACPI IO region.
+>  	 */
+> -	if (!(priv->flags & CRB_FL_ACPI_START)) {
+> +	if (priv->flags & CRB_FL_CRB_START) {
+>  		if (buf->control_address == io_res.start +
+>  		    sizeof(*priv->regs_h))
+>  			priv->regs_h = priv->iobase;
 > -- 
-> 2.10.2
+> Jiandi An
+> Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
+> Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
 > 
+
+/Jarkko
