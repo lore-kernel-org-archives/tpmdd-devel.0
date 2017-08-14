@@ -1,148 +1,108 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v2] tpm/tpm_crb: Access locality for only CRB_START method
-Date: Mon, 14 Aug 2017 13:09:28 +0300
-Message-ID: <20170814100928.7vv3mhd5xpknamnw@linux.intel.com>
-References: <1502587369-24436-1-git-send-email-anjiandi@codeaurora.org>
+Subject: Re: Re: [tpmdd-devel] [PATCH] tpm: improve tpm_tis send()
+ performance by ignoring burstcount
+Date: Mon, 14 Aug 2017 13:51:30 +0300
+Message-ID: <20170814105130.4jjdcop4mqkoxhgh@linux.intel.com>
+References: <20170807114632.1339-1-nayna@linux.vnet.ibm.com>
+ <E37DFCB0-2E74-45F6-B2DF-70EF59F310BC@gmx.de>
+ <20170808191145.kggmoczd5laiccrn@linux.intel.com>
+ <db0359cc-5e6b-2055-734a-bd9104e4a99f@linux.vnet.ibm.com>
+ <trinity-b615e596-8095-4a0a-9922-3fa9a5724c30-1502312435959@3c-app-gmx-bs76>
+ <20170811111421.bg2we53rdeecjtac@linux.intel.com>
+ <1502465419.3579.109.camel@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=iso-8859-1
+Content-Transfer-Encoding: 8bit
 Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1502587369-24436-1-git-send-email-anjiandi@codeaurora.org>
+In-Reply-To: <1502465419.3579.109.camel@linux.vnet.ibm.com>
 Sender: linux-kernel-owner@vger.kernel.org
-To: Jiandi An <anjiandi@codeaurora.org>
-Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-kernel@vger.kernel.org
+To: Mimi Zohar <zohar@linux.vnet.ibm.com>
+Cc: Peter Huewe <PeterHuewe@gmx.de>, Ken Goldman <kgold@linux.vnet.ibm.com>, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat, Aug 12, 2017 at 08:22:49PM -0500, Jiandi An wrote:
-> For ARM64, the locality is handled by Trust Zone in FW.
-> The layout does not have crb_regs_head.  It is hitting
-> the following line.
-> dev_warn(dev, FW_BUG "Bad ACPI memory layout");
+On Fri, Aug 11, 2017 at 11:30:19AM -0400, Mimi Zohar wrote:
+> On Fri, 2017-08-11 at 14:14 +0300, Jarkko Sakkinen wrote:
+> > On Wed, Aug 09, 2017 at 11:00:36PM +0200, Peter Huewe wrote:
+> > > Hi Ken,
+> > > (again speaking only on my behalf, not my employer)
+> > > 
+> > > > Does anyone know of platforms where this occurs?
+> > > > I suspect (but not sure) that the days of SuperIO connecting floppy
+> > > > drives, printer ports, and PS/2 mouse ports on the LPC bus are over, and
+> > > > such legacy systems will not have a TPM. Would SuperIO even support the
+> > > > special TPM LPC bus cycles?
+> > > 
+> > > Since we are the linux kernel, we do have to care for legacy devices.
+> > > And a system with LPC, PS2Mouse on SuperIO and a TPM are not that uncommon.
+> > > 
+> > > And heck, we even have support for 1.1b TPM devices....
+> > > 
+> > > 
+> > > >> One more viewpoint: TCG must added the burst count for a reason (might
+> > > >> be very well related what Peter said). Is ignoring it something that TCG
+> > > >> recommends? Not following standard exactly in the driver code sometimes
+> > > >> makes sense on *small details* but I would not say that this a small
+> > > >> detail...
+> > > 
+> > > > I checked with the TCG's device driver work group (DDWG). Both the spec
+> > > > editor and 3 TPM vendors - Infineon, Nuvoton, and ST Micro - agreed that
+> > > > ignoring burst count may incur wait states but nothing more. Operations
+> > > > will still be successful.
+> > > 
+> > > Interesting - let me check with Georg tomorrow.
+> > > Unfortunately I do not have access to my tcg mails from home (since I'm not working :), 
+> > > but did you _explicitly_ talk about LPC and the system?
+> > > I'm sure the TPM does not care about the waitstates...
+> > > 
+> > > If my memory does not betray me, 
+> > > it is actually possible to "freeze up" a system completly by flooding the lpc bus.
+> > > Let me double check tomorrow...
+> > > 
+> > > 
+> > > In anycase - I really would like to see a much more performant tpm subsystem - 
+> > > however it will be quite an effort with a lot of legacy testing.
+> > > (which I unfortunately cannot spend on my private time ... and also of course lacking test systems).
+> > > 
+> > > Thanks,
+> > > Peter
+> > 
+> > I would like to see tpm_msleep() wrapper to replace current msleep()
+> > usage across the subsystem before considering this. I.e. wrapper that
+> > internally uses usleep_range(). This way we can mechanically convert
+> > everything to a more low latency option.
 > 
-> Current code excludes CRB_FL_ACPI_START and when
-> CRB_FL_CRB_SMC_START is added around the same time
-> locality support is added, it should also be excluded.
-> Change the if condition to be only for CRB_FL_CRB_START.
+> Fine.  I assume you meant tpm_sleep(), not tpm_msleep().
+
+I think it would sense to have a function that takes msecs because msecs
+are mostly used everywhere in the subsystem. This way we don't have to
+change any of the existing constants.
+
+> > This should have been done already for patch that Mini and Nayna
+> > provided instead of open coding stuff.
 > 
-> For goIdle and cmdReady where code was excluding
-> CRB_FL_ACPI_START only (do nothing for ACPI start method),
-> CRB_FL_CRB_SMC_START was also excluded as ARM64 SMC start
-> method does not have TPM_CRB_CTRL_REQ.
-> Change the if condition to be only for CRB_FL_CRB_START
-> in crb_go_idle() and crb_cmd_ready().
+> At that time, we had no idea what caused the major change in TPM
+> performance.  We only knew that the change occurred somewhere between
+> linux-4.7 and linux-4.8.  Even after figuring out it was the change to
+> msleep(), we were hoping that msleep() would be fixed.  So your
+> comment, that we should have done it differently back then, is
+> unwarranted.
+
+I wasn't trying to point the blame to you at all. I didn't bring this to
+table back then myself. I agree what you are saying.
+
+I was mainly trying to explain why I think it should be done this way
+now while I didn't suggest it back then :-)
+
+> > That change is something that can be applied right now. On the other
+> > hand, this is a very controversial change.
 > 
-> Signed-off-by: Jiandi An <anjiandi@codeaurora.org>
-> ---
-> v2
-> Changed if condition to CRB_FL_CRB_START for go idle
-> and crb_cmd_ready per maintainer's comment.
-
-What about platforms with firmware bug that they report only requiring
-ACPI start but actually also require CRB start.
-
-if (sm == ACPI_TPM2_START_METHOD ||
-    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
-	priv->flags |= CRB_FL_ACPI_START;
-
-I've encountered a platform that reports to require start method 2 (ACPI
-start) while it actually requires start method 8.
-
-That's why we have this nasty workaround:
-
-/* The reason for the extra quirk is that the PTT in 4th Gen Core CPUs
- * report only ACPI start but in practice seems to require both
- * ACPI start and CRB start.
- */
-if (sm == ACPI_TPM2_COMMAND_BUFFER || sm == ACPI_TPM2_MEMORY_MAPPED ||
-    !strcmp(acpi_device_hid(device), "MSFT0101"))
-	priv->flags |= CRB_FL_CRB_START;
-
-Also, since start method 8 exist in the spec, it is a legit config.
-
+> Since the main concern about this change is breaking old systems that
+> might potentially have other peripherals hanging off the LPC bus, can
+> we define a new Kconfig option, with the default as 'N'?
 > 
->  drivers/char/tpm/tpm_crb.c | 36 +++++++++++++++++-------------------
->  1 file changed, 17 insertions(+), 19 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> index 8f0a98d..7a6735d 100644
-> --- a/drivers/char/tpm/tpm_crb.c
-> +++ b/drivers/char/tpm/tpm_crb.c
-> @@ -128,18 +128,16 @@ struct tpm2_crb_smc {
->   * Anyhow, we do not wait here as a consequent CMD_READY request
->   * will be handled correctly even if idle was not completed.
->   *
-> - * The function does nothing for devices with ACPI-start method.
-> + * The function does nothing for devices with ACPI-start method
-> + * and SMC-start method.
->   *
->   * Return: 0 always
->   */
->  static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
->  {
-> -	if ((priv->flags & CRB_FL_ACPI_START) ||
-> -	    (priv->flags & CRB_FL_CRB_SMC_START))
-> -		return 0;
-> -
-> -	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
-> -	/* we don't really care when this settles */
-> +	if (priv->flags & CRB_FL_CRB_START)
-> +		iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
-> +		/* we don't really care when this settles */
->  
->  	return 0;
->  }
-> @@ -174,23 +172,23 @@ static bool crb_wait_for_reg_32(u32 __iomem *reg, u32 mask, u32 value,
->   * The device should respond within TIMEOUT_C.
->   *
->   * The function does nothing for devices with ACPI-start method
-> + * and SMC-start method.
->   *
->   * Return: 0 on success -ETIME on timeout;
->   */
->  static int __maybe_unused crb_cmd_ready(struct device *dev,
->  					struct crb_priv *priv)
->  {
-> -	if ((priv->flags & CRB_FL_ACPI_START) ||
-> -	    (priv->flags & CRB_FL_CRB_SMC_START))
-> -		return 0;
-> -
-> -	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
-> -	if (!crb_wait_for_reg_32(&priv->regs_t->ctrl_req,
-> -				 CRB_CTRL_REQ_CMD_READY /* mask */,
-> -				 0, /* value */
-> -				 TPM2_TIMEOUT_C)) {
-> -		dev_warn(dev, "cmdReady timed out\n");
-> -		return -ETIME;
-> +	if (priv->flags & CRB_FL_CRB_START)
-> +	{
+> Mimi
 
-The opening curly brace should be in the same line as the condition
-statement.
-
-> +		iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
-> +		if (!crb_wait_for_reg_32(&priv->regs_t->ctrl_req,
-> +					 CRB_CTRL_REQ_CMD_READY /* mask */,
-> +					 0, /* value */
-> +					 TPM2_TIMEOUT_C)) {
-> +			dev_warn(dev, "cmdReady timed out\n");
-> +			return -ETIME;
-> +		}
->  	}
->  
->  	return 0;
-> @@ -458,7 +456,7 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
->  	 * the control area, as one nice sane region except for some older
->  	 * stuff that puts the control area outside the ACPI IO region.
->  	 */
-> -	if (!(priv->flags & CRB_FL_ACPI_START)) {
-> +	if (priv->flags & CRB_FL_CRB_START) {
->  		if (buf->control_address == io_res.start +
->  		    sizeof(*priv->regs_h))
->  			priv->regs_h = priv->iobase;
-> -- 
-> Jiandi An
-> Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
-> Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
-> 
+I guess that could make sense but I would like to hear feedback first.
 
 /Jarkko
