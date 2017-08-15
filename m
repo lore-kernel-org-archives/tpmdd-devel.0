@@ -1,8 +1,8 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 Subject: Re: Re: [tpmdd-devel] [PATCH] tpm: improve tpm_tis send()
  performance by ignoring burstcount
-Date: Tue, 15 Aug 2017 09:08:23 +0300
-Message-ID: <20170815060823.3orsmfbruefqps57@linux.intel.com>
+Date: Tue, 15 Aug 2017 09:09:33 +0300
+Message-ID: <20170815060933.3hauk5skfz7fxsby@linux.intel.com>
 References: <20170807114632.1339-1-nayna@linux.vnet.ibm.com>
  <E37DFCB0-2E74-45F6-B2DF-70EF59F310BC@gmx.de>
  <20170808191145.kggmoczd5laiccrn@linux.intel.com>
@@ -12,40 +12,48 @@ References: <20170807114632.1339-1-nayna@linux.vnet.ibm.com>
  <1502465419.3579.109.camel@linux.vnet.ibm.com>
  <20170814105130.4jjdcop4mqkoxhgh@linux.intel.com>
  <20170814105651.eo3e7tokt7mujeba@linux.intel.com>
- <1502712185.6179.20.camel@linux.vnet.ibm.com>
+ <1502712773.6179.26.camel@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1502712185.6179.20.camel@linux.vnet.ibm.com>
+In-Reply-To: <1502712773.6179.26.camel@linux.vnet.ibm.com>
 Sender: owner-linux-security-module@vger.kernel.org
 To: Mimi Zohar <zohar@linux.vnet.ibm.com>
 Cc: Peter Huewe <PeterHuewe@gmx.de>, Ken Goldman <kgold@linux.vnet.ibm.com>, linux-ima-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Aug 14, 2017 at 08:03:05AM -0400, Mimi Zohar wrote:
+On Mon, Aug 14, 2017 at 08:12:53AM -0400, Mimi Zohar wrote:
 > On Mon, 2017-08-14 at 13:56 +0300, Jarkko Sakkinen wrote:
 > 
-> > > > > I would like to see tpm_msleep() wrapper to replace current msleep()
-> > > > > usage across the subsystem before considering this. I.e. wrapper that
-> > > > > internally uses usleep_range(). This way we can mechanically convert
-> > > > > everything to a more low latency option.
+> > > > Since the main concern about this change is breaking old systems that
+> > > > might potentially have other peripherals hanging off the LPC bus, can
+> > > > we define a new Kconfig option, with the default as 'N'?
 > > > > 
-> > > > Fine.  I assume you meant tpm_sleep(), not tpm_msleep().
+> > > > Mimi
 > > > 
-> > > I think it would sense to have a function that takes msecs because msecs
-> > > are mostly used everywhere in the subsystem. This way we don't have to
-> > > change any of the existing constants.
+> > > I guess that could make sense but I would like to hear feedback first.
+> > > 
+> > > /Jarkko
+> > 
+> > And I'm worried would that it'd be left for many years to come as an
+> > option.  I do not have any metrics what portion of hardware in the field
+> > would break if this is turned on.
+> > 
+> > It would slow down kernel testing as I would have to run tests for the
+> > driver with that option turned on and off because it is a major shift
+> > from how driver functions. And I have zero idea how long I would go on
+> > doing this.
+> > 
+> > One maybe a little bit better option would be to have a sysfs attribute
+> > for this functionality (disable_burst_count). What do you think about
+> > that?
 > 
-> For now converting from msleep() to tpm_msleep() will be straight
-> forward.  Internally we would just use usleep_range().
-> 
-> Going forward, my concern is that even 1 msec might be too long for
-> some of these sleeps.
+> That works!  So we'll define a module_param named disable_burst_count,
+> which can be specified on the boot command line.
 > 
 > Mimi
 
-We can revisit this. I would take the simple route right now.
+That would work for me.
 
 /Jarkko
