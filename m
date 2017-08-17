@@ -1,19 +1,21 @@
-From: Alexander Stein <alexander.stein@systec-electronic.com>
+From: Sebastian Andrzej Siewior <sebastian.siewior@linutronix.de>
 Subject: Re: [tpmdd-devel] [PATCH v2] tpm_tis: fix stall after iowrite*()s
-Date: Thu, 17 Aug 2017 07:57:08 +0200
-Message-ID: <2684601.PnLOm3uNmr@ws-stein>
-References: <20170804215651.29247-1-haris.okanovic@ni.com> <20170815201308.20024-1-haris.okanovic@ni.com> <13741b28-1b5c-de55-3945-e05911e5a4e2@linux.vnet.ibm.com>
+Date: Thu, 17 Aug 2017 12:38:07 +0200
+Message-ID: <20170817103807.ubrbylnud6wxod3s@linutronix.de>
+References: <20170804215651.29247-1-haris.okanovic@ni.com>
+ <20170815201308.20024-1-haris.okanovic@ni.com>
+ <13741b28-1b5c-de55-3945-e05911e5a4e2@linux.vnet.ibm.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7Bit
+Content-Type: text/plain; charset=utf-8
 Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
 In-Reply-To: <13741b28-1b5c-de55-3945-e05911e5a4e2@linux.vnet.ibm.com>
 Sender: linux-kernel-owner@vger.kernel.org
-To: Ken Goldman <kgold@linux.vnet.ibm.com>
-Cc: linux-rt-users@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+To: Ken Goldman <kgold@linux.vnet.ibm.com>, Haris Okanovic <haris.okanovic@ni.com>
+Cc: linux-rt-users@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, harisokn@gmail.com, julia.cartwright@ni.com, gratian.crisan@ni.com, scott.hartman@ni.com, chris.graf@ni.com, brad.mouring@ni.com, jonathan.david@ni.com, peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, eric.gardiner@ni.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wednesday 16 August 2017 17:15:55, Ken Goldman wrote:
+On 2017-08-16 17:15:55 [-0400], Ken Goldman wrote:
 > On 8/15/2017 4:13 PM, Haris Okanovic wrote:
 > > ioread8() operations to TPM MMIO addresses can stall the cpu when
 > > immediately following a sequence of iowrite*()'s to the same region.
@@ -29,22 +31,20 @@ On Wednesday 16 August 2017 17:15:55, Ken Goldman wrote:
 > > The enclosed change appears to fix this issue: read the TPM chip's
 > > access register (status code) after every iowrite*() operation to
 > > amortize the cost of flushing data to chip across multiple instructions.
-> 
+
+Haris, could you try a wmb() instead the read?
+
 > I worry a bit about "appears to fix".  It seems odd that the TPM device
-> driver would be the first code to uncover this.  Can anyone confirm that
-> the chipset does indeed have this bug?
+> driver would be the first code to uncover this.  Can anyone confirm that the
+> chipset does indeed have this bug?
 
-No, there was already a similar problem in e1000e where a PCIe read stalled 
-the CPU, hence no interrupts are serviced. See 
-https://www.spinics.net/lists/linux-rt-users/msg14077.html
-AFAIK there was no outcome though.
+What Haris says makes sense. It is just not all architectures
+accumulate/ batch writes to HW.
 
-> I'd also like an indication of the performance penalty.  We're doing a
-> lot of work to improve the performance and I worry that "do a read after
-> every write" will have a performance impact.
+> I'd also like an indication of the performance penalty.  We're doing a lot
+> of work to improve the performance and I worry that "do a read after every
+> write" will have a performance impact.
+So powerpc (for instance) has a sync operation after each write to HW. I
+am wondering if we could need something like that on x86.
 
-Realtime will always affect performance, but IMHO the latter is much more 
-important.
-
-Best regards,
-Alexander
+Sebastian
