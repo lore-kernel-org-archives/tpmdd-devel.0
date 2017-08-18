@@ -1,49 +1,32 @@
-From: Michael Ellerman <mpe-Gsx/Oe8HsFggBc27wqDAHg@public.gmane.org>
-Subject: Re: [PATCH 5/5] Use __func__ instead of function name
-Date: Fri, 18 Aug 2017 21:25:39 +1000
-Message-ID: <87378pqfrg.fsf@concordia.ellerman.id.au>
-References: <20170729072433.13194-1-sz.lin@moxa.com>
- <20170729072433.13194-6-sz.lin@moxa.com>
- <0e2d9ac4f5ee02e9df98610ed07eaec9@suse.de>
+From: Michael Ellerman <mpe@ellerman.id.au>
+Subject: Re: [PATCH] tpm: vtpm: constify vio_device_id
+Date: Fri, 18 Aug 2017 21:32:46 +1000
+Message-ID: <87ziaxp0v5.fsf@concordia.ellerman.id.au>
+References: <a9ebcd668f5a7293c3805d0b6b21245f15c80212.1502989694.git.arvind.yadav.cs@gmail.com> <20170817191642.GF24735@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <0e2d9ac4f5ee02e9df98610ed07eaec9-l3A5Bk7waGM@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Michal =?utf-8?Q?Such=C3=A1nek?= <msuchanek-l3A5Bk7waGM@public.gmane.org>, SZ Lin <sz.lin-D4fb9hXD9d4@public.gmane.org>
-Cc: Linuxppc-dev <linuxppc-dev-bounces+msuchanek=suse.de-uLR06cmDAlY/bJ5BZ2RsiQ@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, paulus-eUNUBHrolfbYtjvyW6yDsg@public.gmane.org, ashleydlai-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, linuxppc-dev-uLR06cmDAlY/bJ5BZ2RsiQ@public.gmane.org, tpmdd-yWjUBOtONeeDGRHsOpWV0g@public.gmane.org
+Content-Type: text/plain
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20170817191642.GF24735@obsidianresearch.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Arvind Yadav <arvind.yadav.cs@gmail.com>
+Cc: tpmdd@selhorst.net, linux-kernel@vger.kernel.org, jarkko.sakkinen@linux.intel.com, tpmdd-devel@lists.sourceforge.net, ashleydlai@gmail.com, peterhuewe@gmx.de, linuxppc-dev@lists.ozlabs.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-TWljaGFsIFN1Y2jDoW5layA8bXN1Y2hhbmVrQHN1c2UuZGU+IHdyaXRlczoKCj4gT24gMjAxNy0w
-Ny0yOSAwOToyNCwgU1ogTGluIHdyb3RlOgo+PiBGaXggZm9sbG93aW5nIGNoZWNrcGF0Y2gucGwg
-d2FybmluZzoKPj4gV0FSTklORzogUHJlZmVyIHVzaW5nICciJXMuLi4iLCBfX2Z1bmNfXycgdG8g
-dXNpbmcKPj4gdGhlIGZ1bmN0aW9uJ3MgbmFtZSwgaW4gYSBzdHJpbmcKPj4gCj4+IFNpZ25lZC1v
-ZmYtYnk6IFNaIExpbiA8c3oubGluQG1veGEuY29tPgo+PiAtLS0KPj4gIGRyaXZlcnMvY2hhci90
-cG0vdHBtX2libXZ0cG0uYyB8IDEyICsrKysrKy0tLS0tLQo+PiAgMSBmaWxlIGNoYW5nZWQsIDYg
-aW5zZXJ0aW9ucygrKSwgNiBkZWxldGlvbnMoLSkKPj4gCj4+IGRpZmYgLS1naXQgYS9kcml2ZXJz
-L2NoYXIvdHBtL3RwbV9pYm12dHBtLmMgCj4+IGIvZHJpdmVycy9jaGFyL3RwbS90cG1faWJtdnRw
-bS5jCj4+IGluZGV4IGU3NWE2NzRiNDRhYy4uMmQzM2FjYzQzZTI1IDEwMDY0NAo+PiAtLS0gYS9k
-cml2ZXJzL2NoYXIvdHBtL3RwbV9pYm12dHBtLmMKPj4gKysrIGIvZHJpdmVycy9jaGFyL3RwbS90
-cG1faWJtdnRwbS5jCj4+IEBAIC0xNTEsNyArMTUxLDcgQEAgc3RhdGljIGludCB0cG1faWJtdnRw
-bV9zZW5kKHN0cnVjdCB0cG1fY2hpcCAqY2hpcCwKPj4gdTggKmJ1Ziwgc2l6ZV90IGNvdW50KQo+
-PiAgCXJjID0gaWJtdnRwbV9zZW5kX2NycShpYm12dHBtLT52ZGV2LCBiZTY0X3RvX2NwdSh3b3Jk
-WzBdKSwKPj4gIAkJCSAgICAgIGJlNjRfdG9fY3B1KHdvcmRbMV0pKTsKPj4gIAlpZiAocmMgIT0g
-SF9TVUNDRVNTKSB7Cj4+IC0JCWRldl9lcnIoaWJtdnRwbS0+ZGV2LCAidHBtX2libXZ0cG1fc2Vu
-ZCBmYWlsZWQgcmM9JWRcbiIsIHJjKTsKPj4gKwkJZGV2X2VycihpYm12dHBtLT5kZXYsICIlcyBm
-YWlsZWQgcmM9JWRcbiIsIF9fZnVuY19fLCByYyk7Cj4KPiBDYW4gZnVuY3Rpb24gbmFtZSBjb250
-YWluIGEgJT8KCkxldCdzIGhvcGUgbm90LgoKJCBnaXQgZ3JlcCAiJXMuKl9fZnVuY19fIiB8IHdj
-IC1sCjE2OTM3CgpjaGVlcnMKCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpDaGVjayBvdXQgdGhlIHZp
-YnJhbnQgdGVjaCBjb21tdW5pdHkgb24gb25lIG9mIHRoZSB3b3JsZCdzIG1vc3QKZW5nYWdpbmcg
-dGVjaCBzaXRlcywgU2xhc2hkb3Qub3JnISBodHRwOi8vc2RtLmxpbmsvc2xhc2hkb3QKX19fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFp
-bGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xpc3Rz
-LnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
+Jason Gunthorpe <jgunthorpe@obsidianresearch.com> writes:
+
+> On Thu, Aug 17, 2017 at 11:04:21PM +0530, Arvind Yadav wrote:
+>> vio_device_id are not supposed to change at runtime. All functions
+>> working with vio_device_id provided by <asm/vio.h> work with
+>> const vio_device_id. So mark the non-const structs as const.
+>> 
+>> Signed-off-by: Arvind Yadav <arvind.yadav.cs@gmail.com>
+>
+> Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+
+Thanks Jason.
+
+>>  drivers/char/tpm/tpm_ibmvtpm.c | 2 +-
+
+Who merges changes for this driver? I assume it's Jarkko?
+
+cheers
