@@ -1,11 +1,14 @@
 From: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: [PATCH 1/3] tpm2-cmd: Trigger only missing self tests
-Date: Fri, 18 Aug 2017 14:15:30 +0200
-Message-ID: <20170818121532.5764-1-Alexander.Steffen@infineon.com>
+Subject: [PATCH 2/3] tpm2-cmd: Use dynamic delay to wait for
+ self test result
+Date: Fri, 18 Aug 2017 14:15:31 +0200
+Message-ID: <20170818121532.5764-2-Alexander.Steffen@infineon.com>
+References: <20170818121532.5764-1-Alexander.Steffen@infineon.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170818121532.5764-1-Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,39 +20,56 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-tpm2_do_selftest is only used during initialization of the TPM to ensure
-that the device functions correctly. Therefore, it is sufficient to request
-only missing self tests (parameter full_test=0), not a reexecution of all
-self tests, as was done before. This allows for a faster execution of this
-command.
+In order to avoid delaying the code longer than necessary while still
+giving the TPM enough time to execute the self tests asynchronously, start
+with a small delay between two polls and increase it each round.
 
 Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
 ---
- drivers/char/tpm/tpm2-cmd.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+ drivers/char/tpm/tpm2-cmd.c | 17 +++++++++--------
+ 1 file changed, 9 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-index f7f34b2a..7e328d6 100644
+index 7e328d6..e3d4cc3 100644
 --- a/drivers/char/tpm/tpm2-cmd.c
 +++ b/drivers/char/tpm/tpm2-cmd.c
-@@ -865,7 +865,7 @@ static int tpm2_start_selftest(struct tpm_chip *chip, bool full)
- }
+@@ -877,20 +877,17 @@ static int tpm2_start_selftest(struct tpm_chip *chip, bool full)
+ static int tpm2_do_selftest(struct tpm_chip *chip)
+ {
+ 	int rc;
+-	unsigned int loops;
+-	unsigned int delay_msec = 100;
+-	unsigned long duration;
+-	int i;
+-
+-	duration = tpm2_calc_ordinal_duration(chip, TPM2_CC_SELF_TEST);
++	unsigned int delay_msec = 20;
++	long duration;
  
- /**
-- * tpm2_do_selftest() - run a full self test
-+ * tpm2_do_selftest() - ensure that all self tests have passed
-  *
-  * @chip: TPM chip to use
-  *
-@@ -886,7 +886,7 @@ static int tpm2_do_selftest(struct tpm_chip *chip)
+-	loops = jiffies_to_msecs(duration) / delay_msec;
++	duration = jiffies_to_msecs(
++		tpm2_calc_ordinal_duration(chip, TPM2_CC_SELF_TEST));
  
- 	loops = jiffies_to_msecs(duration) / delay_msec;
- 
--	rc = tpm2_start_selftest(chip, true);
-+	rc = tpm2_start_selftest(chip, false);
+ 	rc = tpm2_start_selftest(chip, false);
  	if (rc)
  		return rc;
  
+-	for (i = 0; i < loops; i++) {
++	while (duration > 0) {
+ 		/* Attempt to read a PCR value */
+ 		rc = tpm2_pcr_read(chip, 0, NULL);
+ 		if (rc < 0)
+@@ -900,6 +897,10 @@ static int tpm2_do_selftest(struct tpm_chip *chip)
+ 			break;
+ 
+ 		msleep(delay_msec);
++		duration -= delay_msec;
++
++		/* wait longer the next round */
++		delay_msec *= 2;
+ 	}
+ 
+ 	return rc;
 -- 
 2.7.4
 
