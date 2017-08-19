@@ -1,54 +1,118 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH v2] tpm_tis: fix stall after iowrite*()s
-Date: Sat, 19 Aug 2017 20:03:46 +0300
-Message-ID: <20170819170346.6mytggeq3rgu6b2q@linux.intel.com>
-References: <20170804215651.29247-1-haris.okanovic@ni.com>
- <20170815201308.20024-1-haris.okanovic@ni.com>
- <13741b28-1b5c-de55-3945-e05911e5a4e2@linux.vnet.ibm.com>
- <20170817103807.ubrbylnud6wxod3s@linutronix.de>
- <20170817171732.GA22792@obsidianresearch.com>
+Subject: Re: [PATCH] tpm/tpm_crb: Access locality for non-ACPI and non-SMC
+ start method
+Date: Sat, 19 Aug 2017 20:05:00 +0300
+Message-ID: <20170819170500.xayh6pzidl5ury2d@linux.intel.com>
+References: <1503029736-591-1-git-send-email-anjiandi@codeaurora.org>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-rt-users-owner@vger.kernel.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170817171732.GA22792@obsidianresearch.com>
-Sender: linux-rt-users-owner@vger.kernel.org
-To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Cc: Sebastian Andrzej Siewior <sebastian.siewior@linutronix.de>, Ken Goldman <kgold@linux.vnet.ibm.com>, Haris Okanovic <haris.okanovic@ni.com>, linux-rt-users@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, harisokn@gmail.com, julia.cartwright@ni.com, gratian.crisan@ni.com, scott.hartman@ni.com, chris.graf@ni.com, brad.mouring@ni.com, jonathan.david@ni.com, peterhuewe@gmx.de, tpmdd@selhorst.net, eric.gardiner@ni.com
+In-Reply-To: <1503029736-591-1-git-send-email-anjiandi@codeaurora.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jiandi An <anjiandi@codeaurora.org>
+Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Aug 17, 2017 at 11:17:32AM -0600, Jason Gunthorpe wrote:
-> On Thu, Aug 17, 2017 at 12:38:07PM +0200, Sebastian Andrzej Siewior wrote:
+On Thu, Aug 17, 2017 at 11:15:36PM -0500, Jiandi An wrote:
+> For ARM64, the locality is handled by Trust Zone in FW.
+> The layout does not have crb_regs_head.  It is hitting
+> the following line.
+> dev_warn(dev, FW_BUG "Bad ACPI memory layout");
 > 
-> > > I worry a bit about "appears to fix".  It seems odd that the TPM device
-> > > driver would be the first code to uncover this.  Can anyone confirm that the
-> > > chipset does indeed have this bug?
-> > 
-> > What Haris says makes sense. It is just not all architectures
-> > accumulate/ batch writes to HW.
+> Current code excludes CRB_FL_ACPI_START and when
+> CRB_FL_CRB_SMC_START is added around the same time
+> locality support is added, it should also be excluded.
 > 
-> It doesn't seem that odd to me.. In modern Intel chipsets the physical
-> LPC bus is used for very little. Maybe some flash and possibly a
-> winbond super IO at worst?  Plus the TPM.
+> For goIdle and cmdReady where code was excluding
+> CRB_FL_ACPI_START only (do nothing for ACPI start method),
+> CRB_FL_CRB_SMC_START was also excluded as ARM64 SMC start
+> method does not have TPM_CRB_CTRL_REQ.
+> Change if confition to white list instead of black list.
 > 
-> I can't confirm what Intel has done, but if writes are posted, then it
-> is not a 'bug', but expected operation for a PCI/LPC bridge device to
-> have an ordered queue of posted writes, and thus higher latency when
-> processing reads due to ordering requirments.
-> 
-> Other drivers may not see it because most LPC usages would not be
-> write heavy, or might use IO instructions which are not posted..
-> 
-> I can confirm that my ARM systems with a custom PCI-LPC bridge will
-> have exactly the same problem, and that the readl is the only
-> solution.
-> 
-> This is becuase writes to LPC are posted over PCI and will be buffered
-> in the root complex, device end port and internally in the LPC
-> bridge. Since they are posted there is no way for the CPU to know when
-> the complete and when it would be 'low latency' to issue a read.
+> Signed-off-by: Jiandi An <anjiandi@codeaurora.org>
 
-What you say makes sense to me but wasn't the patch tried with SPI-TPM,
-not LPC? Anyway, what you're saying probably still applies.
+Is this v2? If so, where is the change log?
 
 /Jarkko
+
+> ---
+>  drivers/char/tpm/tpm_crb.c | 35 ++++++++++++++++-------------------
+>  1 file changed, 16 insertions(+), 19 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+> index 8f0a98d..cbfdbdde 100644
+> --- a/drivers/char/tpm/tpm_crb.c
+> +++ b/drivers/char/tpm/tpm_crb.c
+> @@ -128,18 +128,16 @@ struct tpm2_crb_smc {
+>   * Anyhow, we do not wait here as a consequent CMD_READY request
+>   * will be handled correctly even if idle was not completed.
+>   *
+> - * The function does nothing for devices with ACPI-start method.
+> + * The function does nothing for devices with ACPI-start method
+> + * or SMC-start method.
+>   *
+>   * Return: 0 always
+>   */
+>  static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+>  {
+> -	if ((priv->flags & CRB_FL_ACPI_START) ||
+> -	    (priv->flags & CRB_FL_CRB_SMC_START))
+> -		return 0;
+> -
+> -	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
+> -	/* we don't really care when this settles */
+> +	if ((priv->flags & (CRB_FL_ACPI_START | CRB_FL_CRB_SMC_START)) == 0)
+> +		iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
+> +		/* we don't really care when this settles */
+>  
+>  	return 0;
+>  }
+> @@ -174,23 +172,22 @@ static bool crb_wait_for_reg_32(u32 __iomem *reg, u32 mask, u32 value,
+>   * The device should respond within TIMEOUT_C.
+>   *
+>   * The function does nothing for devices with ACPI-start method
+> + * or SMC-start method.
+>   *
+>   * Return: 0 on success -ETIME on timeout;
+>   */
+>  static int __maybe_unused crb_cmd_ready(struct device *dev,
+>  					struct crb_priv *priv)
+>  {
+> -	if ((priv->flags & CRB_FL_ACPI_START) ||
+> -	    (priv->flags & CRB_FL_CRB_SMC_START))
+> -		return 0;
+> -
+> -	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
+> -	if (!crb_wait_for_reg_32(&priv->regs_t->ctrl_req,
+> -				 CRB_CTRL_REQ_CMD_READY /* mask */,
+> -				 0, /* value */
+> -				 TPM2_TIMEOUT_C)) {
+> -		dev_warn(dev, "cmdReady timed out\n");
+> -		return -ETIME;
+> +	if ((priv->flags & (CRB_FL_ACPI_START | CRB_FL_CRB_SMC_START)) == 0) {
+> +		iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
+> +		if (!crb_wait_for_reg_32(&priv->regs_t->ctrl_req,
+> +					 CRB_CTRL_REQ_CMD_READY /* mask */,
+> +					 0, /* value */
+> +					 TPM2_TIMEOUT_C)) {
+> +			dev_warn(dev, "cmdReady timed out\n");
+> +			return -ETIME;
+> +		}
+>  	}
+>  
+>  	return 0;
+> @@ -458,7 +455,7 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+>  	 * the control area, as one nice sane region except for some older
+>  	 * stuff that puts the control area outside the ACPI IO region.
+>  	 */
+> -	if (!(priv->flags & CRB_FL_ACPI_START)) {
+> +	if ((priv->flags & (CRB_FL_ACPI_START | CRB_FL_CRB_SMC_START)) == 0) {
+>  		if (buf->control_address == io_res.start +
+>  		    sizeof(*priv->regs_h))
+>  			priv->regs_h = priv->iobase;
+> -- 
+> Jiandi An
+> Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
+> Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
+> 
