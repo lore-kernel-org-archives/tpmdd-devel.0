@@ -1,39 +1,36 @@
-From: Seiji Munetoh <seiji.munetoh-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: Nuvoton NPCT650 I2C TPM issues
-Date: Sat, 19 Aug 2017 21:47:28 +0900
-Message-ID: <CADX6gZxX-7SCayU7+E0dvr0O16j6+gpcZeF4OoK=dCpcepz14Q@mail.gmail.com>
+From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Subject: Re: [PATCH v2] Do not disable driver and bus shutdown hook when
+ class shutdown hook is set.
+Date: Sat, 19 Aug 2017 10:03:40 -0700
+Message-ID: <20170819170340.GA12870@kroah.com>
+References: <20170811134443.770-1-msuchanek@suse.de>
+ <20170819120353.mpwswylg2qulci75@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20170819120353.mpwswylg2qulci75@linux.intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: Michal Suchanek <msuchanek@suse.de>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "David S. Miller" <davem@davemloft.net>, Andrew Morton <akpm@linux-foundation.org>, "Rafael J. Wysocki" <rafael.j.wysocki@intel.com>, Phil Sutter <phil@nwl.cc>, Josh Zimmerman <joshz@google.com>, Madalin Bucur <madalin.bucur@nxp.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Heiko Carstens <heiko.carstens@de.ibm.com>, Ludovic Desroches <ludovic.desroches@o2linux.fr>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi,
+On Sat, Aug 19, 2017 at 03:03:53PM +0300, Jarkko Sakkinen wrote:
+> On Fri, Aug 11, 2017 at 03:44:43PM +0200, Michal Suchanek wrote:
+> > As seen from the implementation of the single class shutdown hook this
+> > is not very sound design.
+> > 
+> > Rename the class shutdown hook to shutdown_pre to make it clear it runs
+> > before the driver shutdown hook.
+> > 
+> > Signed-off-by: Michal Suchanek <msuchanek@suse.de>
+> 
+> I already gave this reviewed-by but cannot apply it because there's no
+> ack from device maintainers yet.
 
-I'm trying to use Nuvoton NPCT650 I2C TPM with Raspberry Pi.
-So far, the tpm_i2c_nuvoton driver (I tested 4.4, 4.9, and 4.12) do
-not work with the NPCT650 TPM chip.
+I'm on vacation at the moment and will look at this when I get back in a
+week, please give me a chance.
 
-It seems the TPM requires some delay between I2C messages like
-tpm_i2c_infinion driver do. However the i2c_smbus_* commands
-used by the tpm_i2c_nuvoton driver does not support such delay.
+thanks,
 
-The TPM itself seems to be functional since I can communicate
-with the TPM by a python script.
-
-regards,
---
-Seiji
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+greg k-h
