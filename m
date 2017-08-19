@@ -1,36 +1,54 @@
-From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: Re: [PATCH v2] Do not disable driver and bus shutdown hook when
- class shutdown hook is set.
-Date: Sat, 19 Aug 2017 10:03:40 -0700
-Message-ID: <20170819170340.GA12870@kroah.com>
-References: <20170811134443.770-1-msuchanek@suse.de>
- <20170819120353.mpwswylg2qulci75@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [PATCH v2] tpm_tis: fix stall after iowrite*()s
+Date: Sat, 19 Aug 2017 20:03:46 +0300
+Message-ID: <20170819170346.6mytggeq3rgu6b2q@linux.intel.com>
+References: <20170804215651.29247-1-haris.okanovic@ni.com>
+ <20170815201308.20024-1-haris.okanovic@ni.com>
+ <13741b28-1b5c-de55-3945-e05911e5a4e2@linux.vnet.ibm.com>
+ <20170817103807.ubrbylnud6wxod3s@linutronix.de>
+ <20170817171732.GA22792@obsidianresearch.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Return-path: <linux-rt-users-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170819120353.mpwswylg2qulci75@linux.intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: Michal Suchanek <msuchanek@suse.de>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "David S. Miller" <davem@davemloft.net>, Andrew Morton <akpm@linux-foundation.org>, "Rafael J. Wysocki" <rafael.j.wysocki@intel.com>, Phil Sutter <phil@nwl.cc>, Josh Zimmerman <joshz@google.com>, Madalin Bucur <madalin.bucur@nxp.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Heiko Carstens <heiko.carstens@de.ibm.com>, Ludovic Desroches <ludovic.desroches@o2linux.fr>, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+In-Reply-To: <20170817171732.GA22792@obsidianresearch.com>
+Sender: linux-rt-users-owner@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: Sebastian Andrzej Siewior <sebastian.siewior@linutronix.de>, Ken Goldman <kgold@linux.vnet.ibm.com>, Haris Okanovic <haris.okanovic@ni.com>, linux-rt-users@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, harisokn@gmail.com, julia.cartwright@ni.com, gratian.crisan@ni.com, scott.hartman@ni.com, chris.graf@ni.com, brad.mouring@ni.com, jonathan.david@ni.com, peterhuewe@gmx.de, tpmdd@selhorst.net, eric.gardiner@ni.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat, Aug 19, 2017 at 03:03:53PM +0300, Jarkko Sakkinen wrote:
-> On Fri, Aug 11, 2017 at 03:44:43PM +0200, Michal Suchanek wrote:
-> > As seen from the implementation of the single class shutdown hook this
-> > is not very sound design.
-> > 
-> > Rename the class shutdown hook to shutdown_pre to make it clear it runs
-> > before the driver shutdown hook.
-> > 
-> > Signed-off-by: Michal Suchanek <msuchanek@suse.de>
+On Thu, Aug 17, 2017 at 11:17:32AM -0600, Jason Gunthorpe wrote:
+> On Thu, Aug 17, 2017 at 12:38:07PM +0200, Sebastian Andrzej Siewior wrote:
 > 
-> I already gave this reviewed-by but cannot apply it because there's no
-> ack from device maintainers yet.
+> > > I worry a bit about "appears to fix".  It seems odd that the TPM device
+> > > driver would be the first code to uncover this.  Can anyone confirm that the
+> > > chipset does indeed have this bug?
+> > 
+> > What Haris says makes sense. It is just not all architectures
+> > accumulate/ batch writes to HW.
+> 
+> It doesn't seem that odd to me.. In modern Intel chipsets the physical
+> LPC bus is used for very little. Maybe some flash and possibly a
+> winbond super IO at worst?  Plus the TPM.
+> 
+> I can't confirm what Intel has done, but if writes are posted, then it
+> is not a 'bug', but expected operation for a PCI/LPC bridge device to
+> have an ordered queue of posted writes, and thus higher latency when
+> processing reads due to ordering requirments.
+> 
+> Other drivers may not see it because most LPC usages would not be
+> write heavy, or might use IO instructions which are not posted..
+> 
+> I can confirm that my ARM systems with a custom PCI-LPC bridge will
+> have exactly the same problem, and that the readl is the only
+> solution.
+> 
+> This is becuase writes to LPC are posted over PCI and will be buffered
+> in the root complex, device end port and internally in the LPC
+> bridge. Since they are posted there is no way for the CPU to know when
+> the complete and when it would be 'low latency' to issue a read.
 
-I'm on vacation at the moment and will look at this when I get back in a
-week, please give me a chance.
+What you say makes sense to me but wasn't the patch tried with SPI-TPM,
+not LPC? Anyway, what you're saying probably still applies.
 
-thanks,
-
-greg k-h
+/Jarkko
