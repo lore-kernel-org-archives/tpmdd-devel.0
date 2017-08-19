@@ -1,118 +1,138 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm/tpm_crb: Access locality for non-ACPI and non-SMC
- start method
-Date: Sat, 19 Aug 2017 20:05:00 +0300
-Message-ID: <20170819170500.xayh6pzidl5ury2d@linux.intel.com>
-References: <1503029736-591-1-git-send-email-anjiandi@codeaurora.org>
+Subject: Re: [PATCH v2] tpm_tis_spi: Use DMA-safe memory for SPI transfers
+Date: Sat, 19 Aug 2017 20:12:07 +0300
+Message-ID: <20170819171207.npq6ogm2v2oai5si@linux.intel.com>
+References: <20170818121457.10084-1-Alexander.Steffen@infineon.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Return-path: <stable-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1503029736-591-1-git-send-email-anjiandi@codeaurora.org>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jiandi An <anjiandi@codeaurora.org>
-Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+In-Reply-To: <20170818121457.10084-1-Alexander.Steffen@infineon.com>
+Sender: stable-owner@vger.kernel.org
+To: Alexander Steffen <Alexander.Steffen@infineon.com>
+Cc: tpmdd-devel@lists.sourceforge.net, stable@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Aug 17, 2017 at 11:15:36PM -0500, Jiandi An wrote:
-> For ARM64, the locality is handled by Trust Zone in FW.
-> The layout does not have crb_regs_head.  It is hitting
-> the following line.
-> dev_warn(dev, FW_BUG "Bad ACPI memory layout");
+On Fri, Aug 18, 2017 at 02:14:57PM +0200, Alexander Steffen wrote:
+> The buffers used as tx_buf/rx_buf in a SPI transfer need to be DMA-safe.
+> This cannot be guaranteed for the buffers passed to tpm_tis_spi_read_bytes
+> and tpm_tis_spi_write_bytes. Therefore, we need to use our own DMA-safe
+> buffer and copy the data to/from it.
 > 
-> Current code excludes CRB_FL_ACPI_START and when
-> CRB_FL_CRB_SMC_START is added around the same time
-> locality support is added, it should also be excluded.
+> A single buffer is sufficient for both tx and rx, since bytes that have
+> already been sent are not used anymore and can safely be overwritten with
+> the received bytes. The buffer needs to be allocated separately, to ensure
+> that it is cacheline-aligned and not shared with other data, so that DMA
+> can work correctly.
 > 
-> For goIdle and cmdReady where code was excluding
-> CRB_FL_ACPI_START only (do nothing for ACPI start method),
-> CRB_FL_CRB_SMC_START was also excluded as ARM64 SMC start
-> method does not have TPM_CRB_CTRL_REQ.
-> Change if confition to white list instead of black list.
-> 
-> Signed-off-by: Jiandi An <anjiandi@codeaurora.org>
+> Fixes: 0edbfea537d1 ("tpm/tpm_tis_spi: Add support for spi phy")
+> Cc: stable@vger.kernel.org
+> Signed-off-by: Alexander Steffen <Alexander.Steffen@infineon.com>
 
-Is this v2? If so, where is the change log?
+90% of this patch is about merging the buffers and 10% is the bug fix
+that you even want to stable, right?
+
+So please create a patch that does the fix without merging the buffers.
+In this form this is pain to backport to stable.
 
 /Jarkko
 
 > ---
->  drivers/char/tpm/tpm_crb.c | 35 ++++++++++++++++-------------------
->  1 file changed, 16 insertions(+), 19 deletions(-)
+> v2: Updated commit message with more explanations.
 > 
-> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> index 8f0a98d..cbfdbdde 100644
-> --- a/drivers/char/tpm/tpm_crb.c
-> +++ b/drivers/char/tpm/tpm_crb.c
-> @@ -128,18 +128,16 @@ struct tpm2_crb_smc {
->   * Anyhow, we do not wait here as a consequent CMD_READY request
->   * will be handled correctly even if idle was not completed.
->   *
-> - * The function does nothing for devices with ACPI-start method.
-> + * The function does nothing for devices with ACPI-start method
-> + * or SMC-start method.
->   *
->   * Return: 0 always
->   */
->  static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
->  {
-> -	if ((priv->flags & CRB_FL_ACPI_START) ||
-> -	    (priv->flags & CRB_FL_CRB_SMC_START))
-> -		return 0;
+>  drivers/char/tpm/tpm_tis_spi.c | 32 ++++++++++++++++++--------------
+>  1 file changed, 18 insertions(+), 14 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
+> index 88fe72a..5321245 100644
+> --- a/drivers/char/tpm/tpm_tis_spi.c
+> +++ b/drivers/char/tpm/tpm_tis_spi.c
+> @@ -46,9 +46,7 @@
+>  struct tpm_tis_spi_phy {
+>  	struct tpm_tis_data priv;
+>  	struct spi_device *spi_device;
 > -
-> -	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
-> -	/* we don't really care when this settles */
-> +	if ((priv->flags & (CRB_FL_ACPI_START | CRB_FL_CRB_SMC_START)) == 0)
-> +		iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
-> +		/* we don't really care when this settles */
+> -	u8 tx_buf[4];
+> -	u8 rx_buf[4];
+> +	u8 *iobuf;
+>  };
 >  
->  	return 0;
->  }
-> @@ -174,23 +172,22 @@ static bool crb_wait_for_reg_32(u32 __iomem *reg, u32 mask, u32 value,
->   * The device should respond within TIMEOUT_C.
->   *
->   * The function does nothing for devices with ACPI-start method
-> + * or SMC-start method.
->   *
->   * Return: 0 on success -ETIME on timeout;
->   */
->  static int __maybe_unused crb_cmd_ready(struct device *dev,
->  					struct crb_priv *priv)
->  {
-> -	if ((priv->flags & CRB_FL_ACPI_START) ||
-> -	    (priv->flags & CRB_FL_CRB_SMC_START))
-> -		return 0;
-> -
-> -	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
-> -	if (!crb_wait_for_reg_32(&priv->regs_t->ctrl_req,
-> -				 CRB_CTRL_REQ_CMD_READY /* mask */,
-> -				 0, /* value */
-> -				 TPM2_TIMEOUT_C)) {
-> -		dev_warn(dev, "cmdReady timed out\n");
-> -		return -ETIME;
-> +	if ((priv->flags & (CRB_FL_ACPI_START | CRB_FL_CRB_SMC_START)) == 0) {
-> +		iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
-> +		if (!crb_wait_for_reg_32(&priv->regs_t->ctrl_req,
-> +					 CRB_CTRL_REQ_CMD_READY /* mask */,
-> +					 0, /* value */
-> +					 TPM2_TIMEOUT_C)) {
-> +			dev_warn(dev, "cmdReady timed out\n");
-> +			return -ETIME;
-> +		}
+>  static inline struct tpm_tis_spi_phy *to_tpm_tis_spi_phy(struct tpm_tis_data *data)
+> @@ -71,14 +69,14 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  	while (len) {
+>  		transfer_len = min_t(u16, len, MAX_SPI_FRAMESIZE);
+>  
+> -		phy->tx_buf[0] = direction | (transfer_len - 1);
+> -		phy->tx_buf[1] = 0xd4;
+> -		phy->tx_buf[2] = addr >> 8;
+> -		phy->tx_buf[3] = addr;
+> +		phy->iobuf[0] = direction | (transfer_len - 1);
+> +		phy->iobuf[1] = 0xd4;
+> +		phy->iobuf[2] = addr >> 8;
+> +		phy->iobuf[3] = addr;
+>  
+>  		memset(&spi_xfer, 0, sizeof(spi_xfer));
+> -		spi_xfer.tx_buf = phy->tx_buf;
+> -		spi_xfer.rx_buf = phy->rx_buf;
+> +		spi_xfer.tx_buf = phy->iobuf;
+> +		spi_xfer.rx_buf = phy->iobuf;
+>  		spi_xfer.len = 4;
+>  		spi_xfer.cs_change = 1;
+>  
+> @@ -88,9 +86,9 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  		if (ret < 0)
+>  			goto exit;
+>  
+> -		if ((phy->rx_buf[3] & 0x01) == 0) {
+> +		if ((phy->iobuf[3] & 0x01) == 0) {
+>  			// handle SPI wait states
+> -			phy->tx_buf[0] = 0;
+> +			phy->iobuf[0] = 0;
+>  
+>  			for (i = 0; i < TPM_RETRY; i++) {
+>  				spi_xfer.len = 1;
+> @@ -99,7 +97,7 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  				ret = spi_sync_locked(phy->spi_device, &m);
+>  				if (ret < 0)
+>  					goto exit;
+> -				if (phy->rx_buf[0] & 0x01)
+> +				if (phy->iobuf[0] & 0x01)
+>  					break;
+>  			}
+>  
+> @@ -115,10 +113,9 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  
+>  		if (direction) {
+>  			spi_xfer.tx_buf = NULL;
+> -			spi_xfer.rx_buf = buffer;
+>  		} else {
+> -			spi_xfer.tx_buf = buffer;
+>  			spi_xfer.rx_buf = NULL;
+> +			memcpy(phy->iobuf, buffer, transfer_len);
+>  		}
+>  
+>  		spi_message_init(&m);
+> @@ -127,6 +124,9 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  		if (ret < 0)
+>  			goto exit;
+>  
+> +		if (direction)
+> +			memcpy(buffer, phy->iobuf, transfer_len);
+> +
+>  		len -= transfer_len;
+>  		buffer += transfer_len;
 >  	}
+> @@ -194,6 +194,10 @@ static int tpm_tis_spi_probe(struct spi_device *dev)
 >  
->  	return 0;
-> @@ -458,7 +455,7 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
->  	 * the control area, as one nice sane region except for some older
->  	 * stuff that puts the control area outside the ACPI IO region.
->  	 */
-> -	if (!(priv->flags & CRB_FL_ACPI_START)) {
-> +	if ((priv->flags & (CRB_FL_ACPI_START | CRB_FL_CRB_SMC_START)) == 0) {
->  		if (buf->control_address == io_res.start +
->  		    sizeof(*priv->regs_h))
->  			priv->regs_h = priv->iobase;
+>  	phy->spi_device = dev;
+>  
+> +	phy->iobuf = devm_kmalloc(&dev->dev, MAX_SPI_FRAMESIZE, GFP_KERNEL);
+> +	if (!phy->iobuf)
+> +		return -ENOMEM;
+> +
+>  	return tpm_tis_core_init(&dev->dev, &phy->priv, -1, &tpm_spi_phy_ops,
+>  				 NULL);
+>  }
 > -- 
-> Jiandi An
-> Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
-> Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
+> 2.7.4
 > 
