@@ -1,7 +1,7 @@
 From: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: [PATCH v3 0/2] tpm_tis_spi: Use DMA-safe memory
-Date: Thu, 24 Aug 2017 10:27:43 +0200
-Message-ID: <20170824082745.9372-1-Alexander.Steffen@infineon.com>
+Subject: [PATCH v2 0/3] tpm2-cmd: Improve self test execution
+Date: Thu, 24 Aug 2017 10:30:03 +0200
+Message-ID: <20170824083006.7704-1-Alexander.Steffen@infineon.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
@@ -17,29 +17,20 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The documentation says that DMA-safe memory is required for SPI transfers.
-The I/O buffers passed in by the caller can be allocated anywhere,
-including on the stack, which is not DMA-safe. So the data needs to be
-copied to separate, DMA-safe buffers.
-
-We did not see any DMA-related issues on our test systems, even without
-DMA-safe buffers. But this might simply be due to the fact that the SPI
-transfer size is rather small, so our systems do not bother to set up DMA
-transfers. Other systems might do so.
+The self test logic for TPM 2.0 was probably based on the implementation
+for TPM 1.2, but did not correctly take into account some TPM 2.0 specifics.
+This patch series fixes those issues.
 
 v2:
-- Updated commit message with more explanations.
+- Moved implementation description from comment to commit message.
 
-v3:
-- Split into two patches, one for making the buffers DMA-safe and another
-  for using only a single buffer.
+Alexander Steffen (3):
+  tpm2-cmd: Trigger only missing self tests
+  tpm2-cmd: Use dynamic delay to wait for self test result
+  tpm2-cmd: React correctly to RC_TESTING from self tests
 
-Alexander Steffen (2):
-  tpm_tis_spi: Use DMA-safe memory for SPI transfers
-  tpm_tis_spi: Use a single buffer for SPI transfers
-
- drivers/char/tpm/tpm_tis_spi.c | 32 ++++++++++++++++++--------------
- 1 file changed, 18 insertions(+), 14 deletions(-)
+ drivers/char/tpm/tpm2-cmd.c | 69 +++++++++++++--------------------------------
+ 1 file changed, 20 insertions(+), 49 deletions(-)
 
 -- 
 2.7.4
