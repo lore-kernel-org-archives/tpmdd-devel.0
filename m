@@ -1,97 +1,75 @@
-From: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: [PATCH RESEND 3/3] tpm-chip: Export TPM device to
- user space even when startup failed
-Date: Thu, 24 Aug 2017 10:37:14 +0200
-Message-ID: <20170824083714.10016-4-Alexander.Steffen@infineon.com>
-References: <20170824083714.10016-1-Alexander.Steffen@infineon.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH] tpm/tpm_crb: Access locality for non-ACPI and non-SMC
+ start method
+Date: Thu, 24 Aug 2017 15:26:30 +0300
+Message-ID: <20170824122630.75sxjmkj5f7p7tv5@linux.intel.com>
+References: <1503029736-591-1-git-send-email-anjiandi@codeaurora.org>
+ <20170822173956.zpqe4scdnv7plrhj@linux.intel.com>
+ <d88e255c-f8c9-b6fc-64bd-8cf56153fcce@codeaurora.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170824083714.10016-1-Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <d88e255c-f8c9-b6fc-64bd-8cf56153fcce@codeaurora.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jiandi An <anjiandi@codeaurora.org>
+Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-When one of the commands during the auto_startup sequences does not return
-TPM_RC_SUCCESS, tpm_chip_register misleadingly returns ENODEV, even though
-a TPM device is definitely present.
+On Tue, Aug 22, 2017 at 04:28:54PM -0500, Jiandi An wrote:
+>  > >  {
+> > > -	if ((priv->flags & CRB_FL_ACPI_START) ||
+> > > -	    (priv->flags & CRB_FL_CRB_SMC_START))
+> > > -		return 0;
+> > > -
+> > > -	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
+> > > -	/* we don't really care when this settles */
+> > > +	if ((priv->flags & (CRB_FL_ACPI_START | CRB_FL_CRB_SMC_START)) == 0)
+> > > +		iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
+> > > +		/* we don't really care when this settles */
+> > 
+> > It's *exactly* the same condition expessed in different form.
+> > 
+> 
+> I'm sorry perhaps I didn't fully understand the workaround specific to Intel
+> PPT.  In previous patch thread, you mentioned the following where
+> a platform could report to require start method 2 (ACPI start) which is
+> sm = ACPI_TPM2_START_METHOD, and actually requires start method 8, which
+> is sm = ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD.
 
-An error response during those sequences is indeed unexpected, so to
-prevent subsequent errors, the kernel should not make use of the TPM
-device. But user space applications still might be able to communicate with
-the TPM, so they can be used to further diagnose and/or fix the problem. To
-allow this, with this patch the device is still exported to user space,
-even if a TPM error code has been received, but the kernel itself will not
-be allowed to use the device for anything.
+What this has to do with the above code change? Those two versions
+compile most likely to almost if not exactly same machine code.
 
-This is not a hypothetical scenario, but there are devices in the wild that
-show this behavior. With this fix, those devices can be recovered from
-their failed state.
+Both the original code and your updated blacklist cases where either
+of those flags is set.
 
-Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
----
- drivers/char/tpm/tpm-chip.c | 15 +++++++++------
- 1 file changed, 9 insertions(+), 6 deletions(-)
+> But you listed the following code logic which for either sm = 2 or
+> sm = 8, CRB_FL_ACPI_START flag is set.
+> 
+> if (sm == ACPI_TPM2_START_METHOD ||
+>     sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
+> 	priv->flags |= CRB_FL_ACPI_START;
+> 
+> So I'm a little confused about the PPT workaround you mentioned
+> 
+> /* The reason for the extra quirk is that the PTT in 4th Gen Core CPUs
+>  * report only ACPI start but in practice seems to require both
+>  * ACPI start and CRB start.
+>  */
+> if (sm == ACPI_TPM2_COMMAND_BUFFER || sm == ACPI_TPM2_MEMORY_MAPPED ||
+>     !strcmp(acpi_device_hid(device), "MSFT0101"))
+> 	priv->flags |= CRB_FL_CRB_START;
+> 
+> I took it as some platform sm = 2 or sm = 8 which CRB_FL_ACPI_START
+> flag is set, additionally, if HID = MSFT0101, CRB_FL_CRB_START flag
+> is set.
 
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index f20fcb7..a4baa56 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -390,7 +390,7 @@ static int tpm_add_legacy_sysfs(struct tpm_chip *chip)
-  *
-  * Creates a character device for the TPM chip and adds sysfs attributes for
-  * the device. As the last step this function adds the chip to the list of TPM
-- * chips available for in-kernel use.
-+ * chips available for in-kernel use, if the TPM startup was successful.
-  *
-  * This function should be only called after the chip initialization is
-  * complete.
-@@ -398,6 +398,7 @@ static int tpm_add_legacy_sysfs(struct tpm_chip *chip)
- int tpm_chip_register(struct tpm_chip *chip)
- {
- 	int rc;
-+	bool startup_successful = true;
- 
- 	if (chip->ops->flags & TPM_OPS_AUTO_STARTUP) {
- 		if (chip->flags & TPM_CHIP_FLAG_TPM2)
-@@ -407,7 +408,7 @@ int tpm_chip_register(struct tpm_chip *chip)
- 		if (rc < 0)
- 			return rc;
- 		else if (rc > 0)
--			return -ENODEV;
-+			startup_successful = false;
- 	}
- 
- 	tpm_sysfs_add_device(chip);
-@@ -430,10 +431,12 @@ int tpm_chip_register(struct tpm_chip *chip)
- 		return rc;
- 	}
- 
--	/* Make the chip available. */
--	mutex_lock(&idr_lock);
--	idr_replace(&dev_nums_idr, chip, chip->dev_num);
--	mutex_unlock(&idr_lock);
-+	if (startup_successful) {
-+		/* Make the chip available. */
-+		mutex_lock(&idr_lock);
-+		idr_replace(&dev_nums_idr, chip, chip->dev_num);
-+		mutex_unlock(&idr_lock);
-+	}
- 
- 	return 0;
- }
--- 
-2.7.4
+Yes.
 
+I'm starting to think that the code might be easier to follow if we
+removed 'flags' and store sm to the priv struct and put conditionals in
+places where we need them based on sm.
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+I think the 'flags' field was not a good idea in the first place.
+
+/Jarkko
