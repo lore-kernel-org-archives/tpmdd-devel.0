@@ -1,11 +1,14 @@
 From: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: [PATCH v2 0/3] tpm2-cmd: Improve self test execution
-Date: Thu, 24 Aug 2017 10:30:03 +0200
-Message-ID: <20170824083006.7704-1-Alexander.Steffen@infineon.com>
+Subject: [PATCH v2 1/3] tpm2-cmd: Trigger only missing self
+ tests
+Date: Thu, 24 Aug 2017 10:30:04 +0200
+Message-ID: <20170824083006.7704-2-Alexander.Steffen@infineon.com>
+References: <20170824083006.7704-1-Alexander.Steffen@infineon.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170824083006.7704-1-Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -17,21 +20,40 @@ Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The self test logic for TPM 2.0 was probably based on the implementation
-for TPM 1.2, but did not correctly take into account some TPM 2.0 specifics.
-This patch series fixes those issues.
+tpm2_do_selftest is only used during initialization of the TPM to ensure
+that the device functions correctly. Therefore, it is sufficient to request
+only missing self tests (parameter full_test=0), not a reexecution of all
+self tests, as was done before. This allows for a faster execution of this
+command.
 
-v2:
-- Moved implementation description from comment to commit message.
+Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+---
+ drivers/char/tpm/tpm2-cmd.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-Alexander Steffen (3):
-  tpm2-cmd: Trigger only missing self tests
-  tpm2-cmd: Use dynamic delay to wait for self test result
-  tpm2-cmd: React correctly to RC_TESTING from self tests
-
- drivers/char/tpm/tpm2-cmd.c | 69 +++++++++++++--------------------------------
- 1 file changed, 20 insertions(+), 49 deletions(-)
-
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index e1a41b7..8e940a5 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -865,7 +865,7 @@ static int tpm2_start_selftest(struct tpm_chip *chip, bool full)
+ }
+ 
+ /**
+- * tpm2_do_selftest() - run a full self test
++ * tpm2_do_selftest() - ensure that all self tests have passed
+  *
+  * @chip: TPM chip to use
+  *
+@@ -886,7 +886,7 @@ static int tpm2_do_selftest(struct tpm_chip *chip)
+ 
+ 	loops = jiffies_to_msecs(duration) / delay_msec;
+ 
+-	rc = tpm2_start_selftest(chip, true);
++	rc = tpm2_start_selftest(chip, false);
+ 	if (rc)
+ 		return rc;
+ 
 -- 
 2.7.4
 
