@@ -1,35 +1,29 @@
 From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [PATCH] tpm_tis: make array cmd_getticks static const to shink
- object code size
-Date: Fri, 25 Aug 2017 10:52:42 -0600
-Message-ID: <20170825165242.GA5254@obsidianresearch.com>
-References: <20170825164505.23447-1-colin.king@canonical.com>
+Subject: Re: [PATCH] tpm/tpm_crb: Access locality for non-ACPI and non-SMC
+ start method
+Date: Fri, 25 Aug 2017 10:53:09 -0600
+Message-ID: <20170825165309.GB5254@obsidianresearch.com>
+References: <1503029736-591-1-git-send-email-anjiandi@codeaurora.org>
+ <20170822173956.zpqe4scdnv7plrhj@linux.intel.com>
+ <d88e255c-f8c9-b6fc-64bd-8cf56153fcce@codeaurora.org>
+ <20170824122630.75sxjmkj5f7p7tv5@linux.intel.com>
+ <7478e964-6553-9d1e-3d8f-83b044a9a562@codeaurora.org>
+ <20170825162139.s5oasztecntzg223@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170825164505.23447-1-colin.king@canonical.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Colin King <colin.king@canonical.com>
-Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+In-Reply-To: <20170825162139.s5oasztecntzg223@linux.intel.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: Jiandi An <anjiandi@codeaurora.org>, peterhuewe@gmx.de, tpmdd@selhorst.net, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Aug 25, 2017 at 05:45:05PM +0100, Colin King wrote:
-> From: Colin Ian King <colin.king@canonical.com>
-> 
-> Don't populate array cmd_getticks on the stack, instead make it static
-> const.  Makes the object code smaller by over 160 bytes:
-> 
-> Before:
->    text	   data	    bss	    dec	    hex	filename
->   18813	   3152	    128	  22093	   564d	drivers/char/tpm/tpm_tis_core.o
-> 
-> After:
->    text	   data	    bss	    dec	    hex	filename
->   18554	   3248	    128	  21930	   55aa	drivers/char/tpm/tpm_tis_core.o
-> 
-> Signed-off-by: Colin Ian King <colin.king@canonical.com>
+On Fri, Aug 25, 2017 at 07:21:39PM +0300, Jarkko Sakkinen wrote:
+> As I said before it would make much more sense to make code always deal
+> with sm and remove flags completely. That would help maintaining code
+> easier as new logic for TZ is introduced.
 
-Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Yes please
 
 Jason
