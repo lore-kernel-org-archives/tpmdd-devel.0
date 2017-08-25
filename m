@@ -1,61 +1,94 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm/tpm_crb: Access locality for non-ACPI and non-SMC
- start method
-Date: Fri, 25 Aug 2017 19:21:39 +0300
-Message-ID: <20170825162139.s5oasztecntzg223@linux.intel.com>
-References: <1503029736-591-1-git-send-email-anjiandi@codeaurora.org>
- <20170822173956.zpqe4scdnv7plrhj@linux.intel.com>
- <d88e255c-f8c9-b6fc-64bd-8cf56153fcce@codeaurora.org>
- <20170824122630.75sxjmkj5f7p7tv5@linux.intel.com>
- <7478e964-6553-9d1e-3d8f-83b044a9a562@codeaurora.org>
+Subject: Re: [PATCH v3 1/2] tpm_tis_spi: Use DMA-safe memory for SPI transfers
+Date: Fri, 25 Aug 2017 19:39:19 +0300
+Message-ID: <20170825163919.e3v5ph6qlgtquo6r@linux.intel.com>
+References: <20170824082745.9372-1-Alexander.Steffen@infineon.com>
+ <20170824082745.9372-2-Alexander.Steffen@infineon.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Return-path: <stable-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <7478e964-6553-9d1e-3d8f-83b044a9a562@codeaurora.org>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jiandi An <anjiandi@codeaurora.org>
-Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+In-Reply-To: <20170824082745.9372-2-Alexander.Steffen@infineon.com>
+Sender: stable-owner@vger.kernel.org
+To: Alexander Steffen <Alexander.Steffen@infineon.com>
+Cc: tpmdd-devel@lists.sourceforge.net, stable@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Aug 24, 2017 at 12:20:35PM -0500, Jiandi An wrote:
-> I know they don't change the logic.  This was to address comment from Jason.
-> He wanted to express the exact condition which crb_go_idle(),
-> crb_cmd_ready(), and the check for "Bad ACPI memory layout" in
-> crb_map_io() should run, instead of the if not the condition, return.
-> Since you want it as is, I'll change it back. It's already excluding
-> CRB_FL_CRB_SMC_START in addition to CRB_FL_ACPI_START which is what's
-> intended.
-
-I think this very in simple terms. It does not change *anything*.
-
-> Like I said the goal for this patch is to really further exclude
-> CRB_FL_CRB_SMC_START from the check for "Bad ACPI memory layout"
-> in crb_map_io() in the code below.
+On Thu, Aug 24, 2017 at 10:27:44AM +0200, Alexander Steffen wrote:
+> The buffers used as tx_buf/rx_buf in a SPI transfer need to be DMA-safe.
+> This cannot be guaranteed for the buffers passed to tpm_tis_spi_read_bytes
+> and tpm_tis_spi_write_bytes. Therefore, we need to use our own DMA-safe
+> buffer and copy the data to/from it.
 > 
-> @@ -458,7 +455,7 @@ static int crb_map_io(struct acpi_device *device, struct
-> crb_priv *priv,
->   * the control area, as one nice sane region except for some older
->   * stuff that puts the control area outside the ACPI IO region.
->   */
->  -if (!(priv->flags & CRB_FL_ACPI_START)) {
->  +if ((priv->flags & (CRB_FL_ACPI_START | CRB_FL_CRB_SMC_START)) == 0) {
->   		if (buf->control_address == io_res.start +
->   		    sizeof(*priv->regs_h))
->   			priv->regs_h = priv->iobase;
->   		else
->   		    dev_warn(dev, FW_BUG "Bad ACPI memory layout");
->   }
+> The buffer needs to be allocated separately, to ensure that it is
+> cacheline-aligned and not shared with other data, so that DMA can work
+> correctly.
 > 
-> I'll submit v2 with only this change.  Are you okay which this change?
+> Fixes: 0edbfea537d1 ("tpm/tpm_tis_spi: Add support for spi phy")
+> Cc: stable@vger.kernel.org
+> Signed-off-by: Alexander Steffen <Alexander.Steffen@infineon.com>
+> ---
+>  drivers/char/tpm/tpm_tis_spi.c | 18 ++++++++++++++----
+>  1 file changed, 14 insertions(+), 4 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
+> index 88fe72a..05ce841 100644
+> --- a/drivers/char/tpm/tpm_tis_spi.c
+> +++ b/drivers/char/tpm/tpm_tis_spi.c
+> @@ -47,8 +47,8 @@ struct tpm_tis_spi_phy {
+>  	struct tpm_tis_data priv;
+>  	struct spi_device *spi_device;
+>  
+> -	u8 tx_buf[4];
+> -	u8 rx_buf[4];
+> +	u8 *tx_buf;
+> +	u8 *rx_buf;
+>  };
+>  
+>  static inline struct tpm_tis_spi_phy *to_tpm_tis_spi_phy(struct tpm_tis_data *data)
+> @@ -115,10 +115,9 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  
+>  		if (direction) {
+>  			spi_xfer.tx_buf = NULL;
+> -			spi_xfer.rx_buf = buffer;
+>  		} else {
+> -			spi_xfer.tx_buf = buffer;
+>  			spi_xfer.rx_buf = NULL;
+> +			memcpy(phy->tx_buf, buffer, transfer_len);
+>  		}
+>  
+>  		spi_message_init(&m);
+> @@ -127,6 +126,9 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  		if (ret < 0)
+>  			goto exit;
+>  
+> +		if (direction)
+> +			memcpy(buffer, phy->rx_buf, transfer_len);
+> +
+>  		len -= transfer_len;
+>  		buffer += transfer_len;
+>  	}
+> @@ -194,6 +196,14 @@ static int tpm_tis_spi_probe(struct spi_device *dev)
+>  
+>  	phy->spi_device = dev;
+>  
+> +	phy->tx_buf = devm_kmalloc(&dev->dev, MAX_SPI_FRAMESIZE, GFP_KERNEL);
+> +	if (!phy->tx_buf)
+> +		return -ENOMEM;
+> +
+> +	phy->rx_buf = devm_kmalloc(&dev->dev, MAX_SPI_FRAMESIZE, GFP_KERNEL);
+> +	if (!phy->rx_buf)
+> +		return -ENOMEM;
+> +
+>  	return tpm_tis_core_init(&dev->dev, &phy->priv, -1, &tpm_spi_phy_ops,
+>  				 NULL);
+>  }
+> -- 
+> 2.7.4
+> 
 
-I'm not OK with those parts that do nothing except shuffle the code.
+Great. This is much less confusing patch for backporting.
 
-As I said before it would make much more sense to make code always deal
-with sm and remove flags completely. That would help maintaining code
-easier as new logic for TZ is introduced.
-
-> Thanks
-> - Jiandi
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
 /Jarkko
