@@ -1,36 +1,59 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH RESEND] tpm: migrate pubek_show to struct tpm_buf
-Date: Sat, 26 Aug 2017 14:19:45 +0300
-Message-ID: <20170826111945.kelicskdcquf6ddz@linux.intel.com>
-References: <20170825172946.18357-1-jarkko.sakkinen@linux.intel.com>
- <20170826081004.cf3kbr5ild6vfv2y@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v3 0/2] tpm_tis_spi: Use DMA-safe memory
+Date: Sat, 26 Aug 2017 14:22:59 +0300
+Message-ID: <20170826112259.ypwtqbwakyfdqkzo@linux.intel.com>
+References: <20170824082745.9372-1-Alexander.Steffen@infineon.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20170826081004.cf3kbr5ild6vfv2y@linux.intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: linux-security-module@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
+In-Reply-To: <20170824082745.9372-1-Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat, Aug 26, 2017 at 11:10:04AM +0300, Jarkko Sakkinen wrote:
-> On Fri, Aug 25, 2017 at 08:29:46PM +0300, Jarkko Sakkinen wrote:
-> > Migrated pubek_show to struct tpm_buf and cleaned up its implementation.
-> > Previously the output parameter structure was declared but left
-> > completely unused. Now it is used to refer different fields of the
-> > output. We can move it to tpm-sysfs.c as it does not have any use
-> > outside of that file.
-> > 
-> > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+On Thu, Aug 24, 2017 at 10:27:43AM +0200, Alexander Steffen wrote:
+> The documentation says that DMA-safe memory is required for SPI transfers.
+> The I/O buffers passed in by the caller can be allocated anywhere,
+> including on the stack, which is not DMA-safe. So the data needs to be
+> copied to separate, DMA-safe buffers.
 > 
-> I'm going to apply this if there are no obligations. I sent this updated
-> patch 2017-06-20 based on feedback I got on [1].
+> We did not see any DMA-related issues on our test systems, even without
+> DMA-safe buffers. But this might simply be due to the fact that the SPI
+> transfer size is rather small, so our systems do not bother to set up DMA
+> transfers. Other systems might do so.
 > 
-> [1] https://patchwork.kernel.org/patch/9749151/
+> v2:
+> - Updated commit message with more explanations.
 > 
-> /Jarkko
+> v3:
+> - Split into two patches, one for making the buffers DMA-safe and another
+>   for using only a single buffer.
+> 
+> Alexander Steffen (2):
+>   tpm_tis_spi: Use DMA-safe memory for SPI transfers
+>   tpm_tis_spi: Use a single buffer for SPI transfers
+> 
+>  drivers/char/tpm/tpm_tis_spi.c | 32 ++++++++++++++++++--------------
+>  1 file changed, 18 insertions(+), 14 deletions(-)
+> 
+> -- 
+> 2.7.4
+> 
 
-Applied (master, next).
+Needs to be CC linux-kernel and linux-security-module and tested-by.
 
 /Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
