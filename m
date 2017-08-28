@@ -1,11 +1,16 @@
-From: Laurent Bigonville <bigon-8fiUuRrzOP0dnm+yROfE0A@public.gmane.org>
-Subject: tpm device not showing up in /dev anymore
-Date: Mon, 28 Aug 2017 13:28:24 +0200
-Message-ID: <f9526f55-df96-64fc-a4d6-877ce04e7156@debian.org>
+From: <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+Subject: Re: [PATCH RESEND 1/2] tpm-dev-common: Reject too
+ short writes
+Date: Mon, 28 Aug 2017 17:11:00 +0000
+Message-ID: <6039fbecc07044a88706a41441f62d18@MUCSE603.infineon.com>
+References: <20170824083545.13280-1-Alexander.Steffen@infineon.com>
+ <20170824083545.13280-2-Alexander.Steffen@infineon.com>
+ <20170825165451.b7lv7t5w3nhbz7da@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"; Format="flowed"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170825165451.b7lv7t5w3nhbz7da-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
@@ -15,26 +20,40 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-SGVsbG8sCgpTaW5jZSB0aGUgdmVyc2lvbiA0LjEyIChJIGFsc28gdGVzdGVkIHdpdGggNC4xMy1y
-YzUpIG9mIHRoZSBrZXJuZWwsIHRoZSAKdHBtIGRldmljZSBpcyBub3Qgc2hvd2luZyB1cCBpbiAv
-ZGV2Ly4gSW4gZG1lc2cgSSBjYW4gc2VlIHRoZSBmb2xsb3dpbmcgCmxpbmVzOgoKPiBbwqDCoMKg
-IDEuNzcyMTUzXSB0cG1fdGlzIDAwOjA2OiAxLjIgVFBNIChkZXZpY2UtaWQgMHg2ODcxLCByZXYt
-aWQgMSkKPiBbwqDCoMKgIDEuNzg4MTA2XSB0cG0gdHBtMDogdHBtX3RyYW5zbWl0OiB0cG1fc2Vu
-ZDogZXJyb3IgLTUKPiBbwqDCoMKgIDEuNzg4MTQ2XSB0cG0gdHBtMDogQSBUUE0gZXJyb3IgKC01
-KSBvY2N1cnJlZCBhdHRlbXB0aW5nIHRvIAo+IGRldGVybWluZSB0aGUgdGltZW91dHMKPiBbwqDC
-oMKgIDEuNzg4MTk0XSB0cG1fdGlzOiBwcm9iZSBvZiAwMDowNiBmYWlsZWQgd2l0aCBlcnJvciAt
-NQo+IFvCoMKgwqAgMS43OTY4NjVdIGltYTogTm8gVFBNIGNoaXAgZm91bmQsIGFjdGl2YXRpbmcg
-VFBNLWJ5cGFzcyEgKHJjPS0xOSkKPiBbwqDCoCAxMC4wODUyNDVdIHRwbV9pbmZfcG5wIDAwOjA2
-OiBGb3VuZCBUUE0gd2l0aCBJRCBJRlgwMTAyCgpJZiBJJ20gcmV2ZXJ0aW5nIHRvIDQuMTEsIGV2
-ZXJ5dGhpbmcgaXMgd29ya2luZyBmaW5lLgoKQW4gaWRlYSBob3cgdG8gdHJvdWJsZXNob290IHRo
-aXM/CgpSZWdhcmRzLAoKTGF1cmVudCBCaWdvbnZpbGxlCgoKLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-CkNoZWNrIG91dCB0aGUgdmlicmFudCB0ZWNoIGNvbW11bml0eSBvbiBvbmUgb2YgdGhlIHdvcmxk
-J3MgbW9zdAplbmdhZ2luZyB0ZWNoIHNpdGVzLCBTbGFzaGRvdC5vcmchIGh0dHA6Ly9zZG0ubGlu
-ay9zbGFzaGRvdApfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-Xwp0cG1kZC1kZXZlbCBtYWlsaW5nIGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2Uu
-bmV0Cmh0dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRl
-dmVsCg==
+> > diff --git a/drivers/char/tpm/tpm-dev-common.c
+> > b/drivers/char/tpm/tpm-dev-common.c
+> > index 610638a..c39b581 100644
+> > --- a/drivers/char/tpm/tpm-dev-common.c
+> > +++ b/drivers/char/tpm/tpm-dev-common.c
+> > @@ -119,7 +119,7 @@ ssize_t tpm_common_write(struct file *file, const
+> char __user *buf,
+> >  		return -EPIPE;
+> >  	}
+> >  	out_size = tpm_transmit(priv->chip, space, priv->data_buffer,
+> > -				sizeof(priv->data_buffer), 0);
+> > +				sizeof(priv->data_buffer), in_size, 0);
+> 
+> Why you couldn't just
+> 
+> unsigned int bufsiz;
+> 
+> /* ... */
+> 
+> bufsiz = sizeof(priv->data_buffer);
+> if (in_size < bufsiz)
+> 	bufsiz = in_size;
+> 
+> out_size = tpm_transmit(priv->chip, space, priv->data_buffer, bufsiz, 0);
+
+Because the code needs to know both how large the buffer is (in order to avoid buffer overflows when writing to it) and how much of the data in the buffer is valid (in order not to send random junk to the TPM). This is made more explicit in PATCH 2/2.
+
+Your example fails as soon as the response is longer than the command.
+
+Alexander
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
