@@ -1,15 +1,12 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 0/3] tpm2-cmd: Improve self test
- execution
-Date: Sat, 26 Aug 2017 14:23:53 +0300
-Message-ID: <20170826112353.6bd6eaeofxmzg7wj@linux.intel.com>
-References: <20170824083006.7704-1-Alexander.Steffen@infineon.com>
+From: Laurent Bigonville <bigon-8fiUuRrzOP0dnm+yROfE0A@public.gmane.org>
+Subject: tpm device not showing up in /dev anymore
+Date: Mon, 28 Aug 2017 13:28:24 +0200
+Message-ID: <f9526f55-df96-64fc-a4d6-877ce04e7156@debian.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"; Format="flowed"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170824083006.7704-1-Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,34 +15,26 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Aug 24, 2017 at 10:30:03AM +0200, Alexander Steffen wrote:
-> The self test logic for TPM 2.0 was probably based on the implementation
-> for TPM 1.2, but did not correctly take into account some TPM 2.0 specifics.
-> This patch series fixes those issues.
-> 
-> v2:
-> - Moved implementation description from comment to commit message.
-> 
-> Alexander Steffen (3):
->   tpm2-cmd: Trigger only missing self tests
->   tpm2-cmd: Use dynamic delay to wait for self test result
->   tpm2-cmd: React correctly to RC_TESTING from self tests
-> 
->  drivers/char/tpm/tpm2-cmd.c | 69 +++++++++++++--------------------------------
->  1 file changed, 20 insertions(+), 49 deletions(-)
-> 
-> -- 
-> 2.7.4
-> 
-
-Missing stuff from CC.
-
-/Jarkko
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+SGVsbG8sCgpTaW5jZSB0aGUgdmVyc2lvbiA0LjEyIChJIGFsc28gdGVzdGVkIHdpdGggNC4xMy1y
+YzUpIG9mIHRoZSBrZXJuZWwsIHRoZSAKdHBtIGRldmljZSBpcyBub3Qgc2hvd2luZyB1cCBpbiAv
+ZGV2Ly4gSW4gZG1lc2cgSSBjYW4gc2VlIHRoZSBmb2xsb3dpbmcgCmxpbmVzOgoKPiBbwqDCoMKg
+IDEuNzcyMTUzXSB0cG1fdGlzIDAwOjA2OiAxLjIgVFBNIChkZXZpY2UtaWQgMHg2ODcxLCByZXYt
+aWQgMSkKPiBbwqDCoMKgIDEuNzg4MTA2XSB0cG0gdHBtMDogdHBtX3RyYW5zbWl0OiB0cG1fc2Vu
+ZDogZXJyb3IgLTUKPiBbwqDCoMKgIDEuNzg4MTQ2XSB0cG0gdHBtMDogQSBUUE0gZXJyb3IgKC01
+KSBvY2N1cnJlZCBhdHRlbXB0aW5nIHRvIAo+IGRldGVybWluZSB0aGUgdGltZW91dHMKPiBbwqDC
+oMKgIDEuNzg4MTk0XSB0cG1fdGlzOiBwcm9iZSBvZiAwMDowNiBmYWlsZWQgd2l0aCBlcnJvciAt
+NQo+IFvCoMKgwqAgMS43OTY4NjVdIGltYTogTm8gVFBNIGNoaXAgZm91bmQsIGFjdGl2YXRpbmcg
+VFBNLWJ5cGFzcyEgKHJjPS0xOSkKPiBbwqDCoCAxMC4wODUyNDVdIHRwbV9pbmZfcG5wIDAwOjA2
+OiBGb3VuZCBUUE0gd2l0aCBJRCBJRlgwMTAyCgpJZiBJJ20gcmV2ZXJ0aW5nIHRvIDQuMTEsIGV2
+ZXJ5dGhpbmcgaXMgd29ya2luZyBmaW5lLgoKQW4gaWRlYSBob3cgdG8gdHJvdWJsZXNob290IHRo
+aXM/CgpSZWdhcmRzLAoKTGF1cmVudCBCaWdvbnZpbGxlCgoKLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+CkNoZWNrIG91dCB0aGUgdmlicmFudCB0ZWNoIGNvbW11bml0eSBvbiBvbmUgb2YgdGhlIHdvcmxk
+J3MgbW9zdAplbmdhZ2luZyB0ZWNoIHNpdGVzLCBTbGFzaGRvdC5vcmchIGh0dHA6Ly9zZG0ubGlu
+ay9zbGFzaGRvdApfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
+Xwp0cG1kZC1kZXZlbCBtYWlsaW5nIGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2Uu
+bmV0Cmh0dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRl
+dmVsCg==
