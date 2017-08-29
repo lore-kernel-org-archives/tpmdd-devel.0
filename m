@@ -1,188 +1,123 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm/tpm_crb: Use start method value from ACPI table
- directly
-Date: Tue, 29 Aug 2017 15:09:25 +0300
-Message-ID: <20170829120925.wxbcadattnxx62js@linux.intel.com>
-References: <1503703735-2332-1-git-send-email-anjiandi@codeaurora.org>
+From: <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+Subject: Re: [PATCH RESEND 2/3] tpm-chip: Return TPM error
+ codes from auto_startup functions
+Date: Tue, 29 Aug 2017 12:11:20 +0000
+Message-ID: <68ebc7c2346e4db3bd5a7196677ee880@MUCSE603.infineon.com>
+References: <20170824083714.10016-1-Alexander.Steffen@infineon.com>
+ <20170824083714.10016-3-Alexander.Steffen@infineon.com>
+ <20170825170607.wfnr5y5zres2n42r@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <1503703735-2332-1-git-send-email-anjiandi@codeaurora.org>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Jiandi An <anjiandi@codeaurora.org>
-Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170825170607.wfnr5y5zres2n42r-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Content-Language: en-US
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Aug 25, 2017 at 06:28:55PM -0500, Jiandi An wrote:
-> This patch gets rid of dealing with intermediate flag for start method
-> and use start method value from ACPI table directly.
+> > diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+> > index a353b7a..f20fcb7 100644
+> > --- a/drivers/char/tpm/tpm-chip.c
+> > +++ b/drivers/char/tpm/tpm-chip.c
+> > @@ -404,8 +404,10 @@ int tpm_chip_register(struct tpm_chip *chip)
+> >  			rc = tpm2_auto_startup(chip);
+> >  		else
+> >  			rc = tpm1_auto_startup(chip);
+> > -		if (rc)
+> > +		if (rc < 0)
+> >  			return rc;
+> > +		else if (rc > 0)
+> > +			return -ENODEV;
 > 
-> For ARM64, the locality is handled by Trust Zone in FW.  The layout
-> does not have crb_regs_head.  It is hitting the following line.
-> dev_warn(dev, FW_BUG "Bad ACPI memory layout");
-> 
-> Current code excludes CRB_FL_ACPI_START for this check.  Now since
-> ARM64 support for TPM CRB is added, CRB_FL_CRB_SMC_START should also be
-> excluded from this check.
-> 
-> For goIdle and cmdReady where code was excluding CRB_FL_ACPI_START only
-> (do nothing for ACPI start method), CRB_FL_CRB_SMC_START was also
-> excluded as ARM64 SMC start method does not have TPM_CRB_CTRL_REQ.
-> 
-> However with special PPT workaround requiring CRB_FL_CRB_START to be
-> set in addition to CRB_FL_ACPI_START and the addition flag of SMC
-> start method CRB_FL_CRB_SMC_START, the code has become difficult to
-> maintain and undrestand.  It is better to make code deal with start
-> method value from ACPI table directly.
-> 
-> Signed-off-by: Jiandi An <anjiandi@codeaurora.org>
-> ---
->  drivers/char/tpm/tpm_crb.c | 59 +++++++++++++++++++++++-----------------------
->  1 file changed, 29 insertions(+), 30 deletions(-)
-> 
-> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-> index 8f0a98d..7b3c2a8 100644
-> --- a/drivers/char/tpm/tpm_crb.c
-> +++ b/drivers/char/tpm/tpm_crb.c
-> @@ -92,14 +92,9 @@ enum crb_status {
->  	CRB_DRV_STS_COMPLETE	= BIT(0),
->  };
->  
-> -enum crb_flags {
-> -	CRB_FL_ACPI_START	= BIT(0),
-> -	CRB_FL_CRB_START	= BIT(1),
-> -	CRB_FL_CRB_SMC_START	= BIT(2),
-> -};
-> -
->  struct crb_priv {
-> -	unsigned int flags;
-> +	u32 sm;
-> +	const char *hid;
->  	void __iomem *iobase;
->  	struct crb_regs_head __iomem *regs_h;
->  	struct crb_regs_tail __iomem *regs_t;
-> @@ -128,14 +123,16 @@ struct tpm2_crb_smc {
->   * Anyhow, we do not wait here as a consequent CMD_READY request
->   * will be handled correctly even if idle was not completed.
->   *
-> - * The function does nothing for devices with ACPI-start method.
-> + * The function does nothing for devices with ACPI-start method
-> + * or SMC-start method.
->   *
->   * Return: 0 always
->   */
->  static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
->  {
-> -	if ((priv->flags & CRB_FL_ACPI_START) ||
-> -	    (priv->flags & CRB_FL_CRB_SMC_START))
-> +	if ((priv->sm == ACPI_TPM2_START_METHOD) ||
-> +	    (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD) ||
-> +	    (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_ARM_SMC))
->  		return 0;
->  
->  	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
-> @@ -174,14 +171,16 @@ static bool crb_wait_for_reg_32(u32 __iomem *reg, u32 mask, u32 value,
->   * The device should respond within TIMEOUT_C.
->   *
->   * The function does nothing for devices with ACPI-start method
-> + * or SMC-start method.
->   *
->   * Return: 0 on success -ETIME on timeout;
->   */
->  static int __maybe_unused crb_cmd_ready(struct device *dev,
->  					struct crb_priv *priv)
->  {
-> -	if ((priv->flags & CRB_FL_ACPI_START) ||
-> -	    (priv->flags & CRB_FL_CRB_SMC_START))
-> +	if ((priv->sm == ACPI_TPM2_START_METHOD) ||
-> +	    (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD) ||
-> +	    (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_ARM_SMC))
->  		return 0;
->  
->  	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
-> @@ -325,13 +324,20 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
->  	/* Make sure that cmd is populated before issuing start. */
->  	wmb();
->  
-> -	if (priv->flags & CRB_FL_CRB_START)
-> +	/* The reason for the extra quirk is that the PTT in 4th Gen Core CPUs
-> +	 * report only ACPI start but in practice seems to require both
-> +	 * CRB start, hence invoking CRB start method if hid == MSFT0101.
-> +	 */
-> +	if ((priv->sm == ACPI_TPM2_COMMAND_BUFFER) ||
-> +	    (priv->sm == ACPI_TPM2_MEMORY_MAPPED) ||
-> +	    (!strcmp(priv->hid, "MSFT0101")))
->  		iowrite32(CRB_START_INVOKE, &priv->regs_t->ctrl_start);
->  
-> -	if (priv->flags & CRB_FL_ACPI_START)
-> +	if ((priv->sm == ACPI_TPM2_START_METHOD) ||
-> +	    (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD))
->  		rc = crb_do_acpi_start(chip);
->  
-> -	if (priv->flags & CRB_FL_CRB_SMC_START) {
-> +	if (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_ARM_SMC) {
->  		iowrite32(CRB_START_INVOKE, &priv->regs_t->ctrl_start);
->  		rc = tpm_crb_smc_start(&chip->dev, priv->smc_func_id);
->  	}
-> @@ -345,7 +351,9 @@ static void crb_cancel(struct tpm_chip *chip)
->  
->  	iowrite32(CRB_CANCEL_INVOKE, &priv->regs_t->ctrl_cancel);
->  
-> -	if ((priv->flags & CRB_FL_ACPI_START) && crb_do_acpi_start(chip))
-> +	if (((priv->sm == ACPI_TPM2_START_METHOD) ||
-> +	    (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)) &&
-> +	     crb_do_acpi_start(chip))
->  		dev_err(&chip->dev, "ACPI Start failed\n");
->  }
->  
-> @@ -458,7 +466,8 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
->  	 * the control area, as one nice sane region except for some older
->  	 * stuff that puts the control area outside the ACPI IO region.
->  	 */
-> -	if (!(priv->flags & CRB_FL_ACPI_START)) {
-> +	if ((priv->sm == ACPI_TPM2_COMMAND_BUFFER) ||
-> +	    (priv->sm == ACPI_TPM2_MEMORY_MAPPED)) {
->  		if (buf->control_address == io_res.start +
->  		    sizeof(*priv->regs_h))
->  			priv->regs_h = priv->iobase;
-> @@ -552,18 +561,6 @@ static int crb_acpi_add(struct acpi_device *device)
->  	if (!priv)
->  		return -ENOMEM;
->  
-> -	/* The reason for the extra quirk is that the PTT in 4th Gen Core CPUs
-> -	 * report only ACPI start but in practice seems to require both
-> -	 * ACPI start and CRB start.
-> -	 */
-> -	if (sm == ACPI_TPM2_COMMAND_BUFFER || sm == ACPI_TPM2_MEMORY_MAPPED ||
-> -	    !strcmp(acpi_device_hid(device), "MSFT0101"))
-> -		priv->flags |= CRB_FL_CRB_START;
-> -
-> -	if (sm == ACPI_TPM2_START_METHOD ||
-> -	    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
-> -		priv->flags |= CRB_FL_ACPI_START;
-> -
->  	if (sm == ACPI_TPM2_COMMAND_BUFFER_WITH_ARM_SMC) {
->  		if (buf->header.length < (sizeof(*buf) + sizeof(*crb_smc))) {
->  			dev_err(dev,
-> @@ -574,9 +571,11 @@ static int crb_acpi_add(struct acpi_device *device)
->  		}
->  		crb_smc = ACPI_ADD_PTR(struct tpm2_crb_smc, buf, sizeof(*buf));
->  		priv->smc_func_id = crb_smc->smc_func_id;
-> -		priv->flags |= CRB_FL_CRB_SMC_START;
->  	}
->  
-> +	priv->sm = sm;
-> +	priv->hid = acpi_device_hid(device);
-> +
->  	rc = crb_map_io(device, priv, buf);
->  	if (rc)
->  		return rc;
-> -- 
-> Jiandi An
-> Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
-> Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
->
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> So what good this change makes in the end? I'm not sure I'm following.
 
-/Jarkko
+This is just refactoring the code without changing the functionality. Before this change, tpm*_auto_startup could only return negative error codes (or 0 for success). With this change, tpm*_auto_startup can also return positive errors codes for TPM errors (but still 0 for success). Therefore, tpm_chip_register, the only caller of tpm*_auto_startup, now needs to convert positive error codes to -ENODEV, so that the external behavior is unchanged.
+
+> >  	}
+> >
+> >  	tpm_sysfs_add_device(chip);
+> > diff --git a/drivers/char/tpm/tpm-interface.c
+> > b/drivers/char/tpm/tpm-interface.c
+> > index 78fb41d..fe11f2a 100644
+> > --- a/drivers/char/tpm/tpm-interface.c
+> > +++ b/drivers/char/tpm/tpm-interface.c
+> > @@ -1000,7 +1000,8 @@ EXPORT_SYMBOL_GPL(tpm_do_selftest);
+> >   *                     sequence
+> >   * @chip: TPM chip to use
+> >   *
+> > - * Returns 0 on success, < 0 in case of fatal error.
+> > + * Returns 0 on success, < 0 in case of fatal error or a value > 0
+> > + representing
+> > + * a TPM error code.
+> >   */
+> 
+> A nitpick.
+> 
+> According to https://www.kernel.org/doc/Documentation/kernel-doc-nano-
+> HOWTO.txt
+> you ought to use "Return:" keyword ;-)
+> 
+> I would favor here:
+> 
+>   "Return: same as with tpm_transmit_cmd()"
+
+Agreed. I will fix that together with the rest, once the discussions for the other patches in the series have come to a conclusion.
+
+> >  int tpm1_auto_startup(struct tpm_chip *chip)  { @@ -1015,10 +1016,7
+> > @@ int tpm1_auto_startup(struct tpm_chip *chip)
+> >  		goto out;
+> >  	}
+> >
+> > -	return rc;
+> >  out:
+> > -	if (rc > 0)
+> > -		rc = -ENODEV;
+> >  	return rc;
+> >  }
+> >
+> > diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+> > index e1a41b7..54a3123 100644
+> > --- a/drivers/char/tpm/tpm2-cmd.c
+> > +++ b/drivers/char/tpm/tpm2-cmd.c
+> > @@ -1074,7 +1074,8 @@ static int tpm2_get_cc_attrs_tbl(struct tpm_chip
+> *chip)
+> >   *                     sequence
+> >   * @chip: TPM chip to use
+> >   *
+> > - * Returns 0 on success, < 0 in case of fatal error.
+> > + * Returns 0 on success, < 0 in case of fatal error or a value > 0
+> > + representing
+> > + * a TPM error code.
+> >   */
+> >  int tpm2_auto_startup(struct tpm_chip *chip)  { @@ -1109,8 +1110,6 @@
+> > int tpm2_auto_startup(struct tpm_chip *chip)
+> >  	rc = tpm2_get_cc_attrs_tbl(chip);
+> >
+> >  out:
+> > -	if (rc > 0)
+> > -		rc = -ENODEV;
+> >  	return rc;
+> >  }
+> >
+> > --
+> > 2.7.4
+> >
+> 
+> At this point I can only see aero improvement how the driver works and a
+> very minor clean up.
+> 
+> /Jarkko
+
+Alexander
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
