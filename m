@@ -1,115 +1,188 @@
-From: <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: Re: [PATCH RESEND 1/3] tpm-chip: Move idr_replace
- calls to appropriate places
-Date: Mon, 28 Aug 2017 17:18:21 +0000
-Message-ID: <31c462c575634ce9ae0b2aaf53f6382b@MUCSE603.infineon.com>
-References: <20170824083714.10016-1-Alexander.Steffen@infineon.com>
- <20170824083714.10016-2-Alexander.Steffen@infineon.com>
- <20170825172546.f4bl2wh7tgbyjx2n@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH] tpm/tpm_crb: Use start method value from ACPI table
+ directly
+Date: Tue, 29 Aug 2017 15:09:25 +0300
+Message-ID: <20170829120925.wxbcadattnxx62js@linux.intel.com>
+References: <1503703735-2332-1-git-send-email-anjiandi@codeaurora.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170825172546.f4bl2wh7tgbyjx2n-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Content-Language: en-US
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <1503703735-2332-1-git-send-email-anjiandi@codeaurora.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jiandi An <anjiandi@codeaurora.org>
+Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-> On Thu, Aug 24, 2017 at 10:37:12AM +0200, Alexander Steffen wrote:
-> > According to the comments, adding/removing the chip from the list
-> > should be the first/last action in (un)register. But currently it is
-> > done in a subfunction in the middle of the process. Moving the code
-> > from the subfunctions to the appropriate places within (un)register
-> > ensures that the code matches the comments.
-> >
-> > Signed-off-by: Alexander Steffen <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-> > ---
-> >  drivers/char/tpm/tpm-chip.c | 20 ++++++++++----------
-> >  1 file changed, 10 insertions(+), 10 deletions(-)
-> >
-> > diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> > index 67ec9d3..a353b7a 100644
-> > --- a/drivers/char/tpm/tpm-chip.c
-> > +++ b/drivers/char/tpm/tpm-chip.c
-> > @@ -327,11 +327,6 @@ static int tpm_add_char_device(struct tpm_chip
-> *chip)
-> >  		}
-> >  	}
-> >
-> > -	/* Make the chip available. */
-> > -	mutex_lock(&idr_lock);
-> > -	idr_replace(&dev_nums_idr, chip, chip->dev_num);
-> > -	mutex_unlock(&idr_lock);
-> > -
-> >  	return rc;
-> >  }
-> >
-> > @@ -339,11 +334,6 @@ static void tpm_del_char_device(struct tpm_chip
-> > *chip)  {
-> >  	cdev_device_del(&chip->cdev, &chip->dev);
-> >
-> > -	/* Make the chip unavailable. */
-> > -	mutex_lock(&idr_lock);
-> > -	idr_replace(&dev_nums_idr, NULL, chip->dev_num);
-> > -	mutex_unlock(&idr_lock);
-> > -
-> >  	/* Make the driver uncallable. */
-> >  	down_write(&chip->ops_sem);
-> >  	if (chip->flags & TPM_CHIP_FLAG_TPM2) @@ -438,6 +428,11 @@ int
-> > tpm_chip_register(struct tpm_chip *chip)
-> >  		return rc;
-> >  	}
-> >
-> > +	/* Make the chip available. */
-> > +	mutex_lock(&idr_lock);
-> > +	idr_replace(&dev_nums_idr, chip, chip->dev_num);
-> > +	mutex_unlock(&idr_lock);
-> > +
-> >  	return 0;
-> >  }
-> >  EXPORT_SYMBOL_GPL(tpm_chip_register);
-> > @@ -457,6 +452,11 @@ EXPORT_SYMBOL_GPL(tpm_chip_register);
-> >   */
-> >  void tpm_chip_unregister(struct tpm_chip *chip)  {
-> > +	/* Make the chip unavailable. */
-> > +	mutex_lock(&idr_lock);
-> > +	idr_replace(&dev_nums_idr, NULL, chip->dev_num);
-> > +	mutex_unlock(&idr_lock);
-> > +
-> >  	tpm_del_legacy_sysfs(chip);
-> >  	tpm_bios_log_teardown(chip);
-> >  	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> > --
+On Fri, Aug 25, 2017 at 06:28:55PM -0500, Jiandi An wrote:
+> This patch gets rid of dealing with intermediate flag for start method
+> and use start method value from ACPI table directly.
 > 
-> This is unnecessary and questionable code shuffling in a very critical places of
-> the driver code where race conditions are easily introduced.
+> For ARM64, the locality is handled by Trust Zone in FW.  The layout
+> does not have crb_regs_head.  It is hitting the following line.
+> dev_warn(dev, FW_BUG "Bad ACPI memory layout");
+> 
+> Current code excludes CRB_FL_ACPI_START for this check.  Now since
+> ARM64 support for TPM CRB is added, CRB_FL_CRB_SMC_START should also be
+> excluded from this check.
+> 
+> For goIdle and cmdReady where code was excluding CRB_FL_ACPI_START only
+> (do nothing for ACPI start method), CRB_FL_CRB_SMC_START was also
+> excluded as ARM64 SMC start method does not have TPM_CRB_CTRL_REQ.
+> 
+> However with special PPT workaround requiring CRB_FL_CRB_START to be
+> set in addition to CRB_FL_ACPI_START and the addition flag of SMC
+> start method CRB_FL_CRB_SMC_START, the code has become difficult to
+> maintain and undrestand.  It is better to make code deal with start
+> method value from ACPI table directly.
+> 
+> Signed-off-by: Jiandi An <anjiandi@codeaurora.org>
+> ---
+>  drivers/char/tpm/tpm_crb.c | 59 +++++++++++++++++++++++-----------------------
+>  1 file changed, 29 insertions(+), 30 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+> index 8f0a98d..7b3c2a8 100644
+> --- a/drivers/char/tpm/tpm_crb.c
+> +++ b/drivers/char/tpm/tpm_crb.c
+> @@ -92,14 +92,9 @@ enum crb_status {
+>  	CRB_DRV_STS_COMPLETE	= BIT(0),
+>  };
+>  
+> -enum crb_flags {
+> -	CRB_FL_ACPI_START	= BIT(0),
+> -	CRB_FL_CRB_START	= BIT(1),
+> -	CRB_FL_CRB_SMC_START	= BIT(2),
+> -};
+> -
+>  struct crb_priv {
+> -	unsigned int flags;
+> +	u32 sm;
+> +	const char *hid;
+>  	void __iomem *iobase;
+>  	struct crb_regs_head __iomem *regs_h;
+>  	struct crb_regs_tail __iomem *regs_t;
+> @@ -128,14 +123,16 @@ struct tpm2_crb_smc {
+>   * Anyhow, we do not wait here as a consequent CMD_READY request
+>   * will be handled correctly even if idle was not completed.
+>   *
+> - * The function does nothing for devices with ACPI-start method.
+> + * The function does nothing for devices with ACPI-start method
+> + * or SMC-start method.
+>   *
+>   * Return: 0 always
+>   */
+>  static int __maybe_unused crb_go_idle(struct device *dev, struct crb_priv *priv)
+>  {
+> -	if ((priv->flags & CRB_FL_ACPI_START) ||
+> -	    (priv->flags & CRB_FL_CRB_SMC_START))
+> +	if ((priv->sm == ACPI_TPM2_START_METHOD) ||
+> +	    (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD) ||
+> +	    (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_ARM_SMC))
+>  		return 0;
+>  
+>  	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
+> @@ -174,14 +171,16 @@ static bool crb_wait_for_reg_32(u32 __iomem *reg, u32 mask, u32 value,
+>   * The device should respond within TIMEOUT_C.
+>   *
+>   * The function does nothing for devices with ACPI-start method
+> + * or SMC-start method.
+>   *
+>   * Return: 0 on success -ETIME on timeout;
+>   */
+>  static int __maybe_unused crb_cmd_ready(struct device *dev,
+>  					struct crb_priv *priv)
+>  {
+> -	if ((priv->flags & CRB_FL_ACPI_START) ||
+> -	    (priv->flags & CRB_FL_CRB_SMC_START))
+> +	if ((priv->sm == ACPI_TPM2_START_METHOD) ||
+> +	    (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD) ||
+> +	    (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_ARM_SMC))
+>  		return 0;
+>  
+>  	iowrite32(CRB_CTRL_REQ_CMD_READY, &priv->regs_t->ctrl_req);
+> @@ -325,13 +324,20 @@ static int crb_send(struct tpm_chip *chip, u8 *buf, size_t len)
+>  	/* Make sure that cmd is populated before issuing start. */
+>  	wmb();
+>  
+> -	if (priv->flags & CRB_FL_CRB_START)
+> +	/* The reason for the extra quirk is that the PTT in 4th Gen Core CPUs
+> +	 * report only ACPI start but in practice seems to require both
+> +	 * CRB start, hence invoking CRB start method if hid == MSFT0101.
+> +	 */
+> +	if ((priv->sm == ACPI_TPM2_COMMAND_BUFFER) ||
+> +	    (priv->sm == ACPI_TPM2_MEMORY_MAPPED) ||
+> +	    (!strcmp(priv->hid, "MSFT0101")))
+>  		iowrite32(CRB_START_INVOKE, &priv->regs_t->ctrl_start);
+>  
+> -	if (priv->flags & CRB_FL_ACPI_START)
+> +	if ((priv->sm == ACPI_TPM2_START_METHOD) ||
+> +	    (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD))
+>  		rc = crb_do_acpi_start(chip);
+>  
+> -	if (priv->flags & CRB_FL_CRB_SMC_START) {
+> +	if (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_ARM_SMC) {
+>  		iowrite32(CRB_START_INVOKE, &priv->regs_t->ctrl_start);
+>  		rc = tpm_crb_smc_start(&chip->dev, priv->smc_func_id);
+>  	}
+> @@ -345,7 +351,9 @@ static void crb_cancel(struct tpm_chip *chip)
+>  
+>  	iowrite32(CRB_CANCEL_INVOKE, &priv->regs_t->ctrl_cancel);
+>  
+> -	if ((priv->flags & CRB_FL_ACPI_START) && crb_do_acpi_start(chip))
+> +	if (((priv->sm == ACPI_TPM2_START_METHOD) ||
+> +	    (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)) &&
+> +	     crb_do_acpi_start(chip))
+>  		dev_err(&chip->dev, "ACPI Start failed\n");
+>  }
+>  
+> @@ -458,7 +466,8 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
+>  	 * the control area, as one nice sane region except for some older
+>  	 * stuff that puts the control area outside the ACPI IO region.
+>  	 */
+> -	if (!(priv->flags & CRB_FL_ACPI_START)) {
+> +	if ((priv->sm == ACPI_TPM2_COMMAND_BUFFER) ||
+> +	    (priv->sm == ACPI_TPM2_MEMORY_MAPPED)) {
+>  		if (buf->control_address == io_res.start +
+>  		    sizeof(*priv->regs_h))
+>  			priv->regs_h = priv->iobase;
+> @@ -552,18 +561,6 @@ static int crb_acpi_add(struct acpi_device *device)
+>  	if (!priv)
+>  		return -ENOMEM;
+>  
+> -	/* The reason for the extra quirk is that the PTT in 4th Gen Core CPUs
+> -	 * report only ACPI start but in practice seems to require both
+> -	 * ACPI start and CRB start.
+> -	 */
+> -	if (sm == ACPI_TPM2_COMMAND_BUFFER || sm == ACPI_TPM2_MEMORY_MAPPED ||
+> -	    !strcmp(acpi_device_hid(device), "MSFT0101"))
+> -		priv->flags |= CRB_FL_CRB_START;
+> -
+> -	if (sm == ACPI_TPM2_START_METHOD ||
+> -	    sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD)
+> -		priv->flags |= CRB_FL_ACPI_START;
+> -
+>  	if (sm == ACPI_TPM2_COMMAND_BUFFER_WITH_ARM_SMC) {
+>  		if (buf->header.length < (sizeof(*buf) + sizeof(*crb_smc))) {
+>  			dev_err(dev,
+> @@ -574,9 +571,11 @@ static int crb_acpi_add(struct acpi_device *device)
+>  		}
+>  		crb_smc = ACPI_ADD_PTR(struct tpm2_crb_smc, buf, sizeof(*buf));
+>  		priv->smc_func_id = crb_smc->smc_func_id;
+> -		priv->flags |= CRB_FL_CRB_SMC_START;
+>  	}
+>  
+> +	priv->sm = sm;
+> +	priv->hid = acpi_device_hid(device);
+> +
+>  	rc = crb_map_io(device, priv, buf);
+>  	if (rc)
+>  		return rc;
+> -- 
+> Jiandi An
+> Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
+> Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
+>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
-Can you explain what race conditions you fear here?
-
-My understanding of the code so far is this: There are two separate paths to the TPM (from kernel and user space), that share the common driver code (tpm_transmit and everything below), but that can (in theory) exist without the other, i.e. the kernel can use the TPM without ever exporting it to user space and user space applications can send commands to the TPM without the kernel using the TPM for anything.
-
-If the kernel wants to use the TPM, it needs to go through tpm_chip_find_get at some point. Every request from user space passes through tpm_common_write (except for everything from tpm-sysfs.c, that also somehow lacks the serialization imposed by tpm_try_get_ops, but that is a different problem). By not placing the chip into dev_nums_idr, I prevent the kernel from using the TPM while leaving the user space path intact.
-
-So, based on those assumptions, that the kernel and user space paths are independent, until they meet at tpm_transmit, which is serialized by tpm_try_get_ops, it should not matter in what order I make the device available for kernel or user space usage, or whether I do not make it available for one of them at all. What race conditions could there be?
-
-> If you don't have a better reason to do this, I'm not going to take this.
-
-The comments currently state that the idr_replace calls should be the first/last step in the process, so either the code or the comments are wrong and need to be changed. I opted for changing the code, since, as explained above, I cannot see how the kernel and user space paths in this place interact (i.e. as far as I understand the code, you can place the idr_replace call anywhere after the call to tpm*_auto_startup, without being able to detect a difference). Also, "somewhere in the middle, add the chip to the list" does not make for a very useful comment ;-)
-
-> I also fail to see the connection to the patch set as whole.
-
-PATCH 3/3 needs a way to skip the idr_replace call under some circumstances, and this seemed like a cleaner solution than passing around additional flags, that also fixed the comment/code mismatch.
-
-Alexander
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+/Jarkko
