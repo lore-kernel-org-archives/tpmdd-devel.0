@@ -1,13 +1,14 @@
-From: <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+From: Laurent Bigonville <bigon-8fiUuRrzOP0dnm+yROfE0A@public.gmane.org>
 Subject: Re: tpm device not showing up in /dev anymore
-Date: Tue, 29 Aug 2017 16:00:49 +0000
-Message-ID: <dcad0104c46d4d5f88e642862bdb42c2@MUCSE603.infineon.com>
+Date: Tue, 29 Aug 2017 18:35:26 +0200
+Message-ID: <47c4300b-8701-79a6-1c58-3a5853f4c5e3@debian.org>
 References: <f9526f55-df96-64fc-a4d6-877ce04e7156@debian.org>
+ <dcad0104c46d4d5f88e642862bdb42c2@MUCSE603.infineon.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"; Format="flowed"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <f9526f55-df96-64fc-a4d6-877ce04e7156-8fiUuRrzOP0dnm+yROfE0A@public.gmane.org>
+In-Reply-To: <dcad0104c46d4d5f88e642862bdb42c2-nFblLGNE8XKJSz+rYg/bSJowlv4uC7bZ@public.gmane.org>
 Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
@@ -17,34 +18,47 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: bigon-8fiUuRrzOP0dnm+yROfE0A@public.gmane.org
+To: Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi Laurent,
-
-> Since the version 4.12 (I also tested with 4.13-rc5) of the kernel, the tpm
-> device is not showing up in /dev/. In dmesg I can see the following
-> lines:
-
-Do you know what TPM you are using exactly (model number, firmware version, etc.)?
-
-> > [    1.772153] tpm_tis 00:06: 1.2 TPM (device-id 0x6871, rev-id 1) [
-> > 1.788106] tpm tpm0: tpm_transmit: tpm_send: error -5 [    1.788146]
-> > tpm tpm0: A TPM error (-5) occurred attempting to determine the
-> > timeouts [    1.788194] tpm_tis: probe of 00:06 failed with error -5 [
-> > 1.796865] ima: No TPM chip found, activating TPM-bypass! (rc=-19) [
-> > 10.085245] tpm_inf_pnp 00:06: Found TPM with ID IFX0102
-> 
-> If I'm reverting to 4.11, everything is working fine.
-
-Error -5 is EIO, which is as far as I can tell only used in few places (related to expect flag checks) in the tpm_transmit code path that first reports that error. If this is what causes the problem, then it only tells us that the TPM did not understand the command correctly (it received not enough/too much data). I cannot see any obvious changes between 4.11 and 4.12 that might affect the behavior in that region.
-
-> An idea how to troubleshoot this?
-
-Can you run git bisect on the changes between 4.11 and 4.12, so that we find the offending commit? It is probably sufficient to limit the search to commits that touch something in drivers/char/tpm.
-
-Alexander
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+TGUgMjkvMDgvMTcgw6AgMTg6MDAsIEFsZXhhbmRlci5TdGVmZmVuQGluZmluZW9uLmNvbSBhIMOp
+Y3JpdMKgOgo+IEhpIExhdXJlbnQsCgpIZWxsbyBBbGV4YW5kZXIsCgo+PiBTaW5jZSB0aGUgdmVy
+c2lvbiA0LjEyIChJIGFsc28gdGVzdGVkIHdpdGggNC4xMy1yYzUpIG9mIHRoZSBrZXJuZWwsIHRo
+ZSB0cG0KPj4gZGV2aWNlIGlzIG5vdCBzaG93aW5nIHVwIGluIC9kZXYvLiBJbiBkbWVzZyBJIGNh
+biBzZWUgdGhlIGZvbGxvd2luZwo+PiBsaW5lczoKPiBEbyB5b3Uga25vdyB3aGF0IFRQTSB5b3Ug
+YXJlIHVzaW5nIGV4YWN0bHkgKG1vZGVsIG51bWJlciwgZmlybXdhcmUgdmVyc2lvbiwgZXRjLik/
+CnRwbV92ZXJzaW9uIHNob3dzOgoKIyB0cG1fdmVyc2lvbgp4S++/vRNOwqAgVFBNIDEuMiBWZXJz
+aW9uIEluZm86CiDCoCBDaGlwIFZlcnNpb246wqDCoMKgwqDCoMKgwqAgMS4yLjMuNgogwqAgU3Bl
+YyBMZXZlbDrCoMKgwqDCoMKgwqDCoMKgwqAgMgogwqAgRXJyYXRhIFJldmlzaW9uOsKgwqDCoMKg
+IDAKIMKgIFRQTSBWZW5kb3IgSUQ6wqDCoMKgwqDCoMKgIFNOUwogwqAgVFBNIFZlcnNpb246wqDC
+oMKgwqDCoMKgwqDCoCAwMTAxMDAwMAogwqAgTWFudWZhY3R1cmVyIEluZm86wqDCoCA1MzRlNTMw
+MAoKCj4KPj4+IFsgICAgMS43NzIxNTNdIHRwbV90aXMgMDA6MDY6IDEuMiBUUE0gKGRldmljZS1p
+ZCAweDY4NzEsIHJldi1pZCAxKSBbCj4+PiAxLjc4ODEwNl0gdHBtIHRwbTA6IHRwbV90cmFuc21p
+dDogdHBtX3NlbmQ6IGVycm9yIC01IFsgICAgMS43ODgxNDZdCj4+PiB0cG0gdHBtMDogQSBUUE0g
+ZXJyb3IgKC01KSBvY2N1cnJlZCBhdHRlbXB0aW5nIHRvIGRldGVybWluZSB0aGUKPj4+IHRpbWVv
+dXRzIFsgICAgMS43ODgxOTRdIHRwbV90aXM6IHByb2JlIG9mIDAwOjA2IGZhaWxlZCB3aXRoIGVy
+cm9yIC01IFsKPj4+IDEuNzk2ODY1XSBpbWE6IE5vIFRQTSBjaGlwIGZvdW5kLCBhY3RpdmF0aW5n
+IFRQTS1ieXBhc3MhIChyYz0tMTkpIFsKPj4+IDEwLjA4NTI0NV0gdHBtX2luZl9wbnAgMDA6MDY6
+IEZvdW5kIFRQTSB3aXRoIElEIElGWDAxMDIKPj4gSWYgSSdtIHJldmVydGluZyB0byA0LjExLCBl
+dmVyeXRoaW5nIGlzIHdvcmtpbmcgZmluZS4KPiBFcnJvciAtNSBpcyBFSU8sIHdoaWNoIGlzIGFz
+IGZhciBhcyBJIGNhbiB0ZWxsIG9ubHkgdXNlZCBpbiBmZXcgcGxhY2VzIChyZWxhdGVkIHRvIGV4
+cGVjdCBmbGFnIGNoZWNrcykgaW4gdGhlIHRwbV90cmFuc21pdCBjb2RlIHBhdGggdGhhdCBmaXJz
+dCByZXBvcnRzIHRoYXQgZXJyb3IuIElmIHRoaXMgaXMgd2hhdCBjYXVzZXMgdGhlIHByb2JsZW0s
+IHRoZW4gaXQgb25seSB0ZWxscyB1cyB0aGF0IHRoZSBUUE0gZGlkIG5vdCB1bmRlcnN0YW5kIHRo
+ZSBjb21tYW5kIGNvcnJlY3RseSAoaXQgcmVjZWl2ZWQgbm90IGVub3VnaC90b28gbXVjaCBkYXRh
+KS4gSSBjYW5ub3Qgc2VlIGFueSBvYnZpb3VzIGNoYW5nZXMgYmV0d2VlbiA0LjExIGFuZCA0LjEy
+IHRoYXQgbWlnaHQgYWZmZWN0IHRoZSBiZWhhdmlvciBpbiB0aGF0IHJlZ2lvbi4KPgo+PiBBbiBp
+ZGVhIGhvdyB0byB0cm91Ymxlc2hvb3QgdGhpcz8KPiBDYW4geW91IHJ1biBnaXQgYmlzZWN0IG9u
+IHRoZSBjaGFuZ2VzIGJldHdlZW4gNC4xMSBhbmQgNC4xMiwgc28gdGhhdCB3ZSBmaW5kIHRoZSBv
+ZmZlbmRpbmcgY29tbWl0PyBJdCBpcyBwcm9iYWJseSBzdWZmaWNpZW50IHRvIGxpbWl0IHRoZSBz
+ZWFyY2ggdG8gY29tbWl0cyB0aGF0IHRvdWNoIHNvbWV0aGluZyBpbiBkcml2ZXJzL2NoYXIvdHBt
+LgoKSSdsbCB0cnkgYW5kIGtlZXAgeW91IHBvc3RlZC4KClRoYW5rcyBmb3IgeW91ciBhbnN3ZXIu
+CgpMYXVyZW50IEJpZ29udmlsbGUKCj4KPiBBbGV4YW5kZXIKCgotLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0KQ2hlY2sgb3V0IHRoZSB2aWJyYW50IHRlY2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29y
+bGQncyBtb3N0CmVuZ2FnaW5nIHRlY2ggc2l0ZXMsIFNsYXNoZG90Lm9yZyEgaHR0cDovL3NkbS5s
+aW5rL3NsYXNoZG90Cl9fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
+X19fCnRwbWRkLWRldmVsIG1haWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3Jn
+ZS5uZXQKaHR0cHM6Ly9saXN0cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQt
+ZGV2ZWwK
