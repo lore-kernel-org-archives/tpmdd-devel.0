@@ -1,19 +1,14 @@
-From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Subject: Re: [PATCH RESEND 3/3] tpm-chip: Export TPM device to
- user space even when startup failed
-Date: Tue, 29 Aug 2017 15:53:17 +0200
-Message-ID: <E1DD9935-818F-456B-98B3-2103A6799E27@gmx.de>
-References: <20170824083714.10016-1-Alexander.Steffen@infineon.com>
- <20170824083714.10016-4-Alexander.Steffen@infineon.com>
- <20170825172021.lw3ycxqw63ubrcm2@linux.intel.com>
- <adaaeae32ba64d979abfc4b758c63fc0@MUCSE603.infineon.com>
- <20170829125509.55aylht3ikes3bpy@linux.intel.com>
- <20170829151739.315ae581@kitsune.suse.cz>
+From: <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
+Subject: Re: tpm device not showing up in /dev anymore
+Date: Tue, 29 Aug 2017 16:00:49 +0000
+Message-ID: <dcad0104c46d4d5f88e642862bdb42c2@MUCSE603.infineon.com>
+References: <f9526f55-df96-64fc-a4d6-877ce04e7156@debian.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170829151739.315ae581-6hIufAJW0g4CVLCxKZUutA@public.gmane.org>
+In-Reply-To: <f9526f55-df96-64fc-a4d6-877ce04e7156-8fiUuRrzOP0dnm+yROfE0A@public.gmane.org>
+Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -22,60 +17,34 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, =?ISO-8859-1?Q?Michal_Such=E1nek?= <msuchanek-l3A5Bk7waGM@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: bigon-8fiUuRrzOP0dnm+yROfE0A@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-VGhhYmtzIE1pY2hhbCEKCkFtIDI5LiBBdWd1c3QgMjAxNyAxNToxNzozOSBNRVNaIHNjaHJpZWIg
-Ik1pY2hhbCBTdWNow6FuZWsiIDxtc3VjaGFuZWtAc3VzZS5kZT46Cj5IZWxsbywKPgo+T24gVHVl
-LCAyOSBBdWcgMjAxNyAxNTo1NTowOSArMDMwMAo+SmFya2tvIFNha2tpbmVuIDxqYXJra28uc2Fr
-a2luZW5AbGludXguaW50ZWwuY29tPiB3cm90ZToKPgo+PiBPbiBNb24sIEF1ZyAyOCwgMjAxNyBh
-dCAwNToxNTo1OFBNICswMDAwLAo+PiBBbGV4YW5kZXIuU3RlZmZlbkBpbmZpbmVvbi5jb20gd3Jv
-dGU6Cj4+ID4gQnV0IGlzIHRoYXQganVzdCBiZWNhdXNlIG5vYm9keSBib3RoZXJlZCB0byBpbXBs
-ZW1lbnQgdGhlIG5lY2Vzc2FyeQo+PiA+IGxvZ2ljIG9yIGZvciBzb21lIG90aGVyIHJlYXNvbj8g
-IAo+PiAKPj4gV2UgZG8gbm90IHdhbnQgdXNlciBzcGFjZSB0byBhY2Nlc3MgYnJva2VuIGhhcmR3
-YXJlLiBJdCdzIGEgaHVnZSByaXNrCj4+IGZvciBzeXN0ZW0gc3RhYmlsaXR5IGFuZCBwb3RlbnRp
-YWxseSBjb3VsZCBiZSB1c2VkIGZvciBldmlsIHB1cnBvc2VzLgo+PiAKPj4gVGhpcyBpcyBub3Qg
-Z29pbmcgdG8gbWFpbmxpbmUgYXMgaXQgaXMgbm90IHN1aXRhYmxlIGZvciBnZW5lcmFsCj4+IGNv
-bnN1bXB0aW9uLiBZb3UgbXVzdCB1c2UgYSBwYXRjaGVkIGtlcm5lbCBpZiB5b3Ugd2FudCB0aGlz
-Lgo+PiAKPj4gL0phcmtrbwo+PiAKPgo+SXQgaGFzIGJlZW4gcG9pbnRlZCBvdXQgdGhhdCB1c2Vy
-c3BhY2UgYXBwbGljYXRpb25zIHRoYXQgdXNlIGRpcmVjdCBJTwo+YWNjZXNzIGV4aXN0IGZvciB0
-aGUgcHVycG9zZS4gU28gdXNpbmcgYSBrZXJuZWwgZHJpdmVyIGlzIGFuCj5pbXByb3ZlbWVudCBv
-dmVyIHRoYXQgaWYgdGhlIGludGVyZmFjZSBpcyBvdGhlcndpc2Ugc2FuZS4KKzEKCj4KPldoYXQg
-ZG8geW91IGV4cGVjdCBpcyB0aGUgcG90ZW50aWFsIGZvciBpbnN0YWJpbGl0eSBvciBldmlsIHVz
-ZT8KPgo+V2l0aCBhIGtlcm5lbCBkcml2ZXIgYXJiaXRyYXRpbmcgdGhlIGJ1cyBhY2Nlc3MgYXMg
-aXQgd291bGQgaW4gYW55Cj5vdGhlciBjYXNlIEkgZG8gbm90IHNlZSBtdWNoIHBvdGVudGlhbCBm
-b3IgaW5zdGFiaWxpdHkuIAoKRXhhY3RseS4KIAoKPklmIHRoZXJlIGFyZQo+Y2FzZXMgd2hlbiB0
-aGUgYXJiaXRyYXRpb24gZmFpbHMgdGhleSBjYW4gc3VyZWx5IGJlIG1vcmUgbGlrZWx5Cj50cmln
-Z2VyZWQgaW4gY2FzZXMgb3RoZXIgdGhhbiB1c2Vyc3BhY2Ugc2VuZGluZyBhcmJpdHJhcnkgcmVx
-dWVzdHMgdG8gYQo+ZGV2aWNlIHdoaWNoIGlzIGluIGEgc3RhdGUgdGhlIGtlcm5lbCBkb2VzIG5v
-dCBzdXBwb3J0IGJ1dCBvdGhlcndpc2UKPnJlc3BvbnNpdmUuCgpJdHMgdGhlIHNhbWUgYXMgd2l0
-aCBldmVyeSBvdGhlciBkZXZpY2UgLSBhcyBsb25nIGFzIGl0IGNvbW11bmljYXRlcyBsaWtlIGEg
-dHBtLCB0YWxrcyBsaWtlIGEgdHBtLCBiZWhhdmVzIGxpa2UgYSB0cG0gLSBpdCdzIGEgdHBtLiAK
-RXZlbiBpZiB0aGUga2VybmVsIGRvZXMgbm90IHJlY29nbml6ZSB0aGUgdHBtJ3MgaW50ZXJuYWwg
-c3RhdGUuCgoKPklmIHlvdSByZWFsbHkgdGhpbmsgdGhhdCBhY2Nlc3NpbmcgYSBkZXZpY2UgdGhh
-dCBpcyBpbiB1bnN1cHBvcnRlZAo+c3RhdGUgYXQgYm9vdCAoYXMgb3Bwb3NlZCB0byBnZXR0aW5n
-IHVudG8gdW5zdXBwb3J0ZWQgc3RhdGUgZHVyaW5nCj5kZXZpY2Ugb3BlcmF0aW9uIGFmdGVyIGJv
-b3QpIGlzIGEgcmVhbCBwcm9ibGVtIGl0IGNhbiBiZSBzZWxlY3RhYmxlIGFzCj5jb21waWxlIHRp
-bWUgb3B0aW9uIHNvIHBlb3BsZSB3aG8gZG8gbm90IHdhbnQgdGhlIGNvZGUgZG8gbm90IGdldCBp
-dC4KCkkgd291bGQgbW9yZSBmYXZvciBhIG1vZHVsZSBvcHRpb24sIApidXQgaG9uZXN0bHkgSSBk
-b24ndCBzZWUgYSByZWFzb24gdG8gbm90IHB1bGwgdGhpcyBjb2RlIGluLCBhcyBpdCBpcy4KTWF5
-YmUgbWFyayB0aGUga2VybmVsIGFzIHRhaW50ZWQgaWYgeW91IHRoaW5rIGl0IGlzIGFuIGlzc3Vl
-LgoKQWRkaW5nIHRoaXMgYXMgYSBvdXQgb2YgdHJlZSBwYXRjaCBpcyBmYXIgZnJvbSB1c2VyZnJp
-ZW5kbHkuCklmIHRoZXJlIGlzIGEgY2hhbmNlIHRvIGRlYnVnIGFuZCBmaXggYSAidW5rbm93biIg
-c3RhdGUgdXNpbmcgdGhlIGtlcm5lbCBhcyB0aGUgY29tbXVuaWNhdGlvbiBsYXllciwgSSB3b3Vs
-ZCBsaWtlIHRvIHVzZSB0aGlzIHdheS4KCgpQZXRlcgoKPgo+VGhhbmtzCj4KPk1pY2hhbAo+Cj4t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0KPkNoZWNrIG91dCB0aGUgdmlicmFudCB0ZWNoIGNvbW11bml0
-eSBvbiBvbmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAo+ZW5nYWdpbmcgdGVjaCBzaXRlcywgU2xhc2hk
-b3Qub3JnISBodHRwOi8vc2RtLmxpbmsvc2xhc2hkb3QKPl9fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fCj50cG1kZC1kZXZlbCBtYWlsaW5nIGxpc3QKPnRwbWRk
-LWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldAo+aHR0cHM6Ly9saXN0cy5zb3VyY2Vmb3JnZS5u
-ZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwKCi0tIApTZW50IGZyb20gbXkgbW9iaWxlCgot
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0KQ2hlY2sgb3V0IHRoZSB2aWJyYW50IHRlY2ggY29tbXVuaXR5
-IG9uIG9uZSBvZiB0aGUgd29ybGQncyBtb3N0CmVuZ2FnaW5nIHRlY2ggc2l0ZXMsIFNsYXNoZG90
-Lm9yZyEgaHR0cDovL3NkbS5saW5rL3NsYXNoZG90Cl9fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fX19fX19fX19fX19fX19fCnRwbWRkLWRldmVsIG1haWxpbmcgbGlzdAp0cG1kZC1kZXZl
-bEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9saXN0cy5zb3VyY2Vmb3JnZS5uZXQvbGlz
-dHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwK
+Hi Laurent,
+
+> Since the version 4.12 (I also tested with 4.13-rc5) of the kernel, the tpm
+> device is not showing up in /dev/. In dmesg I can see the following
+> lines:
+
+Do you know what TPM you are using exactly (model number, firmware version, etc.)?
+
+> > [    1.772153] tpm_tis 00:06: 1.2 TPM (device-id 0x6871, rev-id 1) [
+> > 1.788106] tpm tpm0: tpm_transmit: tpm_send: error -5 [    1.788146]
+> > tpm tpm0: A TPM error (-5) occurred attempting to determine the
+> > timeouts [    1.788194] tpm_tis: probe of 00:06 failed with error -5 [
+> > 1.796865] ima: No TPM chip found, activating TPM-bypass! (rc=-19) [
+> > 10.085245] tpm_inf_pnp 00:06: Found TPM with ID IFX0102
+> 
+> If I'm reverting to 4.11, everything is working fine.
+
+Error -5 is EIO, which is as far as I can tell only used in few places (related to expect flag checks) in the tpm_transmit code path that first reports that error. If this is what causes the problem, then it only tells us that the TPM did not understand the command correctly (it received not enough/too much data). I cannot see any obvious changes between 4.11 and 4.12 that might affect the behavior in that region.
+
+> An idea how to troubleshoot this?
+
+Can you run git bisect on the changes between 4.11 and 4.12, so that we find the offending commit? It is probably sufficient to limit the search to commits that touch something in drivers/char/tpm.
+
+Alexander
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
