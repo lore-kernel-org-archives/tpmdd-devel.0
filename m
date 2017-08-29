@@ -1,16 +1,14 @@
 From: <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: Re: [PATCH RESEND 2/3] tpm-chip: Return TPM error
- codes from auto_startup functions
-Date: Tue, 29 Aug 2017 12:11:20 +0000
-Message-ID: <68ebc7c2346e4db3bd5a7196677ee880@MUCSE603.infineon.com>
-References: <20170824083714.10016-1-Alexander.Steffen@infineon.com>
- <20170824083714.10016-3-Alexander.Steffen@infineon.com>
- <20170825170607.wfnr5y5zres2n42r@linux.intel.com>
+Subject: Re: [PATCH v3 0/2] tpm_tis_spi: Use DMA-safe memory
+Date: Tue, 29 Aug 2017 12:14:37 +0000
+Message-ID: <9aea582eccbe4655b5de487dacf7c745@MUCSE603.infineon.com>
+References: <20170824082745.9372-1-Alexander.Steffen@infineon.com>
+ <20170826112259.ypwtqbwakyfdqkzo@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170825170607.wfnr5y5zres2n42r-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+In-Reply-To: <20170826112259.ypwtqbwakyfdqkzo-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
@@ -20,102 +18,55 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
+To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, benoit.houyere-qxv4g6HH51o@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-> > diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-> > index a353b7a..f20fcb7 100644
-> > --- a/drivers/char/tpm/tpm-chip.c
-> > +++ b/drivers/char/tpm/tpm-chip.c
-> > @@ -404,8 +404,10 @@ int tpm_chip_register(struct tpm_chip *chip)
-> >  			rc = tpm2_auto_startup(chip);
-> >  		else
-> >  			rc = tpm1_auto_startup(chip);
-> > -		if (rc)
-> > +		if (rc < 0)
-> >  			return rc;
-> > +		else if (rc > 0)
-> > +			return -ENODEV;
-> 
-> So what good this change makes in the end? I'm not sure I'm following.
-
-This is just refactoring the code without changing the functionality. Before this change, tpm*_auto_startup could only return negative error codes (or 0 for success). With this change, tpm*_auto_startup can also return positive errors codes for TPM errors (but still 0 for success). Therefore, tpm_chip_register, the only caller of tpm*_auto_startup, now needs to convert positive error codes to -ENODEV, so that the external behavior is unchanged.
-
-> >  	}
+> On Thu, Aug 24, 2017 at 10:27:43AM +0200, Alexander Steffen wrote:
+> > The documentation says that DMA-safe memory is required for SPI
+> transfers.
+> > The I/O buffers passed in by the caller can be allocated anywhere,
+> > including on the stack, which is not DMA-safe. So the data needs to be
+> > copied to separate, DMA-safe buffers.
 > >
-> >  	tpm_sysfs_add_device(chip);
-> > diff --git a/drivers/char/tpm/tpm-interface.c
-> > b/drivers/char/tpm/tpm-interface.c
-> > index 78fb41d..fe11f2a 100644
-> > --- a/drivers/char/tpm/tpm-interface.c
-> > +++ b/drivers/char/tpm/tpm-interface.c
-> > @@ -1000,7 +1000,8 @@ EXPORT_SYMBOL_GPL(tpm_do_selftest);
-> >   *                     sequence
-> >   * @chip: TPM chip to use
-> >   *
-> > - * Returns 0 on success, < 0 in case of fatal error.
-> > + * Returns 0 on success, < 0 in case of fatal error or a value > 0
-> > + representing
-> > + * a TPM error code.
-> >   */
-> 
-> A nitpick.
-> 
-> According to https://www.kernel.org/doc/Documentation/kernel-doc-nano-
-> HOWTO.txt
-> you ought to use "Return:" keyword ;-)
-> 
-> I would favor here:
-> 
->   "Return: same as with tpm_transmit_cmd()"
-
-Agreed. I will fix that together with the rest, once the discussions for the other patches in the series have come to a conclusion.
-
-> >  int tpm1_auto_startup(struct tpm_chip *chip)  { @@ -1015,10 +1016,7
-> > @@ int tpm1_auto_startup(struct tpm_chip *chip)
-> >  		goto out;
-> >  	}
+> > We did not see any DMA-related issues on our test systems, even
+> > without DMA-safe buffers. But this might simply be due to the fact
+> > that the SPI transfer size is rather small, so our systems do not
+> > bother to set up DMA transfers. Other systems might do so.
 > >
-> > -	return rc;
-> >  out:
-> > -	if (rc > 0)
-> > -		rc = -ENODEV;
-> >  	return rc;
-> >  }
+> > v2:
+> > - Updated commit message with more explanations.
 > >
-> > diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-> > index e1a41b7..54a3123 100644
-> > --- a/drivers/char/tpm/tpm2-cmd.c
-> > +++ b/drivers/char/tpm/tpm2-cmd.c
-> > @@ -1074,7 +1074,8 @@ static int tpm2_get_cc_attrs_tbl(struct tpm_chip
-> *chip)
-> >   *                     sequence
-> >   * @chip: TPM chip to use
-> >   *
-> > - * Returns 0 on success, < 0 in case of fatal error.
-> > + * Returns 0 on success, < 0 in case of fatal error or a value > 0
-> > + representing
-> > + * a TPM error code.
-> >   */
-> >  int tpm2_auto_startup(struct tpm_chip *chip)  { @@ -1109,8 +1110,6 @@
-> > int tpm2_auto_startup(struct tpm_chip *chip)
-> >  	rc = tpm2_get_cc_attrs_tbl(chip);
+> > v3:
+> > - Split into two patches, one for making the buffers DMA-safe and another
+> >   for using only a single buffer.
 > >
-> >  out:
-> > -	if (rc > 0)
-> > -		rc = -ENODEV;
-> >  	return rc;
-> >  }
+> > Alexander Steffen (2):
+> >   tpm_tis_spi: Use DMA-safe memory for SPI transfers
+> >   tpm_tis_spi: Use a single buffer for SPI transfers
+> >
+> >  drivers/char/tpm/tpm_tis_spi.c | 32 ++++++++++++++++++--------------
+> >  1 file changed, 18 insertions(+), 14 deletions(-)
 > >
 > > --
 > > 2.7.4
 > >
 > 
-> At this point I can only see aero improvement how the driver works and a
-> very minor clean up.
-> 
-> /Jarkko
+> Needs to be CC linux-kernel and linux-security-module
+
+I will resend the patches there. Is this process of what patches to send where documented somewhere? MAINTAINERS mentions only tpmdd-devel.
+
+> and tested-by.
+
+I forgot to mention that before: Unless otherwise noted, everything that I submit has been tested with:
+
+- tpm_tis on x86_64 with LPC TPMs 1.2 and 2.0 (Infineon SLB 9660 and SLB 9665)
+- tpm_tis_spi on armv7l and aarch64 (Raspberry Pi 2 and 3) with SPI TPMs 1.2 and 2.0 (Infineon SLB 9670)
+- tpm_i2c_infineon on armv7l (Raspberry Pi 2) with I2C TPMs 1.2 (Infineon SLB 9635 and SLB 9645)
+
+Since those tests are fully automated, I'm happy to integrate more TPM chips, if anyone has got some for me ;-)
+
+To get some more test coverage for this SPI-specific change, maybe Benoit or Christophe can rerun their tests? Though this change probably depends more on the platform than on the TPM. As far as we could tell from the code, our Raspberry Pis will never use DMA for the SPI transfers to the TPM, because those transfers are too small.
 
 Alexander
 ------------------------------------------------------------------------------
