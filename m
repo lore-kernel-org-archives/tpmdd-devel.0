@@ -1,59 +1,67 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH RESEND 1/2] tpm-dev-common: Reject too short writes
-Date: Wed, 30 Aug 2017 13:40:59 +0300
-Message-ID: <20170830104059.sglgybn3fxh24qjr@linux.intel.com>
-References: <20170824083545.13280-1-Alexander.Steffen@infineon.com>
- <20170824083545.13280-2-Alexander.Steffen@infineon.com>
- <20170825165451.b7lv7t5w3nhbz7da@linux.intel.com>
- <6039fbecc07044a88706a41441f62d18@MUCSE603.infineon.com>
+From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+Subject: Re: [PATCH RESEND 3/3] tpm-chip: Export TPM device to
+ user space even when startup failed
+Date: Wed, 30 Aug 2017 12:41:51 +0200
+Message-ID: <4722067A-082C-40E7-90ED-29EFB3228765@gmx.de>
+References: <20170824083714.10016-1-Alexander.Steffen@infineon.com>
+ <20170824083714.10016-4-Alexander.Steffen@infineon.com>
+ <20170825172021.lw3ycxqw63ubrcm2@linux.intel.com>
+ <adaaeae32ba64d979abfc4b758c63fc0@MUCSE603.infineon.com>
+ <20170829125509.55aylht3ikes3bpy@linux.intel.com>
+ <20170829151739.315ae581@kitsune.suse.cz>
+ <20170830101510.rlkh2p3zecfsrhgl@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <stable-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <6039fbecc07044a88706a41441f62d18@MUCSE603.infineon.com>
-Sender: stable-owner@vger.kernel.org
-To: Alexander.Steffen@infineon.com
-Cc: tpmdd-devel@lists.sourceforge.net, stable@vger.kernel.org
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170830101510.rlkh2p3zecfsrhgl-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, =?ISO-8859-1?Q?Michal_Such=E1nek?= <msuchanek-l3A5Bk7waGM@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Aug 28, 2017 at 05:11:00PM +0000, Alexander.Steffen@infineon.com wrote:
-> > > diff --git a/drivers/char/tpm/tpm-dev-common.c
-> > > b/drivers/char/tpm/tpm-dev-common.c
-> > > index 610638a..c39b581 100644
-> > > --- a/drivers/char/tpm/tpm-dev-common.c
-> > > +++ b/drivers/char/tpm/tpm-dev-common.c
-> > > @@ -119,7 +119,7 @@ ssize_t tpm_common_write(struct file *file, const
-> > char __user *buf,
-> > >  		return -EPIPE;
-> > >  	}
-> > >  	out_size = tpm_transmit(priv->chip, space, priv->data_buffer,
-> > > -				sizeof(priv->data_buffer), 0);
-> > > +				sizeof(priv->data_buffer), in_size, 0);
-> > 
-> > Why you couldn't just
-> > 
-> > unsigned int bufsiz;
-> > 
-> > /* ... */
-> > 
-> > bufsiz = sizeof(priv->data_buffer);
-> > if (in_size < bufsiz)
-> > 	bufsiz = in_size;
-> > 
-> > out_size = tpm_transmit(priv->chip, space, priv->data_buffer, bufsiz, 0);
-> 
-> Because the code needs to know both how large the buffer is (in order to avoid buffer overflows when writing to it) and how much of the data in the buffer is valid (in order not to send random junk to the TPM). This is made more explicit in PATCH 2/2.
-> 
-> Your example fails as soon as the response is longer than the command.
-> 
-> Alexander
-
-Got you.
-
-Do the comparison for count tpm-dev-common.c as it is the only call site
-where this is needed instead of scrabbling with the parameters. In other
-call sites this is unnecessary at this point.
-
-This will also make backporting a factor more sleek.
-
-/Jarkko
+CgpBbSAzMC4gQXVndXN0IDIwMTcgMTI6MTU6MTAgTUVTWiBzY2hyaWViIEphcmtrbyBTYWtraW5l
+biA8amFya2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbT46Cj5PbiBUdWUsIEF1ZyAyOSwgMjAx
+NyBhdCAwMzoxNzozOVBNICswMjAwLCBNaWNoYWwgU3VjaMOhbmVrIHdyb3RlOgo+PiBIZWxsbywK
+Pj4gCj4+IE9uIFR1ZSwgMjkgQXVnIDIwMTcgMTU6NTU6MDkgKzAzMDAKPj4gSmFya2tvIFNha2tp
+bmVuIDxqYXJra28uc2Fra2luZW5AbGludXguaW50ZWwuY29tPiB3cm90ZToKPj4gCj4+ID4gT24g
+TW9uLCBBdWcgMjgsIDIwMTcgYXQgMDU6MTU6NThQTSArMDAwMCwKPj4gPiBBbGV4YW5kZXIuU3Rl
+ZmZlbkBpbmZpbmVvbi5jb20gd3JvdGU6Cj4+ID4gPiBCdXQgaXMgdGhhdCBqdXN0IGJlY2F1c2Ug
+bm9ib2R5IGJvdGhlcmVkIHRvIGltcGxlbWVudCB0aGUKPm5lY2Vzc2FyeQo+PiA+ID4gbG9naWMg
+b3IgZm9yIHNvbWUgb3RoZXIgcmVhc29uPyAgCj4+ID4gCj4+ID4gV2UgZG8gbm90IHdhbnQgdXNl
+ciBzcGFjZSB0byBhY2Nlc3MgYnJva2VuIGhhcmR3YXJlLiBJdCdzIGEgaHVnZQo+cmlzawo+PiA+
+IGZvciBzeXN0ZW0gc3RhYmlsaXR5IGFuZCBwb3RlbnRpYWxseSBjb3VsZCBiZSB1c2VkIGZvciBl
+dmlsCj5wdXJwb3Nlcy4KPj4gPiAKPj4gPiBUaGlzIGlzIG5vdCBnb2luZyB0byBtYWlubGluZSBh
+cyBpdCBpcyBub3Qgc3VpdGFibGUgZm9yIGdlbmVyYWwKPj4gPiBjb25zdW1wdGlvbi4gWW91IG11
+c3QgdXNlIGEgcGF0Y2hlZCBrZXJuZWwgaWYgeW91IHdhbnQgdGhpcy4KPj4gPiAKPj4gPiAvSmFy
+a2tvCj4+ID4gCj4+IAo+PiBJdCBoYXMgYmVlbiBwb2ludGVkIG91dCB0aGF0IHVzZXJzcGFjZSBh
+cHBsaWNhdGlvbnMgdGhhdCB1c2UgZGlyZWN0Cj5JTwo+PiBhY2Nlc3MgZXhpc3QgZm9yIHRoZSBw
+dXJwb3NlLiBTbyB1c2luZyBhIGtlcm5lbCBkcml2ZXIgaXMgYW4KPj4gaW1wcm92ZW1lbnQgb3Zl
+ciB0aGF0IGlmIHRoZSBpbnRlcmZhY2UgaXMgb3RoZXJ3aXNlIHNhbmUuCj4+IAo+PiBXaGF0IGRv
+IHlvdSBleHBlY3QgaXMgdGhlIHBvdGVudGlhbCBmb3IgaW5zdGFiaWxpdHkgb3IgZXZpbCB1c2U/
+Cj4KPkJ5IGRlZmluaXRpb24gdGhlIHVzZSBvZiBicm9rZW4gaGFyZHdhcmUgY2FuIGhhdmUgdW5w
+cmVkaWN0YWJsZQo+ZWZmZWN0cy4KPlVzZSBhIHBhdGNoZWQga2VybmVsIGlmIHlvdSB3YW50IHRv
+IGRvIGl0LgoKSWYgdGhlIHMubS5hLnIudCBzZWxmdGVzdCBvZiB5b3VyIGhhcmQgZGlzayBmYWls
+cywgeW91IGNhbiBzdGlsbCBhY2Nlc3MgaXQsIGV2ZW4gdGhvdWdoIHRoZSBodyBzZWxmdGVzdCBz
+YXlzIGl0IGlzIGJyb2tlbi4KU2FtZSBzaXR1YXRpb24uCgoKCj4KPi9KYXJra28KPgo+LS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tCj5DaGVjayBvdXQgdGhlIHZpYnJhbnQgdGVjaCBjb21tdW5pdHkgb24g
+b25lIG9mIHRoZSB3b3JsZCdzIG1vc3QKPmVuZ2FnaW5nIHRlY2ggc2l0ZXMsIFNsYXNoZG90Lm9y
+ZyEgaHR0cDovL3NkbS5saW5rL3NsYXNoZG90Cj5fX19fX19fX19fX19fX19fX19fX19fX19fX19f
+X19fX19fX19fX19fX19fX19fXwo+dHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0Cj50cG1kZC1kZXZl
+bEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKPmh0dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0L2xp
+c3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCgotLSAKU2VudCBmcm9tIG15IG1vYmlsZQoKLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tCkNoZWNrIG91dCB0aGUgdmlicmFudCB0ZWNoIGNvbW11bml0eSBvbiBv
+bmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAplbmdhZ2luZyB0ZWNoIHNpdGVzLCBTbGFzaGRvdC5vcmch
+IGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdApfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
+X19fX19fX19fX19fX19fXwp0cG1kZC1kZXZlbCBtYWlsaW5nIGxpc3QKdHBtZGQtZGV2ZWxAbGlz
+dHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0L2xpc3RzL2xp
+c3RpbmZvL3RwbWRkLWRldmVsCg==
