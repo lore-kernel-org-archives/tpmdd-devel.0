@@ -1,83 +1,59 @@
-From: Michal =?UTF-8?B?U3VjaMOhbmVr?= <msuchanek@suse.de>
-Subject: Re: [tpmdd-devel] [PATCH RESEND 3/3] tpm-chip: Export TPM device to
- user space even when startup failed
-Date: Wed, 30 Aug 2017 12:34:16 +0200
-Message-ID: <20170830123416.29117269@kitsune.suse.cz>
-References: <20170824083714.10016-1-Alexander.Steffen@infineon.com>
-        <20170824083714.10016-4-Alexander.Steffen@infineon.com>
-        <20170825172021.lw3ycxqw63ubrcm2@linux.intel.com>
-        <adaaeae32ba64d979abfc4b758c63fc0@MUCSE603.infineon.com>
-        <20170829125509.55aylht3ikes3bpy@linux.intel.com>
-        <20170829151739.315ae581@kitsune.suse.cz>
-        <20170830101510.rlkh2p3zecfsrhgl@linux.intel.com>
-        <20170830102002.nufnr77whz5jzwfr@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH RESEND 1/2] tpm-dev-common: Reject too short writes
+Date: Wed, 30 Aug 2017 13:40:59 +0300
+Message-ID: <20170830104059.sglgybn3fxh24qjr@linux.intel.com>
+References: <20170824083545.13280-1-Alexander.Steffen@infineon.com>
+ <20170824083545.13280-2-Alexander.Steffen@infineon.com>
+ <20170825165451.b7lv7t5w3nhbz7da@linux.intel.com>
+ <6039fbecc07044a88706a41441f62d18@MUCSE603.infineon.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8BIT
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170830102002.nufnr77whz5jzwfr@linux.intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: Alexander.Steffen@infineon.com, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+Content-Type: text/plain; charset=us-ascii
+Return-path: <stable-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <6039fbecc07044a88706a41441f62d18@MUCSE603.infineon.com>
+Sender: stable-owner@vger.kernel.org
+To: Alexander.Steffen@infineon.com
+Cc: tpmdd-devel@lists.sourceforge.net, stable@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, 30 Aug 2017 13:20:02 +0300
-Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> wrote:
-
-> On Wed, Aug 30, 2017 at 01:15:10PM +0300, Jarkko Sakkinen wrote:
-> > On Tue, Aug 29, 2017 at 03:17:39PM +0200, Michal Suchánek wrote:  
-> > > Hello,
-> > > 
-> > > On Tue, 29 Aug 2017 15:55:09 +0300
-> > > Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> wrote:
-> > >   
-> > > > On Mon, Aug 28, 2017 at 05:15:58PM +0000,
-> > > > Alexander.Steffen@infineon.com wrote:  
-> > > > > But is that just because nobody bothered to implement the
-> > > > > necessary logic or for some other reason?    
-> > > > 
-> > > > We do not want user space to access broken hardware. It's a
-> > > > huge risk for system stability and potentially could be used
-> > > > for evil purposes.
-> > > > 
-> > > > This is not going to mainline as it is not suitable for general
-> > > > consumption. You must use a patched kernel if you want this.
-> > > > 
-> > > > /Jarkko
-> > > >   
-> > > 
-> > > It has been pointed out that userspace applications that use
-> > > direct IO access exist for the purpose. So using a kernel driver
-> > > is an improvement over that if the interface is otherwise sane.
-> > > 
-> > > What do you expect is the potential for instability or evil use?  
+On Mon, Aug 28, 2017 at 05:11:00PM +0000, Alexander.Steffen@infineon.com wrote:
+> > > diff --git a/drivers/char/tpm/tpm-dev-common.c
+> > > b/drivers/char/tpm/tpm-dev-common.c
+> > > index 610638a..c39b581 100644
+> > > --- a/drivers/char/tpm/tpm-dev-common.c
+> > > +++ b/drivers/char/tpm/tpm-dev-common.c
+> > > @@ -119,7 +119,7 @@ ssize_t tpm_common_write(struct file *file, const
+> > char __user *buf,
+> > >  		return -EPIPE;
+> > >  	}
+> > >  	out_size = tpm_transmit(priv->chip, space, priv->data_buffer,
+> > > -				sizeof(priv->data_buffer), 0);
+> > > +				sizeof(priv->data_buffer), in_size, 0);
 > > 
-> > By definition the use of broken hardware can have unpredictable
-> > effects. Use a patched kernel if you want to do it.
+> > Why you couldn't just
 > > 
-> > /Jarkko  
+> > unsigned int bufsiz;
+> > 
+> > /* ... */
+> > 
+> > bufsiz = sizeof(priv->data_buffer);
+> > if (in_size < bufsiz)
+> > 	bufsiz = in_size;
+> > 
+> > out_size = tpm_transmit(priv->chip, space, priv->data_buffer, bufsiz, 0);
 > 
-> I.e. too many unknown unknowns for mainline.
+> Because the code needs to know both how large the buffer is (in order to avoid buffer overflows when writing to it) and how much of the data in the buffer is valid (in order not to send random junk to the TPM). This is made more explicit in PATCH 2/2.
 > 
-> I could consider a solution for the TPM error case on self-test that
-> allows only restricted subset of commands.
+> Your example fails as soon as the response is longer than the command.
 > 
-> The patch description did not go to *any* detail on how it is used so
-> practically it's unreviewable at this point. There's a big burder of
-> proof and now there's only hand waving.
-> 
-Hello,
+> Alexander
 
-there was a bug patched recently in which Linux was not sending the
-shutdown command on system shutdown. Presumably with this bug some TPMs
-consider being under attack and stop performing most functions.
-However, you should be able to read the log if this is implemented
-sanely. For that the TPM needs to be accessible.
+Got you.
 
-There are probably other cases when the TPM might be useless for system
-use but it might be useful to access it. For example, does Linux handle
-uninitialized TPMs?
+Do the comparison for count tpm-dev-common.c as it is the only call site
+where this is needed instead of scrabbling with the parameters. In other
+call sites this is unnecessary at this point.
 
-Thanks
+This will also make backporting a factor more sleek.
 
-Michal
+/Jarkko
