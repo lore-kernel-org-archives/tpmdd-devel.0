@@ -1,16 +1,16 @@
-From: Benoit HOUYERE <benoit.houyere-qxv4g6HH51o@public.gmane.org>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Subject: Re: [PATCH v3 0/2] tpm_tis_spi: Use DMA-safe memory
-Date: Wed, 30 Aug 2017 08:42:03 +0000
-Message-ID: <fe81962beaec4c6fa21ea90df0f01560@SFHDAG3NODE3.st.com>
+Date: Wed, 30 Aug 2017 13:08:47 +0300
+Message-ID: <20170830100847.2jrnzrzjugixq67z@linux.intel.com>
 References: <20170824082745.9372-1-Alexander.Steffen@infineon.com>
  <20170826112259.ypwtqbwakyfdqkzo@linux.intel.com>
  <9aea582eccbe4655b5de487dacf7c745@MUCSE603.infineon.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
 In-Reply-To: <9aea582eccbe4655b5de487dacf7c745-nFblLGNE8XKJSz+rYg/bSJowlv4uC7bZ@public.gmane.org>
-Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,68 +19,63 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: "Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org" <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>, "jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org" <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Christophe Henri RICARD <christophe-h.ricard-qxv4g6HH51o@public.gmane.org>
-Cc: "tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+To: Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-SGkgQWxleGFuZGVyLA0KDQpPYnZpb3VzbHksIHdlIGFncmVlIHRvIGNvdmVyIHZhbGlkYXRpb24g
-d2l0aCBTVE0gVFBNIHRvIGNvbmZpcm0geW91ciB1cGRhdGUuIA0KRm9sbG93aW5nIG15IGF2YWls
-YWJpbGl0eSwgSSBjYW5ub3Qgc3RhcnQgaXQgYmVmb3JlIG1pZCBvZiBTZXB0ZW1iZXIuIElzIGl0
-IGlubGluZSB3aXRoIHlvdXIgZXhwZWN0YXRpb24gPw0KDQpJZiBpdCdzIHRoZSBjYXNlLCBJIHdp
-bGwgc3RhcnQgOg0KLSB0cG1fdGlzX3NwaSBvbiBSYXNwYmVycnkgUEkgMw0KTmV4dCANCi0gdHBt
-X3RpcyBvbiBYODZfNjQNCg0KQ291bGQgeW91IHNlbmQgbWUgcGF0Y2ggZmlsZSBvciBsaW5rIHRv
-IGdldCBwYXRjaCA/DQoNCkJ5IHRha2luZyBSYXNwYmVycnkgUEkgMyBleGFtcGxlLCBIb3cgbWFu
-eSBCeXRlIGluIFNQSSB0cmFuc2ZlciBzaXplIGlzIG5lY2Vzc2FyeSB0byB1c2UgRE1BIHRyYW5z
-ZmVyID8NCg0KQmVzdCBSZWdhcmRzLA0KDQpCZW5vaXQNCg0KLS0tLS1PcmlnaW5hbCBNZXNzYWdl
-LS0tLS0NCkZyb206IEFsZXhhbmRlci5TdGVmZmVuQGluZmluZW9uLmNvbSBbbWFpbHRvOkFsZXhh
-bmRlci5TdGVmZmVuQGluZmluZW9uLmNvbV0gDQpTZW50OiBtYXJkaSAyOSBhb8O7dCAyMDE3IDE0
-OjE1DQpUbzogamFya2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbTsgQmVub2l0IEhPVVlFUkUg
-PGJlbm9pdC5ob3V5ZXJlQHN0LmNvbT47IENocmlzdG9waGUgSGVucmkgUklDQVJEIDxjaHJpc3Rv
-cGhlLWgucmljYXJkQHN0LmNvbT4NCkNjOiB0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5u
-ZXQNClN1YmplY3Q6IFJFOiBbUEFUQ0ggdjMgMC8yXSB0cG1fdGlzX3NwaTogVXNlIERNQS1zYWZl
-IG1lbW9yeQ0KDQo+IE9uIFRodSwgQXVnIDI0LCAyMDE3IGF0IDEwOjI3OjQzQU0gKzAyMDAsIEFs
-ZXhhbmRlciBTdGVmZmVuIHdyb3RlOg0KPiA+IFRoZSBkb2N1bWVudGF0aW9uIHNheXMgdGhhdCBE
-TUEtc2FmZSBtZW1vcnkgaXMgcmVxdWlyZWQgZm9yIFNQSQ0KPiB0cmFuc2ZlcnMuDQo+ID4gVGhl
-IEkvTyBidWZmZXJzIHBhc3NlZCBpbiBieSB0aGUgY2FsbGVyIGNhbiBiZSBhbGxvY2F0ZWQgYW55
-d2hlcmUsIA0KPiA+IGluY2x1ZGluZyBvbiB0aGUgc3RhY2ssIHdoaWNoIGlzIG5vdCBETUEtc2Fm
-ZS4gU28gdGhlIGRhdGEgbmVlZHMgdG8gDQo+ID4gYmUgY29waWVkIHRvIHNlcGFyYXRlLCBETUEt
-c2FmZSBidWZmZXJzLg0KPiA+DQo+ID4gV2UgZGlkIG5vdCBzZWUgYW55IERNQS1yZWxhdGVkIGlz
-c3VlcyBvbiBvdXIgdGVzdCBzeXN0ZW1zLCBldmVuIA0KPiA+IHdpdGhvdXQgRE1BLXNhZmUgYnVm
-ZmVycy4gQnV0IHRoaXMgbWlnaHQgc2ltcGx5IGJlIGR1ZSB0byB0aGUgZmFjdCANCj4gPiB0aGF0
-IHRoZSBTUEkgdHJhbnNmZXIgc2l6ZSBpcyByYXRoZXIgc21hbGwsIHNvIG91ciBzeXN0ZW1zIGRv
-IG5vdCANCj4gPiBib3RoZXIgdG8gc2V0IHVwIERNQSB0cmFuc2ZlcnMuIE90aGVyIHN5c3RlbXMg
-bWlnaHQgZG8gc28uDQo+ID4NCj4gPiB2MjoNCj4gPiAtIFVwZGF0ZWQgY29tbWl0IG1lc3NhZ2Ug
-d2l0aCBtb3JlIGV4cGxhbmF0aW9ucy4NCj4gPg0KPiA+IHYzOg0KPiA+IC0gU3BsaXQgaW50byB0
-d28gcGF0Y2hlcywgb25lIGZvciBtYWtpbmcgdGhlIGJ1ZmZlcnMgRE1BLXNhZmUgYW5kIGFub3Ro
-ZXINCj4gPiAgIGZvciB1c2luZyBvbmx5IGEgc2luZ2xlIGJ1ZmZlci4NCj4gPg0KPiA+IEFsZXhh
-bmRlciBTdGVmZmVuICgyKToNCj4gPiAgIHRwbV90aXNfc3BpOiBVc2UgRE1BLXNhZmUgbWVtb3J5
-IGZvciBTUEkgdHJhbnNmZXJzDQo+ID4gICB0cG1fdGlzX3NwaTogVXNlIGEgc2luZ2xlIGJ1ZmZl
-ciBmb3IgU1BJIHRyYW5zZmVycw0KPiA+DQo+ID4gIGRyaXZlcnMvY2hhci90cG0vdHBtX3Rpc19z
-cGkuYyB8IDMyIA0KPiA+ICsrKysrKysrKysrKysrKysrKy0tLS0tLS0tLS0tLS0tDQo+ID4gIDEg
-ZmlsZSBjaGFuZ2VkLCAxOCBpbnNlcnRpb25zKCspLCAxNCBkZWxldGlvbnMoLSkNCj4gPg0KPiA+
-IC0tDQo+ID4gMi43LjQNCj4gPg0KPiANCj4gTmVlZHMgdG8gYmUgQ0MgbGludXgta2VybmVsIGFu
-ZCBsaW51eC1zZWN1cml0eS1tb2R1bGUNCg0KSSB3aWxsIHJlc2VuZCB0aGUgcGF0Y2hlcyB0aGVy
-ZS4gSXMgdGhpcyBwcm9jZXNzIG9mIHdoYXQgcGF0Y2hlcyB0byBzZW5kIHdoZXJlIGRvY3VtZW50
-ZWQgc29tZXdoZXJlPyBNQUlOVEFJTkVSUyBtZW50aW9ucyBvbmx5IHRwbWRkLWRldmVsLg0KDQo+
-IGFuZCB0ZXN0ZWQtYnkuDQoNCkkgZm9yZ290IHRvIG1lbnRpb24gdGhhdCBiZWZvcmU6IFVubGVz
-cyBvdGhlcndpc2Ugbm90ZWQsIGV2ZXJ5dGhpbmcgdGhhdCBJIHN1Ym1pdCBoYXMgYmVlbiB0ZXN0
-ZWQgd2l0aDoNCg0KLSB0cG1fdGlzIG9uIHg4Nl82NCB3aXRoIExQQyBUUE1zIDEuMiBhbmQgMi4w
-IChJbmZpbmVvbiBTTEIgOTY2MCBhbmQgU0xCIDk2NjUpDQotIHRwbV90aXNfc3BpIG9uIGFybXY3
-bCBhbmQgYWFyY2g2NCAoUmFzcGJlcnJ5IFBpIDIgYW5kIDMpIHdpdGggU1BJIFRQTXMgMS4yIGFu
-ZCAyLjAgKEluZmluZW9uIFNMQiA5NjcwKQ0KLSB0cG1faTJjX2luZmluZW9uIG9uIGFybXY3bCAo
-UmFzcGJlcnJ5IFBpIDIpIHdpdGggSTJDIFRQTXMgMS4yIChJbmZpbmVvbiBTTEIgOTYzNSBhbmQg
-U0xCIDk2NDUpDQoNClNpbmNlIHRob3NlIHRlc3RzIGFyZSBmdWxseSBhdXRvbWF0ZWQsIEknbSBo
-YXBweSB0byBpbnRlZ3JhdGUgbW9yZSBUUE0gY2hpcHMsIGlmIGFueW9uZSBoYXMgZ290IHNvbWUg
-Zm9yIG1lIDstKQ0KDQpUbyBnZXQgc29tZSBtb3JlIHRlc3QgY292ZXJhZ2UgZm9yIHRoaXMgU1BJ
-LXNwZWNpZmljIGNoYW5nZSwgbWF5YmUgQmVub2l0IG9yIENocmlzdG9waGUgY2FuIHJlcnVuIHRo
-ZWlyIHRlc3RzPyBUaG91Z2ggdGhpcyBjaGFuZ2UgcHJvYmFibHkgZGVwZW5kcyBtb3JlIG9uIHRo
-ZSBwbGF0Zm9ybSB0aGFuIG9uIHRoZSBUUE0uIEFzIGZhciBhcyB3ZSBjb3VsZCB0ZWxsIGZyb20g
-dGhlIGNvZGUsIG91ciBSYXNwYmVycnkgUGlzIHdpbGwgbmV2ZXIgdXNlIERNQSBmb3IgdGhlIFNQ
-SSB0cmFuc2ZlcnMgdG8gdGhlIFRQTSwgYmVjYXVzZSB0aG9zZSB0cmFuc2ZlcnMgYXJlIHRvbyBz
-bWFsbC4NCg0KQWxleGFuZGVyDQotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KQ2hlY2sgb3V0IHRoZSB2
-aWJyYW50IHRlY2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29ybGQncyBtb3N0CmVuZ2FnaW5n
-IHRlY2ggc2l0ZXMsIFNsYXNoZG90Lm9yZyEgaHR0cDovL3NkbS5saW5rL3NsYXNoZG90Cl9fX19f
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fCnRwbWRkLWRldmVsIG1h
-aWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9saXN0
-cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQtZGV2ZWwK
+On Tue, Aug 29, 2017 at 12:14:37PM +0000, Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org wrote:
+> > On Thu, Aug 24, 2017 at 10:27:43AM +0200, Alexander Steffen wrote:
+> > > The documentation says that DMA-safe memory is required for SPI
+> > transfers.
+> > > The I/O buffers passed in by the caller can be allocated anywhere,
+> > > including on the stack, which is not DMA-safe. So the data needs to be
+> > > copied to separate, DMA-safe buffers.
+> > >
+> > > We did not see any DMA-related issues on our test systems, even
+> > > without DMA-safe buffers. But this might simply be due to the fact
+> > > that the SPI transfer size is rather small, so our systems do not
+> > > bother to set up DMA transfers. Other systems might do so.
+> > >
+> > > v2:
+> > > - Updated commit message with more explanations.
+> > >
+> > > v3:
+> > > - Split into two patches, one for making the buffers DMA-safe and another
+> > >   for using only a single buffer.
+> > >
+> > > Alexander Steffen (2):
+> > >   tpm_tis_spi: Use DMA-safe memory for SPI transfers
+> > >   tpm_tis_spi: Use a single buffer for SPI transfers
+> > >
+> > >  drivers/char/tpm/tpm_tis_spi.c | 32 ++++++++++++++++++--------------
+> > >  1 file changed, 18 insertions(+), 14 deletions(-)
+> > >
+> > > --
+> > > 2.7.4
+> > >
+> > 
+> > Needs to be CC linux-kernel and linux-security-module
+> 
+> I will resend the patches there. Is this process of what patches to send where documented somewhere? MAINTAINERS mentions only tpmdd-devel.
+> 
+> > and tested-by.
+> 
+> I forgot to mention that before: Unless otherwise noted, everything that I submit has been tested with:
+> 
+> - tpm_tis on x86_64 with LPC TPMs 1.2 and 2.0 (Infineon SLB 9660 and SLB 9665)
+> - tpm_tis_spi on armv7l and aarch64 (Raspberry Pi 2 and 3) with SPI TPMs 1.2 and 2.0 (Infineon SLB 9670)
+> - tpm_i2c_infineon on armv7l (Raspberry Pi 2) with I2C TPMs 1.2 (Infineon SLB 9635 and SLB 9645)
+> 
+> Since those tests are fully automated, I'm happy to integrate more TPM chips, if anyone has got some for me ;-)
+> 
+> To get some more test coverage for this SPI-specific change, maybe Benoit or Christophe can rerun their tests? Though this change probably depends more on the platform than on the TPM. As far as we could tell from the code, our Raspberry Pis will never use DMA for the SPI transfers to the TPM, because those transfers are too small.
+> 
+> Alexander
+
+I'll see later if I could peer test tpm_tis_spi with one machine that I have.
+
+/Jarkko
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
