@@ -1,8 +1,8 @@
-From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Subject: Re: [PATCH RESEND 3/3] tpm-chip: Export TPM device to
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [tpmdd-devel] [PATCH RESEND 3/3] tpm-chip: Export TPM device to
  user space even when startup failed
-Date: Wed, 30 Aug 2017 12:41:51 +0200
-Message-ID: <4722067A-082C-40E7-90ED-29EFB3228765@gmx.de>
+Date: Wed, 30 Aug 2017 14:07:48 +0300
+Message-ID: <20170830110721.edidi46sx2qgovzu@linux.intel.com>
 References: <20170824083714.10016-1-Alexander.Steffen@infineon.com>
  <20170824083714.10016-4-Alexander.Steffen@infineon.com>
  <20170825172021.lw3ycxqw63ubrcm2@linux.intel.com>
@@ -10,58 +10,84 @@ References: <20170824083714.10016-1-Alexander.Steffen@infineon.com>
  <20170829125509.55aylht3ikes3bpy@linux.intel.com>
  <20170829151739.315ae581@kitsune.suse.cz>
  <20170830101510.rlkh2p3zecfsrhgl@linux.intel.com>
+ <20170830102002.nufnr77whz5jzwfr@linux.intel.com>
+ <20170830123416.29117269@kitsune.suse.cz>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170830101510.rlkh2p3zecfsrhgl-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, =?ISO-8859-1?Q?Michal_Such=E1nek?= <msuchanek-l3A5Bk7waGM@public.gmane.org>
-Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Content-Type: text/plain; charset=iso-8859-1
+Content-Transfer-Encoding: 8bit
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20170830123416.29117269@kitsune.suse.cz>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Michal =?iso-8859-1?Q?Such=E1nek?= <msuchanek@suse.de>
+Cc: Alexander.Steffen@infineon.com, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-CgpBbSAzMC4gQXVndXN0IDIwMTcgMTI6MTU6MTAgTUVTWiBzY2hyaWViIEphcmtrbyBTYWtraW5l
-biA8amFya2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbT46Cj5PbiBUdWUsIEF1ZyAyOSwgMjAx
-NyBhdCAwMzoxNzozOVBNICswMjAwLCBNaWNoYWwgU3VjaMOhbmVrIHdyb3RlOgo+PiBIZWxsbywK
-Pj4gCj4+IE9uIFR1ZSwgMjkgQXVnIDIwMTcgMTU6NTU6MDkgKzAzMDAKPj4gSmFya2tvIFNha2tp
-bmVuIDxqYXJra28uc2Fra2luZW5AbGludXguaW50ZWwuY29tPiB3cm90ZToKPj4gCj4+ID4gT24g
-TW9uLCBBdWcgMjgsIDIwMTcgYXQgMDU6MTU6NThQTSArMDAwMCwKPj4gPiBBbGV4YW5kZXIuU3Rl
-ZmZlbkBpbmZpbmVvbi5jb20gd3JvdGU6Cj4+ID4gPiBCdXQgaXMgdGhhdCBqdXN0IGJlY2F1c2Ug
-bm9ib2R5IGJvdGhlcmVkIHRvIGltcGxlbWVudCB0aGUKPm5lY2Vzc2FyeQo+PiA+ID4gbG9naWMg
-b3IgZm9yIHNvbWUgb3RoZXIgcmVhc29uPyAgCj4+ID4gCj4+ID4gV2UgZG8gbm90IHdhbnQgdXNl
-ciBzcGFjZSB0byBhY2Nlc3MgYnJva2VuIGhhcmR3YXJlLiBJdCdzIGEgaHVnZQo+cmlzawo+PiA+
-IGZvciBzeXN0ZW0gc3RhYmlsaXR5IGFuZCBwb3RlbnRpYWxseSBjb3VsZCBiZSB1c2VkIGZvciBl
-dmlsCj5wdXJwb3Nlcy4KPj4gPiAKPj4gPiBUaGlzIGlzIG5vdCBnb2luZyB0byBtYWlubGluZSBh
-cyBpdCBpcyBub3Qgc3VpdGFibGUgZm9yIGdlbmVyYWwKPj4gPiBjb25zdW1wdGlvbi4gWW91IG11
-c3QgdXNlIGEgcGF0Y2hlZCBrZXJuZWwgaWYgeW91IHdhbnQgdGhpcy4KPj4gPiAKPj4gPiAvSmFy
-a2tvCj4+ID4gCj4+IAo+PiBJdCBoYXMgYmVlbiBwb2ludGVkIG91dCB0aGF0IHVzZXJzcGFjZSBh
-cHBsaWNhdGlvbnMgdGhhdCB1c2UgZGlyZWN0Cj5JTwo+PiBhY2Nlc3MgZXhpc3QgZm9yIHRoZSBw
-dXJwb3NlLiBTbyB1c2luZyBhIGtlcm5lbCBkcml2ZXIgaXMgYW4KPj4gaW1wcm92ZW1lbnQgb3Zl
-ciB0aGF0IGlmIHRoZSBpbnRlcmZhY2UgaXMgb3RoZXJ3aXNlIHNhbmUuCj4+IAo+PiBXaGF0IGRv
-IHlvdSBleHBlY3QgaXMgdGhlIHBvdGVudGlhbCBmb3IgaW5zdGFiaWxpdHkgb3IgZXZpbCB1c2U/
-Cj4KPkJ5IGRlZmluaXRpb24gdGhlIHVzZSBvZiBicm9rZW4gaGFyZHdhcmUgY2FuIGhhdmUgdW5w
-cmVkaWN0YWJsZQo+ZWZmZWN0cy4KPlVzZSBhIHBhdGNoZWQga2VybmVsIGlmIHlvdSB3YW50IHRv
-IGRvIGl0LgoKSWYgdGhlIHMubS5hLnIudCBzZWxmdGVzdCBvZiB5b3VyIGhhcmQgZGlzayBmYWls
-cywgeW91IGNhbiBzdGlsbCBhY2Nlc3MgaXQsIGV2ZW4gdGhvdWdoIHRoZSBodyBzZWxmdGVzdCBz
-YXlzIGl0IGlzIGJyb2tlbi4KU2FtZSBzaXR1YXRpb24uCgoKCj4KPi9KYXJra28KPgo+LS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tCj5DaGVjayBvdXQgdGhlIHZpYnJhbnQgdGVjaCBjb21tdW5pdHkgb24g
-b25lIG9mIHRoZSB3b3JsZCdzIG1vc3QKPmVuZ2FnaW5nIHRlY2ggc2l0ZXMsIFNsYXNoZG90Lm9y
-ZyEgaHR0cDovL3NkbS5saW5rL3NsYXNoZG90Cj5fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fX19fX19fX19fX19fXwo+dHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0Cj50cG1kZC1kZXZl
-bEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKPmh0dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0L2xp
-c3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCgotLSAKU2VudCBmcm9tIG15IG1vYmlsZQoKLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tCkNoZWNrIG91dCB0aGUgdmlicmFudCB0ZWNoIGNvbW11bml0eSBvbiBv
-bmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAplbmdhZ2luZyB0ZWNoIHNpdGVzLCBTbGFzaGRvdC5vcmch
-IGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdApfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fX19fX19fX19fXwp0cG1kZC1kZXZlbCBtYWlsaW5nIGxpc3QKdHBtZGQtZGV2ZWxAbGlz
-dHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0L2xpc3RzL2xp
-c3RpbmZvL3RwbWRkLWRldmVsCg==
+On Wed, Aug 30, 2017 at 12:34:16PM +0200, Michal Suchánek wrote:
+> On Wed, 30 Aug 2017 13:20:02 +0300
+> Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> wrote:
+> 
+> > On Wed, Aug 30, 2017 at 01:15:10PM +0300, Jarkko Sakkinen wrote:
+> > > On Tue, Aug 29, 2017 at 03:17:39PM +0200, Michal Suchánek wrote:  
+> > > > Hello,
+> > > > 
+> > > > On Tue, 29 Aug 2017 15:55:09 +0300
+> > > > Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com> wrote:
+> > > >   
+> > > > > On Mon, Aug 28, 2017 at 05:15:58PM +0000,
+> > > > > Alexander.Steffen@infineon.com wrote:  
+> > > > > > But is that just because nobody bothered to implement the
+> > > > > > necessary logic or for some other reason?    
+> > > > > 
+> > > > > We do not want user space to access broken hardware. It's a
+> > > > > huge risk for system stability and potentially could be used
+> > > > > for evil purposes.
+> > > > > 
+> > > > > This is not going to mainline as it is not suitable for general
+> > > > > consumption. You must use a patched kernel if you want this.
+> > > > > 
+> > > > > /Jarkko
+> > > > >   
+> > > > 
+> > > > It has been pointed out that userspace applications that use
+> > > > direct IO access exist for the purpose. So using a kernel driver
+> > > > is an improvement over that if the interface is otherwise sane.
+> > > > 
+> > > > What do you expect is the potential for instability or evil use?  
+> > > 
+> > > By definition the use of broken hardware can have unpredictable
+> > > effects. Use a patched kernel if you want to do it.
+> > > 
+> > > /Jarkko  
+> > 
+> > I.e. too many unknown unknowns for mainline.
+> > 
+> > I could consider a solution for the TPM error case on self-test that
+> > allows only restricted subset of commands.
+> > 
+> > The patch description did not go to *any* detail on how it is used so
+> > practically it's unreviewable at this point. There's a big burder of
+> > proof and now there's only hand waving.
+> > 
+> Hello,
+> 
+> there was a bug patched recently in which Linux was not sending the
+> shutdown command on system shutdown. Presumably with this bug some TPMs
+> consider being under attack and stop performing most functions.
+> However, you should be able to read the log if this is implemented
+> sanely. For that the TPM needs to be accessible.
+> 
+> There are probably other cases when the TPM might be useless for system
+> use but it might be useful to access it. For example, does Linux handle
+> uninitialized TPMs?
+> 
+> Thanks
+> 
+> Michal
+
+Agreed. I still think it would make sense to start with a limited subset
+of TPM commands, not with all-command-allowed.
+
+I guess Alexander should be able to propose such subset.
+
+/Jarkko
