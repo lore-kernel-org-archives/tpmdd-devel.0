@@ -1,16 +1,16 @@
 From: <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: Re: tpm device not showing up in /dev anymore
-Date: Thu, 31 Aug 2017 12:10:46 +0000
-Message-ID: <857106e4bb864bb8a68b1381fffc8f50@MUCSE603.infineon.com>
-References: <f9526f55-df96-64fc-a4d6-877ce04e7156@debian.org>
- <dcad0104c46d4d5f88e642862bdb42c2@MUCSE603.infineon.com>
- <47c4300b-8701-79a6-1c58-3a5853f4c5e3@debian.org>
- <595efb25-8d87-f39d-037f-9c9a98462339@debian.org>
+Subject: Re: [PATCH v3 0/2] tpm_tis_spi: Use DMA-safe memory
+Date: Thu, 31 Aug 2017 12:34:33 +0000
+Message-ID: <6b67f719b71e4eb8abd2ba8b3ed57560@MUCSE603.infineon.com>
+References: <20170824082745.9372-1-Alexander.Steffen@infineon.com>
+ <20170826112259.ypwtqbwakyfdqkzo@linux.intel.com>
+ <9aea582eccbe4655b5de487dacf7c745@MUCSE603.infineon.com>
+ <fe81962beaec4c6fa21ea90df0f01560@SFHDAG3NODE3.st.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <595efb25-8d87-f39d-037f-9c9a98462339-8fiUuRrzOP0dnm+yROfE0A@public.gmane.org>
+In-Reply-To: <fe81962beaec4c6fa21ea90df0f01560-tklXXlf0F76qZDvoWP1BVkEOCMrvLtNR@public.gmane.org>
 Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
@@ -20,61 +20,40 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: bigon-8fiUuRrzOP0dnm+yROfE0A@public.gmane.org, jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org
+To: benoit.houyere-qxv4g6HH51o@public.gmane.org, jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-PiBMZSAyOS8wOC8xNyDDoCAxODozNSwgTGF1cmVudCBCaWdvbnZpbGxlIGEgw6ljcml0wqA6DQo+
-ID4gTGUgMjkvMDgvMTcgw6AgMTg6MDAsIEFsZXhhbmRlci5TdGVmZmVuQGluZmluZW9uLmNvbSBh
-IMOpY3JpdMKgOg0KPiA+Pj4gQW4gaWRlYSBob3cgdG8gdHJvdWJsZXNob290IHRoaXM/DQo+ID4+
-IENhbiB5b3UgcnVuIGdpdCBiaXNlY3Qgb24gdGhlIGNoYW5nZXMgYmV0d2VlbiA0LjExIGFuZCA0
-LjEyLCBzbyB0aGF0DQo+ID4+IHdlIGZpbmQgdGhlIG9mZmVuZGluZyBjb21taXQ/IEl0IGlzIHBy
-b2JhYmx5IHN1ZmZpY2llbnQgdG8gbGltaXQgdGhlDQo+ID4+IHNlYXJjaCB0byBjb21taXRzIHRo
-YXQgdG91Y2ggc29tZXRoaW5nIGluIGRyaXZlcnMvY2hhci90cG0uDQo+ID4NCj4gPiBJJ2xsIHRy
-eSBhbmQga2VlcCB5b3UgcG9zdGVkLg0KPiANCj4gT0sgSSd2ZSBiZWVuIGFibGUgdG8gYmlzZWN0
-IHRoZSBwcm9ibGVtIGFuZCB0aGUgYmFkIGNvbW1pdCBpczoNCj4gDQo+IGU2YWVmMDY5YjZlOTc3
-OTBjYjEyN2Q1ZWViODZhZTlmZjBiN2IwZTMgaXMgdGhlIGZpcnN0IGJhZCBjb21taXQNCj4gY29t
-bWl0IGU2YWVmMDY5YjZlOTc3OTBjYjEyN2Q1ZWViODZhZTlmZjBiN2IwZTMNCj4gQXV0aG9yOiBK
-ZXJyeSBTbml0c2VsYWFyIDxqc25pdHNlbEByZWRoYXQuY29tPg0KPiBEYXRlOiAgIE1vbiBNYXIg
-MjcgMDg6NDY6MDQgMjAxNyAtMDcwMA0KPiANCj4gICAgICB0cG1fdGlzOiBjb252ZXJ0IHRvIHVz
-aW5nIGxvY2FsaXR5IGNhbGxiYWNrcw0KPiANCj4gICAgICBUaGlzIHBhdGNoIGNvbnZlcnRzIHRw
-bV90aXMgdG8gdXNlIG9mIHRoZSBuZXcgdHBtIGNsYXNzIG9wcw0KPiAgICAgIHJlcXVlc3RfbG9j
-YWxpdHksIGFuZCByZWxpbnF1aXNoX2xvY2FsaXR5Lg0KPiANCj4gICAgICBXaXRoIHRoZSBtb3Zl
-IHRvIHVzaW5nIHRoZSBjYWxsYmFja3MsIHJlbGVhc2VfbG9jYWxpdHkgaXMgY2hhbmdlZCBzbw0K
-PiAgICAgIHRoYXQgd2Ugbm93IHJlbGVhc2UgdGhlIGxvY2FsaXR5IGV2ZW4gaWYgdGhlcmUgaXMg
-bm8gcmVxdWVzdCBwZW5kaW5nLg0KPiANCj4gICAgICBUaGlzIHJlcXVpcmVkIHNvbWUgY2hhbmdl
-cyB0byB0aGUgdHBtX3Rpc19jb3JlX2luaXQgY29kZSBwYXRoIHRvDQo+ICAgICAgbWFrZSBzdXJl
-IGxvY2FsaXR5IGlzIHJlcXVlc3RlZCB3aGVuIG5lZWRlZDoNCj4gDQo+ICAgICAgICAtIHRwbTJf
-cHJvYmUgY29kZSBwYXRoIHdpbGwgZW5kIHVwIGNhbGxpbmcgcmVxdWVzdC9yZWxlYXNlIHRocm91
-Z2gNCj4gICAgICAgICAgY2FsbGJhY2tzLCBzbyByZXF1ZXN0X2xvY2FsaXR5IHByaW9yIHRvIHRw
-bTJfcHJvYmUgbm90IG5lZWRlZC4NCj4gDQo+ICAgICAgICAtIHByb2JlX2l0cG0gbWFrZXMgY2Fs
-bHMgdG8gdHBtX3Rpc19zZW5kX2RhdGEgd2hpY2ggbm8gbG9uZ2VyIGNhbGxzDQo+ICAgICAgICAg
-IHJlcXVlc3RfbG9jYWxpdHksIHNvIGFkZCByZXF1ZXN0X2xvY2FsaXR5IHByaW9yIHRvIHRwbV90
-aXNfc2VuZF9kYXRhDQo+ICAgICAgICAgIGNhbGxzLiBBbHNvIGRyb3AgcmVsZWFzZV9sb2NhbGl0
-eSBjYWxsIGluIG1pZGRsZW9mIHByb2JlX2l0cG0sIGFuZA0KPiAgICAgICAgICBrZWVwIGxvY2Fs
-aXR5IHVudGlsIHJlbGVhc2VfbG9jYWxpdHkgY2FsbGVkIGF0IGVuZCBvZiBwcm9iZV9pdHBtLg0K
-PiANCj4gICAgICBDYzogUGV0ZXIgSHVld2UgPHBldGVyaHVld2VAZ214LmRlPg0KPiAgICAgIENj
-OiBKYXJra28gU2Fra2luZW4gPGphcmtrby5zYWtraW5lbkBsaW51eC5pbnRlbC5jb20+DQo+ICAg
-ICAgQ2M6IEphc29uIEd1bnRob3JwZSA8amd1bnRob3JwZUBvYnNpZGlhbnJlc2VhcmNoLmNvbT4N
-Cj4gICAgICBDYzogTWFyY2VsIFNlbGhvcnN0IDx0cG1kZEBzZWxob3JzdC5uZXQ+DQo+ICAgICAg
-U2lnbmVkLW9mZi1ieTogSmVycnkgU25pdHNlbGFhciA8anNuaXRzZWxAcmVkaGF0LmNvbT4NCj4g
-ICAgICBSZXZpZXdlZC1ieTogSmFya2tvIFNha2tpbmVuIDxqYXJra28uc2Fra2luZW5AbGludXgu
-aW50ZWwuY29tPg0KPiAgICAgIFRlc3RlZC1ieTogSmFya2tvIFNha2tpbmVuIDxqYXJra28uc2Fr
-a2luZW5AbGludXguaW50ZWwuY29tPg0KPiAgICAgIFNpZ25lZC1vZmYtYnk6IEphcmtrbyBTYWtr
-aW5lbiA8amFya2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbT4NCj4gDQo+IDowNDAwMDAgMDQw
-MDAwIDcwMjM0MzY1ZGE2OTk1OWQ0NzA3NmViYjQwYzhkMTdmNTIwYzNlNDQNCj4gNzJmMjFiNDQ2
-ZTQ1ZWExMDAzZGU3NTkwMmIwNTUzZGViOTkxNTdmZCBNCWRyaXZlcnMNCj4gDQoNCkkndmUgbG9v
-a2VkIGFnYWluIGF0IHRoZSBjb2RlIGluIHF1ZXN0aW9uLCBidXQgY291bGQgbm90IGZpbmQgYW55
-dGhpbmcgdGhhdCBpcyBvYnZpb3VzbHkgd3JvbmcgdGhlcmUuIExvY2FsaXR5IGlzIG5vdyByZXF1
-ZXN0ZWQvcmVsZWFzZWQgYXQgc2xpZ2h0bHkgZGlmZmVyZW50IHBvaW50cyBpbiB0aGUgcHJvY2Vz
-cyB0aGFuIGJlZm9yZSwgYnV0IHRoYXQncyBpdC4gSXQgZG9lcyBub3Qgc2VlbSB0byBjYXVzZSBw
-cm9ibGVtcyB3aXRoIHRoZSBtYWpvcml0eSBvZiBUUE1zLCBzaW5jZSB5b3UgYXJlIHRoZSBmaXJz
-dCB0byByZXBvcnQgYW55LCBzbyBtYXliZSBpdCBpcyBhIHF1aXJrIHRoYXQgb25seSBhZmZlY3Rz
-IHRoaXMgZGV2aWNlLg0KDQpQZXJoYXBzIEplcnJ5IGNhbiBoZWxwLCBzaW5jZSB0aGlzIGlzIGhp
-cyBjaGFuZ2U/DQoNCkFsZXhhbmRlcg0KLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCkNoZWNrIG91dCB0
-aGUgdmlicmFudCB0ZWNoIGNvbW11bml0eSBvbiBvbmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAplbmdh
-Z2luZyB0ZWNoIHNpdGVzLCBTbGFzaGRvdC5vcmchIGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdApf
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwp0cG1kZC1kZXZl
-bCBtYWlsaW5nIGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8v
-bGlzdHMuc291cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
+> Hi Alexander,
+> 
+> Obviously, we agree to cover validation with STM TPM to confirm your
+> update.
+> Following my availability, I cannot start it before mid of September. Is it inline
+> with your expectation ?
+
+As always, better than nothing, thanks :)
+
+> If it's the case, I will start :
+> - tpm_tis_spi on Raspberry PI 3
+> Next
+> - tpm_tis on X86_64
+
+Those patches only change tpm_tis_spi, so you can skip the tests with tpm_tis.
+
+> Could you send me patch file or link to get patch ?
+
+Unfortunately, Patchwork is not working anymore, so I'll send you the patches in a separate mail.
+
+> By taking Raspberry PI 3 example, How many Byte in SPI transfer size is
+> necessary to use DMA transfer ?
+
+The Raspberry Pi 3 uses drivers/spi/spi-bcm2835.c, which defines BCM2835_SPI_DMA_MIN_LENGTH = 96 bytes. The maximum frame size used by tpm_tis_spi is MAX_SPI_FRAMESIZE = 64 bytes, so the DMA code path is never taken. You could try to set BCM2835_SPI_DMA_MIN_LENGTH to a lower value, to force it to use DMA.
+
+> Best Regards,
+> 
+> Benoit
+
+Alexander
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
