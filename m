@@ -1,79 +1,104 @@
-From: <Alexander.Steffen@infineon.com>
-Subject: RE: [tpmdd-devel] [PATCH RESEND 3/3] tpm-chip: Export TPM device to
- user space even when startup failed
-Date: Thu, 31 Aug 2017 16:26:10 +0000
-Message-ID: <7d87c22c15f64f2da4d73b18ee931e57@MUCSE603.infineon.com>
-References: <20170824083714.10016-1-Alexander.Steffen@infineon.com>
- <20170824083714.10016-4-Alexander.Steffen@infineon.com>
- <20170825172021.lw3ycxqw63ubrcm2@linux.intel.com>
- <adaaeae32ba64d979abfc4b758c63fc0@MUCSE603.infineon.com>
- <20170829125509.55aylht3ikes3bpy@linux.intel.com>
- <20170829151739.315ae581@kitsune.suse.cz>
- <20170830101510.rlkh2p3zecfsrhgl@linux.intel.com>
- <4722067A-082C-40E7-90ED-29EFB3228765@gmx.de>
- <20170830111019.bsd2jod7z2v2jeoi@linux.intel.com>
+From: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Subject: Re: tpm device not showing up in /dev anymore
+Date: Thu, 31 Aug 2017 09:40:15 -0700
+Message-ID: <20170831164015.3ajgwydgxtippwoz@rhwork>
+References: <f9526f55-df96-64fc-a4d6-877ce04e7156@debian.org>
+ <dcad0104c46d4d5f88e642862bdb42c2@MUCSE603.infineon.com>
+ <47c4300b-8701-79a6-1c58-3a5853f4c5e3@debian.org>
+ <595efb25-8d87-f39d-037f-9c9a98462339@debian.org>
+ <857106e4bb864bb8a68b1381fffc8f50@MUCSE603.infineon.com>
+Reply-To: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170830111019.bsd2jod7z2v2jeoi@linux.intel.com>
-Content-Language: en-US
-Sender: owner-linux-security-module@vger.kernel.org
-To: jarkko.sakkinen@linux.intel.com, peterhuewe@gmx.de
-Cc: linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+Content-Type: text/plain; charset="iso-8859-1"; Format="flowed"
+Content-Transfer-Encoding: quoted-printable
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+Content-Disposition: inline
+In-Reply-To: <857106e4bb864bb8a68b1381fffc8f50-nFblLGNE8XKJSz+rYg/bSJowlv4uC7bZ@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-PiBPbiBXZWQsIEF1ZyAzMCwgMjAxNyBhdCAxMjo0MTo1MVBNICswMjAwLCBQZXRlciBIdWV3ZSB3
-cm90ZToNCj4gPg0KPiA+DQo+ID4gQW0gMzAuIEF1Z3VzdCAyMDE3IDEyOjE1OjEwIE1FU1ogc2No
-cmllYiBKYXJra28gU2Fra2luZW4NCj4gPGphcmtrby5zYWtraW5lbkBsaW51eC5pbnRlbC5jb20+
-Og0KPiA+ID5PbiBUdWUsIEF1ZyAyOSwgMjAxNyBhdCAwMzoxNzozOVBNICswMjAwLCBNaWNoYWwg
-U3VjaMOhbmVrIHdyb3RlOg0KPiA+ID4+IEhlbGxvLA0KPiA+ID4+DQo+ID4gPj4gT24gVHVlLCAy
-OSBBdWcgMjAxNyAxNTo1NTowOSArMDMwMA0KPiA+ID4+IEphcmtrbyBTYWtraW5lbiA8amFya2tv
-LnNha2tpbmVuQGxpbnV4LmludGVsLmNvbT4gd3JvdGU6DQo+ID4gPj4NCj4gPiA+PiA+IE9uIE1v
-biwgQXVnIDI4LCAyMDE3IGF0IDA1OjE1OjU4UE0gKzAwMDAsDQo+ID4gPj4gPiBBbGV4YW5kZXIu
-U3RlZmZlbkBpbmZpbmVvbi5jb20gd3JvdGU6DQo+ID4gPj4gPiA+IEJ1dCBpcyB0aGF0IGp1c3Qg
-YmVjYXVzZSBub2JvZHkgYm90aGVyZWQgdG8gaW1wbGVtZW50IHRoZQ0KPiA+ID5uZWNlc3NhcnkN
-Cj4gPiA+PiA+ID4gbG9naWMgb3IgZm9yIHNvbWUgb3RoZXIgcmVhc29uPw0KPiA+ID4+ID4NCj4g
-PiA+PiA+IFdlIGRvIG5vdCB3YW50IHVzZXIgc3BhY2UgdG8gYWNjZXNzIGJyb2tlbiBoYXJkd2Fy
-ZS4gSXQncyBhIGh1Z2UNCj4gPiA+cmlzaw0KPiA+ID4+ID4gZm9yIHN5c3RlbSBzdGFiaWxpdHkg
-YW5kIHBvdGVudGlhbGx5IGNvdWxkIGJlIHVzZWQgZm9yIGV2aWwNCj4gPiA+cHVycG9zZXMuDQo+
-ID4gPj4gPg0KPiA+ID4+ID4gVGhpcyBpcyBub3QgZ29pbmcgdG8gbWFpbmxpbmUgYXMgaXQgaXMg
-bm90IHN1aXRhYmxlIGZvciBnZW5lcmFsDQo+ID4gPj4gPiBjb25zdW1wdGlvbi4gWW91IG11c3Qg
-dXNlIGEgcGF0Y2hlZCBrZXJuZWwgaWYgeW91IHdhbnQgdGhpcy4NCj4gPiA+PiA+DQo+ID4gPj4g
-PiAvSmFya2tvDQo+ID4gPj4gPg0KPiA+ID4+DQo+ID4gPj4gSXQgaGFzIGJlZW4gcG9pbnRlZCBv
-dXQgdGhhdCB1c2Vyc3BhY2UgYXBwbGljYXRpb25zIHRoYXQgdXNlIGRpcmVjdA0KPiA+ID5JTw0K
-PiA+ID4+IGFjY2VzcyBleGlzdCBmb3IgdGhlIHB1cnBvc2UuIFNvIHVzaW5nIGEga2VybmVsIGRy
-aXZlciBpcyBhbg0KPiA+ID4+IGltcHJvdmVtZW50IG92ZXIgdGhhdCBpZiB0aGUgaW50ZXJmYWNl
-IGlzIG90aGVyd2lzZSBzYW5lLg0KPiA+ID4+DQo+ID4gPj4gV2hhdCBkbyB5b3UgZXhwZWN0IGlz
-IHRoZSBwb3RlbnRpYWwgZm9yIGluc3RhYmlsaXR5IG9yIGV2aWwgdXNlPw0KPiA+ID4NCj4gPiA+
-QnkgZGVmaW5pdGlvbiB0aGUgdXNlIG9mIGJyb2tlbiBoYXJkd2FyZSBjYW4gaGF2ZSB1bnByZWRp
-Y3RhYmxlDQo+ID4gPmVmZmVjdHMuDQo+ID4gPlVzZSBhIHBhdGNoZWQga2VybmVsIGlmIHlvdSB3
-YW50IHRvIGRvIGl0Lg0KPiA+DQo+ID4gSWYgdGhlIHMubS5hLnIudCBzZWxmdGVzdCBvZiB5b3Vy
-IGhhcmQgZGlzayBmYWlscywgeW91IGNhbiBzdGlsbA0KPiA+IGFjY2VzcyBpdCwgZXZlbiB0aG91
-Z2ggdGhlIGh3IHNlbGZ0ZXN0IHNheXMgaXQgaXMgYnJva2VuLg0KPiA+IFNhbWUgc2l0dWF0aW9u
-Lg0KPiANCj4gTm90IHN1cmUgaWYgeW91IGNhbiBjb21wYXJlIHRoZXNlIGRpcmVjdGx5IGFsdGhv
-dWdoIEkgZ2V0IHlvdXIgcG9pbnQuDQo+IA0KPiBXYWl0aW5nIGZvciBtb3JlIGNvbW1lbnRzIG9u
-IHRoaXMuIEF0IHRoZSBtb21lbnQgSSdtIHN0aWxsIGRpbGF0ZWQgdG8NCj4gcmVzdHJpY3RlZCBh
-Y2Nlc3MgYmVjYXVzZSBpdCBnaXZlcyBtb3JlIHZhcmlhYmxlcyBmb3IgdGhlIGZ1dHVyZS4NCj4g
-DQo+IC9KYXJra28NCg0KSSB0aGluaywgdGhpcyBpcyBhIHBlcmZlY3QgZXhhbXBsZS4gSW4gYm90
-aCBjYXNlcyB3ZSBoYXZlIGludGVsbGlnZW50IGRldmljZXMsIHRoYXQgY2FuIGRldGVjdCB0aGF0
-IHRoZXkgYXJlIGJyb2tlbiBhbmQgcmVwb3J0IGl0IGNvcnJlY3RseSAoaW5zdGVhZCBvZiBqdXN0
-IG1hbGZ1bmN0aW9uIHJhbmRvbWx5KS4gVGhpcyBhbHNvIHNob3dzIHRoYXQgdGhvc2UgZGV2aWNl
-cyBhcmUgbm90IHNvIGJyb2tlbiB0aGF0IHRoZXkgY29tcGxldGVseSBtaXNiZWhhdmUgKGkuZS4g
-c2lnbmlmaWNhbnRseSB2aW9sYXRlIHRoZWlyIHNwZWMpLCB0aGV5IGp1c3QgZG8gbm90IHByb3Zp
-ZGUgdGhlIGZ1bGwgZnVuY3Rpb25hbGl0eSBhbnltb3JlLg0KDQpDb3VsZCB5b3UgZ2l2ZSBtZSBv
-bmUgZXhhbXBsZSBob3cgeW91J2QgaW1hZ2luZSBzdWNoIGEgZGV2aWNlIHRvIGltcGFjdCBzdGFi
-aWxpdHk/IE15IHBhdGNoIGFscmVhZHkgcHJldmVudHMgdGhlIGtlcm5lbCBmcm9tIHVzaW5nIGJy
-b2tlbiBUUE1zIGZvciBhbnl0aGluZywgaXQgb25seSBwcm92aWRlcyB0aGUgY29tbXVuaWNhdGlv
-biBmYWNpbGl0aWVzIGZvciB1c2VyIHNwYWNlIGFwcGxpY2F0aW9ucy4NCg0KV2l0aCByZWdhcmQg
-dG8gc2VjdXJpdHkvYXR0YWNrcywgaXQgaXMgcHJlY2lzZWx5IHRoZSBUUE0ncyBqb2IgdG8gcHJv
-dGVjdCBpdHNlbGYgKGFuZCB5b3VyIHNlY3JldHMpLiBZb3UgZ2V0IGFsbCB5b3VyIHNlY3VyaXR5
-IGd1YXJhbnRlZXMgZnJvbSB0aGUgVFBNLCBub3QgdGhlIGRyaXZlciBjb2RlLCBzbyBpdCBkb2Vz
-IG5vdCBtYXR0ZXIgd2hhdCB0aGUgZHJpdmVyIGRvZXMsIGV2ZW4gd2l0aCBhIGJyb2tlbiBUUE0u
-DQoNCkkgdW5kZXJzdGFuZCB5b3VyIHBvaW50IG9mIG5vdCB3YW50aW5nIHRvIGVuYWJsZSBmdW5j
-dGlvbmFsaXR5IHRoYXQgeW91IGNhbm5vdCBkaXNhYmxlIGFueW1vcmUsIGJ1dCBJIGZhaWwgdG8g
-c2VlIHdoeSB5b3UnZCBldmVyIHdhbnQgdG8gZGlzYWJsZSAocGFydCBvZikgdGhpcyBmdW5jdGlv
-bmFsaXR5IGFnYWluLiBLbm93aW5nIG1vcmUgYWJvdXQgdGhlIHBvdGVudGlhbCBwcm9ibGVtcyB3
-b3VsZCBhbGxvdyBtZSB0byBwcmV2ZW50IHRoZW0gZnJvbSB0aGUgYmVnaW5uaW5nIG9yIHRvIGNv
-bWUgdXAgd2l0aCBhIGJldHRlciBzYWZlZ3VhcmQgdGhhbiB0aGUgY29tbWFuZC1iYXNlZCB3aGl0
-ZWxpc3RpbmcuDQoNCkFsZXhhbmRlcg0K
+On Thu Aug 31 17, Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org wrote:
+>> Le 29/08/17 =E0 18:35, Laurent Bigonville a =E9crit=A0:
+>> > Le 29/08/17 =E0 18:00, Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org a =E9crit=A0:
+>> >>> An idea how to troubleshoot this?
+>> >> Can you run git bisect on the changes between 4.11 and 4.12, so that
+>> >> we find the offending commit? It is probably sufficient to limit the
+>> >> search to commits that touch something in drivers/char/tpm.
+>> >
+>> > I'll try and keep you posted.
+>>
+>> OK I've been able to bisect the problem and the bad commit is:
+>>
+>> e6aef069b6e97790cb127d5eeb86ae9ff0b7b0e3 is the first bad commit
+>> commit e6aef069b6e97790cb127d5eeb86ae9ff0b7b0e3
+>> Author: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+>> Date:   Mon Mar 27 08:46:04 2017 -0700
+>>
+>>      tpm_tis: convert to using locality callbacks
+>>
+>>      This patch converts tpm_tis to use of the new tpm class ops
+>>      request_locality, and relinquish_locality.
+>>
+>>      With the move to using the callbacks, release_locality is changed so
+>>      that we now release the locality even if there is no request pendin=
+g.
+>>
+>>      This required some changes to the tpm_tis_core_init code path to
+>>      make sure locality is requested when needed:
+>>
+>>        - tpm2_probe code path will end up calling request/release through
+>>          callbacks, so request_locality prior to tpm2_probe not needed.
+>>
+>>        - probe_itpm makes calls to tpm_tis_send_data which no longer cal=
+ls
+>>          request_locality, so add request_locality prior to tpm_tis_send=
+_data
+>>          calls. Also drop release_locality call in middleof probe_itpm, =
+and
+>>          keep locality until release_locality called at end of probe_itp=
+m.
+>>
+>>      Cc: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+>>      Cc: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+>>      Cc: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+>>      Cc: Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>
+>>      Signed-off-by: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+>>      Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+>>      Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+>>      Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+>>
+>> :040000 040000 70234365da69959d47076ebb40c8d17f520c3e44
+>> 72f21b446e45ea1003de75902b0553deb99157fd M	drivers
+>>
+>
+>I've looked again at the code in question, but could not find anything tha=
+t is obviously wrong there. Locality is now requested/released at slightly =
+different points in the process than before, but that's it. It does not see=
+m to cause problems with the majority of TPMs, since you are the first to r=
+eport any, so maybe it is a quirk that only affects this device.
+>
+>Perhaps Jerry can help, since this is his change?
+>
+>Alexander
+
+Getting some caffeine in me, and starting to take a look. Adding
+Jarkko as well since this might involve the general locality changes.
+
+Laurent, if I send you a patch with some debugging code added, would
+you be able to run it on that system? I wasn't running into issues
+on the system I had with a 1.2 device, but I no longer have access
+to it. I'll see if I can find one in our labs and reproduce it there.
+
+---------------------------------------------------------------------------=
+---
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
