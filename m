@@ -1,14 +1,16 @@
 From: <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: Re: Bug in TPM Spi bit protocol implementation?
-Date: Thu, 31 Aug 2017 09:28:23 +0000
-Message-ID: <417427822bed4508914ac9a510c25de0@MUCSE603.infineon.com>
-References: <4f59b268-6897-702c-f440-bbf35f2cf0c9@gmail.com>
- <d00fdebd2ac24743b208dec177ae1b45@MUCSE612.infineon.com>
+Subject: Re: tpm device not showing up in /dev anymore
+Date: Thu, 31 Aug 2017 12:10:46 +0000
+Message-ID: <857106e4bb864bb8a68b1381fffc8f50@MUCSE603.infineon.com>
+References: <f9526f55-df96-64fc-a4d6-877ce04e7156@debian.org>
+ <dcad0104c46d4d5f88e642862bdb42c2@MUCSE603.infineon.com>
+ <47c4300b-8701-79a6-1c58-3a5853f4c5e3@debian.org>
+ <595efb25-8d87-f39d-037f-9c9a98462339@debian.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <d00fdebd2ac24743b208dec177ae1b45-FoTRpVxct+aJSz+rYg/bSJowlv4uC7bZ@public.gmane.org>
+In-Reply-To: <595efb25-8d87-f39d-037f-9c9a98462339-8fiUuRrzOP0dnm+yROfE0A@public.gmane.org>
 Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
@@ -18,87 +20,61 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: raghu.ncstate-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
-Cc: Peter.Huewe-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org, christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: bigon-8fiUuRrzOP0dnm+yROfE0A@public.gmane.org, jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-> -----Original Message-----
-> From: Raghu Krishnamurthy [mailto:raghu.ncstate-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org]
-> Sent: Tuesday, August 29, 2017 11:42 PM
-> To: christophe.ricard-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org; Huewe Peter (IFAG CCS ESS D SW A)
-> Subject: Bug in TPM Spi bit protocol implementation?
->
-> Hello,
->
-> I was using the TPM driver(for TPM2.0) from the 4.9 kernel sources and
-> saw a potential issue in tpm_tis_spi.c, from commit id 0edbfea5.
->
-> In the tpm_spi_read/write_bytes method, we have the following loop,
-> which looks like it is attempting to handle the wait byte in the spi
-> bit protocol(although the comments do not refer to it):
->
->          /* According to TCG PTP specification, if there is no TPM
-> present at
->           * all, then the design has a weak pull-up on MISO. If a TPM is not
->           * present, a pull-up on MISO means that the SB controller
-> sees a 1,
->           * and will latch in 0xFF on the read.
->           */
->          for (i = 0; (phy->rx_buf[0] & 0x01) == 0 && i < TPM_RETRY; i++) {
->                  spi_xfer.len = 1;
->                  spi_message_init(&m);
->                  spi_message_add_tail(&spi_xfer, &m);
->                  ret = spi_sync_locked(phy->spi_device, &m);
->                  if (ret < 0)
->                          goto exit;
->          }
->
-> When the first 4 bytes(command and address) are clocked out of a SPI
-> controller to the TPM, 4 bytes are clocked into the SPI controller as well.
-> Per the PC Client PTP for TPM2.0, the least significant bit of the 4th
-> byte, of the 4 bytes clocked in will tell us if the TPM requires a
-> wait state or not.
-> phy-
-> >rx_buf[0], will correspond to the first byte clocked in(since most
-> >SPI
-> controllers have FIFO for data read in), which means, the wait state
-> is represented in phy->rx_buf[3].
-
-Yep, that was a bug, that I've fixed already, also for 4.9:
-https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git/commit/?h=v4.9.45&id=d513cf24e240f8c7a9127b566b915ce9730fd23e
-
-> So the loop should really first check for (phy->rx_buf[3] & 0x1 == 0),
-> and then enter the loop to check for wait states. Also it must exit
-> the loop with an error if the maximum number of tries are up and the
-> TPM did not change stop inserting wait states.
-
-Another bug, fixed as well:
-https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git/commit/?h=v4.9.45&id=daa432c1a65a541b413111328f8aea61161ad372
-
-> If the loop was not intended to handle the SPI bit protocol wait
-> bytes, then this is a missing piece in the driver and causes issues
-> when being used on systems with a SPI controller where the TPM inserts wait states.
-
-This loop is intended to handle wait states, though as far as I know all TPMs, that I have access to, do not normally generate wait states, so my tests cannot cover that behavior. Do you have a TPM that generates wait states during normal operation? Where can I get one?
-
-> If a TPM does not insert a wait state, and the first byte of data
-> happens to be 0, this loop simply reads a bunch of bytes until there
-> is byte that has bit
-> 0 set to 1 is read. This may be legitimate data, which will then be lost.
->
-> If the TPM does insert a wait state, it will be missed because it is
-> present in
-> phy->rx_buf[3] and not phy->rx_buf[0].
->
-> Please let me know if this makes sense.
-
-Your analysis is correct. Please send such questions also to the tpmdd mailing list (see CC), so that other people are aware of it and can perhaps help you.
-
-> Thanks
->
-> Raghu
-
-Alexander
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+PiBMZSAyOS8wOC8xNyDDoCAxODozNSwgTGF1cmVudCBCaWdvbnZpbGxlIGEgw6ljcml0wqA6DQo+
+ID4gTGUgMjkvMDgvMTcgw6AgMTg6MDAsIEFsZXhhbmRlci5TdGVmZmVuQGluZmluZW9uLmNvbSBh
+IMOpY3JpdMKgOg0KPiA+Pj4gQW4gaWRlYSBob3cgdG8gdHJvdWJsZXNob290IHRoaXM/DQo+ID4+
+IENhbiB5b3UgcnVuIGdpdCBiaXNlY3Qgb24gdGhlIGNoYW5nZXMgYmV0d2VlbiA0LjExIGFuZCA0
+LjEyLCBzbyB0aGF0DQo+ID4+IHdlIGZpbmQgdGhlIG9mZmVuZGluZyBjb21taXQ/IEl0IGlzIHBy
+b2JhYmx5IHN1ZmZpY2llbnQgdG8gbGltaXQgdGhlDQo+ID4+IHNlYXJjaCB0byBjb21taXRzIHRo
+YXQgdG91Y2ggc29tZXRoaW5nIGluIGRyaXZlcnMvY2hhci90cG0uDQo+ID4NCj4gPiBJJ2xsIHRy
+eSBhbmQga2VlcCB5b3UgcG9zdGVkLg0KPiANCj4gT0sgSSd2ZSBiZWVuIGFibGUgdG8gYmlzZWN0
+IHRoZSBwcm9ibGVtIGFuZCB0aGUgYmFkIGNvbW1pdCBpczoNCj4gDQo+IGU2YWVmMDY5YjZlOTc3
+OTBjYjEyN2Q1ZWViODZhZTlmZjBiN2IwZTMgaXMgdGhlIGZpcnN0IGJhZCBjb21taXQNCj4gY29t
+bWl0IGU2YWVmMDY5YjZlOTc3OTBjYjEyN2Q1ZWViODZhZTlmZjBiN2IwZTMNCj4gQXV0aG9yOiBK
+ZXJyeSBTbml0c2VsYWFyIDxqc25pdHNlbEByZWRoYXQuY29tPg0KPiBEYXRlOiAgIE1vbiBNYXIg
+MjcgMDg6NDY6MDQgMjAxNyAtMDcwMA0KPiANCj4gICAgICB0cG1fdGlzOiBjb252ZXJ0IHRvIHVz
+aW5nIGxvY2FsaXR5IGNhbGxiYWNrcw0KPiANCj4gICAgICBUaGlzIHBhdGNoIGNvbnZlcnRzIHRw
+bV90aXMgdG8gdXNlIG9mIHRoZSBuZXcgdHBtIGNsYXNzIG9wcw0KPiAgICAgIHJlcXVlc3RfbG9j
+YWxpdHksIGFuZCByZWxpbnF1aXNoX2xvY2FsaXR5Lg0KPiANCj4gICAgICBXaXRoIHRoZSBtb3Zl
+IHRvIHVzaW5nIHRoZSBjYWxsYmFja3MsIHJlbGVhc2VfbG9jYWxpdHkgaXMgY2hhbmdlZCBzbw0K
+PiAgICAgIHRoYXQgd2Ugbm93IHJlbGVhc2UgdGhlIGxvY2FsaXR5IGV2ZW4gaWYgdGhlcmUgaXMg
+bm8gcmVxdWVzdCBwZW5kaW5nLg0KPiANCj4gICAgICBUaGlzIHJlcXVpcmVkIHNvbWUgY2hhbmdl
+cyB0byB0aGUgdHBtX3Rpc19jb3JlX2luaXQgY29kZSBwYXRoIHRvDQo+ICAgICAgbWFrZSBzdXJl
+IGxvY2FsaXR5IGlzIHJlcXVlc3RlZCB3aGVuIG5lZWRlZDoNCj4gDQo+ICAgICAgICAtIHRwbTJf
+cHJvYmUgY29kZSBwYXRoIHdpbGwgZW5kIHVwIGNhbGxpbmcgcmVxdWVzdC9yZWxlYXNlIHRocm91
+Z2gNCj4gICAgICAgICAgY2FsbGJhY2tzLCBzbyByZXF1ZXN0X2xvY2FsaXR5IHByaW9yIHRvIHRw
+bTJfcHJvYmUgbm90IG5lZWRlZC4NCj4gDQo+ICAgICAgICAtIHByb2JlX2l0cG0gbWFrZXMgY2Fs
+bHMgdG8gdHBtX3Rpc19zZW5kX2RhdGEgd2hpY2ggbm8gbG9uZ2VyIGNhbGxzDQo+ICAgICAgICAg
+IHJlcXVlc3RfbG9jYWxpdHksIHNvIGFkZCByZXF1ZXN0X2xvY2FsaXR5IHByaW9yIHRvIHRwbV90
+aXNfc2VuZF9kYXRhDQo+ICAgICAgICAgIGNhbGxzLiBBbHNvIGRyb3AgcmVsZWFzZV9sb2NhbGl0
+eSBjYWxsIGluIG1pZGRsZW9mIHByb2JlX2l0cG0sIGFuZA0KPiAgICAgICAgICBrZWVwIGxvY2Fs
+aXR5IHVudGlsIHJlbGVhc2VfbG9jYWxpdHkgY2FsbGVkIGF0IGVuZCBvZiBwcm9iZV9pdHBtLg0K
+PiANCj4gICAgICBDYzogUGV0ZXIgSHVld2UgPHBldGVyaHVld2VAZ214LmRlPg0KPiAgICAgIENj
+OiBKYXJra28gU2Fra2luZW4gPGphcmtrby5zYWtraW5lbkBsaW51eC5pbnRlbC5jb20+DQo+ICAg
+ICAgQ2M6IEphc29uIEd1bnRob3JwZSA8amd1bnRob3JwZUBvYnNpZGlhbnJlc2VhcmNoLmNvbT4N
+Cj4gICAgICBDYzogTWFyY2VsIFNlbGhvcnN0IDx0cG1kZEBzZWxob3JzdC5uZXQ+DQo+ICAgICAg
+U2lnbmVkLW9mZi1ieTogSmVycnkgU25pdHNlbGFhciA8anNuaXRzZWxAcmVkaGF0LmNvbT4NCj4g
+ICAgICBSZXZpZXdlZC1ieTogSmFya2tvIFNha2tpbmVuIDxqYXJra28uc2Fra2luZW5AbGludXgu
+aW50ZWwuY29tPg0KPiAgICAgIFRlc3RlZC1ieTogSmFya2tvIFNha2tpbmVuIDxqYXJra28uc2Fr
+a2luZW5AbGludXguaW50ZWwuY29tPg0KPiAgICAgIFNpZ25lZC1vZmYtYnk6IEphcmtrbyBTYWtr
+aW5lbiA8amFya2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbT4NCj4gDQo+IDowNDAwMDAgMDQw
+MDAwIDcwMjM0MzY1ZGE2OTk1OWQ0NzA3NmViYjQwYzhkMTdmNTIwYzNlNDQNCj4gNzJmMjFiNDQ2
+ZTQ1ZWExMDAzZGU3NTkwMmIwNTUzZGViOTkxNTdmZCBNCWRyaXZlcnMNCj4gDQoNCkkndmUgbG9v
+a2VkIGFnYWluIGF0IHRoZSBjb2RlIGluIHF1ZXN0aW9uLCBidXQgY291bGQgbm90IGZpbmQgYW55
+dGhpbmcgdGhhdCBpcyBvYnZpb3VzbHkgd3JvbmcgdGhlcmUuIExvY2FsaXR5IGlzIG5vdyByZXF1
+ZXN0ZWQvcmVsZWFzZWQgYXQgc2xpZ2h0bHkgZGlmZmVyZW50IHBvaW50cyBpbiB0aGUgcHJvY2Vz
+cyB0aGFuIGJlZm9yZSwgYnV0IHRoYXQncyBpdC4gSXQgZG9lcyBub3Qgc2VlbSB0byBjYXVzZSBw
+cm9ibGVtcyB3aXRoIHRoZSBtYWpvcml0eSBvZiBUUE1zLCBzaW5jZSB5b3UgYXJlIHRoZSBmaXJz
+dCB0byByZXBvcnQgYW55LCBzbyBtYXliZSBpdCBpcyBhIHF1aXJrIHRoYXQgb25seSBhZmZlY3Rz
+IHRoaXMgZGV2aWNlLg0KDQpQZXJoYXBzIEplcnJ5IGNhbiBoZWxwLCBzaW5jZSB0aGlzIGlzIGhp
+cyBjaGFuZ2U/DQoNCkFsZXhhbmRlcg0KLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCkNoZWNrIG91dCB0
+aGUgdmlicmFudCB0ZWNoIGNvbW11bml0eSBvbiBvbmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAplbmdh
+Z2luZyB0ZWNoIHNpdGVzLCBTbGFzaGRvdC5vcmchIGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdApf
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwp0cG1kZC1kZXZl
+bCBtYWlsaW5nIGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8v
+bGlzdHMuc291cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
