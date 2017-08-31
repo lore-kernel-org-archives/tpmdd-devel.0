@@ -1,59 +1,127 @@
-From: <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: Re: [PATCH v3 0/2] tpm_tis_spi: Use DMA-safe memory
-Date: Thu, 31 Aug 2017 12:34:33 +0000
-Message-ID: <6b67f719b71e4eb8abd2ba8b3ed57560@MUCSE603.infineon.com>
-References: <20170824082745.9372-1-Alexander.Steffen@infineon.com>
- <20170826112259.ypwtqbwakyfdqkzo@linux.intel.com>
- <9aea582eccbe4655b5de487dacf7c745@MUCSE603.infineon.com>
- <fe81962beaec4c6fa21ea90df0f01560@SFHDAG3NODE3.st.com>
+From: <Alexander.Steffen@infineon.com>
+Subject: RE: [tpmdd-devel] [PATCH RESEND 3/3] tpm-chip: Export TPM device to
+ user space even when startup failed
+Date: Thu, 31 Aug 2017 16:18:42 +0000
+Message-ID: <d284fb46422f468cb2e5c70d3836be69@MUCSE603.infineon.com>
+References: <20170824083714.10016-1-Alexander.Steffen@infineon.com>
+ <20170824083714.10016-4-Alexander.Steffen@infineon.com>
+ <20170825172021.lw3ycxqw63ubrcm2@linux.intel.com>
+ <adaaeae32ba64d979abfc4b758c63fc0@MUCSE603.infineon.com>
+ <20170829125509.55aylht3ikes3bpy@linux.intel.com>
+ <20170829151739.315ae581@kitsune.suse.cz>
+ <20170830101510.rlkh2p3zecfsrhgl@linux.intel.com>
+ <20170830102002.nufnr77whz5jzwfr@linux.intel.com>
+ <20170830123416.29117269@kitsune.suse.cz>
+ <20170830110721.edidi46sx2qgovzu@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <fe81962beaec4c6fa21ea90df0f01560-tklXXlf0F76qZDvoWP1BVkEOCMrvLtNR@public.gmane.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170830110721.edidi46sx2qgovzu@linux.intel.com>
 Content-Language: en-US
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: benoit.houyere-qxv4g6HH51o@public.gmane.org, jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, christophe-h.ricard-qxv4g6HH51o@public.gmane.org
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Sender: owner-linux-security-module@vger.kernel.org
+To: jarkko.sakkinen@linux.intel.com, msuchanek@suse.de
+Cc: linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-> Hi Alexander,
-> 
-> Obviously, we agree to cover validation with STM TPM to confirm your
-> update.
-> Following my availability, I cannot start it before mid of September. Is it inline
-> with your expectation ?
-
-As always, better than nothing, thanks :)
-
-> If it's the case, I will start :
-> - tpm_tis_spi on Raspberry PI 3
-> Next
-> - tpm_tis on X86_64
-
-Those patches only change tpm_tis_spi, so you can skip the tests with tpm_tis.
-
-> Could you send me patch file or link to get patch ?
-
-Unfortunately, Patchwork is not working anymore, so I'll send you the patches in a separate mail.
-
-> By taking Raspberry PI 3 example, How many Byte in SPI transfer size is
-> necessary to use DMA transfer ?
-
-The Raspberry Pi 3 uses drivers/spi/spi-bcm2835.c, which defines BCM2835_SPI_DMA_MIN_LENGTH = 96 bytes. The maximum frame size used by tpm_tis_spi is MAX_SPI_FRAMESIZE = 64 bytes, so the DMA code path is never taken. You could try to set BCM2835_SPI_DMA_MIN_LENGTH to a lower value, to force it to use DMA.
-
-> Best Regards,
-> 
-> Benoit
-
-Alexander
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+PiBPbiBXZWQsIEF1ZyAzMCwgMjAxNyBhdCAxMjozNDoxNlBNICswMjAwLCBNaWNoYWwgU3VjaMOh
+bmVrIHdyb3RlOg0KPiA+IE9uIFdlZCwgMzAgQXVnIDIwMTcgMTM6MjA6MDIgKzAzMDANCj4gPiBK
+YXJra28gU2Fra2luZW4gPGphcmtrby5zYWtraW5lbkBsaW51eC5pbnRlbC5jb20+IHdyb3RlOg0K
+PiA+DQo+ID4gPiBPbiBXZWQsIEF1ZyAzMCwgMjAxNyBhdCAwMToxNToxMFBNICswMzAwLCBKYXJr
+a28gU2Fra2luZW4gd3JvdGU6DQo+ID4gPiA+IE9uIFR1ZSwgQXVnIDI5LCAyMDE3IGF0IDAzOjE3
+OjM5UE0gKzAyMDAsIE1pY2hhbCBTdWNow6FuZWsgd3JvdGU6DQo+ID4gPiA+ID4gSGVsbG8sDQo+
+ID4gPiA+ID4NCj4gPiA+ID4gPiBPbiBUdWUsIDI5IEF1ZyAyMDE3IDE1OjU1OjA5ICswMzAwIEph
+cmtrbyBTYWtraW5lbg0KPiA+ID4gPiA+IDxqYXJra28uc2Fra2luZW5AbGludXguaW50ZWwuY29t
+PiB3cm90ZToNCj4gPiA+ID4gPg0KPiA+ID4gPiA+ID4gT24gTW9uLCBBdWcgMjgsIDIwMTcgYXQg
+MDU6MTU6NThQTSArMDAwMCwNCj4gPiA+ID4gPiA+IEFsZXhhbmRlci5TdGVmZmVuQGluZmluZW9u
+LmNvbSB3cm90ZToNCj4gPiA+ID4gPiA+ID4gQnV0IGlzIHRoYXQganVzdCBiZWNhdXNlIG5vYm9k
+eSBib3RoZXJlZCB0byBpbXBsZW1lbnQgdGhlDQo+ID4gPiA+ID4gPiA+IG5lY2Vzc2FyeSBsb2dp
+YyBvciBmb3Igc29tZSBvdGhlciByZWFzb24/DQo+ID4gPiA+ID4gPg0KPiA+ID4gPiA+ID4gV2Ug
+ZG8gbm90IHdhbnQgdXNlciBzcGFjZSB0byBhY2Nlc3MgYnJva2VuIGhhcmR3YXJlLiBJdCdzIGEN
+Cj4gPiA+ID4gPiA+IGh1Z2UgcmlzayBmb3Igc3lzdGVtIHN0YWJpbGl0eSBhbmQgcG90ZW50aWFs
+bHkgY291bGQgYmUgdXNlZA0KPiA+ID4gPiA+ID4gZm9yIGV2aWwgcHVycG9zZXMuDQo+ID4gPiA+
+ID4gPg0KPiA+ID4gPiA+ID4gVGhpcyBpcyBub3QgZ29pbmcgdG8gbWFpbmxpbmUgYXMgaXQgaXMg
+bm90IHN1aXRhYmxlIGZvcg0KPiA+ID4gPiA+ID4gZ2VuZXJhbCBjb25zdW1wdGlvbi4gWW91IG11
+c3QgdXNlIGEgcGF0Y2hlZCBrZXJuZWwgaWYgeW91IHdhbnQNCj4gdGhpcy4NCj4gPiA+ID4gPiA+
+DQo+ID4gPiA+ID4gPiAvSmFya2tvDQo+ID4gPiA+ID4gPg0KPiA+ID4gPiA+DQo+ID4gPiA+ID4g
+SXQgaGFzIGJlZW4gcG9pbnRlZCBvdXQgdGhhdCB1c2Vyc3BhY2UgYXBwbGljYXRpb25zIHRoYXQg
+dXNlDQo+ID4gPiA+ID4gZGlyZWN0IElPIGFjY2VzcyBleGlzdCBmb3IgdGhlIHB1cnBvc2UuIFNv
+IHVzaW5nIGEga2VybmVsIGRyaXZlcg0KPiA+ID4gPiA+IGlzIGFuIGltcHJvdmVtZW50IG92ZXIg
+dGhhdCBpZiB0aGUgaW50ZXJmYWNlIGlzIG90aGVyd2lzZSBzYW5lLg0KPiA+ID4gPiA+DQo+ID4g
+PiA+ID4gV2hhdCBkbyB5b3UgZXhwZWN0IGlzIHRoZSBwb3RlbnRpYWwgZm9yIGluc3RhYmlsaXR5
+IG9yIGV2aWwgdXNlPw0KPiA+ID4gPg0KPiA+ID4gPiBCeSBkZWZpbml0aW9uIHRoZSB1c2Ugb2Yg
+YnJva2VuIGhhcmR3YXJlIGNhbiBoYXZlIHVucHJlZGljdGFibGUNCj4gPiA+ID4gZWZmZWN0cy4g
+VXNlIGEgcGF0Y2hlZCBrZXJuZWwgaWYgeW91IHdhbnQgdG8gZG8gaXQuDQo+ID4gPiA+DQo+ID4g
+PiA+IC9KYXJra28NCj4gPiA+DQo+ID4gPiBJLmUuIHRvbyBtYW55IHVua25vd24gdW5rbm93bnMg
+Zm9yIG1haW5saW5lLg0KPiA+ID4NCj4gPiA+IEkgY291bGQgY29uc2lkZXIgYSBzb2x1dGlvbiBm
+b3IgdGhlIFRQTSBlcnJvciBjYXNlIG9uIHNlbGYtdGVzdCB0aGF0DQo+ID4gPiBhbGxvd3Mgb25s
+eSByZXN0cmljdGVkIHN1YnNldCBvZiBjb21tYW5kcy4NCj4gPiA+DQo+ID4gPiBUaGUgcGF0Y2gg
+ZGVzY3JpcHRpb24gZGlkIG5vdCBnbyB0byAqYW55KiBkZXRhaWwgb24gaG93IGl0IGlzIHVzZWQN
+Cj4gPiA+IHNvIHByYWN0aWNhbGx5IGl0J3MgdW5yZXZpZXdhYmxlIGF0IHRoaXMgcG9pbnQuIFRo
+ZXJlJ3MgYSBiaWcgYnVyZGVyDQo+ID4gPiBvZiBwcm9vZiBhbmQgbm93IHRoZXJlJ3Mgb25seSBo
+YW5kIHdhdmluZy4NCj4gPiA+DQo+ID4gSGVsbG8sDQo+ID4NCj4gPiB0aGVyZSB3YXMgYSBidWcg
+cGF0Y2hlZCByZWNlbnRseSBpbiB3aGljaCBMaW51eCB3YXMgbm90IHNlbmRpbmcgdGhlDQo+ID4g
+c2h1dGRvd24gY29tbWFuZCBvbiBzeXN0ZW0gc2h1dGRvd24uIFByZXN1bWFibHkgd2l0aCB0aGlz
+IGJ1ZyBzb21lDQo+ID4gVFBNcyBjb25zaWRlciBiZWluZyB1bmRlciBhdHRhY2sgYW5kIHN0b3Ag
+cGVyZm9ybWluZyBtb3N0IGZ1bmN0aW9ucy4NCj4gPiBIb3dldmVyLCB5b3Ugc2hvdWxkIGJlIGFi
+bGUgdG8gcmVhZCB0aGUgbG9nIGlmIHRoaXMgaXMgaW1wbGVtZW50ZWQNCj4gPiBzYW5lbHkuIEZv
+ciB0aGF0IHRoZSBUUE0gbmVlZHMgdG8gYmUgYWNjZXNzaWJsZS4NCj4gPg0KPiA+IFRoZXJlIGFy
+ZSBwcm9iYWJseSBvdGhlciBjYXNlcyB3aGVuIHRoZSBUUE0gbWlnaHQgYmUgdXNlbGVzcyBmb3IN
+Cj4gPiBzeXN0ZW0gdXNlIGJ1dCBpdCBtaWdodCBiZSB1c2VmdWwgdG8gYWNjZXNzIGl0LiBGb3Ig
+ZXhhbXBsZSwgZG9lcw0KPiA+IExpbnV4IGhhbmRsZSB1bmluaXRpYWxpemVkIFRQTXM/DQo+ID4N
+Cj4gPiBUaGFua3MNCj4gPg0KPiA+IE1pY2hhbA0KDQpUaGUgdHdvIHNjZW5hcmlvcyB0aGF0IEkg
+aGFkIGluIG1pbmQ6DQoNCjEuIEEgVFBNIGluIGZhaWx1cmUgbW9kZS4gVGhpcyBzaWduYWxzIGEg
+YnJva2VuIGRldmljZSwgeWVzLCBidXQgaXQgaXMgcGFydCBvZiB0aGUgc3BlY2lmaWNhdGlvbiwg
+c28gd2Ugc2hvdWxkIHN1cHBvcnQgaXQuIElmIGl0IHdhcyB1bnJlYXNvbmFibGUgdG8gdGFsayB0
+byBzdWNoIGEgZGV2aWNlLCB3aHkgc3BlY2lmeSBmYWlsdXJlIG1vZGUgaW4gdGhlIGZpcnN0IHBs
+YWNlPw0KDQoyLiBBIFRQTSBpbiBzb21lIHZlbmRvci1zcGVjaWZpYyBtb2RlLiBUaGlzIGlzIHdo
+YXQgaGFwcGVucyBkdXJpbmcgZmllbGQgdXBncmFkZSB3aXRoIHNvbWUgSW5maW5lb24gVFBNcy4g
+RHVyaW5nIHRoZSBmaWVsZCB1cGdyYWRlIHByb2Nlc3MsIHRoZSBjb21tdW5pY2F0aW9uIGxvb2tz
+IFRQTS1saWtlIChpLmUuIHRoZSB1c3VhbCAxMC1ieXRlIGhlYWRlciBpcyBwcmVzZW50KSwgYnV0
+IGl0IGlzIG5vdCBwYXJ0IG9mIGFueSAocHVibGljKSBzcGVjaWZpY2F0aW9uLCBhbmQgc3RhbmRh
+cmQgVFBNIGNvbW1hbmRzIGFyZSBvYnZpb3VzbHkgdW5zdXBwb3J0ZWQuIFRoaXMgd29ya3MgZmlu
+ZSB3aXRoIHRoZSBjdXJyZW50IGRyaXZlciwgYXMgbG9uZyBhcyB5b3UgZG8gbm90IGludGVycnVw
+dCB0aGUgdXBncmFkZSBwcm9jZXNzLCBhcyB0aGUgZHJpdmVyIG5ldmVyIGNoZWNrcyB0aGUgZGV2
+aWNlIGFnYWluIGR1cmluZyB1c2FnZS4gQnV0IGlmIHRoZSB1cGdyYWRlIHByb2Nlc3MgaXMgaW50
+ZXJydXB0ZWQgKGUuZy4gYnkgcG93ZXIgbG9zcykgYW5kIHRoZSBUUE0gaGFzIHRvIHN0YXJ0IGFn
+YWluIGluIHRoaXMgdmVuZG9yLXNwZWNpZmljIG1vZGUsIHRoZW4gdGhlIGRldmljZSBzaW1wbHkg
+ZGlzYXBwZWFycyBmcm9tIHRoZSBzeXN0ZW0gYW5kIHlvdSBoYXZlIG5vIGNoYW5jZSB0byBmaXgg
+dGhlIHByb2JsZW0uDQoNCj4gQWdyZWVkLiBJIHN0aWxsIHRoaW5rIGl0IHdvdWxkIG1ha2Ugc2Vu
+c2UgdG8gc3RhcnQgd2l0aCBhIGxpbWl0ZWQgc3Vic2V0IG9mIFRQTQ0KPiBjb21tYW5kcywgbm90
+IHdpdGggYWxsLWNvbW1hbmQtYWxsb3dlZC4NCj4gDQo+IEkgZ3Vlc3MgQWxleGFuZGVyIHNob3Vs
+ZCBiZSBhYmxlIHRvIHByb3Bvc2Ugc3VjaCBzdWJzZXQuDQoNCkZvciBzY2VuYXJpbyAjMSB5b3Ug
+Y291bGQgcHJvYmFibHkgY29tZSB1cCB3aXRoIGEgbGlzdCBvZiBjb21tYW5kcyB0aGF0IGFyZSBn
+ZW5lcmFsbHkgdXNlZnVsLiBCdXQgb25jZSB5b3UgYXJlIHJlc3RyaWN0ZWQgdG8gdGhvc2UgZml2
+ZSBjb21tYW5kcywgeW91IGJsb2NrIGl0ZXJhdGl2ZSBkZWJ1Z2dpbmcgb2YgdGhlICJJIHNlZSB3
+aGVyZSB0aGUgcHJvYmxlbSBtaWdodCBiZSwgY291bGQgeW91IHRyeSB0byBleGVjdXRlIC4uLiIg
+ZmFzaGlvbiBieSByZXF1aXJpbmcgdGhlIG90aGVyIHBlcnNvbiB0byBwYXRjaCBhbmQgcmVidWls
+ZCB0aGVpciBrZXJuZWwuDQoNCkZvciBzY2VuYXJpbyAjMiBJIHNlZSBubyBjaGFuY2UgdG8gZG8g
+dGhhdCBpbiBhIGdlbmVyaWMgd2F5LiBJIGNvdWxkIG1heWJlIHRlbGwgeW91IHdoYXQgdGhlIGNv
+bW1hbmRzIGluIHRoaXMgbW9kZSBjdXJyZW50bHkgbG9vayBsaWtlIGZvciBJbmZpbmVvbiBUUE1z
+LCBzbyB0aGF0IHRoZXkgY2FuIGJlIHdoaXRlbGlzdGVkLCBidXQgdGhleSBtaWdodCBsb29rIGRp
+ZmZlcmVudCBpbiB0aGUgZnV0dXJlIGFuZCB0aGV5IGFyZSBjZXJ0YWlubHkgZGlmZmVyZW50IGZv
+ciBvdGhlciB2ZW5kb3IncyBpbXBsZW1lbnRhdGlvbnMuDQoNClNvIHdpdGggYm90aCBzY2VuYXJp
+b3MgeW91IGVuZCB1cCB3aXRoIGEgbG90IG9mIGluZnJhc3RydWN0dXJlIGZvciB0aGlzIHdoaXRl
+bGlzdCBhcHByb2FjaCBpbiBnZW5lcmFsIGFuZCBhZGQgYSBncm93aW5nIGxpc3Qgb2YgYWxsb3dl
+ZCBjb21tYW5kcywgdGhhdCBhcmUgaW5pdGlhbGx5IG5ldmVyIHByZXNlbnQgaW4gdGhlIGtlcm5l
+bCB2ZXJzaW9uIHdoZXJlIHlvdSBuZWVkIHRoZW0gbW9zdCwgYW5kIHdoZXJlIGl0IHRoZW4gdGFr
+ZXMgc2V2ZXJhbCBtb250aHMgb3IgeWVhcnMgdW50aWwgdGhleSBmaW5hbGx5IHJlYWNoIHlvdXIg
+dXNlcnMgdGhyb3VnaCBvZmZpY2lhbCBjaGFubmVscy4gQW5kIHdpdGggYWxsIHRoYXQgaW4gcGxh
+Y2UsIHlvdSBnYWluIHdoYXQgZXhhY3RseT8gV2h5IGlzIGl0IGV2ZW4gdXNlZnVsIHRvIHdoaXRl
+bGlzdCBmdW5jdGlvbmFsaXR5IGJhc2VkIG9uIGNvbW1hbmQgY29kZXM/IElmIHRoZSBkZXZpY2Ug
+aXMgYnJva2VuLCBpdCBtaWdodCBiZSB0aGF0IGp1c3Qgc29tZSBUSVMgcmVnaXN0ZXJzIGRvIG5v
+dCB3b3JrIGNvcnJlY3RseS4gT3IgbWF5YmUganVzdCBzb21lIHBhcmFtZXRlciBjb21iaW5hdGlv
+bnMgZm9yIHNwZWNpZmljIGNvbW1hbmRzIGRvIG5vdCB3b3JrIGFueW1vcmUgKGUuZy4geW91ciBS
+U0EgaGFyZHdhcmUgaXMgYnJva2VuLCBzbyBSU0Egb3BlcmF0aW9ucyBmYWlsLCBidXQgRUNDIGlz
+IHN0aWxsIGdvb2QpLg0KDQpNeSBwb2ludCBpczogWW91IGFscmVhZHkgbmVlZCB0byBndWFyZCBh
+Z2FpbnN0IG1pc2JlaGF2aW5nIGRldmljZXMsIGJ1dCB5b3UgY2Fubm90IGRvIHNvIGJ5IHRyeWlu
+ZyB0byBjbGFzc2lmeSBkZXZpY2VzIGFzIGVpdGhlciAiZ29vZCIgb3IgImJhZCIuIEEgZGV2aWNl
+IHRoYXQgaW5pdGlhbGx5IGxvb2tzIGdvb2QgY2FuIHR1cm4gYmFkIGF0IGFueSB0aW1lLiBTbyBm
+b3IgZXhhbXBsZSwgeW91IGNhbm5vdCBydW4gYW4gZW5kbGVzcyBsb29wIHVudGlsIHRoZSBnb29k
+IGRldmljZSByZXR1cm5zIHRoZSBleHBlY3RlZCBhbnN3ZXIsIGJ1dCB5b3UgYWx3YXlzIGhhdmUg
+dG8gdXNlIHByb3BlciB0aW1lb3V0cy4gSWYgc3VjaCBzYWZlZ3VhcmRzIGFyZSBtaXNzaW5nIHNv
+bWV3aGVyZSwgdGhlbiBpdCBpcyBhbHJlYWR5IGEgYnVnIHRoYXQgbmVlZHMgdG8gYmUgZml4ZWQu
+IEJ1dCBpZiBzdWNoIHNhZmVndWFyZHMgYXJlIHByZXNlbnQgZXZlcnl3aGVyZSB3aGVyZSBuZWVk
+ZWQsIHRoZXJlIHNob3VsZCBiZSBub3RoaW5nIHRoYXQgYSBnb29kIG9yIGEgYmFkIGRldmljZSBj
+YW4gZG8sIHRoYXQgaGFybXMgdGhlIGtlcm5lbCBvciBhbnkgKHdlbGwtd3JpdHRlbikgYXBwbGlj
+YXRpb24uDQoNCkFsZXhhbmRlcg0K
