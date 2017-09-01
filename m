@@ -1,16 +1,19 @@
-From: <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: Re: [PATCH RESEND 0/2] Avoid sending invalid data to
- the TPM
-Date: Fri, 1 Sep 2017 12:08:49 +0000
-Message-ID: <793a8e7428f946cc96d400038bc050da@MUCSE603.infineon.com>
-References: <20170824083545.13280-1-Alexander.Steffen@infineon.com>
- <20170825164416.svo7khm4zsmosxbx@linux.intel.com>
+From: Laurent Bigonville <bigon-8fiUuRrzOP0dnm+yROfE0A@public.gmane.org>
+Subject: Re: tpm device not showing up in /dev anymore
+Date: Fri, 1 Sep 2017 14:10:18 +0200
+Message-ID: <0d9be244-ace0-030d-6ff9-c4e94c63b7e9@debian.org>
+References: <f9526f55-df96-64fc-a4d6-877ce04e7156@debian.org>
+ <dcad0104c46d4d5f88e642862bdb42c2@MUCSE603.infineon.com>
+ <47c4300b-8701-79a6-1c58-3a5853f4c5e3@debian.org>
+ <595efb25-8d87-f39d-037f-9c9a98462339@debian.org>
+ <857106e4bb864bb8a68b1381fffc8f50@MUCSE603.infineon.com>
+ <20170831164015.3ajgwydgxtippwoz@rhwork>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"; Format="flowed"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170825164416.svo7khm4zsmosxbx-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Content-Language: en-US
+In-Reply-To: <20170831164015.3ajgwydgxtippwoz@rhwork>
+Content-Language: fr-BE
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -19,42 +22,75 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org
+Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-> On Thu, Aug 24, 2017 at 10:35:43AM +0200, Alexander Steffen wrote:
-> > When trying to send invalid commands (with mismatching commandSize
-> > values) to the TPM we discovered some cases in which data is sent to
-> > the TPM that should not be sent there. Similar problems were fixed
-> > years ago, but this one slipped through it seems.
-> >
-> > Alexander Steffen (2):
-> >   tpm-dev-common: Reject too short writes
-> >   tpm-interface: Fix checks of buffer size
-> >
-> >  drivers/char/tpm/tpm-dev-common.c |  2 +-
-> > drivers/char/tpm/tpm-interface.c  | 16 ++++++++--------
-> >  drivers/char/tpm/tpm.h            |  3 ++-
-> >  3 files changed, 11 insertions(+), 10 deletions(-)
-> >
-> > --
-> > 2.7.4
-> >
-> 
-> Have you checked that these do no break /dev/tpmrm0?
-> 
-> I have some cheap unit tests here to smoke it:
-> 
-> https://github.com/jsakkine-intel/tpm2-scripts
-> 
-> /Jarkko
-
-I've now included your tests in my automation, so that they will run for all my future changes. Is it sufficient to use tpm2_smoke.py or should I also run keyctl-smoke.sh? Not having used keyctl before, I'm not sure whether it has any dependencies/side effects.
-
-There was one thing I needed to fix to make the tests run with my TPMs and I've sent you a pull request via GitHub for it.
-
-Alexander
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+TGUgMzEvMDgvMTcgw6AgMTg6NDAsIEplcnJ5IFNuaXRzZWxhYXIgYSDDqWNyaXTCoDoKPiBPbiBU
+aHUgQXVnIDMxIDE3LCBBbGV4YW5kZXIuU3RlZmZlbkBpbmZpbmVvbi5jb20gd3JvdGU6Cj4+PiBM
+ZSAyOS8wOC8xNyDDoCAxODozNSwgTGF1cmVudCBCaWdvbnZpbGxlIGEgw6ljcml0wqA6Cj4+PiA+
+IExlIDI5LzA4LzE3IMOgIDE4OjAwLCBBbGV4YW5kZXIuU3RlZmZlbkBpbmZpbmVvbi5jb20gYSDD
+qWNyaXTCoDoKPj4+ID4+PiBBbiBpZGVhIGhvdyB0byB0cm91Ymxlc2hvb3QgdGhpcz8KPj4+ID4+
+IENhbiB5b3UgcnVuIGdpdCBiaXNlY3Qgb24gdGhlIGNoYW5nZXMgYmV0d2VlbiA0LjExIGFuZCA0
+LjEyLCBzbyB0aGF0Cj4+PiA+PiB3ZSBmaW5kIHRoZSBvZmZlbmRpbmcgY29tbWl0PyBJdCBpcyBw
+cm9iYWJseSBzdWZmaWNpZW50IHRvIGxpbWl0IHRoZQo+Pj4gPj4gc2VhcmNoIHRvIGNvbW1pdHMg
+dGhhdCB0b3VjaCBzb21ldGhpbmcgaW4gZHJpdmVycy9jaGFyL3RwbS4KPj4+ID4KPj4+ID4gSSds
+bCB0cnkgYW5kIGtlZXAgeW91IHBvc3RlZC4KPj4+Cj4+PiBPSyBJJ3ZlIGJlZW4gYWJsZSB0byBi
+aXNlY3QgdGhlIHByb2JsZW0gYW5kIHRoZSBiYWQgY29tbWl0IGlzOgo+Pj4KPj4+IGU2YWVmMDY5
+YjZlOTc3OTBjYjEyN2Q1ZWViODZhZTlmZjBiN2IwZTMgaXMgdGhlIGZpcnN0IGJhZCBjb21taXQK
+Pj4+IGNvbW1pdCBlNmFlZjA2OWI2ZTk3NzkwY2IxMjdkNWVlYjg2YWU5ZmYwYjdiMGUzCj4+PiBB
+dXRob3I6IEplcnJ5IFNuaXRzZWxhYXIgPGpzbml0c2VsQHJlZGhhdC5jb20+Cj4+PiBEYXRlOsKg
+wqAgTW9uIE1hciAyNyAwODo0NjowNCAyMDE3IC0wNzAwCj4+Pgo+Pj4gwqDCoMKgwqAgdHBtX3Rp
+czogY29udmVydCB0byB1c2luZyBsb2NhbGl0eSBjYWxsYmFja3MKPj4+Cj4+PiDCoMKgwqDCoCBU
+aGlzIHBhdGNoIGNvbnZlcnRzIHRwbV90aXMgdG8gdXNlIG9mIHRoZSBuZXcgdHBtIGNsYXNzIG9w
+cwo+Pj4gwqDCoMKgwqAgcmVxdWVzdF9sb2NhbGl0eSwgYW5kIHJlbGlucXVpc2hfbG9jYWxpdHku
+Cj4+Pgo+Pj4gwqDCoMKgwqAgV2l0aCB0aGUgbW92ZSB0byB1c2luZyB0aGUgY2FsbGJhY2tzLCBy
+ZWxlYXNlX2xvY2FsaXR5IGlzIAo+Pj4gY2hhbmdlZCBzbwo+Pj4gwqDCoMKgwqAgdGhhdCB3ZSBu
+b3cgcmVsZWFzZSB0aGUgbG9jYWxpdHkgZXZlbiBpZiB0aGVyZSBpcyBubyByZXF1ZXN0IAo+Pj4g
+cGVuZGluZy4KPj4+Cj4+PiDCoMKgwqDCoCBUaGlzIHJlcXVpcmVkIHNvbWUgY2hhbmdlcyB0byB0
+aGUgdHBtX3Rpc19jb3JlX2luaXQgY29kZSBwYXRoIHRvCj4+PiDCoMKgwqDCoCBtYWtlIHN1cmUg
+bG9jYWxpdHkgaXMgcmVxdWVzdGVkIHdoZW4gbmVlZGVkOgo+Pj4KPj4+IMKgwqDCoMKgwqDCoCAt
+IHRwbTJfcHJvYmUgY29kZSBwYXRoIHdpbGwgZW5kIHVwIGNhbGxpbmcgcmVxdWVzdC9yZWxlYXNl
+IAo+Pj4gdGhyb3VnaAo+Pj4gwqDCoMKgwqDCoMKgwqDCoCBjYWxsYmFja3MsIHNvIHJlcXVlc3Rf
+bG9jYWxpdHkgcHJpb3IgdG8gdHBtMl9wcm9iZSBub3QgbmVlZGVkLgo+Pj4KPj4+IMKgwqDCoMKg
+wqDCoCAtIHByb2JlX2l0cG0gbWFrZXMgY2FsbHMgdG8gdHBtX3Rpc19zZW5kX2RhdGEgd2hpY2gg
+bm8gbG9uZ2VyIAo+Pj4gY2FsbHMKPj4+IMKgwqDCoMKgwqDCoMKgwqAgcmVxdWVzdF9sb2NhbGl0
+eSwgc28gYWRkIHJlcXVlc3RfbG9jYWxpdHkgcHJpb3IgdG8gCj4+PiB0cG1fdGlzX3NlbmRfZGF0
+YQo+Pj4gwqDCoMKgwqDCoMKgwqDCoCBjYWxscy4gQWxzbyBkcm9wIHJlbGVhc2VfbG9jYWxpdHkg
+Y2FsbCBpbiBtaWRkbGVvZiAKPj4+IHByb2JlX2l0cG0sIGFuZAo+Pj4gwqDCoMKgwqDCoMKgwqDC
+oCBrZWVwIGxvY2FsaXR5IHVudGlsIHJlbGVhc2VfbG9jYWxpdHkgY2FsbGVkIGF0IGVuZCBvZiAK
+Pj4+IHByb2JlX2l0cG0uCj4+Pgo+Pj4gwqDCoMKgwqAgQ2M6IFBldGVyIEh1ZXdlIDxwZXRlcmh1
+ZXdlQGdteC5kZT4KPj4+IMKgwqDCoMKgIENjOiBKYXJra28gU2Fra2luZW4gPGphcmtrby5zYWtr
+aW5lbkBsaW51eC5pbnRlbC5jb20+Cj4+PiDCoMKgwqDCoCBDYzogSmFzb24gR3VudGhvcnBlIDxq
+Z3VudGhvcnBlQG9ic2lkaWFucmVzZWFyY2guY29tPgo+Pj4gwqDCoMKgwqAgQ2M6IE1hcmNlbCBT
+ZWxob3JzdCA8dHBtZGRAc2VsaG9yc3QubmV0Pgo+Pj4gwqDCoMKgwqAgU2lnbmVkLW9mZi1ieTog
+SmVycnkgU25pdHNlbGFhciA8anNuaXRzZWxAcmVkaGF0LmNvbT4KPj4+IMKgwqDCoMKgIFJldmll
+d2VkLWJ5OiBKYXJra28gU2Fra2luZW4gPGphcmtrby5zYWtraW5lbkBsaW51eC5pbnRlbC5jb20+
+Cj4+PiDCoMKgwqDCoCBUZXN0ZWQtYnk6IEphcmtrbyBTYWtraW5lbiA8amFya2tvLnNha2tpbmVu
+QGxpbnV4LmludGVsLmNvbT4KPj4+IMKgwqDCoMKgIFNpZ25lZC1vZmYtYnk6IEphcmtrbyBTYWtr
+aW5lbiA8amFya2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbT4KPj4+Cj4+PiA6MDQwMDAwIDA0
+MDAwMCA3MDIzNDM2NWRhNjk5NTlkNDcwNzZlYmI0MGM4ZDE3ZjUyMGMzZTQ0Cj4+PiA3MmYyMWI0
+NDZlNDVlYTEwMDNkZTc1OTAyYjA1NTNkZWI5OTE1N2ZkIE3CoMKgwqAgZHJpdmVycwo+Pj4KPj4K
+Pj4gSSd2ZSBsb29rZWQgYWdhaW4gYXQgdGhlIGNvZGUgaW4gcXVlc3Rpb24sIGJ1dCBjb3VsZCBu
+b3QgZmluZCAKPj4gYW55dGhpbmcgdGhhdCBpcyBvYnZpb3VzbHkgd3JvbmcgdGhlcmUuIExvY2Fs
+aXR5IGlzIG5vdyAKPj4gcmVxdWVzdGVkL3JlbGVhc2VkIGF0IHNsaWdodGx5IGRpZmZlcmVudCBw
+b2ludHMgaW4gdGhlIHByb2Nlc3MgdGhhbiAKPj4gYmVmb3JlLCBidXQgdGhhdCdzIGl0LiBJdCBk
+b2VzIG5vdCBzZWVtIHRvIGNhdXNlIHByb2JsZW1zIHdpdGggdGhlIAo+PiBtYWpvcml0eSBvZiBU
+UE1zLCBzaW5jZSB5b3UgYXJlIHRoZSBmaXJzdCB0byByZXBvcnQgYW55LCBzbyBtYXliZSBpdCAK
+Pj4gaXMgYSBxdWlyayB0aGF0IG9ubHkgYWZmZWN0cyB0aGlzIGRldmljZS4KPj4KPj4gUGVyaGFw
+cyBKZXJyeSBjYW4gaGVscCwgc2luY2UgdGhpcyBpcyBoaXMgY2hhbmdlPwo+Pgo+PiBBbGV4YW5k
+ZXIKPgo+IEdldHRpbmcgc29tZSBjYWZmZWluZSBpbiBtZSwgYW5kIHN0YXJ0aW5nIHRvIHRha2Ug
+YSBsb29rLiBBZGRpbmcKPiBKYXJra28gYXMgd2VsbCBzaW5jZSB0aGlzIG1pZ2h0IGludm9sdmUg
+dGhlIGdlbmVyYWwgbG9jYWxpdHkgY2hhbmdlcy4KPgo+IExhdXJlbnQsIGlmIEkgc2VuZCB5b3Ug
+YSBwYXRjaCB3aXRoIHNvbWUgZGVidWdnaW5nIGNvZGUgYWRkZWQsIHdvdWxkCj4geW91IGJlIGFi
+bGUgdG8gcnVuIGl0IG9uIHRoYXQgc3lzdGVtPyBJIHdhc24ndCBydW5uaW5nIGludG8gaXNzdWVz
+Cj4gb24gdGhlIHN5c3RlbSBJIGhhZCB3aXRoIGEgMS4yIGRldmljZSwgYnV0IEkgbm8gbG9uZ2Vy
+IGhhdmUgYWNjZXNzCj4gdG8gaXQuIEknbGwgc2VlIGlmIEkgY2FuIGZpbmQgb25lIGluIG91ciBs
+YWJzIGFuZCByZXByb2R1Y2UgaXQgdGhlcmUuCgpZZXMgSSBzaG91bGQgYmUgYWJsZSB0byBkbyB0
+aGF0CgoKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCkNoZWNrIG91dCB0aGUgdmlicmFudCB0ZWNoIGNv
+bW11bml0eSBvbiBvbmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAplbmdhZ2luZyB0ZWNoIHNpdGVzLCBT
+bGFzaGRvdC5vcmchIGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdApfX19fX19fX19fX19fX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fXwp0cG1kZC1kZXZlbCBtYWlsaW5nIGxpc3QKdHBt
+ZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8vbGlzdHMuc291cmNlZm9yZ2Uu
+bmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
