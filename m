@@ -1,38 +1,46 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH RESEND v2 0/3] tpm2-cmd: Improve self test execution
-Date: Sat, 2 Sep 2017 13:16:44 +0300
-Message-ID: <20170902101644.x254cv2jmlw3jruu@linux.intel.com>
-References: <20170831171858.13252-1-Alexander.Steffen@infineon.com>
+Subject: Re: [tpmdd-devel] [PATCH RESEND 3/3] tpm-chip: Export TPM device to
+ user space even when startup failed
+Date: Sat, 2 Sep 2017 13:20:11 +0300
+Message-ID: <20170902102011.j77dpzuiabm2tn5l@linux.intel.com>
+References: <20170824083714.10016-4-Alexander.Steffen@infineon.com>
+ <20170825172021.lw3ycxqw63ubrcm2@linux.intel.com>
+ <adaaeae32ba64d979abfc4b758c63fc0@MUCSE603.infineon.com>
+ <20170829125509.55aylht3ikes3bpy@linux.intel.com>
+ <20170829151739.315ae581@kitsune.suse.cz>
+ <20170830101510.rlkh2p3zecfsrhgl@linux.intel.com>
+ <20170830102002.nufnr77whz5jzwfr@linux.intel.com>
+ <20170830123416.29117269@kitsune.suse.cz>
+ <20170830110721.edidi46sx2qgovzu@linux.intel.com>
+ <d284fb46422f468cb2e5c70d3836be69@MUCSE603.infineon.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170831171858.13252-1-Alexander.Steffen@infineon.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Alexander Steffen <Alexander.Steffen@infineon.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+In-Reply-To: <d284fb46422f468cb2e5c70d3836be69@MUCSE603.infineon.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Alexander.Steffen@infineon.com
+Cc: msuchanek@suse.de, linux-security-module@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Aug 31, 2017 at 07:18:55PM +0200, Alexander Steffen wrote:
-> The self test logic for TPM 2.0 was probably based on the implementation
-> for TPM 1.2, but did not correctly take into account some TPM 2.0 specifics.
-> This patch series fixes those issues.
+On Thu, Aug 31, 2017 at 04:18:42PM +0000, Alexander.Steffen@infineon.com wrote:
+> > I guess Alexander should be able to propose such subset.
 > 
-> v2:
-> - Moved implementation description from comment to commit message.
-> 
-> Alexander Steffen (3):
->   tpm2-cmd: Trigger only missing self tests
->   tpm2-cmd: Use dynamic delay to wait for self test result
->   tpm2-cmd: React correctly to RC_TESTING from self tests
-> 
->  drivers/char/tpm/tpm2-cmd.c | 69 +++++++++++++--------------------------------
->  1 file changed, 20 insertions(+), 49 deletions(-)
-> 
-> -- 
-> 2.7.4
-> 
+> For scenario #1 you could probably come up with a list of commands
+> that are generally useful. But once you are restricted to those five
+> commands, you block iterative debugging of the "I see where the
+> problem might be, could you try to execute ..." fashion by requiring
+> the other person to patch and rebuild their kernel.
 
-Great, just have to test these.
+If the subset turns out to be wrong, it can be revisited.
+
+> For scenario #2 I see no chance to do that in a generic way. I could
+> maybe tell you what the commands in this mode currently look like for
+> Infineon TPMs, so that they can be whitelisted, but they might look
+> different in the future and they are certainly different for other
+> vendor's implementations.
+
+It's easy to check whether a command is vendor specific and allow to
+pass those through.
 
 /Jarkko
