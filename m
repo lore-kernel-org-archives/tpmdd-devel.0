@@ -1,47 +1,55 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH RESEND v3 0/2] tpm_tis_spi: Use DMA-safe memory
-Date: Sat, 2 Sep 2017 13:54:24 +0300
-Message-ID: <20170902105424.ej67umlzqfgaue7x@linux.intel.com>
-References: <20170831165819.13544-1-Alexander.Steffen@infineon.com>
+From: <Alexander.Steffen@infineon.com>
+Subject: RE: [PATCH RESEND 1/2] tpm-dev-common: Reject too short writes
+Date: Mon, 4 Sep 2017 17:35:00 +0000
+Message-ID: <dd865ba5751e4d568709e0aaf209633b@MUCSE603.infineon.com>
+References: <20170824083545.13280-1-Alexander.Steffen@infineon.com>
+ <20170824083545.13280-2-Alexander.Steffen@infineon.com>
+ <20170825165451.b7lv7t5w3nhbz7da@linux.intel.com>
+ <6039fbecc07044a88706a41441f62d18@MUCSE603.infineon.com>
+ <20170830104059.sglgybn3fxh24qjr@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20170831165819.13544-1-Alexander.Steffen@infineon.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Alexander Steffen <Alexander.Steffen@infineon.com>
-Cc: tpmdd-devel@lists.sourceforge.net, benoit.houyere@st.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <stable-owner@vger.kernel.org>
+In-Reply-To: <20170830104059.sglgybn3fxh24qjr@linux.intel.com>
+Content-Language: en-US
+Sender: stable-owner@vger.kernel.org
+To: jarkko.sakkinen@linux.intel.com
+Cc: tpmdd-devel@lists.sourceforge.net, stable@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Aug 31, 2017 at 06:58:17PM +0200, Alexander Steffen wrote:
-> The documentation says that DMA-safe memory is required for SPI transfers.
-> The I/O buffers passed in by the caller can be allocated anywhere,
-> including on the stack, which is not DMA-safe. So the data needs to be
-> copied to separate, DMA-safe buffers.
-> 
-> We did not see any DMA-related issues on our test systems, even without
-> DMA-safe buffers. But this might simply be due to the fact that the SPI
-> transfer size is rather small, so our systems do not bother to set up DMA
-> transfers. Other systems might do so.
-> 
-> v2:
-> - Updated commit message with more explanations.
-> 
-> v3:
-> - Split into two patches, one for making the buffers DMA-safe and another
->   for using only a single buffer.
-> 
-> Alexander Steffen (2):
->   tpm_tis_spi: Use DMA-safe memory for SPI transfers
->   tpm_tis_spi: Use a single buffer for SPI transfers
-> 
->  drivers/char/tpm/tpm_tis_spi.c | 32 ++++++++++++++++++--------------
->  1 file changed, 18 insertions(+), 14 deletions(-)
-> 
-> -- 
-> 2.7.4
-> 
-
-Great, I'll try to get means to test this!
-
-/Jarkko
+PiBPbiBNb24sIEF1ZyAyOCwgMjAxNyBhdCAwNToxMTowMFBNICswMDAwLA0KPiBBbGV4YW5kZXIu
+U3RlZmZlbkBpbmZpbmVvbi5jb20gd3JvdGU6DQo+ID4gPiA+IGRpZmYgLS1naXQgYS9kcml2ZXJz
+L2NoYXIvdHBtL3RwbS1kZXYtY29tbW9uLmMNCj4gPiA+ID4gYi9kcml2ZXJzL2NoYXIvdHBtL3Rw
+bS1kZXYtY29tbW9uLmMNCj4gPiA+ID4gaW5kZXggNjEwNjM4YS4uYzM5YjU4MSAxMDA2NDQNCj4g
+PiA+ID4gLS0tIGEvZHJpdmVycy9jaGFyL3RwbS90cG0tZGV2LWNvbW1vbi5jDQo+ID4gPiA+ICsr
+KyBiL2RyaXZlcnMvY2hhci90cG0vdHBtLWRldi1jb21tb24uYw0KPiA+ID4gPiBAQCAtMTE5LDcg
+KzExOSw3IEBAIHNzaXplX3QgdHBtX2NvbW1vbl93cml0ZShzdHJ1Y3QgZmlsZSAqZmlsZSwNCj4g
+PiA+ID4gY29uc3QNCj4gPiA+IGNoYXIgX191c2VyICpidWYsDQo+ID4gPiA+ICAJCXJldHVybiAt
+RVBJUEU7DQo+ID4gPiA+ICAJfQ0KPiA+ID4gPiAgCW91dF9zaXplID0gdHBtX3RyYW5zbWl0KHBy
+aXYtPmNoaXAsIHNwYWNlLCBwcml2LT5kYXRhX2J1ZmZlciwNCj4gPiA+ID4gLQkJCQlzaXplb2Yo
+cHJpdi0+ZGF0YV9idWZmZXIpLCAwKTsNCj4gPiA+ID4gKwkJCQlzaXplb2YocHJpdi0+ZGF0YV9i
+dWZmZXIpLCBpbl9zaXplLCAwKTsNCj4gPiA+DQo+ID4gPiBXaHkgeW91IGNvdWxkbid0IGp1c3QN
+Cj4gPiA+DQo+ID4gPiB1bnNpZ25lZCBpbnQgYnVmc2l6Ow0KPiA+ID4NCj4gPiA+IC8qIC4uLiAq
+Lw0KPiA+ID4NCj4gPiA+IGJ1ZnNpeiA9IHNpemVvZihwcml2LT5kYXRhX2J1ZmZlcik7DQo+ID4g
+PiBpZiAoaW5fc2l6ZSA8IGJ1ZnNpeikNCj4gPiA+IAlidWZzaXogPSBpbl9zaXplOw0KPiA+ID4N
+Cj4gPiA+IG91dF9zaXplID0gdHBtX3RyYW5zbWl0KHByaXYtPmNoaXAsIHNwYWNlLCBwcml2LT5k
+YXRhX2J1ZmZlciwNCj4gPiA+IGJ1ZnNpeiwgMCk7DQo+ID4NCj4gPiBCZWNhdXNlIHRoZSBjb2Rl
+IG5lZWRzIHRvIGtub3cgYm90aCBob3cgbGFyZ2UgdGhlIGJ1ZmZlciBpcyAoaW4gb3JkZXIgdG8N
+Cj4gYXZvaWQgYnVmZmVyIG92ZXJmbG93cyB3aGVuIHdyaXRpbmcgdG8gaXQpIGFuZCBob3cgbXVj
+aCBvZiB0aGUgZGF0YSBpbiB0aGUNCj4gYnVmZmVyIGlzIHZhbGlkIChpbiBvcmRlciBub3QgdG8g
+c2VuZCByYW5kb20ganVuayB0byB0aGUgVFBNKS4gVGhpcyBpcyBtYWRlDQo+IG1vcmUgZXhwbGlj
+aXQgaW4gUEFUQ0ggMi8yLg0KPiA+DQo+ID4gWW91ciBleGFtcGxlIGZhaWxzIGFzIHNvb24gYXMg
+dGhlIHJlc3BvbnNlIGlzIGxvbmdlciB0aGFuIHRoZSBjb21tYW5kLg0KPiA+DQo+ID4gQWxleGFu
+ZGVyDQo+IA0KPiBHb3QgeW91Lg0KPiANCj4gRG8gdGhlIGNvbXBhcmlzb24gZm9yIGNvdW50IHRw
+bS1kZXYtY29tbW9uLmMgYXMgaXQgaXMgdGhlIG9ubHkgY2FsbCBzaXRlDQo+IHdoZXJlIHRoaXMg
+aXMgbmVlZGVkIGluc3RlYWQgb2Ygc2NyYWJibGluZyB3aXRoIHRoZSBwYXJhbWV0ZXJzLiBJbiBv
+dGhlciBjYWxsDQo+IHNpdGVzIHRoaXMgaXMgdW5uZWNlc3NhcnkgYXQgdGhpcyBwb2ludC4NCj4g
+DQo+IFRoaXMgd2lsbCBhbHNvIG1ha2UgYmFja3BvcnRpbmcgYSBmYWN0b3IgbW9yZSBzbGVlay4N
+Cg0KSSBhbSBub3QgZW50aXJlbHkgaGFwcHkgd2l0aCB0aGF0IGFwcHJvYWNoLCBzaW5jZSBpdCBs
+ZWFkcyB0byB3b3JzZSBjb2RlLCBzcGxpdHRpbmcgdGhlIGJ1ZmZlciBzaXplIHZhbGlkYXRpb24g
+bG9naWMgb3ZlciBtdWx0aXBsZSBwbGFjZXMsIGJ1dCBJIGNhbiBzZWUgaG93IGl0IG1ha2VzIGJh
+Y2twb3J0aW5nIGVhc2llciB0aGFua3MgdG8gYSBzbWFsbGVyIGRpZmYuIEEgbmV3IHBhdGNoIGlz
+IG9uIGl0cyB3YXkuDQoNCk1heWJlIGF0IHNvbWUgcG9pbnQgdGhvc2UgcGFydHMgb2YgdGhlIGNv
+ZGUgYW5kIHRoZSBpbnRlcm5hbCBpbnRlcmZhY2VzIHNob3VsZCBiZSB0aG9yb3VnaGx5IGNsZWFu
+ZWQgdXAgKGkuZS4gcmV3cml0dGVuKS4NCg0KQWxleGFuZGVyDQo=
