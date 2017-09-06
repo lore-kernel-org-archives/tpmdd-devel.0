@@ -1,164 +1,94 @@
-From: PrasannaKumar Muralidharan <prasannatsmkumar@gmail.com>
-Subject: [RFC] tpm: Register RNG device only on tpm chip init
-Date: Wed,  6 Sep 2017 18:41:16 +0530
-Message-ID: <20170906131116.25967-1-prasannatsmkumar@gmail.com>
-Return-path: <linux-crypto-owner@vger.kernel.org>
-Sender: linux-crypto-owner@vger.kernel.org
-To: herbert@gondor.apana.org.au, peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, linux-crypto@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
-Cc: PrasannaKumar Muralidharan <prasannatsmkumar@gmail.com>
+From: <Alexander.Steffen@infineon.com>
+Subject: RE: [PATCH v2] tpm-dev-common: Reject too short writes
+Date: Wed, 6 Sep 2017 14:19:28 +0000
+Message-ID: <f8ea7617d4da43439d59b30f4de63b87@MUCSE603.infineon.com>
+References: <20170904173642.5988-1-Alexander.Steffen@infineon.com>
+ <20170906124233.qquzut5lyuri2buu@linux.intel.com>
+ <20170906125033.32cwy27inzecfo3i@linux.intel.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20170906125033.32cwy27inzecfo3i@linux.intel.com>
+Content-Language: en-US
+Sender: linux-kernel-owner@vger.kernel.org
+To: jarkko.sakkinen@linux.intel.com
+Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, stable@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-RNG device is registered as soon as tpm-rng module is loaded even if
-there are no TPM chip available. Call hwrng_register once tpm chip has
-registered.
-
-Signed-off-by: PrasannaKumar Muralidharan <prasannatsmkumar@gmail.com>
----
- drivers/char/hw_random/tpm-rng.c | 50 ----------------------------------------
- drivers/char/tpm/tpm-chip.c      | 24 +++++++++++++++++++
- drivers/char/tpm/tpm.h           |  3 +++
- 3 files changed, 27 insertions(+), 50 deletions(-)
- delete mode 100644 drivers/char/hw_random/tpm-rng.c
-
-diff --git a/drivers/char/hw_random/tpm-rng.c b/drivers/char/hw_random/tpm-rng.c
-deleted file mode 100644
-index d6d4482..0000000
---- a/drivers/char/hw_random/tpm-rng.c
-+++ /dev/null
-@@ -1,50 +0,0 @@
--/*
-- * Copyright (C) 2012 Kent Yoder IBM Corporation
-- *
-- * HWRNG interfaces to pull RNG data from a TPM
-- *
-- * This program is free software; you can redistribute it and/or modify
-- * it under the terms of the GNU General Public License version 2 as
-- * published by the Free Software Foundation.
-- *
-- * This program is distributed in the hope that it will be useful,
-- * but WITHOUT ANY WARRANTY; without even the implied warranty of
-- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-- * GNU General Public License for more details.
-- *
-- * You should have received a copy of the GNU General Public License
-- * along with this program; if not, write to the Free Software
-- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
-- */
--
--#include <linux/module.h>
--#include <linux/hw_random.h>
--#include <linux/tpm.h>
--
--#define MODULE_NAME "tpm-rng"
--
--static int tpm_rng_read(struct hwrng *rng, void *data, size_t max, bool wait)
--{
--	return tpm_get_random(TPM_ANY_NUM, data, max);
--}
--
--static struct hwrng tpm_rng = {
--	.name = MODULE_NAME,
--	.read = tpm_rng_read,
--};
--
--static int __init rng_init(void)
--{
--	return hwrng_register(&tpm_rng);
--}
--module_init(rng_init);
--
--static void __exit rng_exit(void)
--{
--	hwrng_unregister(&tpm_rng);
--}
--module_exit(rng_exit);
--
--MODULE_LICENSE("GPL v2");
--MODULE_AUTHOR("Kent Yoder <key@linux.vnet.ibm.com>");
--MODULE_DESCRIPTION("RNG driver for TPM devices");
-diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
-index 0eca20c..bf9c2ad 100644
---- a/drivers/char/tpm/tpm-chip.c
-+++ b/drivers/char/tpm/tpm-chip.c
-@@ -26,6 +26,7 @@
- #include <linux/spinlock.h>
- #include <linux/freezer.h>
- #include <linux/major.h>
-+#include <linux/hw_random.h>
- #include "tpm.h"
- #include "tpm_eventlog.h"
- 
-@@ -387,6 +388,15 @@ static int tpm_add_legacy_sysfs(struct tpm_chip *chip)
- 
- 	return 0;
- }
-+
-+static int tpm_rng_read(struct hwrng *rng, void *data, size_t max, bool wait)
-+{
-+	int chip_num = 0;
-+
-+	kstrtoint(&rng->name[8], 10, &chip_num);
-+	return tpm_get_random(chip_num, data, max);
-+}
-+
- /*
-  * tpm_chip_register() - create a character device for the TPM chip
-  * @chip: TPM chip to use.
-@@ -401,6 +411,7 @@ static int tpm_add_legacy_sysfs(struct tpm_chip *chip)
- int tpm_chip_register(struct tpm_chip *chip)
- {
- 	int rc;
-+	char *tpm_rng_name;
- 
- 	if (chip->ops->flags & TPM_OPS_AUTO_STARTUP) {
- 		if (chip->flags & TPM_CHIP_FLAG_TPM2)
-@@ -431,6 +442,14 @@ int tpm_chip_register(struct tpm_chip *chip)
- 		return rc;
- 	}
- 
-+	tpm_rng_name = kmalloc(64, GFP_KERNEL);
-+
-+	if (tpm_rng_name) {
-+		sprintf(tpm_rng_name, "tpm-rng-%d", chip->dev_num);
-+		tpm_rng.name = tpm_rng_name;
-+		tpm_rng.read = tpm_rng_read;
-+		hwrng_register(&tpm_rng);
-+	}
- 	return 0;
- }
- EXPORT_SYMBOL_GPL(tpm_chip_register);
-@@ -450,6 +469,11 @@ EXPORT_SYMBOL_GPL(tpm_chip_register);
-  */
- void tpm_chip_unregister(struct tpm_chip *chip)
- {
-+	if (chip->tpm_rng.name[0] != 0) {
-+		hwrng_unregister(&tpm_rng);
-+		kfree(chip->tpm_rng.name);
-+		chip->tpm_rng.name[0] = 0;
-+	}
- 	tpm_del_legacy_sysfs(chip);
- 	tpm_bios_log_teardown(chip);
- 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
-diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-index b50e92f..ca042f7 100644
---- a/drivers/char/tpm/tpm.h
-+++ b/drivers/char/tpm/tpm.h
-@@ -26,6 +26,7 @@
- #include <linux/module.h>
- #include <linux/delay.h>
- #include <linux/fs.h>
-+#include <linux/hw_random.h>
- #include <linux/mutex.h>
- #include <linux/sched.h>
- #include <linux/platform_device.h>
-@@ -210,6 +211,8 @@ struct tpm_chip {
- 	int dev_num;		/* /dev/tpm# */
- 	unsigned long is_open;	/* only one allowed */
- 
-+	struct hwrng tpm_rng;
-+
- 	struct mutex tpm_mutex;	/* tpm is processing */
- 
- 	unsigned long timeout_a; /* jiffies */
--- 
-2.10.0
+PiBPbiBXZWQsIFNlcCAwNiwgMjAxNyBhdCAwMzo0MjozM1BNICswMzAwLCBKYXJra28gU2Fra2lu
+ZW4gd3JvdGU6DQo+ID4gT24gTW9uLCBTZXAgMDQsIDIwMTcgYXQgMDc6MzY6NDJQTSArMDIwMCwg
+QWxleGFuZGVyIFN0ZWZmZW4gd3JvdGU6DQo+ID4gPiB0cG1fdHJhbnNtaXQoKSBkb2VzIG5vdCBv
+ZmZlciBhbiBleHBsaWNpdCBpbnRlcmZhY2UgdG8gaW5kaWNhdGUgdGhlDQo+ID4gPiBudW1iZXIg
+b2YgdmFsaWQgYnl0ZXMgaW4gdGhlIGNvbW11bmljYXRpb24gYnVmZmVyLiBJbnN0ZWFkLCBpdA0K
+PiA+ID4gcmVsaWVzIG9uIHRoZSBjb21tYW5kU2l6ZSBmaWVsZCBpbiB0aGUgVFBNIGhlYWRlciB0
+aGF0IGlzIGVuY29kZWQgd2l0aGluDQo+IHRoZSBidWZmZXIuDQo+ID4gPiBUaGVyZWZvcmUsIGVu
+c3VyZSB0aGF0IGEpIGVub3VnaCBkYXRhIGhhcyBiZWVuIHdyaXR0ZW4gdG8gdGhlDQo+ID4gPiBi
+dWZmZXIsIHNvIHRoYXQgdGhlIGNvbW1hbmRTaXplIGZpZWxkIGlzIHByZXNlbnQgYW5kIGIpIHRo
+ZQ0KPiA+ID4gY29tbWFuZFNpemUgZmllbGQgZG9lcyBub3QgYW5ub3VuY2UgbW9yZSBkYXRhIHRo
+YW4gaGFzIGJlZW4gd3JpdHRlbg0KPiB0byB0aGUgYnVmZmVyLg0KPiA+ID4NCj4gPiA+IFRoaXMg
+c2hvdWxkIGhhdmUgYmVlbiBmaXhlZCB3aXRoIENWRS0yMDExLTExNjEgbG9uZyBhZ28sIGJ1dA0K
+PiA+ID4gYXBwYXJlbnRseSBhIGNvcnJlY3QgdmVyc2lvbiBvZiB0aGF0IHBhdGNoIG5ldmVyIG1h
+ZGUgaXQgaW50byB0aGUga2VybmVsLg0KPiA+ID4NCj4gPiA+IENjOiBzdGFibGVAdmdlci5rZXJu
+ZWwub3JnDQo+ID4gPiBTaWduZWQtb2ZmLWJ5OiBBbGV4YW5kZXIgU3RlZmZlbiA8QWxleGFuZGVy
+LlN0ZWZmZW5AaW5maW5lb24uY29tPg0KPiA+ID4gLS0tDQo+ID4gPiB2MjoNCj4gPiA+IC0gTW92
+ZWQgYWxsIGNoYW5nZXMgdG8gdHBtX2NvbW1vbl93cml0ZSBpbiBhIHNpbmdsZSBwYXRjaC4NCj4g
+PiA+DQo+ID4gPiAgZHJpdmVycy9jaGFyL3RwbS90cG0tZGV2LWNvbW1vbi5jIHwgMyArKy0NCj4g
+PiA+ICAxIGZpbGUgY2hhbmdlZCwgMiBpbnNlcnRpb25zKCspLCAxIGRlbGV0aW9uKC0pDQo+ID4g
+Pg0KPiA+ID4gZGlmZiAtLWdpdCBhL2RyaXZlcnMvY2hhci90cG0vdHBtLWRldi1jb21tb24uYw0K
+PiA+ID4gYi9kcml2ZXJzL2NoYXIvdHBtL3RwbS1kZXYtY29tbW9uLmMNCj4gPiA+IGluZGV4IDYx
+MDYzOGEuLmFjMjU1NzQgMTAwNjQ0DQo+ID4gPiAtLS0gYS9kcml2ZXJzL2NoYXIvdHBtL3RwbS1k
+ZXYtY29tbW9uLmMNCj4gPiA+ICsrKyBiL2RyaXZlcnMvY2hhci90cG0vdHBtLWRldi1jb21tb24u
+Yw0KPiA+ID4gQEAgLTk5LDcgKzk5LDggQEAgc3NpemVfdCB0cG1fY29tbW9uX3dyaXRlKHN0cnVj
+dCBmaWxlICpmaWxlLCBjb25zdA0KPiBjaGFyIF9fdXNlciAqYnVmLA0KPiA+ID4gIAlpZiAoYXRv
+bWljX3JlYWQoJnByaXYtPmRhdGFfcGVuZGluZykgIT0gMCkNCj4gPiA+ICAJCXJldHVybiAtRUJV
+U1k7DQo+ID4gPg0KPiA+ID4gLQlpZiAoaW5fc2l6ZSA+IFRQTV9CVUZTSVpFKQ0KPiA+ID4gKwlp
+ZiAoaW5fc2l6ZSA+IHNpemVvZihwcml2LT5kYXRhX2J1ZmZlcikgfHwgaW5fc2l6ZSA8IDYgfHwN
+Cj4gPiA+ICsJICAgIGluX3NpemUgPCBiZTMyX3RvX2NwdSgqKChfX2JlMzIgKikgKGJ1ZiArIDIp
+KSkpDQo+ID4gPiAgCQlyZXR1cm4gLUUyQklHOw0KPiA+ID4NCj4gPiA+ICAJbXV0ZXhfbG9jaygm
+cHJpdi0+YnVmZmVyX211dGV4KTsNCj4gPiA+IC0tDQo+ID4gPiAyLjcuNA0KPiA+ID4NCj4gPg0K
+PiA+IEhvdyBkaWQgeW91IHRlc3QgdGhpcyBjaGFuZ2UgYWZ0ZXIgeW91IGltcGxlbWVudGVkIGl0
+Pw0KPiA+DQo+ID4gSnVzdCB0aGlua2luZyB3aGF0IHRvIGFkZCB0bw0KPiA+IGh0dHBzOi8vZ2l0
+aHViLmNvbS9qc2Fra2luZS1pbnRlbC90cG0yLXNjcmlwdHMNCg0KSSBhbHJlYWR5IGhhZCB0ZXN0
+IGNhc2VzIHRoYXQgZmFpbGVkIHdpdGggc29tZSBvZiBteSBUUE1zIHVuZGVyIHNvbWUgY2lyY3Vt
+c3RhbmNlcy4gSSdsbCB0cnkgdG8gY29tZSB1cCB3aXRoIGEgY29uY2lzZSBkZXNjcmlwdGlvbiBv
+ZiB3aGF0IHRob3NlIHRlc3RzIGRvIG9yIHNlbmQgeW91IGEgcGF0Y2ggZGlyZWN0bHkgZm9yIHlv
+dXIgdGVzdHMuIEdpdEh1YiBwdWxsIHJlcXVlc3RzIGFyZSBva2F5IGZvciB0aGF0IHJlcG9zaXRv
+cnk/IChJIGFscmVhZHkgaGF2ZSBvbmUgd2FpdGluZyB0aGVyZS4pDQoNCj4gPg0KPiA+IC9KYXJr
+a28NCj4gDQo+IEp1c3Qgd2hlbiBJIHN0YXJ0ZWQgdG8gaW1wbGVtZW50IHRoaXMgdGhhdCB0aGUg
+YnVnIGZpeCBpdHNlbGYgZG9lcyBub3QgaGF2ZSB5ZXQNCj4gdGhlIHJpZ2h0IHNlbWFudGljcy4N
+Cj4gDQo+IEl0IHNob3VsZCBiZSBqdXN0IGFkZCBhIG5ldyBjaGVjazoNCj4gDQo+IGlmIChpbl9z
+aXplICE9IGJlMzJfdG9fY3B1KCooKF9fYmUzMiAqKSAoYnVmICsgMikpKSkNCj4gCXJldHVybiAt
+RUlOVkFMOw0KPiANCj4gVGhlIGV4aXN0aW5nIGNoZWNrIGlzIGNvcnJlY3QuIFRoaXMgd2FzIG1p
+c3NpbmcuIFRoZSByZWFzb24gZm9yIHRoaXMgaXMgdGhhdCB3ZQ0KPiBwcm9jZXNzIHdoYXRldmVy
+IGlzIGluIHRoZSBpbl9zaXplIGJ5dGVzIGFzIGEgZnVsbCBjb21tYW5kLg0KDQpUaGVyZSBhcmUg
+dHdvIHByb2JsZW1zIHdpdGggdGhpcyBzb2x1dGlvbjoNCg0KMS4gWW91IG5lZWQgdG8gY2hlY2sg
+Zm9yIGluX3NpemUgPCA2LCBvdGhlcndpc2UgeW91IHJlYWQgZGF0YSB0aGF0IGhhcyBub3QgYmVl
+biB3cml0dGVuIHRoZXJlIGR1cmluZyB0aGF0IHJlcXVlc3QuIEkgaGF2ZW4ndCB0ZXN0ZWQgdGhp
+cywgYnV0IEknZCBleHBlY3QgaXQgdG8gZmFpbCBmb3IgZXhhbXBsZSBpZiB5b3UgdHJ5IHRvIHNl
+bmQgdGhlIHR3byBjb21tYW5kcyAiMDAgMDAgMDAgMDAgMDAgMDIiIGFuZCAiMDAgMDAiLiBUaGUg
+Zmlyc3Qgd2lsbCBiZSByZWplY3RlZCB3aXRoIEVJTlZBTCwgYmVjYXVzZSA2IChpbl9zaXplKSAh
+PSAyIChjb21tYW5kU2l6ZSkuIEJ1dCB0aGUgc2Vjb25kIHdpbGwgcGFzcyB0aGF0IGNoZWNrLCBi
+ZWNhdXNlIG5vdyBpbl9zaXplIGhhcHBlbnMgdG8gbWF0Y2ggdGhlIGNvbW1hbmRTaXplIHRoYXQg
+aGFzIG9ubHkgYmVlbiB3cml0dGVuIHRvIHRoZSBidWZmZXIgZm9yIHRoZSBmaXJzdCBjb21tYW5k
+Lg0KDQoyLiBZb3UgbWF5IG5vdCByZWplY3QgY29tbWFuZHMgd2hlcmUgaW5fc2l6ZSA+IGNvbW1h
+bmRTaXplLCBiZWNhdXNlIFRJUy9QVFAgcmVxdWlyZSB0aGUgVFBNIHRvIHRocm93IGF3YXkgZXh0
+cmEgYnl0ZXMgKGFuZCBwcm9jZXNzIHRoZSBjb21tYW5kIGFzIHVzdWFsKSwgbm90IGZhaWwgdGhl
+IGNvbW1hbmQuIFlvdSBjYW4gc2VlIHRoYXQgaW4gdGhlIFN0YXRlIFRyYW5zaXRpb24gVGFibGUg
+KFRhYmxlIDE4IGluIFRJUyAxLjMpLCBsaW5lIDIwLCB3aXRoIHRoZSBUUE0gaW4gUmVjZXB0aW9u
+IHN0YXRlIGFuZCBFeHBlY3Q9MCwgd3JpdGluZyBtb3JlIGRhdGEgZG9lcyBub3QgY2hhbmdlIHRo
+ZSBzdGF0ZSAoIldyaXRlIGlzIG5vdCBleHBlY3RlZC4gRHJvcCB3cml0ZS4gVFBNIGlnbm9yZXMg
+dGhpcyBzdGF0ZSB0cmFuc2l0aW9uLiIpLiBPZiBjb3Vyc2UsIHNpbmNlIHdlIGRvIG5vdCBwYXNz
+IG9uIGluX3NpemUsIGJ1dCBvbmx5IGNvbW1hbmRTaXplIHRoZSBUUE0gd2lsbCBuZXZlciBzZWUg
+dGhvc2UgZXh0cmEgYnl0ZXMsIGJ1dCB0aGUgZXh0ZXJuYWwgYmVoYXZpb3IgKGZvciB1c2VyIHNw
+YWNlIGFwcGxpY2F0aW9ucykgaXMgaWRlbnRpY2FsLg0KDQpXaGVuIHlvdSBmaXggdGhvc2UgdHdv
+IHByb2JsZW1zLCB5b3UncmUgcHJvYmFibHkgYmFjayBhdCBteSBzb2x1dGlvbi4gVGhlIG9ubHkg
+b3RoZXIgY2hhbmdlIEkgbWFkZSAocmVuYW1pbmcgVFBNX0JVRlNJWkUgdG8gc2l6ZW9mKHByaXYt
+PmRhdGFfYnVmZmVyKSkgZG9lcyBub3QgY2hhbmdlIGFueXRoaW5nLCB0aGUgdmFsdWVzIGFyZSBp
+ZGVudGljYWwuIEkganVzdCBmaW5kIGl0IHZlcnkgY29uZnVzaW5nIHdoZW4geW91IGNvbXBhcmUg
+c29tZXRoaW5nIGFnYWluc3QgYSBtYWdpYyBjb25zdGFudCB0byBhdm9pZCBidWZmZXIgb3ZlcmZs
+b3dzIGluIHlvdXIgbWVtY3B5LiBVc2luZyB0aGUgYnVmZmVyIHNpemUgZGlyZWN0bHkgaXMgbXVj
+aCBtb3JlIHN0cmFpZ2h0Zm9yd2FyZCAoYW5kIGxlc3MgcHJvbmUgdG8gZmFpbCBhcyBzb29uIGFz
+IHNvbWVvbmUgY2hhbmdlcyB0aGUgc3RydWN0dXJlIGRlZmluaXRpb24pLg0KDQo+IA0KPiBTb3Jy
+eSBJIGRpZG4ndCBub3RpY2UgYmVmb3JlIEkgc3RhcnRlZCB0byBpbXBsZW1lbnQgYSB0ZXN0IGNh
+c2UuDQo+IA0KPiAvSmFya2tvDQoNCkFsZXhhbmRlcg0K
