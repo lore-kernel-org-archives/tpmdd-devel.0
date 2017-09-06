@@ -1,75 +1,48 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v2] tpm-dev-common: Reject too short writes
-Date: Wed, 6 Sep 2017 15:50:33 +0300
-Message-ID: <20170906125033.32cwy27inzecfo3i@linux.intel.com>
-References: <20170904173642.5988-1-Alexander.Steffen@infineon.com>
- <20170906124233.qquzut5lyuri2buu@linux.intel.com>
+Subject: Re: [PATCH RESEND v3 0/2] tpm_tis_spi: Use DMA-safe memory
+Date: Wed, 6 Sep 2017 15:54:58 +0300
+Message-ID: <20170906125458.ueqpmokh7bg64olc@linux.intel.com>
+References: <20170831165819.13544-1-Alexander.Steffen@infineon.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170906124233.qquzut5lyuri2buu@linux.intel.com>
+In-Reply-To: <20170831165819.13544-1-Alexander.Steffen@infineon.com>
 Sender: owner-linux-security-module@vger.kernel.org
 To: Alexander Steffen <Alexander.Steffen@infineon.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, stable@vger.kernel.org
+Cc: tpmdd-devel@lists.sourceforge.net, benoit.houyere@st.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Sep 06, 2017 at 03:42:33PM +0300, Jarkko Sakkinen wrote:
-> On Mon, Sep 04, 2017 at 07:36:42PM +0200, Alexander Steffen wrote:
-> > tpm_transmit() does not offer an explicit interface to indicate the number
-> > of valid bytes in the communication buffer. Instead, it relies on the
-> > commandSize field in the TPM header that is encoded within the buffer.
-> > Therefore, ensure that a) enough data has been written to the buffer, so
-> > that the commandSize field is present and b) the commandSize field does not
-> > announce more data than has been written to the buffer.
-> > 
-> > This should have been fixed with CVE-2011-1161 long ago, but apparently
-> > a correct version of that patch never made it into the kernel.
-> > 
-> > Cc: stable@vger.kernel.org
-> > Signed-off-by: Alexander Steffen <Alexander.Steffen@infineon.com>
-> > ---
-> > v2:
-> > - Moved all changes to tpm_common_write in a single patch.
-> > 
-> >  drivers/char/tpm/tpm-dev-common.c | 3 ++-
-> >  1 file changed, 2 insertions(+), 1 deletion(-)
-> > 
-> > diff --git a/drivers/char/tpm/tpm-dev-common.c b/drivers/char/tpm/tpm-dev-common.c
-> > index 610638a..ac25574 100644
-> > --- a/drivers/char/tpm/tpm-dev-common.c
-> > +++ b/drivers/char/tpm/tpm-dev-common.c
-> > @@ -99,7 +99,8 @@ ssize_t tpm_common_write(struct file *file, const char __user *buf,
-> >  	if (atomic_read(&priv->data_pending) != 0)
-> >  		return -EBUSY;
-> >  
-> > -	if (in_size > TPM_BUFSIZE)
-> > +	if (in_size > sizeof(priv->data_buffer) || in_size < 6 ||
-> > +	    in_size < be32_to_cpu(*((__be32 *) (buf + 2))))
-> >  		return -E2BIG;
-> >  
-> >  	mutex_lock(&priv->buffer_mutex);
-> > -- 
-> > 2.7.4
-> > 
+On Thu, Aug 31, 2017 at 06:58:17PM +0200, Alexander Steffen wrote:
+> The documentation says that DMA-safe memory is required for SPI transfers.
+> The I/O buffers passed in by the caller can be allocated anywhere,
+> including on the stack, which is not DMA-safe. So the data needs to be
+> copied to separate, DMA-safe buffers.
 > 
-> How did you test this change after you implemented it?
+> We did not see any DMA-related issues on our test systems, even without
+> DMA-safe buffers. But this might simply be due to the fact that the SPI
+> transfer size is rather small, so our systems do not bother to set up DMA
+> transfers. Other systems might do so.
 > 
-> Just thinking what to add to https://github.com/jsakkine-intel/tpm2-scripts
+> v2:
+> - Updated commit message with more explanations.
 > 
-> /Jarkko
+> v3:
+> - Split into two patches, one for making the buffers DMA-safe and another
+>   for using only a single buffer.
+> 
+> Alexander Steffen (2):
+>   tpm_tis_spi: Use DMA-safe memory for SPI transfers
+>   tpm_tis_spi: Use a single buffer for SPI transfers
+> 
+>  drivers/char/tpm/tpm_tis_spi.c | 32 ++++++++++++++++++--------------
+>  1 file changed, 18 insertions(+), 14 deletions(-)
+> 
+> -- 
+> 2.7.4
+> 
 
-Just when I started to implement this that the bug fix itself does not
-have yet the right semantics.
-
-It should be just add a new check:
-
-if (in_size != be32_to_cpu(*((__be32 *) (buf + 2))))
-	return -EINVAL;
-
-The existing check is correct. This was missing. The reason for this is
-that we process whatever is in the in_size bytes as a full command.
-
-Sorry I didn't notice before I started to implement a test case.
+Applied to my bleeding edge master brach for more convenient testing.
+Have not yet applied to my next branch.
 
 /Jarkko
