@@ -1,116 +1,142 @@
-From: Nayna Jain <nayna@linux.vnet.ibm.com>
-Subject: [PATCH 1/4] tpm: ignore burstcount to improve tpm_tis send() performance.
-Date: Wed,  6 Sep 2017 08:56:40 -0400
-Message-ID: <20170906125643.5070-6-nayna@linux.vnet.ibm.com>
+From: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Subject: [PATCH v2 2/4] tpm: define __wait_for_tpm_stat to
+ specify variable polling sleep time
+Date: Wed,  6 Sep 2017 08:56:37 -0400
+Message-ID: <20170906125643.5070-3-nayna@linux.vnet.ibm.com>
 References: <20170906125643.5070-1-nayna@linux.vnet.ibm.com>
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <20170906125643.5070-1-nayna@linux.vnet.ibm.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: peterhuewe@gmx.de, tpmdd@selhorst.net, jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, patrickc@us.ibm.com, Nayna Jain <nayna@linux.vnet.ibm.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20170906125643.5070-1-nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: patrickc-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The TPM burstcount status indicates the number of bytes that can
-be sent to the TPM without causing bus wait states.  Effectively,
-it is the number of empty bytes in the command FIFO. Further,
-some TPMs have a static burstcount, when the value remains zero
-until the entire FIFO is empty.
+The existing wait_for_tpm_stat() checks the chip status before
+sleeping for 5 msec in a polling loop.  For some functions although
+the status isn't ready immediately, the status returns extremely
+quickly. Waiting for 5 msec causes an unnecessary delay. An
+example is the send() call in the tpms_tis driver.
 
-This patch adds an optimization to check for burstcount only once.
-And if it is valid, it writes all the bytes at once, permitting
-wait states. The performance of a 34 byte extend on a TPM 1.2 with
-an 8 byte burstcount improved from 41 msec to 14 msec.
+This patch defines __wait_for_tpm_stat(), allowing the caller
+to specify the polling sleep timeout value within the loop.
+The existing wait_for_tpm_stat() becomes a wrapper for this
+function.
 
-This functionality is enabled only by passing module
-parameter ignore_burst_count=1. By default, this parameter
-is disabled.
+After this change, performance on a TPM 1.2 with an 8 byte
+burstcount for 1000 extends improved from ~14sec to ~10sec.
 
-Suggested-by: Ken Goldman <kgold@linux.vnet.ibm.com> in
-conjunction with the TPM Device Driver work group.
-Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
-Acked-by: Mimi Zohar <zohar@linux.vnet.ibm.com>
+Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
+Acked-by: Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
 ---
- Documentation/admin-guide/kernel-parameters.txt |  8 ++++++++
- drivers/char/tpm/tpm_tis_core.c                 | 24 +++++++++++++++++++++---
- 2 files changed, 29 insertions(+), 3 deletions(-)
+ drivers/char/tpm/tpm-interface.c | 15 ++++++++++++---
+ drivers/char/tpm/tpm.h           |  3 +++
+ drivers/char/tpm/tpm_tis_core.c  | 11 ++++++-----
+ 3 files changed, 21 insertions(+), 8 deletions(-)
 
-diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
-index 4e303be83df6..3c59bb91e1ee 100644
---- a/Documentation/admin-guide/kernel-parameters.txt
-+++ b/Documentation/admin-guide/kernel-parameters.txt
-@@ -1465,6 +1465,14 @@
- 			mode generally follows that for the NaN encoding,
- 			except where unsupported by hardware.
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index 1d6729be4cd6..b23d006243b7 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -1050,8 +1050,9 @@ static bool wait_for_tpm_stat_cond(struct tpm_chip *chip, u8 mask,
+ 	return false;
+ }
  
-+	ignore_burst_count [TPM_TIS_CORE]
-+			tpm_tis_core driver queries for the burstcount before
-+			every send call in a loop. However, it causes delay to
-+			the send command for TPMs with low burstcount value.
-+			Setting this value to 1, will make driver to query for
-+			burstcount only once in the loop to improve the
-+			performance. By default, its value is set to 0.
+-int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
+-		      wait_queue_head_t *queue, bool check_cancel)
++int __wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
++		      unsigned int poll_sleep, wait_queue_head_t *queue,
++		      bool check_cancel)
+ {
+ 	unsigned long stop;
+ 	long rc;
+@@ -1085,7 +1086,7 @@ int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
+ 		}
+ 	} else {
+ 		do {
+-			tpm_msleep(TPM_TIMEOUT);
++			tpm_msleep(poll_sleep);
+ 			status = chip->ops->status(chip);
+ 			if ((status & mask) == mask)
+ 				return 0;
+@@ -1093,6 +1094,14 @@ int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
+ 	}
+ 	return -ETIME;
+ }
++EXPORT_SYMBOL_GPL(__wait_for_tpm_stat);
 +
- 	ignore_loglevel	[KNL]
- 			Ignore loglevel setting - this will print /all/
- 			kernel messages to the console. Useful for debugging.
++int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
++		      wait_queue_head_t *queue, bool check_cancel)
++{
++	return __wait_for_tpm_stat(chip, mask, timeout, TPM_TIMEOUT,
++			queue, check_cancel);
++}
+ EXPORT_SYMBOL_GPL(wait_for_tpm_stat);
+ 
+ #define TPM_ORD_SAVESTATE 152
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index 2d5466a72e40..eb2f8818eded 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -525,6 +525,9 @@ int tpm_do_selftest(struct tpm_chip *chip);
+ unsigned long tpm_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
+ int tpm_pm_suspend(struct device *dev);
+ int tpm_pm_resume(struct device *dev);
++int __wait_for_tpm_stat(struct tpm_chip *chip, u8 mask,
++		unsigned long timeout, unsigned int poll_sleep,
++		wait_queue_head_t *queue, bool check_cancel);
+ int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
+ 		      wait_queue_head_t *queue, bool check_cancel);
+ 
 diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-index 63bc6c3b949e..6b9bf4c4d434 100644
+index 6b9bf4c4d434..d1eab29cb447 100644
 --- a/drivers/char/tpm/tpm_tis_core.c
 +++ b/drivers/char/tpm/tpm_tis_core.c
-@@ -31,6 +31,11 @@
- #include "tpm.h"
- #include "tpm_tis_core.h"
- 
-+static bool ignore_burst_count = false;
-+module_param(ignore_burst_count, bool, 0444);
-+MODULE_PARM_DESC(ignore_burst_count,
-+		"Ignore burstcount value while writing data");
-+
- /* Before we attempt to access the TPM we must see that the valid bit is set.
-  * The specification says that this bit is 0 at reset and remains 0 until the
-  * 'TPM has gone through its self test and initialization and has established
-@@ -256,6 +261,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- {
- 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
- 	int rc, status, burstcnt;
-+	int sendcnt;
- 	size_t count = 0;
- 	bool itpm = priv->flags & TPM_TIS_ITPM_WORKAROUND;
- 
-@@ -271,19 +277,31 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
- 	}
- 
- 	while (count < len - 1) {
-+
-+		/*
-+		 * Get the initial burstcount to ensure TPM is ready to
-+		 * accept data, even when waiting for burstcount is disabled.
-+		 */
- 		burstcnt = get_burstcount(chip);
- 		if (burstcnt < 0) {
- 			dev_err(&chip->dev, "Unable to read burstcount\n");
- 			rc = burstcnt;
+@@ -268,8 +268,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ 	status = tpm_tis_status(chip);
+ 	if ((status & TPM_STS_COMMAND_READY) == 0) {
+ 		tpm_tis_ready(chip);
+-		if (wait_for_tpm_stat
+-		    (chip, TPM_STS_COMMAND_READY, chip->timeout_b,
++		if (__wait_for_tpm_stat
++		    (chip, TPM_STS_COMMAND_READY, chip->timeout_b, 1,
+ 		     &priv->int_queue, false) < 0) {
+ 			rc = -ETIME;
  			goto out_err;
- 		}
--		burstcnt = min_t(int, burstcnt, len - count - 1);
-+
-+		if (ignore_burst_count)
-+			sendcnt = len - 1;
-+		else
-+			sendcnt = min_t(int, burstcnt, len - count - 1);
-+
- 		rc = tpm_tis_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
--					 burstcnt, buf + count);
-+					 sendcnt, buf + count);
- 		if (rc < 0)
- 			goto out_err;
+@@ -303,7 +303,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ 		if (ignore_burst_count)
+ 			continue;
  
--		count += burstcnt;
-+		count += sendcnt;
-+		if (ignore_burst_count)
-+			continue;
- 
- 		if (wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
+-		if (wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
++		if (__wait_for_tpm_stat(chip, TPM_STS_VALID,
++					chip->timeout_c, 1,
  					&priv->int_queue, false) < 0) {
+ 			rc = -ETIME;
+ 			goto out_err;
+@@ -320,8 +321,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+ 	if (rc < 0)
+ 		goto out_err;
+ 
+-	if (wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
+-				&priv->int_queue, false) < 0) {
++	if (__wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
++				1, &priv->int_queue, false) < 0) {
+ 		rc = -ETIME;
+ 		goto out_err;
+ 	}
 -- 
 2.13.3
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
