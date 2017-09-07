@@ -1,173 +1,108 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH] tpm: constify transmit data pointers
-Date: Thu, 7 Sep 2017 19:24:03 +0300
-Message-ID: <20170907162403.4o3li6k74livw2bk@linux.intel.com>
-References: <20170907133130.2463746-1-arnd@arndb.de>
+Subject: Re: [PATCH v2] tpm-dev-common: Reject too short writes
+Date: Thu, 7 Sep 2017 19:46:56 +0300
+Message-ID: <20170907164656.skq6624og7xlmg5z@linux.intel.com>
+References: <20170904173642.5988-1-Alexander.Steffen@infineon.com>
+ <20170906124233.qquzut5lyuri2buu@linux.intel.com>
+ <20170906125033.32cwy27inzecfo3i@linux.intel.com>
+ <f8ea7617d4da43439d59b30f4de63b87@MUCSE603.infineon.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170907133130.2463746-1-arnd@arndb.de>
+In-Reply-To: <f8ea7617d4da43439d59b30f4de63b87@MUCSE603.infineon.com>
 Sender: linux-kernel-owner@vger.kernel.org
-To: Arnd Bergmann <arnd@arndb.de>
-Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Colin Ian King <colin.king@canonical.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+To: Alexander.Steffen@infineon.com
+Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, stable@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Sep 07, 2017 at 03:30:45PM +0200, Arnd Bergmann wrote:
-> Making cmd_getticks 'const' introduced a couple of harmless warnings:
+On Wed, Sep 06, 2017 at 02:19:28PM +0000, Alexander.Steffen@infineon.com wrote:
+> > On Wed, Sep 06, 2017 at 03:42:33PM +0300, Jarkko Sakkinen wrote:
+> > > On Mon, Sep 04, 2017 at 07:36:42PM +0200, Alexander Steffen wrote:
+> > > > tpm_transmit() does not offer an explicit interface to indicate the
+> > > > number of valid bytes in the communication buffer. Instead, it
+> > > > relies on the commandSize field in the TPM header that is encoded within
+> > the buffer.
+> > > > Therefore, ensure that a) enough data has been written to the
+> > > > buffer, so that the commandSize field is present and b) the
+> > > > commandSize field does not announce more data than has been written
+> > to the buffer.
+> > > >
+> > > > This should have been fixed with CVE-2011-1161 long ago, but
+> > > > apparently a correct version of that patch never made it into the kernel.
+> > > >
+> > > > Cc: stable@vger.kernel.org
+> > > > Signed-off-by: Alexander Steffen <Alexander.Steffen@infineon.com>
+> > > > ---
+> > > > v2:
+> > > > - Moved all changes to tpm_common_write in a single patch.
+> > > >
+> > > >  drivers/char/tpm/tpm-dev-common.c | 3 ++-
+> > > >  1 file changed, 2 insertions(+), 1 deletion(-)
+> > > >
+> > > > diff --git a/drivers/char/tpm/tpm-dev-common.c
+> > > > b/drivers/char/tpm/tpm-dev-common.c
+> > > > index 610638a..ac25574 100644
+> > > > --- a/drivers/char/tpm/tpm-dev-common.c
+> > > > +++ b/drivers/char/tpm/tpm-dev-common.c
+> > > > @@ -99,7 +99,8 @@ ssize_t tpm_common_write(struct file *file, const
+> > char __user *buf,
+> > > >  	if (atomic_read(&priv->data_pending) != 0)
+> > > >  		return -EBUSY;
+> > > >
+> > > > -	if (in_size > TPM_BUFSIZE)
+> > > > +	if (in_size > sizeof(priv->data_buffer) || in_size < 6 ||
+> > > > +	    in_size < be32_to_cpu(*((__be32 *) (buf + 2))))
+> > > >  		return -E2BIG;
+> > > >
+> > > >  	mutex_lock(&priv->buffer_mutex);
+> > > > --
+> > > > 2.7.4
+> > > >
+> > >
+> > > How did you test this change after you implemented it?
+> > >
+> > > Just thinking what to add to
+> > > https://github.com/jsakkine-intel/tpm2-scripts
 > 
-> drivers/char/tpm/tpm_tis_core.c: In function 'probe_itpm':
-> drivers/char/tpm/tpm_tis_core.c:469:31: error: passing argument 2 of 'tpm_tis_send_data' discards 'const' qualifier from pointer target type [-Werror=discarded-qualifiers]
->   rc = tpm_tis_send_data(chip, cmd_getticks, len);
-> drivers/char/tpm/tpm_tis_core.c:477:31: error: passing argument 2 of 'tpm_tis_send_data' discards 'const' qualifier from pointer target type [-Werror=discarded-qualifiers]
->   rc = tpm_tis_send_data(chip, cmd_getticks, len);
-> drivers/char/tpm/tpm_tis_core.c:255:12: note: expected 'u8 * {aka unsigned char *}' but argument is of type 'const u8 * {aka const unsigned char *}'
->  static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+> I already had test cases that failed with some of my TPMs under some circumstances. I'll try to come up with a concise description of what those tests do or send you a patch directly for your tests. GitHub pull requests are okay for that repository? (I already have one waiting there.)
 > 
-> This changes the related functions to all take 'const' pointers
-> so that gcc can see this as being correct. I had to slightly
-> modify the logic around tpm_tis_spi_transfer() for this to work
-> without introducing ugly casts.
+> > >
+> > > /Jarkko
+> > 
+> > Just when I started to implement this that the bug fix itself does not have yet
+> > the right semantics.
+> > 
+> > It should be just add a new check:
+> > 
+> > if (in_size != be32_to_cpu(*((__be32 *) (buf + 2))))
+> > 	return -EINVAL;
+> > 
+> > The existing check is correct. This was missing. The reason for this is that we
+> > process whatever is in the in_size bytes as a full command.
 > 
-> Fixes: 5e35bd8e06b9 ("tpm_tis: make array cmd_getticks static const to shink object code size")
-> Signed-off-by: Arnd Bergmann <arnd@arndb.de>
-> ---
->  drivers/char/tpm/tpm_tis.c      |  2 +-
->  drivers/char/tpm/tpm_tis_core.c |  4 ++--
->  drivers/char/tpm/tpm_tis_core.h |  4 ++--
->  drivers/char/tpm/tpm_tis_spi.c  | 25 +++++++++++--------------
->  4 files changed, 16 insertions(+), 19 deletions(-)
+> There are two problems with this solution:
 > 
-> diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-> index 7e55aa9ce680..ebd0e75a3e4d 100644
-> --- a/drivers/char/tpm/tpm_tis.c
-> +++ b/drivers/char/tpm/tpm_tis.c
-> @@ -223,7 +223,7 @@ static int tpm_tcg_read_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
->  }
->  
->  static int tpm_tcg_write_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
-> -			       u8 *value)
-> +			       const u8 *value)
->  {
->  	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
->  
-> diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
-> index 1e957e923d21..fdde971bc810 100644
-> --- a/drivers/char/tpm/tpm_tis_core.c
-> +++ b/drivers/char/tpm/tpm_tis_core.c
-> @@ -252,7 +252,7 @@ static int tpm_tis_recv(struct tpm_chip *chip, u8 *buf, size_t count)
->   * tpm.c can skip polling for the data to be available as the interrupt is
->   * waited for here
->   */
-> -static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
-> +static int tpm_tis_send_data(struct tpm_chip *chip, const u8 *buf, size_t len)
->  {
->  	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
->  	int rc, status, burstcnt;
-> @@ -343,7 +343,7 @@ static void disable_interrupts(struct tpm_chip *chip)
->   * tpm.c can skip polling for the data to be available as the interrupt is
->   * waited for here
->   */
-> -static int tpm_tis_send_main(struct tpm_chip *chip, u8 *buf, size_t len)
-> +static int tpm_tis_send_main(struct tpm_chip *chip, const u8 *buf, size_t len)
->  {
->  	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
->  	int rc;
-> diff --git a/drivers/char/tpm/tpm_tis_core.h b/drivers/char/tpm/tpm_tis_core.h
-> index e2212f021a02..6bbac319ff3b 100644
-> --- a/drivers/char/tpm/tpm_tis_core.h
-> +++ b/drivers/char/tpm/tpm_tis_core.h
-> @@ -98,7 +98,7 @@ struct tpm_tis_phy_ops {
->  	int (*read_bytes)(struct tpm_tis_data *data, u32 addr, u16 len,
->  			  u8 *result);
->  	int (*write_bytes)(struct tpm_tis_data *data, u32 addr, u16 len,
-> -			   u8 *value);
-> +			   const u8 *value);
->  	int (*read16)(struct tpm_tis_data *data, u32 addr, u16 *result);
->  	int (*read32)(struct tpm_tis_data *data, u32 addr, u32 *result);
->  	int (*write32)(struct tpm_tis_data *data, u32 addr, u32 src);
-> @@ -128,7 +128,7 @@ static inline int tpm_tis_read32(struct tpm_tis_data *data, u32 addr,
->  }
->  
->  static inline int tpm_tis_write_bytes(struct tpm_tis_data *data, u32 addr,
-> -				      u16 len, u8 *value)
-> +				      u16 len, const u8 *value)
->  {
->  	return data->phy_ops->write_bytes(data, addr, len, value);
->  }
-> diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
-> index 88fe72ae967f..e49f5b9b739a 100644
-> --- a/drivers/char/tpm/tpm_tis_spi.c
-> +++ b/drivers/char/tpm/tpm_tis_spi.c
-> @@ -57,7 +57,7 @@ static inline struct tpm_tis_spi_phy *to_tpm_tis_spi_phy(struct tpm_tis_data *da
->  }
->  
->  static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
-> -				u8 *buffer, u8 direction)
-> +				u8 *in, const u8 *out)
->  {
->  	struct tpm_tis_spi_phy *phy = to_tpm_tis_spi_phy(data);
->  	int ret = 0;
-> @@ -71,7 +71,7 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
->  	while (len) {
->  		transfer_len = min_t(u16, len, MAX_SPI_FRAMESIZE);
->  
-> -		phy->tx_buf[0] = direction | (transfer_len - 1);
-> +		phy->tx_buf[0] = (in ? 0x80 : 0) | (transfer_len - 1);
->  		phy->tx_buf[1] = 0xd4;
->  		phy->tx_buf[2] = addr >> 8;
->  		phy->tx_buf[3] = addr;
-> @@ -112,14 +112,8 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
->  		spi_xfer.cs_change = 0;
->  		spi_xfer.len = transfer_len;
->  		spi_xfer.delay_usecs = 5;
-> -
-> -		if (direction) {
-> -			spi_xfer.tx_buf = NULL;
-> -			spi_xfer.rx_buf = buffer;
-> -		} else {
-> -			spi_xfer.tx_buf = buffer;
-> -			spi_xfer.rx_buf = NULL;
-> -		}
-> +		spi_xfer.tx_buf = out;
-> +		spi_xfer.rx_buf = in;
->  
->  		spi_message_init(&m);
->  		spi_message_add_tail(&spi_xfer, &m);
-> @@ -128,7 +122,10 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
->  			goto exit;
->  
->  		len -= transfer_len;
-> -		buffer += transfer_len;
-> +		if (in)
-> +			in += transfer_len;
-> +		if (out)
-> +			out += transfer_len;
->  	}
->  
->  exit:
-> @@ -139,13 +136,13 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
->  static int tpm_tis_spi_read_bytes(struct tpm_tis_data *data, u32 addr,
->  				  u16 len, u8 *result)
->  {
-> -	return tpm_tis_spi_transfer(data, addr, len, result, 0x80);
-> +	return tpm_tis_spi_transfer(data, addr, len, result, NULL);
->  }
->  
->  static int tpm_tis_spi_write_bytes(struct tpm_tis_data *data, u32 addr,
-> -				   u16 len, u8 *value)
-> +				   u16 len, const u8 *value)
->  {
-> -	return tpm_tis_spi_transfer(data, addr, len, value, 0);
-> +	return tpm_tis_spi_transfer(data, addr, len, NULL, value);
->  }
->  
->  static int tpm_tis_spi_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
-> -- 
-> 2.9.0
-> 
+> 1. You need to check for in_size < 6, otherwise you read data that has
+> not been written there during that request. I haven't tested this, but
+> I'd expect it to fail for example if you try to send the two commands
+> "00 00 00 00 00 02" and "00 00". The first will be rejected with
+> EINVAL, because 6 (in_size) != 2 (commandSize). But the second will
+> pass that check, because now in_size happens to match the commandSize
+> that has only been written to the buffer for the first command.
 
-Thank you Arnd. Do you mind if squash this to Colin's commit and your
-signed-off-by to that one?
+AFAIK tpm_transmit checks that the command has at least the header.
+
+> 2. You may not reject commands where in_size > commandSize, because
+> TIS/PTP require the TPM to throw away extra bytes (and process the
+> command as usual), not fail the command. You can see that in the State
+> Transition Table (Table 18 in TIS 1.3), line 20, with the TPM in
+> Reception state and Expect=0, writing more data does not change the
+> state ("Write is not expected. Drop write. TPM ignores this state
+> transition."). Of course, since we do not pass on in_size, but only
+> commandSize the TPM will never see those extra bytes, but the external
+> behavior (for user space applications) is identical.
+
+OK, this is more relevant. What is the legit case to send extra bytes?
 
 /Jarkko
