@@ -1,44 +1,56 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH RESEND v2 0/3] tpm2-cmd: Improve self test execution
-Date: Fri, 8 Sep 2017 13:00:30 +0300
-Message-ID: <20170908100030.zehv5aj5byxyewio@linux.intel.com>
-References: <20170831171858.13252-1-Alexander.Steffen@infineon.com>
- <20170906125740.2wntnvllembpil7u@linux.intel.com>
+Subject: Re: [PATCH RESEND v3 0/2] tpm_tis_spi: Use DMA-safe memory
+Date: Fri, 8 Sep 2017 15:11:22 +0300
+Message-ID: <20170908121122.2frkkcoidoc3u7g2@linux.intel.com>
+References: <20170831165819.13544-1-Alexander.Steffen@infineon.com>
+ <20170906125458.ueqpmokh7bg64olc@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170906125740.2wntnvllembpil7u@linux.intel.com>
+In-Reply-To: <20170906125458.ueqpmokh7bg64olc@linux.intel.com>
 Sender: owner-linux-security-module@vger.kernel.org
 To: Alexander Steffen <Alexander.Steffen@infineon.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+Cc: tpmdd-devel@lists.sourceforge.net, benoit.houyere@st.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Sep 06, 2017 at 03:57:40PM +0300, Jarkko Sakkinen wrote:
-> On Thu, Aug 31, 2017 at 07:18:55PM +0200, Alexander Steffen wrote:
-> > The self test logic for TPM 2.0 was probably based on the implementation
-> > for TPM 1.2, but did not correctly take into account some TPM 2.0 specifics.
-> > This patch series fixes those issues.
+On Wed, Sep 06, 2017 at 03:54:58PM +0300, Jarkko Sakkinen wrote:
+> On Thu, Aug 31, 2017 at 06:58:17PM +0200, Alexander Steffen wrote:
+> > The documentation says that DMA-safe memory is required for SPI transfers.
+> > The I/O buffers passed in by the caller can be allocated anywhere,
+> > including on the stack, which is not DMA-safe. So the data needs to be
+> > copied to separate, DMA-safe buffers.
+> > 
+> > We did not see any DMA-related issues on our test systems, even without
+> > DMA-safe buffers. But this might simply be due to the fact that the SPI
+> > transfer size is rather small, so our systems do not bother to set up DMA
+> > transfers. Other systems might do so.
 > > 
 > > v2:
-> > - Moved implementation description from comment to commit message.
+> > - Updated commit message with more explanations.
 > > 
-> > Alexander Steffen (3):
-> >   tpm2-cmd: Trigger only missing self tests
-> >   tpm2-cmd: Use dynamic delay to wait for self test result
-> >   tpm2-cmd: React correctly to RC_TESTING from self tests
+> > v3:
+> > - Split into two patches, one for making the buffers DMA-safe and another
+> >   for using only a single buffer.
 > > 
-> >  drivers/char/tpm/tpm2-cmd.c | 69 +++++++++++++--------------------------------
-> >  1 file changed, 20 insertions(+), 49 deletions(-)
+> > Alexander Steffen (2):
+> >   tpm_tis_spi: Use DMA-safe memory for SPI transfers
+> >   tpm_tis_spi: Use a single buffer for SPI transfers
+> > 
+> >  drivers/char/tpm/tpm_tis_spi.c | 32 ++++++++++++++++++--------------
+> >  1 file changed, 18 insertions(+), 14 deletions(-)
 > > 
 > > -- 
 > > 2.7.4
 > > 
 > 
-> Applied to my master for convenient testing.
+> Applied to my bleeding edge master brach for more convenient testing.
+> Have not yet applied to my next branch.
 > 
 > /Jarkko
 
 Tested-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+
+My XP13 happened to have suitable TPM.
 
 /Jarkko
