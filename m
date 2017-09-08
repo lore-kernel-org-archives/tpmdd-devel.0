@@ -1,55 +1,27 @@
-From: Alexander Steffen <Alexander.Steffen@infineon.com>
-Subject: [PATCH v3] tpm-dev-common: Reject too short writes
-Date: Fri, 8 Sep 2017 17:21:32 +0200
-Message-ID: <20170908152132.8728-1-Alexander.Steffen@infineon.com>
+From: Arnd Bergmann <arnd@arndb.de>
+Subject: Re: [PATCH] tpm: constify transmit data pointers
+Date: Fri, 8 Sep 2017 22:58:55 +0200
+Message-ID: <CAK8P3a2nHEU7y98+jt+nSYfmRA-ju6SZhEJqTXqS_StU1d5p-g@mail.gmail.com>
+References: <20170907133130.2463746-1-arnd@arndb.de> <20170907162403.4o3li6k74livw2bk@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Sender: owner-linux-security-module@vger.kernel.org
-To: jarkko.sakkinen@linux.intel.com, tpmdd-devel@lists.sourceforge.net
-Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, Alexander Steffen <Alexander.Steffen@infineon.com>, stable@vger.kernel.org
+Content-Type: text/plain; charset="UTF-8"
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20170907162403.4o3li6k74livw2bk@linux.intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Colin Ian King <colin.king@canonical.com>, tpmdd-devel@lists.sourceforge.net, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-tpm_transmit() does not offer an explicit interface to indicate the number
-of valid bytes in the communication buffer. Instead, it relies on the
-commandSize field in the TPM header that is encoded within the buffer.
-Therefore, ensure that a) enough data has been written to the buffer, so
-that the commandSize field is present and b) the commandSize field does not
-announce more data than has been written to the buffer.
+On Thu, Sep 7, 2017 at 6:24 PM, Jarkko Sakkinen
+<jarkko.sakkinen@linux.intel.com> wrote:
+> On Thu, Sep 07, 2017 at 03:30:45PM +0200, Arnd Bergmann wrote:
+>>
+>
+> Thank you Arnd. Do you mind if squash this to Colin's commit and your
+> signed-off-by to that one?
 
-This should have been fixed with CVE-2011-1161 long ago, but apparently
-a correct version of that patch never made it into the kernel.
+Either way works, but if you merge the two commits into one, please
+clarify in the description who did what part, otherwise it might look like
+I just forwarded Jason's original patch to you.
 
-Cc: stable@vger.kernel.org
-Signed-off-by: Alexander Steffen <Alexander.Steffen@infineon.com>
----
-v2:
-- Moved all changes to tpm_common_write in a single patch.
-v3:
-- Access data copied from user space (priv->data_buffer) instead of user
-  space data directly (buf).
-- Changed return code to EINVAL.
-
- drivers/char/tpm/tpm-dev-common.c | 6 ++++++
- 1 file changed, 6 insertions(+)
-
-diff --git a/drivers/char/tpm/tpm-dev-common.c b/drivers/char/tpm/tpm-dev-common.c
-index 610638a..461bf0b 100644
---- a/drivers/char/tpm/tpm-dev-common.c
-+++ b/drivers/char/tpm/tpm-dev-common.c
-@@ -110,6 +110,12 @@ ssize_t tpm_common_write(struct file *file, const char __user *buf,
- 		return -EFAULT;
- 	}
- 
-+	if (in_size < 6 ||
-+	    in_size < be32_to_cpu(*((__be32 *) (priv->data_buffer + 2)))) {
-+		mutex_unlock(&priv->buffer_mutex);
-+		return -EINVAL;
-+	}
-+
- 	/* atomic tpm command send and result receive. We only hold the ops
- 	 * lock during this period so that the tpm can be unregistered even if
- 	 * the char dev is held open.
--- 
-2.7.4
-
+      Arnd
