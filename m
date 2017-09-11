@@ -1,116 +1,63 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v3] tpm-dev-common: Reject too short writes
-Date: Sat, 9 Sep 2017 15:53:47 +0300
-Message-ID: <20170909125347.y3zgvpnbdywqxi54@linux.intel.com>
-References: <20170908152132.8728-1-Alexander.Steffen@infineon.com>
- <20170908213739.k7ifm2isz4dciaaa@linux.intel.com>
+From: Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Subject: [PATCH v2 0/3] Call GetEventLog before ExitBootServices
+Date: Mon, 11 Sep 2017 12:00:19 +0200
+Message-ID: <20170911100022.7251-1-tweek@google.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <stable-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20170908213739.k7ifm2isz4dciaaa@linux.intel.com>
-Sender: stable-owner@vger.kernel.org
-To: Alexander Steffen <Alexander.Steffen@infineon.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, stable@vger.kernel.org
+Content-Type: text/plain; charset="UTF-8"
+Return-path: <linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Sender: linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: linux-efi-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: ard.biesheuvel-QSEj5FYQhm4dnm+yROfE0A@public.gmane.org, matt-mF/unelCI9GS6iBeEJttW/XRex20P6io@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, mjg59-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, peterhuewe-Mmb7MZpHnFY@public.gmane.org, jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org, tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org, Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Sat, Sep 09, 2017 at 12:37:39AM +0300, Jarkko Sakkinen wrote:
-> On Fri, Sep 08, 2017 at 05:21:32PM +0200, Alexander Steffen wrote:
-> > tpm_transmit() does not offer an explicit interface to indicate the number
-> > of valid bytes in the communication buffer. Instead, it relies on the
-> > commandSize field in the TPM header that is encoded within the buffer.
-> > Therefore, ensure that a) enough data has been written to the buffer, so
-> > that the commandSize field is present and b) the commandSize field does not
-> > announce more data than has been written to the buffer.
-> > 
-> > This should have been fixed with CVE-2011-1161 long ago, but apparently
-> > a correct version of that patch never made it into the kernel.
-> > 
-> > Cc: stable@vger.kernel.org
-> > Signed-off-by: Alexander Steffen <Alexander.Steffen@infineon.com>
-> > ---
-> > v2:
-> > - Moved all changes to tpm_common_write in a single patch.
-> > v3:
-> > - Access data copied from user space (priv->data_buffer) instead of user
-> >   space data directly (buf).
-> > - Changed return code to EINVAL.
-> > 
-> >  drivers/char/tpm/tpm-dev-common.c | 6 ++++++
-> >  1 file changed, 6 insertions(+)
-> > 
-> > diff --git a/drivers/char/tpm/tpm-dev-common.c b/drivers/char/tpm/tpm-dev-common.c
-> > index 610638a..461bf0b 100644
-> > --- a/drivers/char/tpm/tpm-dev-common.c
-> > +++ b/drivers/char/tpm/tpm-dev-common.c
-> > @@ -110,6 +110,12 @@ ssize_t tpm_common_write(struct file *file, const char __user *buf,
-> >  		return -EFAULT;
-> >  	}
-> >  
-> > +	if (in_size < 6 ||
-> > +	    in_size < be32_to_cpu(*((__be32 *) (priv->data_buffer + 2)))) {
-> > +		mutex_unlock(&priv->buffer_mutex);
-> > +		return -EINVAL;
-> > +	}
-> > +
-> >  	/* atomic tpm command send and result receive. We only hold the ops
-> >  	 * lock during this period so that the tpm can be unregistered even if
-> >  	 * the char dev is held open.
-> > -- 
-> > 2.7.4
-> > 
-> 
-> I'm not gonna fight about that "in_size < 6" check. I think it is not
-> needed, I understand your point but still disagree but it is something
-> where I can live with having it.
-> 
-> I kind of disagree also with allowing messages longer than the command
-> size but it does not have to be in the scope of this commit and actually
-> should be a separate discussion if we ever going to do something about
-> it.
-> 
-> Thanks for the patience!
-> 
-> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-> 
-> /Jarkko
+With TPM 1.2, the ACPI table ("TCPA") has two fields to recover the Event Log
+Area (LAML and LASA). These logs are useful to understand and rebuild the
+final values of PCRs.
 
-Without your fix:
+With TPM 2.0, the ACPI table ("TPM2") does not contain these fields anymore.
+The recommended method is now to call the GetEventLog EFI protocol before
+ExitBootServices.
 
-$ python -m unittest -v tpm2_smoke.SmokeTest.test_too_short_cmd
-test_too_short_cmd (tpm2_smoke.SmokeTest) ... FAIL
+Implement this method within the EFI stub and create copy of the logs for the
+TPM device. This will create /sys/kernel/security/tpm0/binary_bios_measurements
+for TPM 2.0 devices (similarly to the current behaviour for TPM 1.2 devices).
 
-======================================================================
-FAIL: test_too_short_cmd (tpm2_smoke.SmokeTest)
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "tpm2_smoke.py", line 157, in test_too_short_cmd
-    self.assertEqual(rejected, True)
-AssertionError: False != True
+-------------------------------------------------------------------------------
 
-----------------------------------------------------------------------
-Ran 1 test in 2.108s
+Patchset Changelog:
 
-FAILED (failures=1)
+Version 2:
+- Move tpm_eventlog.h to top include directory, add commit for this.
+- Use EFI_LOADER_DATA to store the configuration table
+- Whitespace and new lines fixes
 
-The test case expects to get a posix error, which it doesn't get.
 
-With your fix:
+Thiebaud Weksteen (3):
+  tpm: move tpm_eventlog.h outside of drivers folder
+  efi: call get_event_log before ExitBootServices
+  tpm: parse TPM event logs based on EFI table
 
-$ python -m unittest -v tpm2_smoke.SmokeTest.test_too_short_cmd
-test_too_short_cmd (tpm2_smoke.SmokeTest) ... ok
+ arch/x86/boot/compressed/eboot.c                   |  1 +
+ drivers/char/tpm/Makefile                          |  2 +-
+ drivers/char/tpm/tpm-chip.c                        |  3 +-
+ drivers/char/tpm/tpm-interface.c                   |  2 +-
+ drivers/char/tpm/tpm.h                             | 35 ++++++++--
+ drivers/char/tpm/tpm1_eventlog.c                   | 17 +++--
+ drivers/char/tpm/tpm2_eventlog.c                   |  2 +-
+ drivers/char/tpm/tpm_acpi.c                        |  2 +-
+ drivers/char/tpm/tpm_efi.c                         | 66 ++++++++++++++++++
+ drivers/char/tpm/tpm_of.c                          |  2 +-
+ drivers/firmware/efi/Makefile                      |  2 +-
+ drivers/firmware/efi/efi.c                         |  4 ++
+ drivers/firmware/efi/libstub/Makefile              |  3 +-
+ drivers/firmware/efi/libstub/tpm.c                 | 81 ++++++++++++++++++++++
+ drivers/firmware/efi/tpm.c                         | 39 +++++++++++
+ include/linux/efi.h                                | 50 +++++++++++++
+ {drivers/char/tpm => include/linux}/tpm_eventlog.h | 32 ++-------
+ 17 files changed, 301 insertions(+), 42 deletions(-)
+ create mode 100644 drivers/char/tpm/tpm_efi.c
+ create mode 100644 drivers/firmware/efi/tpm.c
+ rename {drivers/char/tpm => include/linux}/tpm_eventlog.h (77%)
 
-----------------------------------------------------------------------
-Ran 1 test in 2.099s
-
-OK
-
-So looks good to me.
-
-Tested-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-
-Can you test the master branch with SPI TPM? I had to tinker your
-commits a bit because of merge conflicts with Arnd's commit. I'll
-put everything back to next as soon as I hear from you. Thanks
-
-/Jarkko
+-- 
+2.14.1.581.gf28d330327-goog
