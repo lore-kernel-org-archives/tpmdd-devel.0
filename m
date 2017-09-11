@@ -1,89 +1,141 @@
-From: <Alexander.Steffen@infineon.com>
-Subject: RE: [PATCH v3] tpm-dev-common: Reject too short writes
-Date: Mon, 11 Sep 2017 10:24:17 +0000
-Message-ID: <cd44dc6b622c4a65ad06bdbc851fe4a0@MUCSE603.infineon.com>
-References: <20170908152132.8728-1-Alexander.Steffen@infineon.com>
- <20170908213739.k7ifm2isz4dciaaa@linux.intel.com>
- <20170909125347.y3zgvpnbdywqxi54@linux.intel.com>
+From: Alexander Steffen <Alexander.Steffen@infineon.com>
+Subject: [PATCH v4] tpm_tis_spi: Use DMA-safe memory for SPI transfers
+Date: Mon, 11 Sep 2017 12:26:52 +0200
+Message-ID: <20170911102652.15356-1-Alexander.Steffen@infineon.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Content-Type: text/plain
 Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170909125347.y3zgvpnbdywqxi54@linux.intel.com>
-Content-Language: en-US
 Sender: owner-linux-security-module@vger.kernel.org
-To: jarkko.sakkinen@linux.intel.com
-Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, stable@vger.kernel.org
+To: jarkko.sakkinen@linux.intel.com, tpmdd-devel@lists.sourceforge.net
+Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, Alexander Steffen <Alexander.Steffen@infineon.com>, stable@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-PiBPbiBTYXQsIFNlcCAwOSwgMjAxNyBhdCAxMjozNzozOUFNICswMzAwLCBKYXJra28gU2Fra2lu
-ZW4gd3JvdGU6DQo+ID4gT24gRnJpLCBTZXAgMDgsIDIwMTcgYXQgMDU6MjE6MzJQTSArMDIwMCwg
-QWxleGFuZGVyIFN0ZWZmZW4gd3JvdGU6DQo+ID4gPiB0cG1fdHJhbnNtaXQoKSBkb2VzIG5vdCBv
-ZmZlciBhbiBleHBsaWNpdCBpbnRlcmZhY2UgdG8gaW5kaWNhdGUgdGhlDQo+IG51bWJlcg0KPiA+
-ID4gb2YgdmFsaWQgYnl0ZXMgaW4gdGhlIGNvbW11bmljYXRpb24gYnVmZmVyLiBJbnN0ZWFkLCBp
-dCByZWxpZXMgb24gdGhlDQo+ID4gPiBjb21tYW5kU2l6ZSBmaWVsZCBpbiB0aGUgVFBNIGhlYWRl
-ciB0aGF0IGlzIGVuY29kZWQgd2l0aGluIHRoZSBidWZmZXIuDQo+ID4gPiBUaGVyZWZvcmUsIGVu
-c3VyZSB0aGF0IGEpIGVub3VnaCBkYXRhIGhhcyBiZWVuIHdyaXR0ZW4gdG8gdGhlIGJ1ZmZlciwg
-c28NCj4gPiA+IHRoYXQgdGhlIGNvbW1hbmRTaXplIGZpZWxkIGlzIHByZXNlbnQgYW5kIGIpIHRo
-ZSBjb21tYW5kU2l6ZSBmaWVsZCBkb2VzDQo+IG5vdA0KPiA+ID4gYW5ub3VuY2UgbW9yZSBkYXRh
-IHRoYW4gaGFzIGJlZW4gd3JpdHRlbiB0byB0aGUgYnVmZmVyLg0KPiA+ID4NCj4gPiA+IFRoaXMg
-c2hvdWxkIGhhdmUgYmVlbiBmaXhlZCB3aXRoIENWRS0yMDExLTExNjEgbG9uZyBhZ28sIGJ1dCBh
-cHBhcmVudGx5DQo+ID4gPiBhIGNvcnJlY3QgdmVyc2lvbiBvZiB0aGF0IHBhdGNoIG5ldmVyIG1h
-ZGUgaXQgaW50byB0aGUga2VybmVsLg0KPiA+ID4NCj4gPiA+IENjOiBzdGFibGVAdmdlci5rZXJu
-ZWwub3JnDQo+ID4gPiBTaWduZWQtb2ZmLWJ5OiBBbGV4YW5kZXIgU3RlZmZlbiA8QWxleGFuZGVy
-LlN0ZWZmZW5AaW5maW5lb24uY29tPg0KPiA+ID4gLS0tDQo+ID4gPiB2MjoNCj4gPiA+IC0gTW92
-ZWQgYWxsIGNoYW5nZXMgdG8gdHBtX2NvbW1vbl93cml0ZSBpbiBhIHNpbmdsZSBwYXRjaC4NCj4g
-PiA+IHYzOg0KPiA+ID4gLSBBY2Nlc3MgZGF0YSBjb3BpZWQgZnJvbSB1c2VyIHNwYWNlIChwcml2
-LT5kYXRhX2J1ZmZlcikgaW5zdGVhZCBvZiB1c2VyDQo+ID4gPiAgIHNwYWNlIGRhdGEgZGlyZWN0
-bHkgKGJ1ZikuDQo+ID4gPiAtIENoYW5nZWQgcmV0dXJuIGNvZGUgdG8gRUlOVkFMLg0KPiA+ID4N
-Cj4gPiA+ICBkcml2ZXJzL2NoYXIvdHBtL3RwbS1kZXYtY29tbW9uLmMgfCA2ICsrKysrKw0KPiA+
-ID4gIDEgZmlsZSBjaGFuZ2VkLCA2IGluc2VydGlvbnMoKykNCj4gPiA+DQo+ID4gPiBkaWZmIC0t
-Z2l0IGEvZHJpdmVycy9jaGFyL3RwbS90cG0tZGV2LWNvbW1vbi5jDQo+IGIvZHJpdmVycy9jaGFy
-L3RwbS90cG0tZGV2LWNvbW1vbi5jDQo+ID4gPiBpbmRleCA2MTA2MzhhLi40NjFiZjBiIDEwMDY0
-NA0KPiA+ID4gLS0tIGEvZHJpdmVycy9jaGFyL3RwbS90cG0tZGV2LWNvbW1vbi5jDQo+ID4gPiAr
-KysgYi9kcml2ZXJzL2NoYXIvdHBtL3RwbS1kZXYtY29tbW9uLmMNCj4gPiA+IEBAIC0xMTAsNiAr
-MTEwLDEyIEBAIHNzaXplX3QgdHBtX2NvbW1vbl93cml0ZShzdHJ1Y3QgZmlsZSAqZmlsZSwNCj4g
-Y29uc3QgY2hhciBfX3VzZXIgKmJ1ZiwNCj4gPiA+ICAJCXJldHVybiAtRUZBVUxUOw0KPiA+ID4g
-IAl9DQo+ID4gPg0KPiA+ID4gKwlpZiAoaW5fc2l6ZSA8IDYgfHwNCj4gPiA+ICsJICAgIGluX3Np
-emUgPCBiZTMyX3RvX2NwdSgqKChfX2JlMzIgKikgKHByaXYtPmRhdGFfYnVmZmVyICsgMikpKSkg
-ew0KPiA+ID4gKwkJbXV0ZXhfdW5sb2NrKCZwcml2LT5idWZmZXJfbXV0ZXgpOw0KPiA+ID4gKwkJ
-cmV0dXJuIC1FSU5WQUw7DQo+ID4gPiArCX0NCj4gPiA+ICsNCj4gPiA+ICAJLyogYXRvbWljIHRw
-bSBjb21tYW5kIHNlbmQgYW5kIHJlc3VsdCByZWNlaXZlLiBXZSBvbmx5IGhvbGQgdGhlDQo+IG9w
-cw0KPiA+ID4gIAkgKiBsb2NrIGR1cmluZyB0aGlzIHBlcmlvZCBzbyB0aGF0IHRoZSB0cG0gY2Fu
-IGJlIHVucmVnaXN0ZXJlZCBldmVuIGlmDQo+ID4gPiAgCSAqIHRoZSBjaGFyIGRldiBpcyBoZWxk
-IG9wZW4uDQo+ID4gPiAtLQ0KPiA+ID4gMi43LjQNCj4gPiA+DQo+ID4NCj4gPiBJJ20gbm90IGdv
-bm5hIGZpZ2h0IGFib3V0IHRoYXQgImluX3NpemUgPCA2IiBjaGVjay4gSSB0aGluayBpdCBpcyBu
-b3QNCj4gPiBuZWVkZWQsIEkgdW5kZXJzdGFuZCB5b3VyIHBvaW50IGJ1dCBzdGlsbCBkaXNhZ3Jl
-ZSBidXQgaXQgaXMgc29tZXRoaW5nDQo+ID4gd2hlcmUgSSBjYW4gbGl2ZSB3aXRoIGhhdmluZyBp
-dC4NCj4gPg0KPiA+IEkga2luZCBvZiBkaXNhZ3JlZSBhbHNvIHdpdGggYWxsb3dpbmcgbWVzc2Fn
-ZXMgbG9uZ2VyIHRoYW4gdGhlIGNvbW1hbmQNCj4gPiBzaXplIGJ1dCBpdCBkb2VzIG5vdCBoYXZl
-IHRvIGJlIGluIHRoZSBzY29wZSBvZiB0aGlzIGNvbW1pdCBhbmQgYWN0dWFsbHkNCj4gPiBzaG91
-bGQgYmUgYSBzZXBhcmF0ZSBkaXNjdXNzaW9uIGlmIHdlIGV2ZXIgZ29pbmcgdG8gZG8gc29tZXRo
-aW5nIGFib3V0DQo+ID4gaXQuDQo+ID4NCj4gPiBUaGFua3MgZm9yIHRoZSBwYXRpZW5jZSENCj4g
-Pg0KPiA+IFJldmlld2VkLWJ5OiBKYXJra28gU2Fra2luZW4gPGphcmtrby5zYWtraW5lbkBsaW51
-eC5pbnRlbC5jb20+DQo+ID4NCj4gPiAvSmFya2tvDQo+IA0KPiBXaXRob3V0IHlvdXIgZml4Og0K
-PiANCj4gJCBweXRob24gLW0gdW5pdHRlc3QgLXYgdHBtMl9zbW9rZS5TbW9rZVRlc3QudGVzdF90
-b29fc2hvcnRfY21kDQo+IHRlc3RfdG9vX3Nob3J0X2NtZCAodHBtMl9zbW9rZS5TbW9rZVRlc3Qp
-IC4uLiBGQUlMDQo+IA0KPiA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09
-PT09PT09PT09PT09PT09PT09DQo+ID09PT09PT09PT09PQ0KPiBGQUlMOiB0ZXN0X3Rvb19zaG9y
-dF9jbWQgKHRwbTJfc21va2UuU21va2VUZXN0KQ0KPiAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tDQo+IFRyYWNlYmFj
-ayAobW9zdCByZWNlbnQgY2FsbCBsYXN0KToNCj4gICBGaWxlICJ0cG0yX3Ntb2tlLnB5IiwgbGlu
-ZSAxNTcsIGluIHRlc3RfdG9vX3Nob3J0X2NtZA0KPiAgICAgc2VsZi5hc3NlcnRFcXVhbChyZWpl
-Y3RlZCwgVHJ1ZSkNCj4gQXNzZXJ0aW9uRXJyb3I6IEZhbHNlICE9IFRydWUNCj4gDQo+IC0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0NCj4gUmFuIDEgdGVzdCBpbiAyLjEwOHMNCj4gDQo+IEZBSUxFRCAoZmFpbHVyZXM9
-MSkNCj4gDQo+IFRoZSB0ZXN0IGNhc2UgZXhwZWN0cyB0byBnZXQgYSBwb3NpeCBlcnJvciwgd2hp
-Y2ggaXQgZG9lc24ndCBnZXQuDQo+IA0KPiBXaXRoIHlvdXIgZml4Og0KPiANCj4gJCBweXRob24g
-LW0gdW5pdHRlc3QgLXYgdHBtMl9zbW9rZS5TbW9rZVRlc3QudGVzdF90b29fc2hvcnRfY21kDQo+
-IHRlc3RfdG9vX3Nob3J0X2NtZCAodHBtMl9zbW9rZS5TbW9rZVRlc3QpIC4uLiBvaw0KPiANCj4g
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLQ0KPiBSYW4gMSB0ZXN0IGluIDIuMDk5cw0KPiANCj4gT0sNCj4gDQo+IFNv
-IGxvb2tzIGdvb2QgdG8gbWUuDQo+IA0KPiBUZXN0ZWQtYnk6IEphcmtrbyBTYWtraW5lbiA8amFy
-a2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbT4NCj4gDQo+IENhbiB5b3UgdGVzdCB0aGUgbWFz
-dGVyIGJyYW5jaCB3aXRoIFNQSSBUUE0/IEkgaGFkIHRvIHRpbmtlciB5b3VyDQo+IGNvbW1pdHMg
-YSBiaXQgYmVjYXVzZSBvZiBtZXJnZSBjb25mbGljdHMgd2l0aCBBcm5kJ3MgY29tbWl0LiBJJ2xs
-DQo+IHB1dCBldmVyeXRoaW5nIGJhY2sgdG8gbmV4dCBhcyBzb29uIGFzIEkgaGVhciBmcm9tIHlv
-dS4gVGhhbmtzDQo+IA0KPiAvSmFya2tvDQoNCnRwbV90aXNfc3BpIGluIG1hc3RlciAoMzg5N2Y3
-YykgaXMgYnJva2VuLCBpdCBkb2VzIG5vdCB0cmFuc2ZlciBhbnkgZGF0YS4gSSdsbCBzZW5kIHlv
-dSBhIGZpeGVkIHBhdGNoIGZvciB0aGUgRE1BIGNoYW5nZS4NCg0KQWxleGFuZGVyDQo=
+The buffers used as tx_buf/rx_buf in a SPI transfer need to be DMA-safe.
+This cannot be guaranteed for the buffers passed to tpm_tis_spi_read_bytes
+and tpm_tis_spi_write_bytes. Therefore, we need to use our own DMA-safe
+buffer and copy the data to/from it.
+
+The buffer needs to be allocated separately, to ensure that it is
+cacheline-aligned and not shared with other data, so that DMA can work
+correctly.
+
+Fixes: 0edbfea537d1 ("tpm/tpm_tis_spi: Add support for spi phy")
+Cc: stable@vger.kernel.org
+Signed-off-by: Alexander Steffen <Alexander.Steffen@infineon.com>
+---
+v2:
+- Updated commit message with more explanations.
+v3:
+- Split into two patches, one for making the buffers DMA-safe and another
+  for using only a single buffer.
+v4:
+- Back to one patch, to fix conflicts with new const buffers.
+
+ drivers/char/tpm/tpm_tis_spi.c | 45 +++++++++++++++++++++++++-----------------
+ 1 file changed, 27 insertions(+), 18 deletions(-)
+
+diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
+index e49f5b9..8ab0bd8 100644
+--- a/drivers/char/tpm/tpm_tis_spi.c
++++ b/drivers/char/tpm/tpm_tis_spi.c
+@@ -46,9 +46,7 @@
+ struct tpm_tis_spi_phy {
+ 	struct tpm_tis_data priv;
+ 	struct spi_device *spi_device;
+-
+-	u8 tx_buf[4];
+-	u8 rx_buf[4];
++	u8 *iobuf;
+ };
+ 
+ static inline struct tpm_tis_spi_phy *to_tpm_tis_spi_phy(struct tpm_tis_data *data)
+@@ -71,14 +69,14 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+ 	while (len) {
+ 		transfer_len = min_t(u16, len, MAX_SPI_FRAMESIZE);
+ 
+-		phy->tx_buf[0] = (in ? 0x80 : 0) | (transfer_len - 1);
+-		phy->tx_buf[1] = 0xd4;
+-		phy->tx_buf[2] = addr >> 8;
+-		phy->tx_buf[3] = addr;
++		phy->iobuf[0] = (in ? 0x80 : 0) | (transfer_len - 1);
++		phy->iobuf[1] = 0xd4;
++		phy->iobuf[2] = addr >> 8;
++		phy->iobuf[3] = addr;
+ 
+ 		memset(&spi_xfer, 0, sizeof(spi_xfer));
+-		spi_xfer.tx_buf = phy->tx_buf;
+-		spi_xfer.rx_buf = phy->rx_buf;
++		spi_xfer.tx_buf = phy->iobuf;
++		spi_xfer.rx_buf = phy->iobuf;
+ 		spi_xfer.len = 4;
+ 		spi_xfer.cs_change = 1;
+ 
+@@ -88,9 +86,9 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+ 		if (ret < 0)
+ 			goto exit;
+ 
+-		if ((phy->rx_buf[3] & 0x01) == 0) {
++		if ((phy->iobuf[3] & 0x01) == 0) {
+ 			// handle SPI wait states
+-			phy->tx_buf[0] = 0;
++			phy->iobuf[0] = 0;
+ 
+ 			for (i = 0; i < TPM_RETRY; i++) {
+ 				spi_xfer.len = 1;
+@@ -99,7 +97,7 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+ 				ret = spi_sync_locked(phy->spi_device, &m);
+ 				if (ret < 0)
+ 					goto exit;
+-				if (phy->rx_buf[0] & 0x01)
++				if (phy->iobuf[0] & 0x01)
+ 					break;
+ 			}
+ 
+@@ -112,8 +110,14 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+ 		spi_xfer.cs_change = 0;
+ 		spi_xfer.len = transfer_len;
+ 		spi_xfer.delay_usecs = 5;
+-		spi_xfer.tx_buf = out;
+-		spi_xfer.rx_buf = in;
++
++		if (in) {
++			spi_xfer.tx_buf = NULL;
++		} else if (out) {
++			spi_xfer.rx_buf = NULL;
++			memcpy(phy->iobuf, out, transfer_len);
++			out += transfer_len;
++		}
+ 
+ 		spi_message_init(&m);
+ 		spi_message_add_tail(&spi_xfer, &m);
+@@ -121,11 +125,12 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+ 		if (ret < 0)
+ 			goto exit;
+ 
+-		len -= transfer_len;
+-		if (in)
++		if (in) {
++			memcpy(in, phy->iobuf, transfer_len);
+ 			in += transfer_len;
+-		if (out)
+-			out += transfer_len;
++		}
++
++		len -= transfer_len;
+ 	}
+ 
+ exit:
+@@ -191,6 +196,10 @@ static int tpm_tis_spi_probe(struct spi_device *dev)
+ 
+ 	phy->spi_device = dev;
+ 
++	phy->iobuf = devm_kmalloc(&dev->dev, MAX_SPI_FRAMESIZE, GFP_KERNEL);
++	if (!phy->iobuf)
++		return -ENOMEM;
++
+ 	return tpm_tis_core_init(&dev->dev, &phy->priv, -1, &tpm_spi_phy_ops,
+ 				 NULL);
+ }
+-- 
+2.7.4
+
