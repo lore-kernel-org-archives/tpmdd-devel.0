@@ -1,73 +1,27 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [PATCH 3/3] tpm: fix type of a local variables in tpm_tis_spi.c
-Date: Wed, 13 Sep 2017 10:26:54 -0700
-Message-ID: <20170913172654.25036-1-jarkko.sakkinen@linux.intel.com>
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Sender: owner-linux-security-module@vger.kernel.org
-To: tpmdd-devel@lists.sourceforge.net
-Cc: linux-security-module@vger.kernel.org, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
+From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Subject: Re: [PATCH 1/3] tpm: fix type of a local variable in
+ tpm2_get_cc_attrs_tbl()
+Date: Wed, 13 Sep 2017 12:14:21 -0600
+Message-ID: <20170913181421.GA1536@obsidianresearch.com>
+References: <20170913172620.24829-1-jarkko.sakkinen@linux.intel.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20170913172620.24829-1-jarkko.sakkinen@linux.intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Use __le32 type for data in that format.
+On Wed, Sep 13, 2017 at 10:26:20AM -0700, Jarkko Sakkinen wrote:
+> The local variable 'attrs' should have the type __be32 instead of u32.
+> 
+> Fixes: 58472f5cd4f6 ("tpm: validate TPM 2.0 commands")
+> Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 
-Fixes: 0edbfea537d1 ("tpm/tpm_tis_spi: Add support for spi phy")
-Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
----
- drivers/char/tpm/tpm_tis_spi.c | 25 ++++++++++++++++++-------
- 1 file changed, 18 insertions(+), 7 deletions(-)
+All 3 look good to me:
 
-diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
-index 7e97eb07b200..bfe972959183 100644
---- a/drivers/char/tpm/tpm_tis_spi.c
-+++ b/drivers/char/tpm/tpm_tis_spi.c
-@@ -153,29 +153,40 @@ static int tpm_tis_spi_write_bytes(struct tpm_tis_data *data, u32 addr,
- 
- static int tpm_tis_spi_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
- {
-+	__le16 result_le;
- 	int rc;
- 
--	rc = data->phy_ops->read_bytes(data, addr, sizeof(u16), (u8 *)result);
-+	rc = data->phy_ops->read_bytes(data, addr, sizeof(u16),
-+				       (u8 *)&result_le);
- 	if (!rc)
--		*result = le16_to_cpu(*result);
-+		*result = le16_to_cpu(result_le);
-+
- 	return rc;
- }
- 
- static int tpm_tis_spi_read32(struct tpm_tis_data *data, u32 addr, u32 *result)
- {
-+	__le32 result_le;
- 	int rc;
- 
--	rc = data->phy_ops->read_bytes(data, addr, sizeof(u32), (u8 *)result);
-+	rc = data->phy_ops->read_bytes(data, addr, sizeof(u32),
-+				       (u8 *)&result_le);
- 	if (!rc)
--		*result = le32_to_cpu(*result);
-+		*result = le32_to_cpu(result_le);
-+
- 	return rc;
- }
- 
- static int tpm_tis_spi_write32(struct tpm_tis_data *data, u32 addr, u32 value)
- {
--	value = cpu_to_le32(value);
--	return data->phy_ops->write_bytes(data, addr, sizeof(u32),
--					   (u8 *)&value);
-+	__le32 value_le;
-+	int rc;
-+
-+	value_le = cpu_to_le32(value);
-+	rc = data->phy_ops->write_bytes(data, addr, sizeof(u32),
-+					(u8 *)&value_le);
-+
-+	return rc;
- }
- 
- static const struct tpm_tis_phy_ops tpm_spi_phy_ops = {
--- 
-2.14.1
+Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 
+Jason
