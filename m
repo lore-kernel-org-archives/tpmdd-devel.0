@@ -1,68 +1,33 @@
-From: James Bottomley <James.Bottomley-RxcU5blhW6jCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
-Subject: Re: Future of TPMDD @ Linux Security Summit / Plumbers
-Date: Wed, 13 Sep 2017 13:51:20 -0700
-Message-ID: <df7c2d96-8790-4625-a6d1-7ba06d691e57@email.android.com>
-References: <1503697721.4203.151.camel@linux.vnet.ibm.com>
- <20170825220252.uuy43ryhuavoz2jq@linux.intel.com>
- <20170825220416.h2j2sns72kukf466@linux.intel.com>
- <1503699356.4203.159.camel@linux.vnet.ibm.com>
- <20170825222209.GA22199@obsidianresearch.com>
- <1503703596.8359.6.camel@linux.vnet.ibm.com>
- <20170826074135.mx3i3bo6b3lrevdu@linux.intel.com>
- <20170826074843.isaxpmrotyk46u6j@linux.intel.com>
- <1503847647.5847.51.camel@linux.vnet.ibm.com>
- <alpine.LRH.2.20.1708281126230.3474@namei.org>
- <20170829121137.ovgkrcihgy5jcufu@linux.intel.com>
- <alpine.LRH.2.20.1708300003510.19193@namei.org>
- <trinity-ab47fab5-3247-446f-add3-baebe7c51350-1505335723429@3c-app-gmx-bs26>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH 1/3] tpm: fix type of a local variable in
+ tpm2_get_cc_attrs_tbl()
+Date: Wed, 13 Sep 2017 16:04:25 -0700
+Message-ID: <20170913230425.xmgnrdz2nazxnvbr@linux.intel.com>
+References: <20170913172620.24829-1-jarkko.sakkinen@linux.intel.com>
+ <20170913181421.GA1536@obsidianresearch.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <trinity-ab47fab5-3247-446f-add3-baebe7c51350-1505335723429@3c-app-gmx-bs26>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Peter Huewe <PeterHuewe-Mmb7MZpHnFY@public.gmane.org>, James Morris <jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>
-Cc: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, George Wilson <gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20170913181421.GA1536@obsidianresearch.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-security-module@vger.kernel.org, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gU2VwdGVtYmVyIDEzLCAyMDE3IDE6NDg6NDMgUE0gUFNULCBQZXRlciBIdWV3ZSA8UGV0ZXJI
-dWV3ZUBnbXguZGU+IHdyb3RlOgo+SGkgSmFya2tvLCBNaW1pLCBKYW1lcywgSmFzb24sIGFuZCBl
-dmVyeWJvZHkgZWxzZSwKPsKgCj5pdCB3b3VsZCBiZSBncmVhdCBpZiB3ZSBjb3VsZCBmaW5kIGEg
-c2xvdCB0byBkaXNjdXNzIGluIHBlcnNvbiBob3cgd2UKPnByb2NlZWQgd2l0aCB0aGUgbWFpbGlu
-ZyBsaXN0cywgcGF0Y2ggZmxvd3MgYW5kIHJldmlldyBjeWNsZXMuCj5JIGtub3cgdGhlcmUgd2Vy
-ZSBzb21lIGRpc2N1c3Npb25zLCBidXQgYXRsZWFzdCBmb3IgbXkgcGFydCBJIGRpZCBub3QKPmdl
-dCB0aGUgZmluYWwgY29uY2x1c2lvbiBvbiBob3cgd2UgcHJvY2VlZCBhbmQgd2h5Lgo+wqAKPkFs
-c28gSSB3b3VsZCBsaWtlIHRvIGRpc2N1c3Mgd2hhdCBpcyB0aGUgY3VycmVudCBzdGF0dXMgb2Yg
-dGhlIG1vdmUgdG8KPmtlcm5lbC5vcmcgaW5mcmFzdHJ1Y3R1cmUgKG9yIGF0bGVhc3QgYXdheSBm
-cm9tIHNmKSwgYW5kIG1heWJlIHdlIGNhbgo+ZmluZCBhbnlvbmUgaGVyZSBhdCBQbHVtYmVycyB0
-byByZW1vdmUgYW55IGJsb2NraW5nIHBvaW50cy4KPgo+TWF5YmUgd2UgY291bGQgYWxzbyBkaXNj
-dXNzIGhvdyB3ZSBjYW4gaW1wcm92ZSBvdXIgdGVzdGluZyBzdHJhdGVneSBhbmQKPmRpc2N1c3Mg
-d2hpY2ggdGVzdHMgY3VycmVudGx5IGV4aXN0cy4KPldlIGhhdmUgYSAoc2VtaS0pYXV0b21hdGlj
-IHRlc3QgZW52aXJvbm1lbnQgZm9yIHRoZSB0cG0ga2VybmVsIHBhdGNoZXMKPmF0IHdvcmsgYW5k
-IHdlIGFyZSBjdXJyZW50bHkgZXhwbG9yaW5nIGhvdyB0byBleHBhbmQgdGhpcyBmdXJ0aGVyIGFu
-ZAo+YXV0b21hdGUgaXQgY29tcGxldGVseS4gSSBjYW4gZ2l2ZSB5b3UgYSBxdWljayBydW5kb3du
-IG9uIHRoaXMgaWYKPmludGVyZXN0ZWQuCgpBdCBwbHVtYmVycyB3ZSBjb3VsZCBkbyBhIGx1bmNo
-IG1lZXRpbmcsIGEgaGFjayByb29tIHNlc3Npb24sYSBib2Ygb3IgYW4gdW5jb25mZXJlbmNlLiAg
-VGFrZSB5b3VyIHBpY2suCgpKYW1lcwoKPgo+VGhhbmtzLAo+UGV0ZXIKPgo+LS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tCj5DaGVjayBvdXQgdGhlIHZpYnJhbnQgdGVjaCBjb21tdW5pdHkgb24gb25lIG9m
-IHRoZSB3b3JsZCdzIG1vc3QKPmVuZ2FnaW5nIHRlY2ggc2l0ZXMsIFNsYXNoZG90Lm9yZyEgaHR0
-cDovL3NkbS5saW5rL3NsYXNoZG90Cj5fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fX19fX19fXwo+dHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0Cj50cG1kZC1kZXZlbEBsaXN0
-cy5zb3VyY2Vmb3JnZS5uZXQKPmh0dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0L2xpc3RzL2xp
-c3RpbmZvL3RwbWRkLWRldmVsCgoKLS0gClNlbnQgZnJvbSBteSBBbmRyb2lkIGRldmljZSB3aXRo
-IEstOSBNYWlsLiBQbGVhc2UgZXhjdXNlIG15IGJyZXZpdHkuCgotLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0KQ2hlY2sgb3V0IHRoZSB2aWJyYW50IHRlY2ggY29tbXVuaXR5IG9uIG9uZSBvZiB0aGUgd29y
-bGQncyBtb3N0CmVuZ2FnaW5nIHRlY2ggc2l0ZXMsIFNsYXNoZG90Lm9yZyEgaHR0cDovL3NkbS5s
-aW5rL3NsYXNoZG90Cl9fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fCnRwbWRkLWRldmVsIG1haWxpbmcgbGlzdAp0cG1kZC1kZXZlbEBsaXN0cy5zb3VyY2Vmb3Jn
-ZS5uZXQKaHR0cHM6Ly9saXN0cy5zb3VyY2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vdHBtZGQt
-ZGV2ZWwK
+On Wed, Sep 13, 2017 at 12:14:21PM -0600, Jason Gunthorpe wrote:
+> On Wed, Sep 13, 2017 at 10:26:20AM -0700, Jarkko Sakkinen wrote:
+> > The local variable 'attrs' should have the type __be32 instead of u32.
+> > 
+> > Fixes: 58472f5cd4f6 ("tpm: validate TPM 2.0 commands")
+> > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+> 
+> All 3 look good to me:
+> 
+> Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+> 
+> Jason
+
+Thanks!
+
+/Jarkko
