@@ -1,177 +1,150 @@
-From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Subject: Re: [PATCH v2 1/4] tpm: ignore burstcount to improve
- tpm_tis send() performance.
-Date: Wed, 13 Sep 2017 11:39:03 -0700
-Message-ID: <CB43D154-BE47-4016-AE2D-C372AFCAD5F9@gmx.de>
-References: <20170906125643.5070-1-nayna@linux.vnet.ibm.com>
- <20170906125643.5070-2-nayna@linux.vnet.ibm.com>
- <20170912222010.ltm76m5vy2kupydi@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v4] tpm_tis_spi: Use DMA-safe memory for SPI transfers
+Date: Wed, 13 Sep 2017 11:48:12 -0700
+Message-ID: <20170913184812.5kb3ojf3ueg6caoc@linux.intel.com>
+References: <20170911102652.15356-1-Alexander.Steffen@infineon.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170912222010.ltm76m5vy2kupydi-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Cc: patrickc-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-security-module-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20170911102652.15356-1-Alexander.Steffen@infineon.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Alexander Steffen <Alexander.Steffen@infineon.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, stable@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+On Mon, Sep 11, 2017 at 12:26:52PM +0200, Alexander Steffen wrote:
+> The buffers used as tx_buf/rx_buf in a SPI transfer need to be DMA-safe.
+> This cannot be guaranteed for the buffers passed to tpm_tis_spi_read_bytes
+> and tpm_tis_spi_write_bytes. Therefore, we need to use our own DMA-safe
+> buffer and copy the data to/from it.
+> 
+> The buffer needs to be allocated separately, to ensure that it is
+> cacheline-aligned and not shared with other data, so that DMA can work
+> correctly.
+> 
+> Fixes: 0edbfea537d1 ("tpm/tpm_tis_spi: Add support for spi phy")
+> Cc: stable@vger.kernel.org
+> Signed-off-by: Alexander Steffen <Alexander.Steffen@infineon.com>
+> ---
+> v2:
+> - Updated commit message with more explanations.
+> v3:
+> - Split into two patches, one for making the buffers DMA-safe and another
+>   for using only a single buffer.
+> v4:
+> - Back to one patch, to fix conflicts with new const buffers.
+> 
+>  drivers/char/tpm/tpm_tis_spi.c | 45 +++++++++++++++++++++++++-----------------
+>  1 file changed, 27 insertions(+), 18 deletions(-)
+> 
+> diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
+> index e49f5b9..8ab0bd8 100644
+> --- a/drivers/char/tpm/tpm_tis_spi.c
+> +++ b/drivers/char/tpm/tpm_tis_spi.c
+> @@ -46,9 +46,7 @@
+>  struct tpm_tis_spi_phy {
+>  	struct tpm_tis_data priv;
+>  	struct spi_device *spi_device;
+> -
+> -	u8 tx_buf[4];
+> -	u8 rx_buf[4];
+> +	u8 *iobuf;
+>  };
+>  
+>  static inline struct tpm_tis_spi_phy *to_tpm_tis_spi_phy(struct tpm_tis_data *data)
+> @@ -71,14 +69,14 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  	while (len) {
+>  		transfer_len = min_t(u16, len, MAX_SPI_FRAMESIZE);
+>  
+> -		phy->tx_buf[0] = (in ? 0x80 : 0) | (transfer_len - 1);
+> -		phy->tx_buf[1] = 0xd4;
+> -		phy->tx_buf[2] = addr >> 8;
+> -		phy->tx_buf[3] = addr;
+> +		phy->iobuf[0] = (in ? 0x80 : 0) | (transfer_len - 1);
+> +		phy->iobuf[1] = 0xd4;
+> +		phy->iobuf[2] = addr >> 8;
+> +		phy->iobuf[3] = addr;
+>  
+>  		memset(&spi_xfer, 0, sizeof(spi_xfer));
+> -		spi_xfer.tx_buf = phy->tx_buf;
+> -		spi_xfer.rx_buf = phy->rx_buf;
+> +		spi_xfer.tx_buf = phy->iobuf;
+> +		spi_xfer.rx_buf = phy->iobuf;
+>  		spi_xfer.len = 4;
+>  		spi_xfer.cs_change = 1;
+>  
+> @@ -88,9 +86,9 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  		if (ret < 0)
+>  			goto exit;
+>  
+> -		if ((phy->rx_buf[3] & 0x01) == 0) {
+> +		if ((phy->iobuf[3] & 0x01) == 0) {
+>  			// handle SPI wait states
+> -			phy->tx_buf[0] = 0;
+> +			phy->iobuf[0] = 0;
+>  
+>  			for (i = 0; i < TPM_RETRY; i++) {
+>  				spi_xfer.len = 1;
+> @@ -99,7 +97,7 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  				ret = spi_sync_locked(phy->spi_device, &m);
+>  				if (ret < 0)
+>  					goto exit;
+> -				if (phy->rx_buf[0] & 0x01)
+> +				if (phy->iobuf[0] & 0x01)
+>  					break;
+>  			}
+>  
+> @@ -112,8 +110,14 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  		spi_xfer.cs_change = 0;
+>  		spi_xfer.len = transfer_len;
+>  		spi_xfer.delay_usecs = 5;
+> -		spi_xfer.tx_buf = out;
+> -		spi_xfer.rx_buf = in;
+> +
+> +		if (in) {
+> +			spi_xfer.tx_buf = NULL;
+> +		} else if (out) {
+> +			spi_xfer.rx_buf = NULL;
+> +			memcpy(phy->iobuf, out, transfer_len);
+> +			out += transfer_len;
+> +		}
+>  
+>  		spi_message_init(&m);
+>  		spi_message_add_tail(&spi_xfer, &m);
+> @@ -121,11 +125,12 @@ static int tpm_tis_spi_transfer(struct tpm_tis_data *data, u32 addr, u16 len,
+>  		if (ret < 0)
+>  			goto exit;
+>  
+> -		len -= transfer_len;
+> -		if (in)
+> +		if (in) {
+> +			memcpy(in, phy->iobuf, transfer_len);
+>  			in += transfer_len;
+> -		if (out)
+> -			out += transfer_len;
+> +		}
+> +
+> +		len -= transfer_len;
+>  	}
+>  
+>  exit:
+> @@ -191,6 +196,10 @@ static int tpm_tis_spi_probe(struct spi_device *dev)
+>  
+>  	phy->spi_device = dev;
+>  
+> +	phy->iobuf = devm_kmalloc(&dev->dev, MAX_SPI_FRAMESIZE, GFP_KERNEL);
+> +	if (!phy->iobuf)
+> +		return -ENOMEM;
+> +
+>  	return tpm_tis_core_init(&dev->dev, &phy->priv, -1, &tpm_spi_phy_ops,
+>  				 NULL);
+>  }
+> -- 
+> 2.7.4
+> 
 
+Great, I swapped to this patch in my master branch. I'm not able to
+test it before I'm back to Finland from US (next week).
 
-Am 12. September 2017 17:45:08 GMT-07:00 schrieb Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>:
->On Wed, Sep 06, 2017 at 08:56:36AM -0400, Nayna Jain wrote:
->> The TPM burstcount status indicates the number of bytes that can
->> be sent to the TPM without causing bus wait states.  Effectively,
->> it is the number of empty bytes in the command FIFO. Further,
->> some TPMs have a static burstcount, when the value remains zero
->> until the entire FIFO is empty.
->> 
->> This patch adds an optimization to check for burstcount only once.
->> And if it is valid, it writes all the bytes at once, permitting
->> wait states. The performance of a 34 byte extend on a TPM 1.2 with
->> an 8 byte burstcount improved from 41 msec to 14 msec.
->> 
->> This functionality is enabled only by passing module
->> parameter ignore_burst_count=1. By default, this parameter
->> is disabled.
->> 
->> After this change, performance on a TPM 1.2 with an 8 byte
->> burstcount for 1000 extends improved from ~41sec to ~14sec.
->> 
->> Suggested-by: Ken Goldman <kgold-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org> in
->> conjunction with the TPM Device Driver work group.
->> Signed-off-by: Nayna Jain <nayna-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
->> Acked-by: Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
->> ---
->>  Documentation/admin-guide/kernel-parameters.txt |  8 ++++++++
->>  drivers/char/tpm/tpm_tis_core.c                 | 24
->+++++++++++++++++++++---
->>  2 files changed, 29 insertions(+), 3 deletions(-)
->> 
->> diff --git a/Documentation/admin-guide/kernel-parameters.txt
->b/Documentation/admin-guide/kernel-parameters.txt
->> index 4e303be83df6..3c59bb91e1ee 100644
->> --- a/Documentation/admin-guide/kernel-parameters.txt
->> +++ b/Documentation/admin-guide/kernel-parameters.txt
->> @@ -1465,6 +1465,14 @@
->>  			mode generally follows that for the NaN encoding,
->>  			except where unsupported by hardware.
->>  
->> +	ignore_burst_count [TPM_TIS_CORE]
->> +			tpm_tis_core driver queries for the burstcount before
->> +			every send call in a loop. However, it causes delay to
->> +			the send command for TPMs with low burstcount value.
->> +			Setting this value to 1, will make driver to query for
->> +			burstcount only once in the loop to improve the
->> +			performance. By default, its value is set to 0.
->> +
->>  	ignore_loglevel	[KNL]
->>  			Ignore loglevel setting - this will print /all/
->>  			kernel messages to the console. Useful for debugging.
->> diff --git a/drivers/char/tpm/tpm_tis_core.c
->b/drivers/char/tpm/tpm_tis_core.c
->> index 63bc6c3b949e..6b9bf4c4d434 100644
->> --- a/drivers/char/tpm/tpm_tis_core.c
->> +++ b/drivers/char/tpm/tpm_tis_core.c
->> @@ -31,6 +31,11 @@
->>  #include "tpm.h"
->>  #include "tpm_tis_core.h"
->>  
->> +static bool ignore_burst_count = false;
->> +module_param(ignore_burst_count, bool, 0444);
->> +MODULE_PARM_DESC(ignore_burst_count,
->> +		"Ignore burstcount value while writing data");
->> +
->>  /* Before we attempt to access the TPM we must see that the valid
->bit is set.
->>   * The specification says that this bit is 0 at reset and remains 0
->until the
->>   * 'TPM has gone through its self test and initialization and has
->established
->> @@ -256,6 +261,7 @@ static int tpm_tis_send_data(struct tpm_chip
->*chip, u8 *buf, size_t len)
->>  {
->>  	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
->>  	int rc, status, burstcnt;
->> +	int sendcnt;
->>  	size_t count = 0;
->>  	bool itpm = priv->flags & TPM_TIS_ITPM_WORKAROUND;
->>  
->> @@ -271,19 +277,31 @@ static int tpm_tis_send_data(struct tpm_chip
->*chip, u8 *buf, size_t len)
->>  	}
->>  
->>  	while (count < len - 1) {
->> +
->> +		/*
->> +		 * Get the initial burstcount to ensure TPM is ready to
->> +		 * accept data, even when waiting for burstcount is disabled.
->> +		 */
->>  		burstcnt = get_burstcount(chip);
->>  		if (burstcnt < 0) {
->>  			dev_err(&chip->dev, "Unable to read burstcount\n");
->>  			rc = burstcnt;
->>  			goto out_err;
->>  		}
->> -		burstcnt = min_t(int, burstcnt, len - count - 1);
->> +
->> +		if (ignore_burst_count)
->> +			sendcnt = len - 1;
->> +		else
->> +			sendcnt = min_t(int, burstcnt, len - count - 1);
->> +
->>  		rc = tpm_tis_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
->> -					 burstcnt, buf + count);
->> +					 sendcnt, buf + count);
->>  		if (rc < 0)
->>  			goto out_err;
->>  
->> -		count += burstcnt;
->> +		count += sendcnt;
->> +		if (ignore_burst_count)
->> +			continue;
->>  
->>  		if (wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
->>  					&priv->int_queue, false) < 0) {
->> -- 
->> 2.13.3
->> 
->
->Makes sense to discuss whether to have the kernel command-line
->parameter or not before applying this.
->
->To fuel the discussion, alternative to this would be:
->
->1. Have this always on i.e. no command-line parameter.
->2. If someone yells, we add the command-line parameter later on.
->
-According to what I've read in the tcg ddwg group this patch should not cause problems on _sane_ tpms.
-
-I'm not 100%convinced that all tpms are sane all the time, but I think we do not want yet another cmdline parameter.
-
-So if we want to pull it in (and ddwg does not see an issue, so yes) it should be on by default, without a kernel parameter.
-
-If there is a kernel parameter, then it should only be one called "failsafe" - which includes the force behavior and maybe the "broken" tpm path.
-
-But I agree with Alex, every additonal code path reduces testing coverage.
-
-
-We would be happy to test a "default on" patch.
-
-Peter
-
->/Jarkko
-
--- 
-Sent from my mobile
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+/Jarkko
