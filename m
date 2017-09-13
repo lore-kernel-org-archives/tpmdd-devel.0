@@ -1,43 +1,73 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [PATCH 2/3] tpm: fix type of a local variable in tpm2_map_command()
-Date: Wed, 13 Sep 2017 10:26:36 -0700
-Message-ID: <20170913172637.24934-1-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH 3/3] tpm: fix type of a local variables in tpm_tis_spi.c
+Date: Wed, 13 Sep 2017 10:26:54 -0700
+Message-ID: <20170913172654.25036-1-jarkko.sakkinen@linux.intel.com>
 Return-path: <linux-security-module-owner@vger.kernel.org>
 Sender: owner-linux-security-module@vger.kernel.org
 To: tpmdd-devel@lists.sourceforge.net
 Cc: linux-security-module@vger.kernel.org, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-The local variable 'handle' should have the type __be32 instead of u32.
+Use __le32 type for data in that format.
 
-Fixes: 745b361e989a ("tpm: infrastructure for TPM spaces")
+Fixes: 0edbfea537d1 ("tpm/tpm_tis_spi: Add support for spi phy")
 Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 ---
- drivers/char/tpm/tpm2-space.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+ drivers/char/tpm/tpm_tis_spi.c | 25 ++++++++++++++++++-------
+ 1 file changed, 18 insertions(+), 7 deletions(-)
 
-diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2-space.c
-index e2e059d8ffec..4e4014eabdb9 100644
---- a/drivers/char/tpm/tpm2-space.c
-+++ b/drivers/char/tpm/tpm2-space.c
-@@ -242,7 +242,7 @@ static int tpm2_map_command(struct tpm_chip *chip, u32 cc, u8 *cmd)
- 	struct tpm_space *space = &chip->work_space;
- 	unsigned int nr_handles;
- 	u32 attrs;
--	u32 *handle;
-+	__be32 *handle;
- 	int i;
+diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
+index 7e97eb07b200..bfe972959183 100644
+--- a/drivers/char/tpm/tpm_tis_spi.c
++++ b/drivers/char/tpm/tpm_tis_spi.c
+@@ -153,29 +153,40 @@ static int tpm_tis_spi_write_bytes(struct tpm_tis_data *data, u32 addr,
  
- 	i = tpm2_find_cc(chip, cc);
-@@ -252,7 +252,7 @@ static int tpm2_map_command(struct tpm_chip *chip, u32 cc, u8 *cmd)
- 	attrs = chip->cc_attrs_tbl[i];
- 	nr_handles = (attrs >> TPM2_CC_ATTR_CHANDLES) & GENMASK(2, 0);
+ static int tpm_tis_spi_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
+ {
++	__le16 result_le;
+ 	int rc;
  
--	handle = (u32 *)&cmd[TPM_HEADER_SIZE];
-+	handle = (__be32 *)&cmd[TPM_HEADER_SIZE];
- 	for (i = 0; i < nr_handles; i++, handle++) {
- 		if ((be32_to_cpu(*handle) & 0xFF000000) == TPM2_HT_TRANSIENT) {
- 			if (!tpm2_map_to_phandle(space, handle))
+-	rc = data->phy_ops->read_bytes(data, addr, sizeof(u16), (u8 *)result);
++	rc = data->phy_ops->read_bytes(data, addr, sizeof(u16),
++				       (u8 *)&result_le);
+ 	if (!rc)
+-		*result = le16_to_cpu(*result);
++		*result = le16_to_cpu(result_le);
++
+ 	return rc;
+ }
+ 
+ static int tpm_tis_spi_read32(struct tpm_tis_data *data, u32 addr, u32 *result)
+ {
++	__le32 result_le;
+ 	int rc;
+ 
+-	rc = data->phy_ops->read_bytes(data, addr, sizeof(u32), (u8 *)result);
++	rc = data->phy_ops->read_bytes(data, addr, sizeof(u32),
++				       (u8 *)&result_le);
+ 	if (!rc)
+-		*result = le32_to_cpu(*result);
++		*result = le32_to_cpu(result_le);
++
+ 	return rc;
+ }
+ 
+ static int tpm_tis_spi_write32(struct tpm_tis_data *data, u32 addr, u32 value)
+ {
+-	value = cpu_to_le32(value);
+-	return data->phy_ops->write_bytes(data, addr, sizeof(u32),
+-					   (u8 *)&value);
++	__le32 value_le;
++	int rc;
++
++	value_le = cpu_to_le32(value);
++	rc = data->phy_ops->write_bytes(data, addr, sizeof(u32),
++					(u8 *)&value_le);
++
++	return rc;
+ }
+ 
+ static const struct tpm_tis_phy_ops tpm_spi_phy_ops = {
 -- 
 2.14.1
 
