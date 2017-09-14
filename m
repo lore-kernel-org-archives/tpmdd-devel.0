@@ -1,52 +1,87 @@
-From: Javier Martinez Canillas <javierm@redhat.com>
-Subject: Re: [tpmdd-devel] [PATCH v2 0/3] Call GetEventLog before
+From: Javier Martinez Canillas <javierm-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Subject: Re: [tpmdd-devel] [PATCH v2 2/3] efi: call get_event_log before
  ExitBootServices
-Date: Thu, 14 Sep 2017 12:21:59 +0200
-Message-ID: <5d530df3-7a7a-4cd7-bde6-92f733c7ae75@redhat.com>
+Date: Thu, 14 Sep 2017 12:24:29 +0200
+Message-ID: <1f25ebdc-ab90-517f-b580-991a7cb5e25a@redhat.com>
 References: <20170911100022.7251-1-tweek@google.com>
+ <20170911100022.7251-3-tweek@google.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <20170911100022.7251-1-tweek@google.com>
+Return-path: <linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+In-Reply-To: <20170911100022.7251-3-tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 Content-Language: en-US
-Sender: linux-kernel-owner@vger.kernel.org
-To: Thiebaud Weksteen <tweek@google.com>, linux-efi@vger.kernel.org
-Cc: ard.biesheuvel@linaro.org, matt@codeblueprint.co.uk, linux-kernel@vger.kernel.org, mjg59@google.com, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, jarkko.sakkinen@linux.intel.com, Peter Jones <pjones@redhat.com>
+Sender: linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>, linux-efi-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Cc: ard.biesheuvel-QSEj5FYQhm4dnm+yROfE0A@public.gmane.org, matt-mF/unelCI9GS6iBeEJttW/XRex20P6io@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, mjg59-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org, jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, Peter Jones <pjones-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hello Thiebaud,
-
 On 09/11/2017 12:00 PM, Thiebaud Weksteen via tpmdd-devel wrote:
-> With TPM 1.2, the ACPI table ("TCPA") has two fields to recover the Event Log
-> Area (LAML and LASA). These logs are useful to understand and rebuild the
-> final values of PCRs.
+> With TPM 2.0 specification, the event logs may only be accessible by
+> calling an EFI Boot Service. Modify the EFI stub to copy the log area to
+> a new Linux-specific EFI configuration table so it remains accessible
+> once booted.
 > 
-> With TPM 2.0, the ACPI table ("TPM2") does not contain these fields anymore.
-> The recommended method is now to call the GetEventLog EFI protocol before
-> ExitBootServices.
+> When calling this service, it is possible to specify the expected format
+> of the logs: TPM 1.2 (SHA1) or TPM 2.0 ("Crypto Agile"). For now, only the
+> first format is retrieved.
 > 
-> Implement this method within the EFI stub and create copy of the logs for the
-> TPM device. This will create /sys/kernel/security/tpm0/binary_bios_measurements
-> for TPM 2.0 devices (similarly to the current behaviour for TPM 1.2 devices).
-> 
+> Signed-off-by: Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+> ---
 
-I've tested your patches on a system with an Intel PTT firmware based TPM2.0 and
-the measurements securityfs entry was correctly created and was able to read it:
+[snip]
 
-$ cat /sys/class/tpm/tpm0/device/description
-TPM 2.0 Device
+> +void efi_retrieve_tpm2_eventlog_1_2(efi_system_table_t *sys_table_arg)
+> +{
 
-$ hexdump /sys/kernel/security/tpm0/binary_bios_measurements | head -n2
-0000000 0000 0000 0008 0000 f504 15a0 1810 bf44
-0000010 63d0 4fdb b8a4 f278 8dc7 c8aa 0014 0000
+[snip]
 
-So please feel free to add:
+> +
+> +	/* Allocate space for the logs and copy them. */
+> +	status = efi_call_early(allocate_pool, EFI_LOADER_DATA,
+> +				sizeof(*log_tbl) + log_size,
+> +				(void **) &log_tbl);
+> +
+> +	if (status != EFI_SUCCESS) {
+> +		efi_printk(sys_table_arg,
+> +			   "Unable to allocate memory for event log\n");
+> +		return;
+> +	}
 
-Tested-by: Javier Martinez Canillas <javierm@redhat.com>
+If this fails or any previous error that will prevent the event log table + logs
+to be allocated, shouldn't tpm_read_log_efi() be notified somehow? Since AFAICT
+it will still try to access them even if the EFI allocate_pool did not succeed.
 
-I also reviewed the patches and look good to me, I have just one question for
-patch #2, but I'll comment there.
+> + */
+> +int __init efi_tpm_eventlog_init(void)
+> +{
+> +	struct linux_efi_tpm_eventlog *tbl;
+> +	unsigned int tbl_size;
+> +
+
+The functions efi_retrieve_tpm2_eventlog_1_2() and tpm_read_log_efi() are using
+log_tbl as variable name, so I would use it here too for consistency.
+
+> +	if (efi.tpm_log == EFI_INVALID_TABLE_ADDR)
+> +		return 0;
+> +
+> +	tbl = early_memremap(efi.tpm_log, sizeof(*tbl));
+> +	if (!tbl) {
+> +		pr_err("Failed to map TPM Event Log table @ 0x%lx\n",
+> +			efi.tpm_log);
+> +		return -ENOMEM;
+> +	}
+> +
+
+Same question than before, if this fails then the table + logs memory won't be
+reserved but tpm_read_log_efi() will still try to access it. I'm not sure what
+is the correct way to notify though, maybe setting efi.tpm_log to 0 and then in
+tpm_read_log_efi() check efi.tpm_log for 0 or EFI_INVALID_TABLE_ADDR instead?
+
+> +	tbl_size = sizeof(*tbl) + tbl->size;
+> +	memblock_reserve(efi.tpm_log, tbl_size);
+> +	early_memunmap(tbl, sizeof(*tbl));
+> +	return 0;
 
 Best regards,
 -- 
