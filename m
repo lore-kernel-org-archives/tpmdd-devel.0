@@ -1,61 +1,55 @@
-From: Nayna Jain <nayna@linux.vnet.ibm.com>
-Subject: Re: [PATCH v2 4/4] tpm: use tpm_msleep() value as max delay
-Date: Thu, 14 Sep 2017 14:55:34 +0530
-Message-ID: <54cc7899-28df-3630-3337-684b561f3760@linux.vnet.ibm.com>
-References: <20170906125643.5070-1-nayna@linux.vnet.ibm.com>
- <20170906125643.5070-5-nayna@linux.vnet.ibm.com>
- <20170913004703.wtebzfp7mlgk57xf@linux.intel.com>
+From: Javier Martinez Canillas <javierm@redhat.com>
+Subject: Re: [tpmdd-devel] [PATCH v2 0/3] Call GetEventLog before
+ ExitBootServices
+Date: Thu, 14 Sep 2017 12:21:59 +0200
+Message-ID: <5d530df3-7a7a-4cd7-bde6-92f733c7ae75@redhat.com>
+References: <20170911100022.7251-1-tweek@google.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 8bit
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170913004703.wtebzfp7mlgk57xf@linux.intel.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20170911100022.7251-1-tweek@google.com>
 Content-Language: en-US
-Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, patrickc@us.ibm.com
+Sender: linux-kernel-owner@vger.kernel.org
+To: Thiebaud Weksteen <tweek@google.com>, linux-efi@vger.kernel.org
+Cc: ard.biesheuvel@linaro.org, matt@codeblueprint.co.uk, linux-kernel@vger.kernel.org, mjg59@google.com, jgunthorpe@obsidianresearch.com, tpmdd-devel@lists.sourceforge.net, jarkko.sakkinen@linux.intel.com, Peter Jones <pjones@redhat.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+Hello Thiebaud,
 
+On 09/11/2017 12:00 PM, Thiebaud Weksteen via tpmdd-devel wrote:
+> With TPM 1.2, the ACPI table ("TCPA") has two fields to recover the Event Log
+> Area (LAML and LASA). These logs are useful to understand and rebuild the
+> final values of PCRs.
+> 
+> With TPM 2.0, the ACPI table ("TPM2") does not contain these fields anymore.
+> The recommended method is now to call the GetEventLog EFI protocol before
+> ExitBootServices.
+> 
+> Implement this method within the EFI stub and create copy of the logs for the
+> TPM device. This will create /sys/kernel/security/tpm0/binary_bios_measurements
+> for TPM 2.0 devices (similarly to the current behaviour for TPM 1.2 devices).
+> 
 
-On 09/13/2017 06:17 AM, Jarkko Sakkinen wrote:
-> On Wed, Sep 06, 2017 at 08:56:39AM -0400, Nayna Jain wrote:
->> Currently, tpm_msleep() uses delay_msec as the minimum value in
->> usleep_range. However, that is the maximum time we want to wait.
->> The function is modified to use the delay_msec as the maximum
->> value, not the minimum value.
->>
->> After this change, performance on a TPM 1.2 with an 8 byte
->> burstcount for 1000 extends improved from ~9sec to ~8sec.
->>
->> Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
->> Acked-by: Mimi Zohar <zohar@linux.vnet.ibm.com>
->> ---
->>   drivers/char/tpm/tpm.h | 4 ++--
->>   1 file changed, 2 insertions(+), 2 deletions(-)
->>
->> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
->> index eb2f8818eded..ff5a8b7b80b9 100644
->> --- a/drivers/char/tpm/tpm.h
->> +++ b/drivers/char/tpm/tpm.h
->> @@ -533,8 +533,8 @@ int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
->>   
->>   static inline void tpm_msleep(unsigned int delay_msec)
->>   {
->> -	usleep_range(delay_msec * 1000,
->> -		     (delay_msec * 1000) + TPM_TIMEOUT_RANGE_US);
->> +	usleep_range((delay_msec * 1000) - TPM_TIMEOUT_RANGE_US,
->> +		     delay_msec * 1000);
->>   };
->>   
->>   struct tpm_chip *tpm_chip_find_get(int chip_num);
->> -- 
->> 2.13.3
->>
-> Doesn't this need a Fixes tag?
-Yeah.. will add.
+I've tested your patches on a system with an Intel PTT firmware based TPM2.0 and
+the measurements securityfs entry was correctly created and was able to read it:
 
-    - Nayna
-> /Jarkko
->
+$ cat /sys/class/tpm/tpm0/device/description
+TPM 2.0 Device
 
+$ hexdump /sys/kernel/security/tpm0/binary_bios_measurements | head -n2
+0000000 0000 0000 0008 0000 f504 15a0 1810 bf44
+0000010 63d0 4fdb b8a4 f278 8dc7 c8aa 0014 0000
+
+So please feel free to add:
+
+Tested-by: Javier Martinez Canillas <javierm@redhat.com>
+
+I also reviewed the patches and look good to me, I have just one question for
+patch #2, but I'll comment there.
+
+Best regards,
+-- 
+Javier Martinez Canillas
+Software Engineer - Desktop Hardware Enablement
+Red Hat
