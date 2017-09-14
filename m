@@ -1,60 +1,38 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v2 4/4] tpm: use tpm_msleep() value as max delay
-Date: Thu, 14 Sep 2017 05:28:56 -0700
-Message-ID: <20170914122856.guu76zv6xb5kdrfc@linux.intel.com>
-References: <20170906125643.5070-1-nayna@linux.vnet.ibm.com>
- <20170906125643.5070-5-nayna@linux.vnet.ibm.com>
- <20170913004703.wtebzfp7mlgk57xf@linux.intel.com>
- <54cc7899-28df-3630-3337-684b561f3760@linux.vnet.ibm.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v2 2/3] efi: call get_event_log before ExitBootServices
+Date: Thu, 14 Sep 2017 11:43:28 -0700
+Message-ID: <20170914184126.eevnstwq3i6fiq4j@linux.intel.com>
+References: <20170911100022.7251-1-tweek@google.com>
+ <20170911100022.7251-3-tweek@google.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Return-path: <linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <54cc7899-28df-3630-3337-684b561f3760@linux.vnet.ibm.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Nayna Jain <nayna@linux.vnet.ibm.com>
-Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, patrickc@us.ibm.com
+In-Reply-To: <20170911100022.7251-3-tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Sender: linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Cc: linux-efi-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, ard.biesheuvel-QSEj5FYQhm4dnm+yROfE0A@public.gmane.org, matt-mF/unelCI9GS6iBeEJttW/XRex20P6io@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, mjg59-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, peterhuewe-Mmb7MZpHnFY@public.gmane.org, jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org, tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Sep 14, 2017 at 02:55:34PM +0530, Nayna Jain wrote:
+On Mon, Sep 11, 2017 at 12:00:21PM +0200, Thiebaud Weksteen wrote:
+> With TPM 2.0 specification, the event logs may only be accessible by
+> calling an EFI Boot Service. Modify the EFI stub to copy the log area to
+> a new Linux-specific EFI configuration table so it remains accessible
+> once booted.
 > 
+> When calling this service, it is possible to specify the expected format
+> of the logs: TPM 1.2 (SHA1) or TPM 2.0 ("Crypto Agile"). For now, only the
+> first format is retrieved.
 > 
-> On 09/13/2017 06:17 AM, Jarkko Sakkinen wrote:
-> > On Wed, Sep 06, 2017 at 08:56:39AM -0400, Nayna Jain wrote:
-> > > Currently, tpm_msleep() uses delay_msec as the minimum value in
-> > > usleep_range. However, that is the maximum time we want to wait.
-> > > The function is modified to use the delay_msec as the maximum
-> > > value, not the minimum value.
-> > > 
-> > > After this change, performance on a TPM 1.2 with an 8 byte
-> > > burstcount for 1000 extends improved from ~9sec to ~8sec.
-> > > 
-> > > Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
-> > > Acked-by: Mimi Zohar <zohar@linux.vnet.ibm.com>
-> > > ---
-> > >   drivers/char/tpm/tpm.h | 4 ++--
-> > >   1 file changed, 2 insertions(+), 2 deletions(-)
-> > > 
-> > > diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> > > index eb2f8818eded..ff5a8b7b80b9 100644
-> > > --- a/drivers/char/tpm/tpm.h
-> > > +++ b/drivers/char/tpm/tpm.h
-> > > @@ -533,8 +533,8 @@ int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
-> > >   static inline void tpm_msleep(unsigned int delay_msec)
-> > >   {
-> > > -	usleep_range(delay_msec * 1000,
-> > > -		     (delay_msec * 1000) + TPM_TIMEOUT_RANGE_US);
-> > > +	usleep_range((delay_msec * 1000) - TPM_TIMEOUT_RANGE_US,
-> > > +		     delay_msec * 1000);
-> > >   };
-> > >   struct tpm_chip *tpm_chip_find_get(int chip_num);
-> > > -- 
-> > > 2.13.3
-> > > 
-> > Doesn't this need a Fixes tag?
-> Yeah.. will add.
+> Signed-off-by: Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 
-No need just for that. I'll test this when I'm back in Finland.
-It was a question just to check that I'm in the same page  :-)
+With a quick skim the code change looks good but I remember from
+Matthew's talk that there was this issue that ExitBootServices() would
+cause a yet another event?
+
+I guess you could manually synthetize that event by reading the PCR
+values right after ExitBootServices()?
+
+Anyway, great work, thanks for making this effort.
 
 /Jarkko
