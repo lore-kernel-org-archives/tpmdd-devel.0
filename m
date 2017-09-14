@@ -1,90 +1,61 @@
-From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
-Subject: Re: Future of TPMDD @ Linux Security Summit / Plumbers
-Date: Wed, 13 Sep 2017 16:52:46 -0700
-Message-ID: <06FAA67B-8FE6-4D28-9D66-D3EB2F9B07DE@gmx.de>
-References: <1503699356.4203.159.camel@linux.vnet.ibm.com>
- <20170825222209.GA22199@obsidianresearch.com>
- <1503703596.8359.6.camel@linux.vnet.ibm.com>
- <20170826074135.mx3i3bo6b3lrevdu@linux.intel.com>
- <20170826074843.isaxpmrotyk46u6j@linux.intel.com>
- <1503847647.5847.51.camel@linux.vnet.ibm.com>
- <alpine.LRH.2.20.1708281126230.3474@namei.org>
- <20170829121137.ovgkrcihgy5jcufu@linux.intel.com>
- <alpine.LRH.2.20.1708300003510.19193@namei.org>
- <trinity-ab47fab5-3247-446f-add3-baebe7c51350-1505335723429@3c-app-gmx-bs26>
- <20170913232125.7e2cmsycxhb376z7@linux.intel.com>
+From: Nayna Jain <nayna@linux.vnet.ibm.com>
+Subject: Re: [PATCH v2 4/4] tpm: use tpm_msleep() value as max delay
+Date: Thu, 14 Sep 2017 14:55:34 +0530
+Message-ID: <54cc7899-28df-3630-3337-684b561f3760@linux.vnet.ibm.com>
+References: <20170906125643.5070-1-nayna@linux.vnet.ibm.com>
+ <20170906125643.5070-5-nayna@linux.vnet.ibm.com>
+ <20170913004703.wtebzfp7mlgk57xf@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20170913232125.7e2cmsycxhb376z7-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, James Morris <jmorris-gx6/JNMH7DfYtjvyW6yDsg@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, George Wilson <gcwilson-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 8bit
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170913004703.wtebzfp7mlgk57xf@linux.intel.com>
+Content-Language: en-US
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, patrickc@us.ibm.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-CgpBbSAxMy4gU2VwdGVtYmVyIDIwMTcgMTY6MjE6MjUgR01ULTA3OjAwIHNjaHJpZWIgSmFya2tv
-IFNha2tpbmVuIDxqYXJra28uc2Fra2luZW5AbGludXguaW50ZWwuY29tPjoKPk9uIFdlZCwgU2Vw
-IDEzLCAyMDE3IGF0IDEwOjQ4OjQzUE0gKzAyMDAsIFBldGVyIEh1ZXdlIHdyb3RlOgo+PiBIaSBK
-YXJra28sIE1pbWksIEphbWVzLCBKYXNvbiwgYW5kIGV2ZXJ5Ym9keSBlbHNlLAo+PiDCoAo+PiBp
-dCB3b3VsZCBiZSBncmVhdCBpZiB3ZSBjb3VsZCBmaW5kIGEgc2xvdCB0byBkaXNjdXNzIGluIHBl
-cnNvbiBob3cgd2UKPj4gcHJvY2VlZCB3aXRoIHRoZSBtYWlsaW5nIGxpc3RzLCBwYXRjaCBmbG93
-cyBhbmQgcmV2aWV3IGN5Y2xlcy4KPj4gSSBrbm93IHRoZXJlIHdlcmUgc29tZSBkaXNjdXNzaW9u
-cywgYnV0IGF0bGVhc3QgZm9yIG15IHBhcnQgSSBkaWQgbm90Cj4+IGdldCB0aGUgZmluYWwgY29u
-Y2x1c2lvbiBvbiBob3cgd2UgcHJvY2VlZCBhbmQgd2h5Lgo+Cj5UaGUgZGVjaXNpb24gd2FzIHRv
-IGNyZWF0ZSBjb21iaW5lZCBtYWlsaW5nIGxpc3QgZm9yIElNQSBhbmQgVFBNLiBBRkFJSwo+eW91
-IHdlcmUgaW4gdGhlIGxvb3AuCk5vdCBvbiBldmVyeSBtYWlsIEkgZHJvcHBlZCBvbiBhIGZldyBh
-bmQgcmUtYWRkZWQgb24gb3RoZXJzLgpJIGRvbid0IHNlZSB0aGUgcmVhc29uIGJlaGluZCB0aGUg
-Q0MgdmVyeSBtdWNoLCBzaW5jZSBJIGRvbid0IGtub3cgb2YgYW55IGZlZWRiYWNrIHRoYXQgY2Ft
-ZSBldmVyIHRocm91Z2ggdGhhdCBtbD8gTWF5YmUgSSdtIHdyb25nLgoKCj5UaGVyZSdzIHplcm8g
-Y2hhbmdlIHRvIHBhdGNoIGZsb3cgb3IgcmV2aWV3IGN5Y2xlLiBJdCdzIGp1c3QgYSBjb21iaW5l
-ZAo+bWFpbGluZyBsaXN0LgpZZXMsIGJ1dCB3aHkgbm90IGRpc2N1c3MgdGhpcyBzaW5jZSB3ZSBh
-cmUgZmluYWxseSBhbGwgImluIHRoZSBzYW1lIHJvb20iIDopCgpFc3BlY2lhbGx5IGhvdyB3ZSBj
-YW4gaW1wcm92ZSB0aGVyZSwgYW5kIGFsc28gSSBkbyBub3QgdGhpbmsgdGhlIGV4YWN0IGRldGFp
-bHMgYXJlIHJlYWxseSB3b3JrZWQgb3V0LgpXaG8gaGFuZGxlcyBwYXRjaHdvcms/IEFmYWlrIGN1
-cnJlbnRseSBvbmx5IHlvdSBhIHVzZSBwYXRjaHdvcmssIHdoaWxlIE1pbWkgZG9lcyBub3Q/ClNv
-IGlmIEkgd291bGQgbG9vayBhdCB0aGUgcmVzdWx0aW5nIHBhdGNod29yayBJIHdvdWxkIHNlZSBh
-IGxvdCBvZiAidW4tdG91Y2hlZCIgcGF0Y2hlcy4KV2hhdCBhcmUgdGhlIHBhdGNoIG5hbWluZyBj
-b252ZW50aW9ucyAsIHNoYWxsIGV2ZXJ5dGhpbmcgcHJlZml4ZWQgYnkgdHBtIC8gaW1hIHNvIHBl
-b3BsZSBjYW4gZmlsdGVyPwpBbmQgc28gb24uCgoKPlRoZSBwYXRjaGZsb3cgaXMgc3VjaCB0aGF0
-IGZvciBub24tdHJpdmlhbCBwYXRjaCBzZXRzIHdlIENDIGFsc28KPmxpbnV4LXNlY3VyaXR5LW1v
-ZHVsZS4gSmFtZXMgd2lsbCBkb2N1bWVudCB0aGlzIHRvIGtlcm5zZWMub3JnLgpXb3VsZCBiZSBn
-cmVhdCB0byBhbHNvIGdldCB3cml0ZSBhY2Nlc3MgdG8ga2VybnNlYy5vcmcgd2lraSBzbyB3ZSBj
-YW4gc3RhcnQgZG9jdW1lbnRpbmcgc3R1ZmYgdGhlcmUgOykKCgo+PiBBbHNvIEkgd291bGQgbGlr
-ZSB0byBkaXNjdXNzIHdoYXQgaXMgdGhlIGN1cnJlbnQgc3RhdHVzIG9mIHRoZSBtb3ZlCj50bwo+
-PiBrZXJuZWwub3JnIGluZnJhc3RydWN0dXJlIChvciBhdGxlYXN0IGF3YXkgZnJvbSBzZiksIGFu
-ZCBtYXliZSB3ZSBjYW4KPj4gZmluZCBhbnlvbmUgaGVyZSBhdCBQbHVtYmVycyB0byByZW1vdmUg
-YW55IGJsb2NraW5nIHBvaW50cy4KPgo+VG9vayBhYm91dCBtb250aCB0byBnZXQgdGhpcy4gR290
-IGVtYWlsIGF0IDEzOjM3ICh5ZXMsIG5vdCBqb2tpbmcpOgo+Cj5odHRwOi8vdmdlci5rZXJuZWwu
-b3JnL3ZnZXItbGlzdHMuaHRtbCNsaW51eC1pbnRlZ3JpdHkKU28gYmlnIGFubm91bmNlbWVudCB0
-aW1lIDopClBhdGNod29yayB1cCBhbmQgcnVubmluZz8KCgoKPj4gTWF5YmUgd2UgY291bGQgYWxz
-byBkaXNjdXNzIGhvdyB3ZSBjYW4gaW1wcm92ZSBvdXIgdGVzdGluZyBzdHJhdGVneQo+PiBhbmQg
-ZGlzY3VzcyB3aGljaCB0ZXN0cyBjdXJyZW50bHkgZXhpc3RzLgo+PiBXZSBoYXZlIGEgKHNlbWkt
-KWF1dG9tYXRpYyB0ZXN0IGVudmlyb25tZW50IGZvciB0aGUgdHBtIGtlcm5lbAo+cGF0Y2hlcwo+
-PiBhdCB3b3JrIGFuZCB3ZSBhcmUgY3VycmVudGx5IGV4cGxvcmluZyBob3cgdG8gZXhwYW5kIHRo
-aXMgZnVydGhlciBhbmQKPj4gYXV0b21hdGUgaXQgY29tcGxldGVseS4gSSBjYW4gZ2l2ZSB5b3Ug
-YSBxdWljayBydW5kb3duIG9uIHRoaXMgaWYKPj4gaW50ZXJlc3RlZC4KPgo+Q2FuIHlvdSBsaW5r
-IHRoaXMgaW5mcmFzdHJ1Y3R1cmUgdG8gbXkgdHJlZSBhdCBpbmZyYWRlYWQub3JnPwpOby4KSW5m
-cmFkZWFkIGlzIG9ubHkgYWNjZXNzaWJsZSB2aWEgZ2l0IHByb3RvY29sIGFuZCB0aGF0J3Mgbm90
-IHNvbWV0aGluZyBvdXIgKG1hbnkgb3RoZXIgY29tcGFueSkgcHJveGllcyBhbGxvdywgd2hpY2gg
-aG9uZXN0bHkgc3Vja3MgKGJvdGggdGhlIHByb3h5IGFuZCBnaXQgb25seSkKCkFzIG1lbnRpb25l
-ZCBxdWl0ZSBvZnRlbgpJIHdvdWxkIGxpa2UgdG8gc2VlIHRwbWRkIGF0IGtlcm5lbC5vcmcgY29t
-cGxldGx5LgpUaGVuIHdlIGNhbiBzdGFydCB0ZXN0aW5nIHRyZWVzIGF1dG9tYXRpY2FsbHkuCgpJ
-dCB3b3VsZCBiZSBncmVhdCB0byBoYXZlIHNvbWUgdHJhdmlzLWNpIG9yIHNpbWlsYXIgZGlyZWN0
-bHkgcnVubmluZyBvbiBvdXIgdHJlZSBidXQgYWZhaWsgdGhpcyBpcyBnaXRodWIgb25seT8KClNv
-IGFsb3Qgb2YgdGhpbmdzIHRvIGRpc2N1c3MgaW1oby4KUGV0ZXIKCgo+Cj4+IFRoYW5rcywKPj4g
-UGV0ZXIKPgo+L0phcmtrbwoKLS0gClNlbnQgZnJvbSBteSBtb2JpbGUKCi0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLQpDaGVjayBvdXQgdGhlIHZpYnJhbnQgdGVjaCBjb21tdW5pdHkgb24gb25lIG9mIHRo
-ZSB3b3JsZCdzIG1vc3QKZW5nYWdpbmcgdGVjaCBzaXRlcywgU2xhc2hkb3Qub3JnISBodHRwOi8v
-c2RtLmxpbmsvc2xhc2hkb3QKX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fX18KdHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJj
-ZWZvcmdlLm5ldApodHRwczovL2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90
-cG1kZC1kZXZlbAo=
+
+
+On 09/13/2017 06:17 AM, Jarkko Sakkinen wrote:
+> On Wed, Sep 06, 2017 at 08:56:39AM -0400, Nayna Jain wrote:
+>> Currently, tpm_msleep() uses delay_msec as the minimum value in
+>> usleep_range. However, that is the maximum time we want to wait.
+>> The function is modified to use the delay_msec as the maximum
+>> value, not the minimum value.
+>>
+>> After this change, performance on a TPM 1.2 with an 8 byte
+>> burstcount for 1000 extends improved from ~9sec to ~8sec.
+>>
+>> Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
+>> Acked-by: Mimi Zohar <zohar@linux.vnet.ibm.com>
+>> ---
+>>   drivers/char/tpm/tpm.h | 4 ++--
+>>   1 file changed, 2 insertions(+), 2 deletions(-)
+>>
+>> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+>> index eb2f8818eded..ff5a8b7b80b9 100644
+>> --- a/drivers/char/tpm/tpm.h
+>> +++ b/drivers/char/tpm/tpm.h
+>> @@ -533,8 +533,8 @@ int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
+>>   
+>>   static inline void tpm_msleep(unsigned int delay_msec)
+>>   {
+>> -	usleep_range(delay_msec * 1000,
+>> -		     (delay_msec * 1000) + TPM_TIMEOUT_RANGE_US);
+>> +	usleep_range((delay_msec * 1000) - TPM_TIMEOUT_RANGE_US,
+>> +		     delay_msec * 1000);
+>>   };
+>>   
+>>   struct tpm_chip *tpm_chip_find_get(int chip_num);
+>> -- 
+>> 2.13.3
+>>
+> Doesn't this need a Fixes tag?
+Yeah.. will add.
+
+    - Nayna
+> /Jarkko
+>
+
