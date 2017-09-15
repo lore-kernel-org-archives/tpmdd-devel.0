@@ -1,59 +1,194 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 2/3] efi: call get_event_log before ExitBootServices
-Date: Thu, 14 Sep 2017 21:06:11 -0700
-Message-ID: <20170915040611.274w2ak6krjvwg6e@linux.intel.com>
-References: <20170911100022.7251-1-tweek@google.com>
- <20170911100022.7251-3-tweek@google.com>
- <20170914184126.eevnstwq3i6fiq4j@linux.intel.com>
- <CACdnJuu2Aq1mvdvooBgC3-1jfi3CPnZ6WGysOGc2Xizm-mbU0w@mail.gmail.com>
- <20170914190247.rrbdzdexjjywxipf@linux.intel.com>
+From: Nayna Jain <nayna@linux.vnet.ibm.com>
+Subject: Re: [PATCH v2 1/4] tpm: ignore burstcount to improve tpm_tis send()
+ performance.
+Date: Fri, 15 Sep 2017 17:59:21 +0530
+Message-ID: <3c83ac72-59cc-f6c8-26ca-b7f8a8887d39@linux.vnet.ibm.com>
+References: <20170906125643.5070-1-nayna@linux.vnet.ibm.com>
+ <20170906125643.5070-2-nayna@linux.vnet.ibm.com>
+ <20170912222010.ltm76m5vy2kupydi@linux.intel.com>
+ <CB43D154-BE47-4016-AE2D-C372AFCAD5F9@gmx.de>
+ <20170913231007.22yb57hlx45aznt6@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Return-path: <linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170914190247.rrbdzdexjjywxipf-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Sender: linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-To: Matthew Garrett <mjg59-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Cc: Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>, linux-efi-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Ard Biesheuvel <ard.biesheuvel-QSEj5FYQhm4dnm+yROfE0A@public.gmane.org>, Matt Fleming <matt-mF/unelCI9GS6iBeEJttW/XRex20P6io@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, peterhuewe-Mmb7MZpHnFY@public.gmane.org, jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org, tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+Return-path: <linux-security-module-owner@vger.kernel.org>
+In-Reply-To: <20170913231007.22yb57hlx45aznt6@linux.intel.com>
+Content-Language: en-US
+Sender: owner-linux-security-module@vger.kernel.org
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>
+Cc: tpmdd-devel@lists.sourceforge.net, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, patrickc@us.ibm.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Thu, Sep 14, 2017 at 12:02:47PM -0700, Jarkko Sakkinen wrote:
-> On Thu, Sep 14, 2017 at 11:48:54AM -0700, Matthew Garrett wrote:
-> > On Thu, Sep 14, 2017 at 11:43 AM, Jarkko Sakkinen
-> > <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
-> > > On Mon, Sep 11, 2017 at 12:00:21PM +0200, Thiebaud Weksteen wrote:
-> > >> With TPM 2.0 specification, the event logs may only be accessible by
-> > >> calling an EFI Boot Service. Modify the EFI stub to copy the log area to
-> > >> a new Linux-specific EFI configuration table so it remains accessible
-> > >> once booted.
-> > >>
-> > >> When calling this service, it is possible to specify the expected format
-> > >> of the logs: TPM 1.2 (SHA1) or TPM 2.0 ("Crypto Agile"). For now, only the
-> > >> first format is retrieved.
-> > >>
-> > >> Signed-off-by: Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-> > >
-> > > With a quick skim the code change looks good but I remember from
-> > > Matthew's talk that there was this issue that ExitBootServices() would
-> > > cause a yet another event?
-> > >
-> > > I guess you could manually synthetize that event by reading the PCR
-> > > values right after ExitBootServices()?
-> > 
-> > I think that would involve breaking SHA1… the information should be
-> 
-> You are absolutely right, was not thinking clearly :-)
-> 
-> > available in the TCG_TREE_FINAL_EVENTS configuration table, so it
-> > /should/ just be a matter of merging the events from that into the
-> > event log.
-> 
-> Right, it is available through runtime services. Why this isn't part
-> of the patch set?
 
-Anyway, I'll try this out out when I get back to Finland. Still before
-landing this to mainline I think it would make sense to make it complete
-wouldn't it?
 
-/Jarkko
+On 09/14/2017 04:40 AM, Jarkko Sakkinen wrote:
+> On Wed, Sep 13, 2017 at 11:39:03AM -0700, Peter Huewe wrote:
+>>
+>> Am 12. September 2017 17:45:08 GMT-07:00 schrieb Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>:
+>>> On Wed, Sep 06, 2017 at 08:56:36AM -0400, Nayna Jain wrote:
+>>>> The TPM burstcount status indicates the number of bytes that can
+>>>> be sent to the TPM without causing bus wait states.  Effectively,
+>>>> it is the number of empty bytes in the command FIFO. Further,
+>>>> some TPMs have a static burstcount, when the value remains zero
+>>>> until the entire FIFO is empty.
+>>>>
+>>>> This patch adds an optimization to check for burstcount only once.
+>>>> And if it is valid, it writes all the bytes at once, permitting
+>>>> wait states. The performance of a 34 byte extend on a TPM 1.2 with
+>>>> an 8 byte burstcount improved from 41 msec to 14 msec.
+>>>>
+>>>> This functionality is enabled only by passing module
+>>>> parameter ignore_burst_count=1. By default, this parameter
+>>>> is disabled.
+>>>>
+>>>> After this change, performance on a TPM 1.2 with an 8 byte
+>>>> burstcount for 1000 extends improved from ~41sec to ~14sec.
+>>>>
+>>>> Suggested-by: Ken Goldman <kgold@linux.vnet.ibm.com> in
+>>>> conjunction with the TPM Device Driver work group.
+>>>> Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
+>>>> Acked-by: Mimi Zohar <zohar@linux.vnet.ibm.com>
+>>>> ---
+>>>>   Documentation/admin-guide/kernel-parameters.txt |  8 ++++++++
+>>>>   drivers/char/tpm/tpm_tis_core.c                 | 24
+>>> +++++++++++++++++++++---
+>>>>   2 files changed, 29 insertions(+), 3 deletions(-)
+>>>>
+>>>> diff --git a/Documentation/admin-guide/kernel-parameters.txt
+>>> b/Documentation/admin-guide/kernel-parameters.txt
+>>>> index 4e303be83df6..3c59bb91e1ee 100644
+>>>> --- a/Documentation/admin-guide/kernel-parameters.txt
+>>>> +++ b/Documentation/admin-guide/kernel-parameters.txt
+>>>> @@ -1465,6 +1465,14 @@
+>>>>   			mode generally follows that for the NaN encoding,
+>>>>   			except where unsupported by hardware.
+>>>>   
+>>>> +	ignore_burst_count [TPM_TIS_CORE]
+>>>> +			tpm_tis_core driver queries for the burstcount before
+>>>> +			every send call in a loop. However, it causes delay to
+>>>> +			the send command for TPMs with low burstcount value.
+>>>> +			Setting this value to 1, will make driver to query for
+>>>> +			burstcount only once in the loop to improve the
+>>>> +			performance. By default, its value is set to 0.
+>>>> +
+>>>>   	ignore_loglevel	[KNL]
+>>>>   			Ignore loglevel setting - this will print /all/
+>>>>   			kernel messages to the console. Useful for debugging.
+>>>> diff --git a/drivers/char/tpm/tpm_tis_core.c
+>>> b/drivers/char/tpm/tpm_tis_core.c
+>>>> index 63bc6c3b949e..6b9bf4c4d434 100644
+>>>> --- a/drivers/char/tpm/tpm_tis_core.c
+>>>> +++ b/drivers/char/tpm/tpm_tis_core.c
+>>>> @@ -31,6 +31,11 @@
+>>>>   #include "tpm.h"
+>>>>   #include "tpm_tis_core.h"
+>>>>   
+>>>> +static bool ignore_burst_count = false;
+>>>> +module_param(ignore_burst_count, bool, 0444);
+>>>> +MODULE_PARM_DESC(ignore_burst_count,
+>>>> +		"Ignore burstcount value while writing data");
+>>>> +
+>>>>   /* Before we attempt to access the TPM we must see that the valid
+>>> bit is set.
+>>>>    * The specification says that this bit is 0 at reset and remains 0
+>>> until the
+>>>>    * 'TPM has gone through its self test and initialization and has
+>>> established
+>>>> @@ -256,6 +261,7 @@ static int tpm_tis_send_data(struct tpm_chip
+>>> *chip, u8 *buf, size_t len)
+>>>>   {
+>>>>   	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+>>>>   	int rc, status, burstcnt;
+>>>> +	int sendcnt;
+>>>>   	size_t count = 0;
+>>>>   	bool itpm = priv->flags & TPM_TIS_ITPM_WORKAROUND;
+>>>>   
+>>>> @@ -271,19 +277,31 @@ static int tpm_tis_send_data(struct tpm_chip
+>>> *chip, u8 *buf, size_t len)
+>>>>   	}
+>>>>   
+>>>>   	while (count < len - 1) {
+>>>> +
+>>>> +		/*
+>>>> +		 * Get the initial burstcount to ensure TPM is ready to
+>>>> +		 * accept data, even when waiting for burstcount is disabled.
+>>>> +		 */
+>>>>   		burstcnt = get_burstcount(chip);
+>>>>   		if (burstcnt < 0) {
+>>>>   			dev_err(&chip->dev, "Unable to read burstcount\n");
+>>>>   			rc = burstcnt;
+>>>>   			goto out_err;
+>>>>   		}
+>>>> -		burstcnt = min_t(int, burstcnt, len - count - 1);
+>>>> +
+>>>> +		if (ignore_burst_count)
+>>>> +			sendcnt = len - 1;
+>>>> +		else
+>>>> +			sendcnt = min_t(int, burstcnt, len - count - 1);
+>>>> +
+>>>>   		rc = tpm_tis_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
+>>>> -					 burstcnt, buf + count);
+>>>> +					 sendcnt, buf + count);
+>>>>   		if (rc < 0)
+>>>>   			goto out_err;
+>>>>   
+>>>> -		count += burstcnt;
+>>>> +		count += sendcnt;
+>>>> +		if (ignore_burst_count)
+>>>> +			continue;
+>>>>   
+>>>>   		if (wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
+>>>>   					&priv->int_queue, false) < 0) {
+>>>> -- 
+>>>> 2.13.3
+>>>>
+>>> Makes sense to discuss whether to have the kernel command-line
+>>> parameter or not before applying this.
+>>>
+>>> To fuel the discussion, alternative to this would be:
+>>>
+>>> 1. Have this always on i.e. no command-line parameter.
+>>> 2. If someone yells, we add the command-line parameter later on.
+>>>
+>> According to what I've read in the tcg ddwg group this patch should
+>> not cause problems on _sane_ tpms.
+>>
+>> I'm not 100%convinced that all tpms are sane all the time, but I think
+>> we do not want yet another cmdline parameter.
+>>
+>> So if we want to pull it in (and ddwg does not see an issue, so yes)
+>> it should be on by default, without a kernel parameter.
+>>
+>> If there is a kernel parameter, then it should only be one called
+>> "failsafe" - which includes the force behavior and maybe the "broken"
+>> tpm path.
+>>
+>> But I agree with Alex, every additonal code path reduces testing coverage.
+>>
+>>
+>> We would be happy to test a "default on" patch.
+>>
+>> Peter
+>>
+>>> /Jarkko
+> I'm starting to dilate to this direction.
+>
+> It is hard to believe that any such TPM would be in active use anywhere
+> assuming that there exist a TPM where this causes issues. This combined
+> to the assumption that you would run the latest mainline on it makes it
+> a pretty insignificant scenario.
+
+It sounds like we are getting in direction to have this change by default.
+Before removing the ignore_burst_count parameter, I will post a test version of this
+patch which enables ignore_burst_count by default, for testing purposes only.
+
+Thanks Peter and Alex for testing.
+
+Thanks & Regards,
+    - Nayna
+
+
+>
+> /Jarkko
+>
+
