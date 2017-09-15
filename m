@@ -1,194 +1,153 @@
 From: Nayna Jain <nayna@linux.vnet.ibm.com>
-Subject: Re: [PATCH v2 1/4] tpm: ignore burstcount to improve tpm_tis send()
- performance.
-Date: Fri, 15 Sep 2017 17:59:21 +0530
-Message-ID: <3c83ac72-59cc-f6c8-26ca-b7f8a8887d39@linux.vnet.ibm.com>
+Subject: Re: [PATCH v2 2/4] tpm: define __wait_for_tpm_stat to specify
+ variable polling sleep time
+Date: Fri, 15 Sep 2017 18:07:26 +0530
+Message-ID: <20e706f4-d7c2-1d20-4268-129275ab3fc9@linux.vnet.ibm.com>
 References: <20170906125643.5070-1-nayna@linux.vnet.ibm.com>
- <20170906125643.5070-2-nayna@linux.vnet.ibm.com>
- <20170912222010.ltm76m5vy2kupydi@linux.intel.com>
- <CB43D154-BE47-4016-AE2D-C372AFCAD5F9@gmx.de>
- <20170913231007.22yb57hlx45aznt6@linux.intel.com>
+ <20170906125643.5070-3-nayna@linux.vnet.ibm.com>
+ <20170913005823.n7oqknkedlo22xe6@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
+Content-Transfer-Encoding: 8bit
 Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <20170913231007.22yb57hlx45aznt6@linux.intel.com>
+In-Reply-To: <20170913005823.n7oqknkedlo22xe6@linux.intel.com>
 Content-Language: en-US
 Sender: owner-linux-security-module@vger.kernel.org
-To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>
-Cc: tpmdd-devel@lists.sourceforge.net, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, patrickc@us.ibm.com
+To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Cc: tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, tpmdd@selhorst.net, jgunthorpe@obsidianresearch.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, patrickc@us.ibm.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
 
 
-On 09/14/2017 04:40 AM, Jarkko Sakkinen wrote:
-> On Wed, Sep 13, 2017 at 11:39:03AM -0700, Peter Huewe wrote:
+On 09/13/2017 06:28 AM, Jarkko Sakkinen wrote:
+> On Wed, Sep 06, 2017 at 08:56:37AM -0400, Nayna Jain wrote:
+>> The existing wait_for_tpm_stat() checks the chip status before
+>> sleeping for 5 msec in a polling loop.  For some functions although
+>> the status isn't ready immediately, the status returns extremely
+>> quickly. Waiting for 5 msec causes an unnecessary delay. An
+>> example is the send() call in the tpms_tis driver.
 >>
->> Am 12. September 2017 17:45:08 GMT-07:00 schrieb Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>:
->>> On Wed, Sep 06, 2017 at 08:56:36AM -0400, Nayna Jain wrote:
->>>> The TPM burstcount status indicates the number of bytes that can
->>>> be sent to the TPM without causing bus wait states.  Effectively,
->>>> it is the number of empty bytes in the command FIFO. Further,
->>>> some TPMs have a static burstcount, when the value remains zero
->>>> until the entire FIFO is empty.
->>>>
->>>> This patch adds an optimization to check for burstcount only once.
->>>> And if it is valid, it writes all the bytes at once, permitting
->>>> wait states. The performance of a 34 byte extend on a TPM 1.2 with
->>>> an 8 byte burstcount improved from 41 msec to 14 msec.
->>>>
->>>> This functionality is enabled only by passing module
->>>> parameter ignore_burst_count=1. By default, this parameter
->>>> is disabled.
->>>>
->>>> After this change, performance on a TPM 1.2 with an 8 byte
->>>> burstcount for 1000 extends improved from ~41sec to ~14sec.
->>>>
->>>> Suggested-by: Ken Goldman <kgold@linux.vnet.ibm.com> in
->>>> conjunction with the TPM Device Driver work group.
->>>> Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
->>>> Acked-by: Mimi Zohar <zohar@linux.vnet.ibm.com>
->>>> ---
->>>>   Documentation/admin-guide/kernel-parameters.txt |  8 ++++++++
->>>>   drivers/char/tpm/tpm_tis_core.c                 | 24
->>> +++++++++++++++++++++---
->>>>   2 files changed, 29 insertions(+), 3 deletions(-)
->>>>
->>>> diff --git a/Documentation/admin-guide/kernel-parameters.txt
->>> b/Documentation/admin-guide/kernel-parameters.txt
->>>> index 4e303be83df6..3c59bb91e1ee 100644
->>>> --- a/Documentation/admin-guide/kernel-parameters.txt
->>>> +++ b/Documentation/admin-guide/kernel-parameters.txt
->>>> @@ -1465,6 +1465,14 @@
->>>>   			mode generally follows that for the NaN encoding,
->>>>   			except where unsupported by hardware.
->>>>   
->>>> +	ignore_burst_count [TPM_TIS_CORE]
->>>> +			tpm_tis_core driver queries for the burstcount before
->>>> +			every send call in a loop. However, it causes delay to
->>>> +			the send command for TPMs with low burstcount value.
->>>> +			Setting this value to 1, will make driver to query for
->>>> +			burstcount only once in the loop to improve the
->>>> +			performance. By default, its value is set to 0.
->>>> +
->>>>   	ignore_loglevel	[KNL]
->>>>   			Ignore loglevel setting - this will print /all/
->>>>   			kernel messages to the console. Useful for debugging.
->>>> diff --git a/drivers/char/tpm/tpm_tis_core.c
->>> b/drivers/char/tpm/tpm_tis_core.c
->>>> index 63bc6c3b949e..6b9bf4c4d434 100644
->>>> --- a/drivers/char/tpm/tpm_tis_core.c
->>>> +++ b/drivers/char/tpm/tpm_tis_core.c
->>>> @@ -31,6 +31,11 @@
->>>>   #include "tpm.h"
->>>>   #include "tpm_tis_core.h"
->>>>   
->>>> +static bool ignore_burst_count = false;
->>>> +module_param(ignore_burst_count, bool, 0444);
->>>> +MODULE_PARM_DESC(ignore_burst_count,
->>>> +		"Ignore burstcount value while writing data");
->>>> +
->>>>   /* Before we attempt to access the TPM we must see that the valid
->>> bit is set.
->>>>    * The specification says that this bit is 0 at reset and remains 0
->>> until the
->>>>    * 'TPM has gone through its self test and initialization and has
->>> established
->>>> @@ -256,6 +261,7 @@ static int tpm_tis_send_data(struct tpm_chip
->>> *chip, u8 *buf, size_t len)
->>>>   {
->>>>   	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
->>>>   	int rc, status, burstcnt;
->>>> +	int sendcnt;
->>>>   	size_t count = 0;
->>>>   	bool itpm = priv->flags & TPM_TIS_ITPM_WORKAROUND;
->>>>   
->>>> @@ -271,19 +277,31 @@ static int tpm_tis_send_data(struct tpm_chip
->>> *chip, u8 *buf, size_t len)
->>>>   	}
->>>>   
->>>>   	while (count < len - 1) {
->>>> +
->>>> +		/*
->>>> +		 * Get the initial burstcount to ensure TPM is ready to
->>>> +		 * accept data, even when waiting for burstcount is disabled.
->>>> +		 */
->>>>   		burstcnt = get_burstcount(chip);
->>>>   		if (burstcnt < 0) {
->>>>   			dev_err(&chip->dev, "Unable to read burstcount\n");
->>>>   			rc = burstcnt;
->>>>   			goto out_err;
->>>>   		}
->>>> -		burstcnt = min_t(int, burstcnt, len - count - 1);
->>>> +
->>>> +		if (ignore_burst_count)
->>>> +			sendcnt = len - 1;
->>>> +		else
->>>> +			sendcnt = min_t(int, burstcnt, len - count - 1);
->>>> +
->>>>   		rc = tpm_tis_write_bytes(priv, TPM_DATA_FIFO(priv->locality),
->>>> -					 burstcnt, buf + count);
->>>> +					 sendcnt, buf + count);
->>>>   		if (rc < 0)
->>>>   			goto out_err;
->>>>   
->>>> -		count += burstcnt;
->>>> +		count += sendcnt;
->>>> +		if (ignore_burst_count)
->>>> +			continue;
->>>>   
->>>>   		if (wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
->>>>   					&priv->int_queue, false) < 0) {
->>>> -- 
->>>> 2.13.3
->>>>
->>> Makes sense to discuss whether to have the kernel command-line
->>> parameter or not before applying this.
->>>
->>> To fuel the discussion, alternative to this would be:
->>>
->>> 1. Have this always on i.e. no command-line parameter.
->>> 2. If someone yells, we add the command-line parameter later on.
->>>
->> According to what I've read in the tcg ddwg group this patch should
->> not cause problems on _sane_ tpms.
+>> This patch defines __wait_for_tpm_stat(), allowing the caller
+>> to specify the polling sleep timeout value within the loop.
+>> The existing wait_for_tpm_stat() becomes a wrapper for this
+>> function.
 >>
->> I'm not 100%convinced that all tpms are sane all the time, but I think
->> we do not want yet another cmdline parameter.
+>> After this change, performance on a TPM 1.2 with an 8 byte
+>> burstcount for 1000 extends improved from ~14sec to ~10sec.
 >>
->> So if we want to pull it in (and ddwg does not see an issue, so yes)
->> it should be on by default, without a kernel parameter.
->>
->> If there is a kernel parameter, then it should only be one called
->> "failsafe" - which includes the force behavior and maybe the "broken"
->> tpm path.
->>
->> But I agree with Alex, every additonal code path reduces testing coverage.
->>
->>
->> We would be happy to test a "default on" patch.
->>
->> Peter
->>
->>> /Jarkko
-> I'm starting to dilate to this direction.
->
-> It is hard to believe that any such TPM would be in active use anywhere
-> assuming that there exist a TPM where this causes issues. This combined
-> to the assumption that you would run the latest mainline on it makes it
-> a pretty insignificant scenario.
+>> Signed-off-by: Nayna Jain <nayna@linux.vnet.ibm.com>
+>> Acked-by: Mimi Zohar <zohar@linux.vnet.ibm.com>
+> Please get rid of wait_for_tpm_stat() rather than further making it more
+> complex. It's hardware specific stuff. This function should not exist in
+> tpm-interface.c.
 
-It sounds like we are getting in direction to have this change by default.
-Before removing the ignore_burst_count parameter, I will post a test version of this
-patch which enables ignore_burst_count by default, for testing purposes only.
-
-Thanks Peter and Alex for testing.
+I think I didn't understand the meaning of "get rid of wait_for_tpm_stat()".
+Do you mean to take care of it in driver specific file ?
+Can you please elaborate it ?
 
 Thanks & Regards,
-    - Nayna
-
+     - Nayna
 
 >
 > /Jarkko
 >
+>> ---
+>>   drivers/char/tpm/tpm-interface.c | 15 ++++++++++++---
+>>   drivers/char/tpm/tpm.h           |  3 +++
+>>   drivers/char/tpm/tpm_tis_core.c  | 11 ++++++-----
+>>   3 files changed, 21 insertions(+), 8 deletions(-)
+>>
+>> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+>> index 1d6729be4cd6..b23d006243b7 100644
+>> --- a/drivers/char/tpm/tpm-interface.c
+>> +++ b/drivers/char/tpm/tpm-interface.c
+>> @@ -1050,8 +1050,9 @@ static bool wait_for_tpm_stat_cond(struct tpm_chip *chip, u8 mask,
+>>   	return false;
+>>   }
+>>   
+>> -int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
+>> -		      wait_queue_head_t *queue, bool check_cancel)
+>> +int __wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
+>> +		      unsigned int poll_sleep, wait_queue_head_t *queue,
+>> +		      bool check_cancel)
+>>   {
+>>   	unsigned long stop;
+>>   	long rc;
+>> @@ -1085,7 +1086,7 @@ int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
+>>   		}
+>>   	} else {
+>>   		do {
+>> -			tpm_msleep(TPM_TIMEOUT);
+>> +			tpm_msleep(poll_sleep);
+>>   			status = chip->ops->status(chip);
+>>   			if ((status & mask) == mask)
+>>   				return 0;
+>> @@ -1093,6 +1094,14 @@ int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
+>>   	}
+>>   	return -ETIME;
+>>   }
+>> +EXPORT_SYMBOL_GPL(__wait_for_tpm_stat);
+>> +
+>> +int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
+>> +		      wait_queue_head_t *queue, bool check_cancel)
+>> +{
+>> +	return __wait_for_tpm_stat(chip, mask, timeout, TPM_TIMEOUT,
+>> +			queue, check_cancel);
+>> +}
+>>   EXPORT_SYMBOL_GPL(wait_for_tpm_stat);
+>>   
+>>   #define TPM_ORD_SAVESTATE 152
+>> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+>> index 2d5466a72e40..eb2f8818eded 100644
+>> --- a/drivers/char/tpm/tpm.h
+>> +++ b/drivers/char/tpm/tpm.h
+>> @@ -525,6 +525,9 @@ int tpm_do_selftest(struct tpm_chip *chip);
+>>   unsigned long tpm_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal);
+>>   int tpm_pm_suspend(struct device *dev);
+>>   int tpm_pm_resume(struct device *dev);
+>> +int __wait_for_tpm_stat(struct tpm_chip *chip, u8 mask,
+>> +		unsigned long timeout, unsigned int poll_sleep,
+>> +		wait_queue_head_t *queue, bool check_cancel);
+>>   int wait_for_tpm_stat(struct tpm_chip *chip, u8 mask, unsigned long timeout,
+>>   		      wait_queue_head_t *queue, bool check_cancel);
+>>   
+>> diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+>> index 6b9bf4c4d434..d1eab29cb447 100644
+>> --- a/drivers/char/tpm/tpm_tis_core.c
+>> +++ b/drivers/char/tpm/tpm_tis_core.c
+>> @@ -268,8 +268,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+>>   	status = tpm_tis_status(chip);
+>>   	if ((status & TPM_STS_COMMAND_READY) == 0) {
+>>   		tpm_tis_ready(chip);
+>> -		if (wait_for_tpm_stat
+>> -		    (chip, TPM_STS_COMMAND_READY, chip->timeout_b,
+>> +		if (__wait_for_tpm_stat
+>> +		    (chip, TPM_STS_COMMAND_READY, chip->timeout_b, 1,
+>>   		     &priv->int_queue, false) < 0) {
+>>   			rc = -ETIME;
+>>   			goto out_err;
+>> @@ -303,7 +303,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+>>   		if (ignore_burst_count)
+>>   			continue;
+>>   
+>> -		if (wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
+>> +		if (__wait_for_tpm_stat(chip, TPM_STS_VALID,
+>> +					chip->timeout_c, 1,
+>>   					&priv->int_queue, false) < 0) {
+>>   			rc = -ETIME;
+>>   			goto out_err;
+>> @@ -320,8 +321,8 @@ static int tpm_tis_send_data(struct tpm_chip *chip, u8 *buf, size_t len)
+>>   	if (rc < 0)
+>>   		goto out_err;
+>>   
+>> -	if (wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
+>> -				&priv->int_queue, false) < 0) {
+>> +	if (__wait_for_tpm_stat(chip, TPM_STS_VALID, chip->timeout_c,
+>> +				1, &priv->int_queue, false) < 0) {
+>>   		rc = -ETIME;
+>>   		goto out_err;
+>>   	}
+>> -- 
+>> 2.13.3
+>>
 
