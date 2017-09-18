@@ -1,49 +1,74 @@
-From: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-Subject: Re: [PATCH v2 3/3] tpm: parse TPM event logs based on EFI table
-Date: Mon, 18 Sep 2017 10:28:14 -0600
-Message-ID: <20170918162814.GA32721@obsidianresearch.com>
+From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Subject: Re: [PATCH v2 2/3] efi: call get_event_log before ExitBootServices
+Date: Mon, 18 Sep 2017 20:56:28 +0300
+Message-ID: <20170918175628.67evhsklb77nxbdk@linux.intel.com>
 References: <20170911100022.7251-1-tweek@google.com>
- <20170911100022.7251-4-tweek@google.com>
- <20170911164750.GA2607@obsidianresearch.com>
- <20170912084851.z3ednbeojawnyxk2@google.com>
- <CA+zpnLe8hgSgBbjw8zF=pvykNo9mkVcyR65KY=vFckKf+XMb=Q@mail.gmail.com>
+ <20170911100022.7251-3-tweek@google.com>
+ <20170914184126.eevnstwq3i6fiq4j@linux.intel.com>
+ <CACdnJuu2Aq1mvdvooBgC3-1jfi3CPnZ6WGysOGc2Xizm-mbU0w@mail.gmail.com>
+ <20170914190247.rrbdzdexjjywxipf@linux.intel.com>
+ <CA+zpnLfs=DhW6kgbLV63_XzmKS7VnGGE0ecbFBZ0bu4wx3Jf+w@mail.gmail.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Return-path: <linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <CA+zpnLe8hgSgBbjw8zF=pvykNo9mkVcyR65KY=vFckKf+XMb=Q@mail.gmail.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Thiebaud Weksteen <tweek@google.com>
-Cc: Ashley Lai <ashleydlai@gmail.com>, Nayna Jain <nayna@linux.vnet.ibm.com>, linux-efi@vger.kernel.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Fleming <matt@codeblueprint.co.uk>, linux-kernel@vger.kernel.org, Matthew Garrett <mjg59@google.com>, tpmdd-devel@lists.sourceforge.net, peterhuewe@gmx.de, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, tpmdd@selhorst.net
+In-Reply-To: <CA+zpnLfs=DhW6kgbLV63_XzmKS7VnGGE0ecbFBZ0bu4wx3Jf+w-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
+Sender: linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+To: Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Cc: Matthew Garrett <mjg59-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>, linux-efi-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Ard Biesheuvel <ard.biesheuvel-QSEj5FYQhm4dnm+yROfE0A@public.gmane.org>, Matt Fleming <matt-mF/unelCI9GS6iBeEJttW/XRex20P6io@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, peterhuewe-Mmb7MZpHnFY@public.gmane.org, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Sep 18, 2017 at 02:38:03PM +0200, Thiebaud Weksteen wrote:
-> On Tue, Sep 12, 2017 at 10:48 AM, Thiebaud Weksteen <tweek@google.com> wrote:
-> > On Mon, Sep 11, 2017 at 10:47:50AM -0600, Jason Gunthorpe wrote:
-> >> On Mon, Sep 11, 2017 at 12:00:22PM +0200, Thiebaud Weksteen wrote:
+On Mon, Sep 18, 2017 at 02:28:45PM +0200, Thiebaud Weksteen wrote:
+> On Thu, Sep 14, 2017 at 9:02 PM, Jarkko Sakkinen
+> <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
+> > On Thu, Sep 14, 2017 at 11:48:54AM -0700, Matthew Garrett wrote:
+> >> On Thu, Sep 14, 2017 at 11:43 AM, Jarkko Sakkinen
+> >> <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
+> >> > On Mon, Sep 11, 2017 at 12:00:21PM +0200, Thiebaud Weksteen wrote:
+> >> >> With TPM 2.0 specification, the event logs may only be accessible by
+> >> >> calling an EFI Boot Service. Modify the EFI stub to copy the log area to
+> >> >> a new Linux-specific EFI configuration table so it remains accessible
+> >> >> once booted.
+> >> >>
+> >> >> When calling this service, it is possible to specify the expected format
+> >> >> of the logs: TPM 1.2 (SHA1) or TPM 2.0 ("Crypto Agile"). For now, only the
+> >> >> first format is retrieved.
+> >> >>
+> >> >> Signed-off-by: Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+> >> >
+> >> > With a quick skim the code change looks good but I remember from
+> >> > Matthew's talk that there was this issue that ExitBootServices() would
+> >> > cause a yet another event?
+> >> >
+> >> > I guess you could manually synthetize that event by reading the PCR
+> >> > values right after ExitBootServices()?
 > >>
-> >> >     chip->bin_log_seqops.chip = chip;
-> >> > -   if (chip->flags & TPM_CHIP_FLAG_TPM2)
-> >> > +
-> >> > +   if (log_version == EFI_TCG2_EVENT_LOG_FORMAT_TCG_2 ||
-> >> > +       (!log_version && (chip->flags & TPM_CHIP_FLAG_TPM2)))
-> >> >             chip->bin_log_seqops.seqops =
-> >> >                     &tpm2_binary_b_measurements_seqops;
-> >>
-> >> Lets have all the read_log_* versions return the postitive log_version
-> >> and get rid of the chip->flags check here.
-> >>
-> >> ie Doesn't ACPI always return the TPM 1 version?
+> >> I think that would involve breaking SHA1… the information should be
 > >
-> > That is my understanding. Ashley, Nayna, could you confirm the format
-> > version expected by tpm_of? Could it be both?
+> > You are absolutely right, was not thinking clearly :-)
 > >
+> >> available in the TCG_TREE_FINAL_EVENTS configuration table, so it
+> >> /should/ just be a matter of merging the events from that into the
+> >> event log.
+> >
+> > Right, it is available through runtime services. Why this isn't part
+> > of the patch set?
 > 
-> I've changed the returned code for ACPI but not for DeviceTree.
-> Without confirmation for tpm_of, I am reluctant to modify the current
-> behaviour.
+> This is not included yet as this table
+> (EFI_TCG2_FINAL_EVENTS_TABLE_GUID) relies on the TPM2 format for the
+> log entries (TCG_PCR_EVENT2, "Crypto Agile"). I first plan to add the
+> parsing of this log version (ie, efi_retrieve_tpm2_eventlog_2) before
+> adding the merging of both tables. But these will be separate patch
+> sets.
 
-Move the TPM_CHIP_FLAG_TPM2 check into tpm_of to keep the current behavior
-but still return the code..
+OK, this should be documented to the commit message to make it clear.
 
-Jason
+linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org is now up and running. I'm still
+surviving from jetlag etc. so testing might be postponed either near end
+of the week or next week.
+
+Thanks for doing this. This is really important stuff in order to get the
+Linux TPM 2.0 support feature complete.
+
+/Jarkko
