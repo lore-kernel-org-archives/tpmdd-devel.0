@@ -1,74 +1,90 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 2/3] efi: call get_event_log before ExitBootServices
-Date: Mon, 18 Sep 2017 20:56:28 +0300
-Message-ID: <20170918175628.67evhsklb77nxbdk@linux.intel.com>
-References: <20170911100022.7251-1-tweek@google.com>
- <20170911100022.7251-3-tweek@google.com>
- <20170914184126.eevnstwq3i6fiq4j@linux.intel.com>
- <CACdnJuu2Aq1mvdvooBgC3-1jfi3CPnZ6WGysOGc2Xizm-mbU0w@mail.gmail.com>
- <20170914190247.rrbdzdexjjywxipf@linux.intel.com>
- <CA+zpnLfs=DhW6kgbLV63_XzmKS7VnGGE0ecbFBZ0bu4wx3Jf+w@mail.gmail.com>
+From: Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+Subject: [PATCH v3 0/5] Call GetEventLog before ExitBootServices
+Date: Wed, 20 Sep 2017 10:13:35 +0200
+Message-ID: <20170920081340.7413-1-tweek@google.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset="UTF-8"
 Return-path: <linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <CA+zpnLfs=DhW6kgbLV63_XzmKS7VnGGE0ecbFBZ0bu4wx3Jf+w-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
 Sender: linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-To: Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Cc: Matthew Garrett <mjg59-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>, linux-efi-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Ard Biesheuvel <ard.biesheuvel-QSEj5FYQhm4dnm+yROfE0A@public.gmane.org>, Matt Fleming <matt-mF/unelCI9GS6iBeEJttW/XRex20P6io@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, peterhuewe-Mmb7MZpHnFY@public.gmane.org, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org
+To: linux-efi-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Cc: ard.biesheuvel-QSEj5FYQhm4dnm+yROfE0A@public.gmane.org, matt-mF/unelCI9GS6iBeEJttW/XRex20P6io@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, mjg59-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org, peterhuewe-Mmb7MZpHnFY@public.gmane.org, jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org, jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org, tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org, Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Sep 18, 2017 at 02:28:45PM +0200, Thiebaud Weksteen wrote:
-> On Thu, Sep 14, 2017 at 9:02 PM, Jarkko Sakkinen
-> <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
-> > On Thu, Sep 14, 2017 at 11:48:54AM -0700, Matthew Garrett wrote:
-> >> On Thu, Sep 14, 2017 at 11:43 AM, Jarkko Sakkinen
-> >> <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
-> >> > On Mon, Sep 11, 2017 at 12:00:21PM +0200, Thiebaud Weksteen wrote:
-> >> >> With TPM 2.0 specification, the event logs may only be accessible by
-> >> >> calling an EFI Boot Service. Modify the EFI stub to copy the log area to
-> >> >> a new Linux-specific EFI configuration table so it remains accessible
-> >> >> once booted.
-> >> >>
-> >> >> When calling this service, it is possible to specify the expected format
-> >> >> of the logs: TPM 1.2 (SHA1) or TPM 2.0 ("Crypto Agile"). For now, only the
-> >> >> first format is retrieved.
-> >> >>
-> >> >> Signed-off-by: Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-> >> >
-> >> > With a quick skim the code change looks good but I remember from
-> >> > Matthew's talk that there was this issue that ExitBootServices() would
-> >> > cause a yet another event?
-> >> >
-> >> > I guess you could manually synthetize that event by reading the PCR
-> >> > values right after ExitBootServices()?
-> >>
-> >> I think that would involve breaking SHA1… the information should be
-> >
-> > You are absolutely right, was not thinking clearly :-)
-> >
-> >> available in the TCG_TREE_FINAL_EVENTS configuration table, so it
-> >> /should/ just be a matter of merging the events from that into the
-> >> event log.
-> >
-> > Right, it is available through runtime services. Why this isn't part
-> > of the patch set?
-> 
-> This is not included yet as this table
-> (EFI_TCG2_FINAL_EVENTS_TABLE_GUID) relies on the TPM2 format for the
-> log entries (TCG_PCR_EVENT2, "Crypto Agile"). I first plan to add the
-> parsing of this log version (ie, efi_retrieve_tpm2_eventlog_2) before
-> adding the merging of both tables. But these will be separate patch
-> sets.
+With TPM 1.2, the ACPI table ("TCPA") has two fields to recover the Event
+Log Area (LAML and LASA). These logs are useful to understand and rebuild
+the final values of PCRs.
 
-OK, this should be documented to the commit message to make it clear.
+With TPM 2.0, the ACPI table ("TPM2") does not contain these fields
+anymore. The recommended method is now to call the GetEventLog EFI
+protocol before ExitBootServices.
 
-linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org is now up and running. I'm still
-surviving from jetlag etc. so testing might be postponed either near end
-of the week or next week.
+Implement this method within the EFI stub and create a copy of the logs
+for the TPM device using a Linux-specific EFI configuration table
+(LINUX_EFI_TPM_EVENT_LOG). This will create
+/sys/kernel/security/tpm0/binary_bios_measurements for TPM 2.0 devices
+(similarly to the current behaviour for TPM 1.2 devices).
 
-Thanks for doing this. This is really important stuff in order to get the
-Linux TPM 2.0 support feature complete.
+Two formats for the log entries exist: TPM 1.2 (SHA1) and TPM 2.0 (Crypto
+Agile). This patch set only retrieves the first type of logs. The second
+type will be implemented in a subsequent patch set.
 
-/Jarkko
+According to the specifications[1], once GetEventLog has been called,
+future events shall be stored in a separate EFI configuration table
+(EFI_TCG2_FINAL_EVENTS_TABLE). Events stored in this table are not
+processed in this patch set as they are stored in the Crypto Agile format.
+These could eventually be merged with the new table for a unified view
+of the logs from userspace.
+
+[1] TCG EFI Protocol Specification, Revision 00.13, March 30, 2016
+    https://trustedcomputinggroup.org/wp-content/uploads/EFI-Protocol-Specification-rev13-160330final.pdf
+
+-------------------------------------------------------------------------------
+
+Patchset Changelog:
+
+Version 3:
+- Move event log providers (acpi and of) to tpm_eventlog_*.c
+- Move efi changes from PATCH 3 to PATCH 2
+- Change return value of tpm_read_log_acpi and tpm_read_log_of
+- Change iounmap to memunmap calls
+- Use log_tbl as variable name for consistency
+- Fix kbuild failures
+
+Version 2:
+- Move tpm_eventlog.h to top include directory, add commit for this.
+- Use EFI_LOADER_DATA to store the configuration table
+- Whitespace and new lines fixes
+
+Thiebaud Weksteen (5):
+  tpm: move tpm_eventlog.h outside of drivers folder
+  tpm: rename event log provider files
+  tpm: add event log format version
+  efi: call get_event_log before ExitBootServices
+  tpm: parse TPM event logs based on EFI table
+
+ arch/x86/boot/compressed/eboot.c                   |  1 +
+ drivers/char/tpm/Makefile                          |  5 +-
+ drivers/char/tpm/tpm-chip.c                        |  3 +-
+ drivers/char/tpm/tpm-interface.c                   |  2 +-
+ drivers/char/tpm/tpm.h                             | 35 ++++++++--
+ drivers/char/tpm/tpm1_eventlog.c                   | 13 +++-
+ drivers/char/tpm/tpm2_eventlog.c                   |  2 +-
+ .../char/tpm/{tpm_acpi.c => tpm_eventlog_acpi.c}   |  4 +-
+ drivers/char/tpm/tpm_eventlog_efi.c                | 66 ++++++++++++++++++
+ drivers/char/tpm/{tpm_of.c => tpm_eventlog_of.c}   |  6 +-
+ drivers/firmware/efi/Makefile                      |  2 +-
+ drivers/firmware/efi/efi.c                         |  4 ++
+ drivers/firmware/efi/libstub/Makefile              |  3 +-
+ drivers/firmware/efi/libstub/tpm.c                 | 81 ++++++++++++++++++++++
+ drivers/firmware/efi/tpm.c                         | 40 +++++++++++
+ include/linux/efi.h                                | 46 ++++++++++++
+ {drivers/char/tpm => include/linux}/tpm_eventlog.h | 35 +++-------
+ 17 files changed, 304 insertions(+), 44 deletions(-)
+ rename drivers/char/tpm/{tpm_acpi.c => tpm_eventlog_acpi.c} (97%)
+ create mode 100644 drivers/char/tpm/tpm_eventlog_efi.c
+ rename drivers/char/tpm/{tpm_of.c => tpm_eventlog_of.c} (93%)
+ create mode 100644 drivers/firmware/efi/tpm.c
+ rename {drivers/char/tpm => include/linux}/tpm_eventlog.h (77%)
+
+-- 
+2.14.1.821.g8fa685d3b7-goog
