@@ -1,80 +1,208 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v3 4/5] efi: call get_event_log before ExitBootServices
-Date: Wed, 4 Oct 2017 13:51:13 +0300
-Message-ID: <20171004105113.mcho3rlytaxfruyf@linux.intel.com>
-References: <20170920081340.7413-1-tweek@google.com>
- <20170920081340.7413-5-tweek@google.com>
- <20170926114538.r5hsyc5osodpaals@linux.intel.com>
- <CA+zpnLcYWcO8Gf6b8rAHgcLkAndC0uyPH+Kxa01giVsochP3Ug@mail.gmail.com>
- <20170929171617.yq4dvn66czvnebns@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH 2/3] tpm: retrieve digest size of unknown algorithms with
+ PCR read
+Date: Wed, 4 Oct 2017 14:12:00 +0300
+Message-ID: <20171004111200.45fx2vhkjo5jydnj@linux.intel.com>
+References: <20170925111950.21511-1-roberto.sassu@huawei.com>
+ <20170925111950.21511-3-roberto.sassu@huawei.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Return-path: <linux-security-module-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170929171617.yq4dvn66czvnebns-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Sender: linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-To: Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Cc: linux-efi-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Ard Biesheuvel <ard.biesheuvel-QSEj5FYQhm4dnm+yROfE0A@public.gmane.org>, Matt Fleming <matt-mF/unelCI9GS6iBeEJttW/XRex20P6io@public.gmane.org>, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Matthew Garrett <mjg59-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>, peterhuewe-Mmb7MZpHnFY@public.gmane.org, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org
+In-Reply-To: <20170925111950.21511-3-roberto.sassu@huawei.com>
+Sender: owner-linux-security-module@vger.kernel.org
+To: Roberto Sassu <roberto.sassu@huawei.com>
+Cc: tpmdd-devel@lists.sourceforge.net, linux-ima-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Fri, Sep 29, 2017 at 08:16:17PM +0300, Jarkko Sakkinen wrote:
-> On Tue, Sep 26, 2017 at 02:49:31PM +0200, Thiebaud Weksteen wrote:
-> > On Tue, Sep 26, 2017 at 1:45 PM, Jarkko Sakkinen
-> > <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org> wrote:
-> > > On Wed, Sep 20, 2017 at 10:13:39AM +0200, Thiebaud Weksteen wrote:
-> > >> With TPM 2.0 specification, the event logs may only be accessible by
-> > >> calling an EFI Boot Service. Modify the EFI stub to copy the log area to
-> > >> a new Linux-specific EFI configuration table so it remains accessible
-> > >> once booted.
-> > >>
-> > >> When calling this service, it is possible to specify the expected format
-> > >> of the logs: TPM 1.2 (SHA1) or TPM 2.0 ("Crypto Agile"). For now, only the
-> > >> first format is retrieved.
-> > >>
-> > >> Signed-off-by: Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-> > >
-> > > Does not apply:
-> > >
-> > > Applying: tpm: move tpm_eventlog.h outside of drivers folder
-> > > Applying: tpm: rename event log provider files
-> > > Applying: tpm: add event log format version
-> > > Applying: efi: call get_event_log before ExitBootServices
-> > > error: sha1 information is lacking or useless (drivers/firmware/efi/efi.c).
-> > > error: could not build fake ancestor
-> > > Patch failed at 0004 efi: call get_event_log before ExitBootServices
-> > > The copy of the patch that failed is found in: .git/rebase-apply/patch
-> > > When you have resolved this problem, run "git am --continue".
-> > > If you prefer to skip this patch, run "git am --skip" instead.
-> > > To restore the original branch and stop patching, run "git am --abort".
-> > >
-> > > Just rebased my tree to the latest security-next.
-> > 
-> > It applies fine on security/next-general which is more up-to-date.
-> > (security/next does not include
-> > ccc829ba3624beb9a703fc995d016b836d9eead8 on which this patch set is
-> > based)
+On Mon, Sep 25, 2017 at 01:19:49PM +0200, Roberto Sassu wrote:
+> PCRs can be extended by providing the TPM algorithm identifier and
+> the digest. To correctly build the command buffer, the digest size
+> must be known.
+
+Remove the first paragraph. It does not any bring light on what the
+commit does and/or why the code change is made. In short, by reading
+this paragraph I did not learn anything about the commit.
+
+> The TPM driver cannot determine the digest size if the provided
+> TPM algorithm is not mapped to any crypto algorithm. In this case,
+> the PCR bank is not extended and could be used by attackers to protect
+> measurements made by themselves, which do not reflect the true status
+> of the platform.
+
+You are talking about "mapping" without any context. There is a static
+mapping inside the driver from crypto IDs to TPM algorithm IDs inside
+the driver implementation. You should just say it.
+
+Writing commit messages is very easy. Just write what you are doing and
+why you are doing it :-) Do not write anything else.
+
+> To avoid this situation, the digest size of unknown algorithms is
+> determined at TPM initialization time with a PCR read, and stored
+> in the tpm_chip structure. The array of algorithms (active_banks)
+> has been replaced with an array of active_pcr_bank_info, a new structure
+> containing both the TPM algorithm identifier and the digest size.
 > 
-> Thanks, my bad, I though that I had it updated.
+> Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
+> ---
+>  drivers/char/tpm/tpm-interface.c |  4 +--
+>  drivers/char/tpm/tpm.h           |  2 +-
+>  drivers/char/tpm/tpm2-cmd.c      | 55 ++++++++++++++++++++++++++++++++--------
+>  include/linux/tpm.h              |  5 ++++
+>  4 files changed, 52 insertions(+), 14 deletions(-)
 > 
-> I'll update my tree and retry.
+> diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+> index 1d6729b..2c3d973 100644
+> --- a/drivers/char/tpm/tpm-interface.c
+> +++ b/drivers/char/tpm/tpm-interface.c
+> @@ -914,8 +914,8 @@ int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
+>  		memset(digest_list, 0, sizeof(digest_list));
+>  
+>  		for (i = 0; i < ARRAY_SIZE(chip->active_banks) &&
+> -			    chip->active_banks[i] != TPM2_ALG_ERROR; i++) {
+> -			digest_list[i].alg_id = chip->active_banks[i];
+> +		     chip->active_banks[i].alg_id != TPM2_ALG_ERROR; i++) {
+> +			digest_list[i].alg_id = chip->active_banks[i].alg_id;
+>  			memcpy(digest_list[i].digest, hash, TPM_DIGEST_SIZE);
+>  			count++;
+>  		}
+> diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> index 2d5466a..fb94bd2 100644
+> --- a/drivers/char/tpm/tpm.h
+> +++ b/drivers/char/tpm/tpm.h
+> @@ -225,7 +225,7 @@ struct tpm_chip {
+>  	const struct attribute_group *groups[3];
+>  	unsigned int groups_cnt;
+>  
+> -	u16 active_banks[7];
+> +	struct active_bank_info active_banks[7];
+>  #ifdef CONFIG_ACPI
+>  	acpi_handle acpi_dev_handle;
+>  	char ppi_version[TPM_PPI_VERSION_LEN + 1];
+> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+> index 0cad0f6..b1356be 100644
+> --- a/drivers/char/tpm/tpm2-cmd.c
+> +++ b/drivers/char/tpm/tpm2-cmd.c
+> @@ -291,7 +291,6 @@ int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
+>  	struct tpm2_null_auth_area auth_area;
+>  	int rc;
+>  	int i;
+> -	int j;
+>  
+>  	if (count > ARRAY_SIZE(chip->active_banks))
+>  		return -EINVAL;
+> @@ -313,14 +312,10 @@ int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
+>  	tpm_buf_append_u32(&buf, count);
+>  
+>  	for (i = 0; i < count; i++) {
+> -		for (j = 0; j < ARRAY_SIZE(tpm2_hash_map); j++) {
+> -			if (digests[i].alg_id != tpm2_hash_map[j].tpm_id)
+> -				continue;
+> -			tpm_buf_append_u16(&buf, digests[i].alg_id);
+> -			tpm_buf_append(&buf, (const unsigned char
+> -					      *)&digests[i].digest,
+> -			       hash_digest_size[tpm2_hash_map[j].crypto_id]);
+> -		}
+> +		/* digests[i].alg_id == chip->active_banks[i].alg_id */
+
+This comment should be removed.
+
+> +		tpm_buf_append_u16(&buf, digests[i].alg_id);
+> +		tpm_buf_append(&buf, (const unsigned char *)&digests[i].digest,
+> +			       chip->active_banks[i].digest_size);
+>  	}
+>  
+>  	rc = tpm_transmit_cmd(chip, NULL, buf.data, PAGE_SIZE, 0, 0,
+> @@ -943,6 +938,39 @@ int tpm2_probe(struct tpm_chip *chip)
+>  }
+>  EXPORT_SYMBOL_GPL(tpm2_probe);
+>  
+> +static int tpm2_init_active_bank_info(struct tpm_chip *chip, u16 alg_id,
+> +				      struct active_bank_info *active_bank)
+> +{
+> +	struct tpm_buf buf;
+> +	struct tpm2_pcr_read_out *out;
+> +	int rc, i;
+
+One declaration per line.
+
+> +
+> +	active_bank->alg_id = alg_id;
+> +
+> +	for (i = 0; i < ARRAY_SIZE(tpm2_hash_map); i++) {
+> +		enum hash_algo crypto_algo = tpm2_hash_map[i].crypto_id;
+> +
+> +		if (active_bank->alg_id != tpm2_hash_map[i].tpm_id)
+> +			continue;
+> +
+> +		active_bank->digest_size = hash_digest_size[crypto_algo];
+> +		return 0;
+> +	}
+> +
+> +	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_PCR_READ);
+> +	if (rc)
+> +		return rc;
+> +
+> +	rc = tpm2_pcr_read_common(chip, 0, alg_id, &buf, NULL);
+> +	if (rc == 0) {
+
+if (!rc) {
+
+> +		out = (struct tpm2_pcr_read_out *)&buf.data[TPM_HEADER_SIZE];
+> +		active_bank->digest_size = be16_to_cpu(out->digest_size);
+> +	}
+> +
+> +	tpm_buf_destroy(&buf);
+> +	return 0;
+> +}
+> +
+>  struct tpm2_pcr_selection {
+>  	__be16  hash_alg;
+>  	u8  size_of_select;
+> @@ -997,7 +1025,12 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
+>  		}
+>  
+>  		memcpy(&pcr_selection, marker, sizeof(pcr_selection));
+> -		chip->active_banks[i] = be16_to_cpu(pcr_selection.hash_alg);
+> +		rc =  tpm2_init_active_bank_info(chip,
+> +					be16_to_cpu(pcr_selection.hash_alg),
+> +					&chip->active_banks[i]);
+> +		if (rc)
+> +			break;
+> +
+>  		sizeof_pcr_selection = sizeof(pcr_selection.hash_alg) +
+>  			sizeof(pcr_selection.size_of_select) +
+>  			pcr_selection.size_of_select;
+> @@ -1006,7 +1039,7 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
+>  
+>  out:
+>  	if (i < ARRAY_SIZE(chip->active_banks))
+> -		chip->active_banks[i] = TPM2_ALG_ERROR;
+> +		chip->active_banks[i].alg_id = TPM2_ALG_ERROR;
+>  
+>  	tpm_buf_destroy(&buf);
+>  
+> diff --git a/include/linux/tpm.h b/include/linux/tpm.h
+> index 5a090f5..3ecce21 100644
+> --- a/include/linux/tpm.h
+> +++ b/include/linux/tpm.h
+> @@ -52,6 +52,11 @@ struct tpm_class_ops {
+>  	void (*relinquish_locality)(struct tpm_chip *chip, int loc);
+>  };
+>  
+> +struct active_bank_info {
+> +	u16 alg_id;
+> +	u16 digest_size;
+> +};
+
+"tpm_" prefix is missing.
+
+> +
+>  #if defined(CONFIG_TCG_TPM) || defined(CONFIG_TCG_TPM_MODULE)
+>  
+>  extern int tpm_is_tpm2(u32 chip_num);
+> -- 
+> 2.9.3
 > 
-> /Jarkko
-
-My master is up to date with security/next.
-
-Still get the same result:
-
-$ git am -3 ~/Downloads/v3-4-5-efi-call-get_event_log-before-ExitBootServices.patch
-Applying: efi: call get_event_log before ExitBootServices
-error: sha1 information is lacking or useless (drivers/firmware/efi/efi.c).
-error: could not build fake ancestor
-Patch failed at 0001 efi: call get_event_log before ExitBootServices
-The copy of the patch that failed is found in: .git/rebase-apply/patch
-When you have resolved this problem, run "git am --continue".
-If you prefer to skip this patch, run "git am --skip" instead.
-To restore the original branch and stop patching, run "git am --abort".
-
-Maybe you have some other trees fetched in your local GIT so that it
-finds the ancestors? Anyway, cannot test this at this point.
 
 /Jarkko
