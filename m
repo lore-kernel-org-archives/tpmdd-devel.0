@@ -1,75 +1,50 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH 3/3] tpm: add the crypto algorithm identifier to
- active_bank_info
-Date: Wed, 4 Oct 2017 14:22:29 +0300
-Message-ID: <20171004112229.7aafz6yttewq4pbb@linux.intel.com>
-References: <20170925111950.21511-1-roberto.sassu@huawei.com>
- <20170925111950.21511-4-roberto.sassu@huawei.com>
+Subject: Re: [PATCH] tpm: fix duplicate inline declaration specifier
+Date: Wed, 4 Oct 2017 14:31:12 +0300
+Message-ID: <20171004113112.u5jnf3ims7vcxo7b@linux.intel.com>
+References: <1506434337-15284-1-git-send-email-rubenroy2005@gmail.com>
+ <20170929171704.azziyvlikbv5qnbd@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170925111950.21511-4-roberto.sassu@huawei.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Roberto Sassu <roberto.sassu@huawei.com>
-Cc: tpmdd-devel@lists.sourceforge.net, linux-ima-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+In-Reply-To: <20170929171704.azziyvlikbv5qnbd@linux.intel.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Ruben Roy <rubenroy2005@gmail.com>
+Cc: Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, Nick Desaulniers <nick.desaulniers@gmail.com>, trivial@kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Sep 25, 2017 at 01:19:50PM +0200, Roberto Sassu wrote:
-> In preparation for the patch introducing a function to pass supported TPM
-> algorithms and digest sizes to TPM users, the crypto algorithm identifier
-> is added to the active_bank_info structure.
+On Fri, Sep 29, 2017 at 08:17:04PM +0300, Jarkko Sakkinen wrote:
+> On Tue, Sep 26, 2017 at 01:58:57PM +0000, Ruben Roy wrote:
+> > This commit fixes the duplicate inline declaration specifier in
+> > tpm2_rc_value which caused a warning
+> > 
+> > Signed-off-by: Ruben Roy <rubenroy2005@gmail.com>
+> > ---
+> >  drivers/char/tpm/tpm.h | 2 +-
+> >  1 file changed, 1 insertion(+), 1 deletion(-)
+> > 
+> > diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+> > index 04fbff2..f4d0272 100644
+> > --- a/drivers/char/tpm/tpm.h
+> > +++ b/drivers/char/tpm/tpm.h
+> > @@ -550,7 +550,7 @@ static inline void tpm_add_ppi(struct tpm_chip *chip)
+> >  }
+> >  #endif
+> >  
+> > -static inline inline u32 tpm2_rc_value(u32 rc)
+> > +static inline u32 tpm2_rc_value(u32 rc)
+> >  {
+> >  	return (rc & BIT(7)) ? rc & 0xff : rc;
+> >  }
+> > -- 
+> > 1.8.3.1
+> > 
 > 
-> All members of active_bank_info are necessary: TPM algorithm identifiers
-> will be used to create an event log (they are included in the Crypto Agile
-> format defined by TCG); crypto identifiers will be used to calculate
-> digests using the crypto subsystem; digest sizes will be used to truncate
-> digests calculated with different algorithms.
+> Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 > 
-> Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
+> /Jarkko
 
-This should be in the patch set where it makes sense. Please remove it
-from the next version.
+Applied.
 
 /Jarkko
-
-> ---
->  drivers/char/tpm/tpm2-cmd.c | 2 ++
->  include/linux/tpm.h         | 1 +
->  2 files changed, 3 insertions(+)
-> 
-> diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
-> index b1356be..8c58f6e 100644
-> --- a/drivers/char/tpm/tpm2-cmd.c
-> +++ b/drivers/char/tpm/tpm2-cmd.c
-> @@ -946,6 +946,7 @@ static int tpm2_init_active_bank_info(struct tpm_chip *chip, u16 alg_id,
->  	int rc, i;
->  
->  	active_bank->alg_id = alg_id;
-> +	active_bank->crypto_id = HASH_ALGO__LAST;
->  
->  	for (i = 0; i < ARRAY_SIZE(tpm2_hash_map); i++) {
->  		enum hash_algo crypto_algo = tpm2_hash_map[i].crypto_id;
-> @@ -954,6 +955,7 @@ static int tpm2_init_active_bank_info(struct tpm_chip *chip, u16 alg_id,
->  			continue;
->  
->  		active_bank->digest_size = hash_digest_size[crypto_algo];
-> +		active_bank->crypto_id = crypto_algo;
->  		return 0;
->  	}
->  
-> diff --git a/include/linux/tpm.h b/include/linux/tpm.h
-> index 3ecce21..fc927f3 100644
-> --- a/include/linux/tpm.h
-> +++ b/include/linux/tpm.h
-> @@ -54,6 +54,7 @@ struct tpm_class_ops {
->  
->  struct active_bank_info {
->  	u16 alg_id;
-> +	u16 crypto_id;
->  	u16 digest_size;
->  };
->  
-> -- 
-> 2.9.3
-> 
