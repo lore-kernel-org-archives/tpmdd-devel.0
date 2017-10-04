@@ -1,53 +1,54 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH 0/3] tpm: retrieve digest size of unknown algorithms from
- TPM
-Date: Wed, 4 Oct 2017 10:32:58 +0300
-Message-ID: <20171004073258.be2j7mdeud2pjbyk@linux.intel.com>
+Subject: Re: [PATCH 1/3] tpm: move PCR read code to static function
+ tpm2_pcr_read_common()
+Date: Wed, 4 Oct 2017 13:45:14 +0300
+Message-ID: <20171004104514.udehflbyjaebxd3j@linux.intel.com>
 References: <20170925111950.21511-1-roberto.sassu@huawei.com>
+ <20170925111950.21511-2-roberto.sassu@huawei.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20170925111950.21511-1-roberto.sassu@huawei.com>
-Sender: owner-linux-security-module@vger.kernel.org
+In-Reply-To: <20170925111950.21511-2-roberto.sassu@huawei.com>
+Sender: linux-kernel-owner@vger.kernel.org
 To: Roberto Sassu <roberto.sassu@huawei.com>
 Cc: tpmdd-devel@lists.sourceforge.net, linux-ima-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Hi
+On Mon, Sep 25, 2017 at 01:19:48PM +0200, Roberto Sassu wrote:
+> tpm2_pcr_read() copies the digest stored in a PCR to a buffer provided by
+> the caller. However, it does not return the digest size, included in the
+> output from the TPM. Retrieving it would be useful when a TPM algorithm
+> is not known by the crypto subsystem, which the TPM driver currently
+> depends upon.
 
-And apologies for late review.
+Remove this paragraph. It is just generic nonsense.
 
-On Mon, Sep 25, 2017 at 01:19:47PM +0200, Roberto Sassu wrote:
-> This patch set derives from a larger patch set which modifies the TPM
-> driver API in order to extend a PCR with multiple digests. It can be
-> retrieved at the URL:
+> Most of tpm2_pcr_read() code is moved to the static function
+> tpm2_pcr_read_common(), which writes the output of the PCR read to the
+> tpm_buf structure passed as input.
 > 
-> https://sourceforge.net/p/tpmdd/mailman/message/35905412/
+> tpm2_pcr_read_common() will be called by tpm2_pcr_read(), and by the new
+> function tpm2_init_active_bank_info(), which will store the identifier
+> and the digest size of TPM algorithms in the tpm_chip structure.
 
-A patch set should be able to live on its own. Please remove this link.
+1. Export tpm_buf to arch/x86/include/linux/tpm.h
+2. Repeal and replace tpm2_pcr_read().
 
-I don't care about that patch set at this point and I'm not going to
-give any distant promises.
+I would just pass one tpm_buf (i.e. no u8* res_buf) that is used both
+for input and output.
 
-> The TPM driver currently relies on the crypto subsystem to determine the
-> digest size of supported TPM algorithms. In the future, TPM vendors might
-> implement new algorithms in their chips, and those algorithms might not
-> be supported by the crypto subsystem.
-> 
-> Usually, vendors provide patches for the new hardware, and likely
-> the crypto subsystem will be updated before the new algorithm is
-> introduced. However, old kernels might be updated later, after patches
-> are included in the mainline kernel. This would leave the opportunity
-> for attackers to misuse PCRs, as PCR banks with an unknown algorithm
-> are not extended.
-> 
-> This patch set provides a long term solution for this issue. If a TPM
-> algorithm is not known by the crypto subsystem, the TPM driver retrieves
-> the digest size from the TPM with a PCR read. All the PCR banks are
-> extended, even if the algorithm is not yet supported by the crypto
-> subsystem.
+Speaking about tpm2_inti_active_bank_info(), which is a *nonexistent*
+function is questionable. For me a sufficient commit message would be
+something like:
 
-This part makes sense to me.
+"
+tpm: refine tpm2_pcr_read() access to all PCR banks
+
+Refine tpm2_pcr_read() interface and implementation in order to enable
+access to all PCR banks for other kernel subsystems such as IMA.
+"
+
+That describes all there is in this commit.
 
 /Jarkko
