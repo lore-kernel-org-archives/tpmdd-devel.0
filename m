@@ -1,146 +1,116 @@
-From: Ruben Roy <rubenroy2005-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Subject: Re: [PATCH] tpm: fix duplicate inline declaration
- specifier
-Date: Wed, 4 Oct 2017 17:04:04 +0530
-Message-ID: <CAKmcHfhJVTkpTSHzjt_setDz4ok8zPnF4C6Bw3QdvMhQYHGYOQ@mail.gmail.com>
-References: <1506434337-15284-1-git-send-email-rubenroy2005@gmail.com>
- <20170929171704.azziyvlikbv5qnbd@linux.intel.com>
- <20171004113112.u5jnf3ims7vcxo7b@linux.intel.com>
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: Re: [PATCH v3 4/5] efi: call get_event_log before ExitBootServices
+Date: Tue, 10 Oct 2017 17:14:19 +0300
+Message-ID: <20171010141419.e4uv4fkmcmpc7sdc@linux.intel.com>
+References: <20170920081340.7413-1-tweek@google.com>
+ <20170920081340.7413-5-tweek@google.com>
+ <20170926114538.r5hsyc5osodpaals@linux.intel.com>
+ <CA+zpnLcYWcO8Gf6b8rAHgcLkAndC0uyPH+Kxa01giVsochP3Ug@mail.gmail.com>
+ <20170929171617.yq4dvn66czvnebns@linux.intel.com>
+ <20171004105113.mcho3rlytaxfruyf@linux.intel.com>
+ <CA+zpnLdg4km1vMUUZaYfRg6M68+nSdC+vASULmH-aKu4vYyy4Q@mail.gmail.com>
 Mime-Version: 1.0
-Content-Type: multipart/mixed; boundary="===============7828287310225021747=="
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20171004113112.u5jnf3ims7vcxo7b-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Cc: trivial-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Nick Desaulniers <nick.desaulniers-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+Content-Type: text/plain; charset=us-ascii
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <CA+zpnLdg4km1vMUUZaYfRg6M68+nSdC+vASULmH-aKu4vYyy4Q@mail.gmail.com>
+Sender: linux-kernel-owner@vger.kernel.org
+To: Thiebaud Weksteen <tweek@google.com>, jmorris@namei.org
+Cc: linux-efi@vger.kernel.org, linux-integrity@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Fleming <matt@codeblueprint.co.uk>, linux-kernel@vger.kernel.org, Matthew Garrett <mjg59@google.com>, peterhuewe@gmx.de, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, tpmdd@selhorst.net
 List-Id: tpmdd-devel@lists.sourceforge.net
 
---===============7828287310225021747==
-Content-Type: multipart/alternative; boundary="001a114221ca3615b6055ab6fc13"
-
---001a114221ca3615b6055ab6fc13
-Content-Type: text/plain; charset="UTF-8"
-
-Thank you, Jarkko
-
-On 4 Oct 2017 5:01 pm, "Jarkko Sakkinen" <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-wrote:
-
-> On Fri, Sep 29, 2017 at 08:17:04PM +0300, Jarkko Sakkinen wrote:
-> > On Tue, Sep 26, 2017 at 01:58:57PM +0000, Ruben Roy wrote:
-> > > This commit fixes the duplicate inline declaration specifier in
-> > > tpm2_rc_value which caused a warning
-> > >
-> > > Signed-off-by: Ruben Roy <rubenroy2005-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-> > > ---
-> > >  drivers/char/tpm/tpm.h | 2 +-
-> > >  1 file changed, 1 insertion(+), 1 deletion(-)
-> > >
-> > > diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> > > index 04fbff2..f4d0272 100644
-> > > --- a/drivers/char/tpm/tpm.h
-> > > +++ b/drivers/char/tpm/tpm.h
-> > > @@ -550,7 +550,7 @@ static inline void tpm_add_ppi(struct tpm_chip
-> *chip)
-> > >  }
-> > >  #endif
-> > >
-> > > -static inline inline u32 tpm2_rc_value(u32 rc)
-> > > +static inline u32 tpm2_rc_value(u32 rc)
-> > >  {
-> > >     return (rc & BIT(7)) ? rc & 0xff : rc;
-> > >  }
-> > > --
-> > > 1.8.3.1
-> > >
+On Wed, Oct 04, 2017 at 01:12:27PM +0200, Thiebaud Weksteen wrote:
+> On Wed, Oct 4, 2017 at 12:51 PM, Jarkko Sakkinen
+> <jarkko.sakkinen@linux.intel.com> wrote:
+> > On Fri, Sep 29, 2017 at 08:16:17PM +0300, Jarkko Sakkinen wrote:
+> >> On Tue, Sep 26, 2017 at 02:49:31PM +0200, Thiebaud Weksteen wrote:
+> >> > On Tue, Sep 26, 2017 at 1:45 PM, Jarkko Sakkinen
+> >> > <jarkko.sakkinen@linux.intel.com> wrote:
+> >> > > On Wed, Sep 20, 2017 at 10:13:39AM +0200, Thiebaud Weksteen wrote:
+> >> > >> With TPM 2.0 specification, the event logs may only be accessible by
+> >> > >> calling an EFI Boot Service. Modify the EFI stub to copy the log area to
+> >> > >> a new Linux-specific EFI configuration table so it remains accessible
+> >> > >> once booted.
+> >> > >>
+> >> > >> When calling this service, it is possible to specify the expected format
+> >> > >> of the logs: TPM 1.2 (SHA1) or TPM 2.0 ("Crypto Agile"). For now, only the
+> >> > >> first format is retrieved.
+> >> > >>
+> >> > >> Signed-off-by: Thiebaud Weksteen <tweek@google.com>
+> >> > >
+> >> > > Does not apply:
+> >> > >
+> >> > > Applying: tpm: move tpm_eventlog.h outside of drivers folder
+> >> > > Applying: tpm: rename event log provider files
+> >> > > Applying: tpm: add event log format version
+> >> > > Applying: efi: call get_event_log before ExitBootServices
+> >> > > error: sha1 information is lacking or useless (drivers/firmware/efi/efi.c).
+> >> > > error: could not build fake ancestor
+> >> > > Patch failed at 0004 efi: call get_event_log before ExitBootServices
+> >> > > The copy of the patch that failed is found in: .git/rebase-apply/patch
+> >> > > When you have resolved this problem, run "git am --continue".
+> >> > > If you prefer to skip this patch, run "git am --skip" instead.
+> >> > > To restore the original branch and stop patching, run "git am --abort".
+> >> > >
+> >> > > Just rebased my tree to the latest security-next.
+> >> >
+> >> > It applies fine on security/next-general which is more up-to-date.
+> >> > (security/next does not include
+> >> > ccc829ba3624beb9a703fc995d016b836d9eead8 on which this patch set is
+> >> > based)
+> >>
+> >> Thanks, my bad, I though that I had it updated.
+> >>
+> >> I'll update my tree and retry.
+> >>
+> >> /Jarkko
 > >
-> > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+> > My master is up to date with security/next.
+> >
+> > Still get the same result:
+> >
+> > $ git am -3 ~/Downloads/v3-4-5-efi-call-get_event_log-before-ExitBootServices.patch
+> > Applying: efi: call get_event_log before ExitBootServices
+> > error: sha1 information is lacking or useless (drivers/firmware/efi/efi.c).
+> > error: could not build fake ancestor
+> > Patch failed at 0001 efi: call get_event_log before ExitBootServices
+> > The copy of the patch that failed is found in: .git/rebase-apply/patch
+> > When you have resolved this problem, run "git am --continue".
+> > If you prefer to skip this patch, run "git am --skip" instead.
+> > To restore the original branch and stop patching, run "git am --abort".
+> >
+> > Maybe you have some other trees fetched in your local GIT so that it
+> > finds the ancestors? Anyway, cannot test this at this point.
 > >
 > > /Jarkko
->
-> Applied.
->
-> /Jarkko
->
+> 
+> The security/next branch still does not contain the commit I mentioned
+> (ccc829ba3624beb9a703fc995d016b836d9eead8), which is already part of
+> torvalds/master now.
+> 
+>  $ git branch -a --contains ccc829ba3624beb9a703fc995d016b836d9eead8
+>   efi_tpm2_eventlog
+>   master
+>   remotes/linux-next/akpm
+>   remotes/linux-next/akpm-base
+>   remotes/linux-next/master
+>   remotes/linux-next/stable
+>   remotes/security/fixes-v4.14-rc3
+>   remotes/security/fixes-v4.14-rc4
+>   remotes/security/next-general
+>   remotes/security/next-testing
+>   remotes/torvalds/master
+> 
+> Is there any reason why you are trying to merge on that specific
+> branch and not next-general or next-testing? Would you know the
+> purpose of all these next-* branches?
+> 
+> Thanks,
+> Thiebaud
 
---001a114221ca3615b6055ab6fc13
-Content-Type: text/html; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+The way I've agreed with James Morris to have my tree is to be rooted to
+security trees next branch.
 
-<div dir=3D"auto">Thank you, Jarkko</div><div class=3D"gmail_extra"><br><di=
-v class=3D"gmail_quote">On 4 Oct 2017 5:01 pm, &quot;Jarkko Sakkinen&quot; =
-&lt;<a href=3D"mailto:jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org">jarkko.sakkinen@linu=
-x.intel.com</a>&gt; wrote:<br type=3D"attribution"><blockquote class=3D"gma=
-il_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-lef=
-t:1ex">On Fri, Sep 29, 2017 at 08:17:04PM +0300, Jarkko Sakkinen wrote:<br>
-&gt; On Tue, Sep 26, 2017 at 01:58:57PM +0000, Ruben Roy wrote:<br>
-&gt; &gt; This commit fixes the duplicate inline declaration specifier in<b=
-r>
-&gt; &gt; tpm2_rc_value which caused a warning<br>
-&gt; &gt;<br>
-&gt; &gt; Signed-off-by: Ruben Roy &lt;<a href=3D"mailto:rubenroy2005@gmail=
-.com">rubenroy2005-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org</a>&gt;<br>
-&gt; &gt; ---<br>
-&gt; &gt;=C2=A0 drivers/char/tpm/tpm.h | 2 +-<br>
-&gt; &gt;=C2=A0 1 file changed, 1 insertion(+), 1 deletion(-)<br>
-&gt; &gt;<br>
-&gt; &gt; diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h<br>
-&gt; &gt; index 04fbff2..f4d0272 100644<br>
-&gt; &gt; --- a/drivers/char/tpm/tpm.h<br>
-&gt; &gt; +++ b/drivers/char/tpm/tpm.h<br>
-&gt; &gt; @@ -550,7 +550,7 @@ static inline void tpm_add_ppi(struct tpm_chi=
-p *chip)<br>
-&gt; &gt;=C2=A0 }<br>
-&gt; &gt;=C2=A0 #endif<br>
-&gt; &gt;<br>
-&gt; &gt; -static inline inline u32 tpm2_rc_value(u32 rc)<br>
-&gt; &gt; +static inline u32 tpm2_rc_value(u32 rc)<br>
-&gt; &gt;=C2=A0 {<br>
-&gt; &gt;=C2=A0 =C2=A0 =C2=A0return (rc &amp; BIT(7)) ? rc &amp; 0xff : rc;=
-<br>
-&gt; &gt;=C2=A0 }<br>
-&gt; &gt; --<br>
-&gt; &gt; 1.8.3.1<br>
-&gt; &gt;<br>
-&gt;<br>
-&gt; Reviewed-by: Jarkko Sakkinen &lt;<a href=3D"mailto:jarkko.sakkinen@lin=
-ux.intel.com">jarkko.sakkinen-VuQAYsv1562uYJLRA6qg5Q@public.gmane.org<wbr>com</a>&gt;<br>
-&gt;<br>
-&gt; /Jarkko<br>
-<br>
-Applied.<br>
-<br>
-/Jarkko<br>
-</blockquote></div></div>
+James, what actions should we take?
 
---001a114221ca3615b6055ab6fc13--
-
-
---===============7828287310225021747==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
---===============7828287310225021747==
-Content-Type: text/plain; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline
-
-_______________________________________________
-tpmdd-devel mailing list
-tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-https://lists.sourceforge.net/lists/listinfo/tpmdd-devel
-
---===============7828287310225021747==--
+/Jarkko
