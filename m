@@ -1,12 +1,15 @@
-From: <Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org>
-Subject: TPM meetup in Prague?
-Date: Thu, 19 Oct 2017 17:31:06 +0000
-Message-ID: <0068162d9f5e40b0b38390e93ecac8f7@infineon.com>
+From: James Bottomley <James.Bottomley-d9PhHud1JfjCXq6kfMZ53/egYHeGw8Jk@public.gmane.org>
+Subject: Re: TPM meetup in Prague?
+Date: Fri, 20 Oct 2017 09:55:39 -0700
+Message-ID: <1508518539.3064.21.camel@HansenPartnership.com>
+References: <0068162d9f5e40b0b38390e93ecac8f7@infineon.com>
+ <alpine.LFD.2.20.1710201107110.11171@t440.gateway.2wire.net>
+ <014beb97-935e-c16a-2edc-09b49fd2f13f@oracle.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Language: en-US
+In-Reply-To: <014beb97-935e-c16a-2edc-09b49fd2f13f-QHcLZuEGTsvQT0dZR+AlfA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -15,13 +18,36 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: tpm2-hn68Rpc1hR1g9hUCZPvPmw@public.gmane.org, linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Enrico Perla <enrico.perla-QHcLZuEGTsvQT0dZR+AlfA@public.gmane.org>, James Morris <james.l.morris-QHcLZuEGTsvQT0dZR+AlfA@public.gmane.org>, Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org, linux_lkml_grp-QHcLZuEGTsvQT0dZR+AlfA@public.gmane.org
+Cc: linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, tpm2-hn68Rpc1hR1g9hUCZPvPmw@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-I have noticed that a TPM focused session appeared on the agenda for the Open Source Summit Europe in Prague next week (https://kernsec.org/wiki/index.php/Linux_Kernel_Summit_2017,_Security_Session). I am going to be there. Does anybody else attend who is interested in TPM development and wants to meet?
-
-Alexander
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+T24gRnJpLCAyMDE3LTEwLTIwIGF0IDEwOjAwICswMjAwLCBFbnJpY28gUGVybGEgd3JvdGU6Cj4g
+T24gMTAvMjAvMTcgMjowOSBBTSwgSmFtZXMgTW9ycmlzIHdyb3RlOgo+ID4gCj4gPiBPbiBUaHUs
+IDE5IE9jdCAyMDE3LCBBbGV4YW5kZXIuU3RlZmZlbkBpbmZpbmVvbi5jb20gd3JvdGU6Cj4gPiAK
+PiA+ID4gCj4gPiA+IEkgaGF2ZSBub3RpY2VkIHRoYXQgYSBUUE0gZm9jdXNlZCBzZXNzaW9uIGFw
+cGVhcmVkIG9uIHRoZSBhZ2VuZGEKPiA+ID4gZm9yIHRoZSBPcGVuIFNvdXJjZSBTdW1taXQgRXVy
+b3BlIGluIFByYWd1ZSBuZXh0IHdlZWsgKGh0dHBzOi8va2UKPiA+ID4gcm5zZWMub3JnL3dpa2kv
+aW5kZXgucGhwL0xpbnV4X0tlcm5lbF9TdW1taXRfMjAxNyxfU2VjdXJpdHlfU2Vzc2kKPiA+ID4g
+b24pLiBJIGFtIGdvaW5nIHRvIGJlIHRoZXJlLiBEb2VzIGFueWJvZHkgZWxzZSBhdHRlbmQgd2hv
+IGlzCj4gPiA+IGludGVyZXN0ZWQgaW4gVFBNIGRldmVsb3BtZW50IGFuZCB3YW50cyB0byBtZWV0
+Pwo+ID4gPiAKPiA+IAo+ID4gTm90ZSB0aGF0IHRoZXJlIHdpbGwgYmUgYSBzZWN1cml0eSB0b3Bp
+YyBhcyBwYXJ0IG9mIHRoZSBrZXJuZWwKPiA+IHN1bW1pdCB0ZWNoIHRyYWNrLCBvcGVuIHRvIGFs
+bCBPU1MgRXVyb3BlIGF0dGVuZGVlcy7CoMKgSmFya2tvIGlzCj4gPiBzY2hlZHVsZWQgdG8gZ2l2
+ZSBhbiB1cGRhdGUgb24gVFBNIHRoZXJlLgo+ID4gCj4gPiBTZWXCoAo+ID4gaHR0cDovL2tlcm5z
+ZWMub3JnL3dpa2kvaW5kZXgucGhwL0xpbnV4X0tlcm5lbF9TdW1taXRfMjAxNyxfU2VjdXJpdAo+
+ID4geV9TZXNzaW9uCj4gPiAKPiA+IFRoZXJlJ3MgYWxzbyBhIHJvb20gYXZhaWxhYmxlIGZvciB1
+bmNvbmZlcmVuY2UgdG9waWNzLgo+IAo+IFdoYXQgaXMgdGhlIGN1cnJlbnQgc3RhdGUgb2YgdGhl
+IGFydCwgb24gbGludXgsIGZvciByZW1vdGUKPiBhdHRlc3RhdGlvbj8gKFBlcmhhcHMgYSBnb29k
+IHF1ZXN0aW9uIGZvciB0aGUgdGFsayA6KSkKClRoZXJlIGFyZSB0d28gY3VycmVudCBzb2x1dGlv
+bnMgKGxpa2UgdGhlcmUgYXJlIHR3byBUU1NzKToKCmh0dHA6Ly9pYm1zd3RwbS5zb3VyY2Vmb3Jn
+ZS5uZXQvaWJtYWNzLmh0bWwKaHR0cHM6Ly8wMS5vcmcvb3BlbmNpdAoKRGVwZW5kcyB3aGljaCB0
+YWtlcyB5b3VyIGZhbmN5LiDCoEFuZCBwb3NzaWJseSB5b3VyIGxhbmd1YWdlCnByZWZlcmVuY2Vz
+OiDCoHRoZSBsYXR0ZXIgdXNlcyBKYXZhIGFuZCB0aGUgZm9ybWVyIGlzIEMgYmFzZWQuCgpKYW1l
+cwoKCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpDaGVjayBvdXQgdGhlIHZpYnJhbnQgdGVjaCBjb21t
+dW5pdHkgb24gb25lIG9mIHRoZSB3b3JsZCdzIG1vc3QKZW5nYWdpbmcgdGVjaCBzaXRlcywgU2xh
+c2hkb3Qub3JnISBodHRwOi8vc2RtLmxpbmsvc2xhc2hkb3QKX19fX19fX19fX19fX19fX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2ZWwgbWFpbGluZyBsaXN0CnRwbWRk
+LWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczovL2xpc3RzLnNvdXJjZWZvcmdlLm5l
+dC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
