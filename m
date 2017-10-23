@@ -1,7 +1,7 @@
-From: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+From: Laurent Bigonville <bigon-8fiUuRrzOP0dnm+yROfE0A@public.gmane.org>
 Subject: Re: tpm device not showing up in /dev anymore
-Date: Mon, 23 Oct 2017 06:45:15 -0700
-Message-ID: <20171023134515.56siz3m6lhrhnovv@rhwork>
+Date: Mon, 23 Oct 2017 15:48:30 +0200
+Message-ID: <e3d4e1b7-d90a-3547-cdb3-1aaedab7b932@debian.org>
 References: <dcad0104c46d4d5f88e642862bdb42c2@MUCSE603.infineon.com>
  <47c4300b-8701-79a6-1c58-3a5853f4c5e3@debian.org>
  <595efb25-8d87-f39d-037f-9c9a98462339@debian.org>
@@ -12,13 +12,13 @@ References: <dcad0104c46d4d5f88e642862bdb42c2@MUCSE603.infineon.com>
  <20171014081318.busge2fhteusfjwx@rhwork>
  <b63b765d-2477-d9fe-9d80-c2ea7e582bce@debian.org>
  <20171023132346.jbqgokwv3ah2oqjo@linux.intel.com>
-Reply-To: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+ <20171023134515.56siz3m6lhrhnovv@rhwork>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="iso-8859-1"; Format="flowed"
-Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset="utf-8"; Format="flowed"
+Content-Transfer-Encoding: base64
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20171023132346.jbqgokwv3ah2oqjo-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+In-Reply-To: <20171023134515.56siz3m6lhrhnovv@rhwork>
+Content-Language: en-US
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -27,214 +27,165 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+To: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 Cc: linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon Oct 23 17, Jarkko Sakkinen wrote:
->On Sat, Oct 21, 2017 at 10:53:55AM +0200, Laurent Bigonville wrote:
->> Le 14/10/17 =E0 10:13, Jerry Snitselaar a =E9crit=A0:
->> > On Wed Sep 06 17, Jarkko Sakkinen wrote:
->> > > On Fri, Sep 01, 2017 at 02:10:18PM +0200, Laurent Bigonville wrote:
->> > > > Le 31/08/17 =E0 18:40, Jerry Snitselaar a =E9crit=A0:
->> > > > > On Thu Aug 31 17, Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org wrote:
->> > > > > > > Le 29/08/17 =E0 18:35, Laurent Bigonville a =E9crit=A0:
->> > > > > > > > Le 29/08/17 =E0 18:00, Alexander.Steffen-d0qZbvYSIPpWk0Htik3J/w@public.gmane.org a =
-=E9crit=A0:
->> > > > > > > >>> An idea how to troubleshoot this?
->> > > > > > > >> Can you run git bisect on the changes between 4.11 and
->> > > > 4.12, so that
->> > > > > > > >> we find the offending commit? It is probably sufficient
->> > > > to limit the
->> > > > > > > >> search to commits that touch something in drivers/char/tp=
-m.
->> > > > > > > >
->> > > > > > > > I'll try and keep you posted.
->> > > > > > >
->> > > > > > > OK I've been able to bisect the problem and the bad commit i=
-s:
->> > > > > > >
->> > > > > > > e6aef069b6e97790cb127d5eeb86ae9ff0b7b0e3 is the first bad co=
-mmit
->> > > > > > > commit e6aef069b6e97790cb127d5eeb86ae9ff0b7b0e3
->> > > > > > > Author: Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
->> > > > > > > Date:=A0=A0 Mon Mar 27 08:46:04 2017 -0700
->> > > > > > >
->> > > > > > > =A0=A0=A0=A0 tpm_tis: convert to using locality callbacks
->> > > > > > >
->> > > > > > > =A0=A0=A0=A0 This patch converts tpm_tis to use of the new t=
-pm class ops
->> > > > > > > =A0=A0=A0=A0 request_locality, and relinquish_locality.
->> > > > > > >
->> > > > > > > =A0=A0=A0=A0 With the move to using the callbacks, release_l=
-ocality is
->> > > > > > > changed so
->> > > > > > > =A0=A0=A0=A0 that we now release the locality even if there =
-is no
->> > > > > > > request pending.
->> > > > > > >
->> > > > > > > =A0=A0=A0=A0 This required some changes to the tpm_tis_core_=
-init
->> > > > code path to
->> > > > > > > =A0=A0=A0=A0 make sure locality is requested when needed:
->> > > > > > >
->> > > > > > > =A0=A0=A0=A0=A0=A0 - tpm2_probe code path will end up calling
->> > > > > > > request/release through
->> > > > > > > =A0=A0=A0=A0=A0=A0=A0=A0 callbacks, so request_locality prio=
-r to
->> > > > tpm2_probe not needed.
->> > > > > > >
->> > > > > > > =A0=A0=A0=A0=A0=A0 - probe_itpm makes calls to tpm_tis_send_=
-data which no
->> > > > > > > longer calls
->> > > > > > > =A0=A0=A0=A0=A0=A0=A0=A0 request_locality, so add request_lo=
-cality prior to
->> > > > > > > tpm_tis_send_data
->> > > > > > > =A0=A0=A0=A0=A0=A0=A0=A0 calls. Also drop release_locality c=
-all in middleof
->> > > > > > > probe_itpm, and
->> > > > > > > =A0=A0=A0=A0=A0=A0=A0=A0 keep locality until release_localit=
-y called at end of
->> > > > > > > probe_itpm.
->> > > > > > >
->> > > > > > > =A0=A0=A0=A0 Cc: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
->> > > > > > > =A0=A0=A0=A0 Cc: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563N0uC3ymp8PA@public.gmane.org=
-l.com>
->> > > > > > > =A0=A0=A0=A0 Cc: Jason Gunthorpe <jgunthorpe@obsidianresearc=
-h.com>
->> > > > > > > =A0=A0=A0=A0 Cc: Marcel Selhorst <tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org>
->> > > > > > > =A0=A0=A0=A0 Signed-off-by: Jerry Snitselaar <jsnitsel@redha=
-t.com>
->> > > > > > > =A0=A0=A0=A0 Reviewed-by: Jarkko Sakkinen
->> > > > <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
->> > > > > > > =A0=A0=A0=A0 Tested-by: Jarkko Sakkinen <jarkko.sakkinen@lin=
-ux.intel.com>
->> > > > > > > =A0=A0=A0=A0 Signed-off-by: Jarkko Sakkinen
->> > > > <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
->> > > > > > >
->> > > > > > > :040000 040000 70234365da69959d47076ebb40c8d17f520c3e44
->> > > > > > > 72f21b446e45ea1003de75902b0553deb99157fd M drivers
->> > > > > > >
->> > > > > >
->> > > > > > I've looked again at the code in question, but could not find
->> > > > > > anything that is obviously wrong there. Locality is now
->> > > > > > requested/released at slightly different points in the process=
- than
->> > > > > > before, but that's it. It does not seem to cause problems with=
- the
->> > > > > > majority of TPMs, since you are the first to report any, so
->> > > > maybe it
->> > > > > > is a quirk that only affects this device.
->> > > > > >
->> > > > > > Perhaps Jerry can help, since this is his change?
->> > > > > >
->> > > > > > Alexander
->> > > > >
->> > > > > Getting some caffeine in me, and starting to take a look. Adding
->> > > > > Jarkko as well since this might involve the general locality cha=
-nges.
->> > > > >
->> > > > > Laurent, if I send you a patch with some debugging code added, w=
-ould
->> > > > > you be able to run it on that system? I wasn't running into issu=
-es
->> > > > > on the system I had with a 1.2 device, but I no longer have acce=
-ss
->> > > > > to it. I'll see if I can find one in our labs and reproduce it t=
-here.
->> > > >
->> > > > Yes I should be able to do that
->> > >
->> > > Any findings?
->> > >
->> > > /Jarkko
->> >
->> > Okay, finally getting back to this. Looking at the code it isn't clear
->> > to me
->> > why the change is causing this. So while I stare at this some more
->> > Laurent
->> > could you reproduce it with this patch so I can see what the status and
->> > access registers look like? Does anyone else on here happen to have a
->> > Sinosun
->> > tpm device? The systems I have access to with TPM1.2 devices don't have
->> > this
->> > issue.
->> >
->> > --8<--
->> >
->> > diff --git a/drivers/char/tpm/tpm_tis_core.c
->> > b/drivers/char/tpm/tpm_tis_core.c
->> > index fdde971bc810..7d60a7e4b50a 100644
->> > --- a/drivers/char/tpm/tpm_tis_core.c
->> > +++ b/drivers/char/tpm/tpm_tis_core.c
->> > @@ -258,6 +258,7 @@ static int tpm_tis_send_data(struct tpm_chip *chip,
->> > const u8 *buf, size_t len)
->> > =A0=A0=A0=A0int rc, status, burstcnt;
->> > =A0=A0=A0=A0size_t count =3D 0;
->> > =A0=A0=A0=A0bool itpm =3D priv->flags & TPM_TIS_ITPM_WORKAROUND;
->> > +=A0=A0=A0 u8 access;
->> >
->> > =A0=A0=A0=A0status =3D tpm_tis_status(chip);
->> > =A0=A0=A0=A0if ((status & TPM_STS_COMMAND_READY) =3D=3D 0) {
->> > @@ -292,6 +293,11 @@ static int tpm_tis_send_data(struct tpm_chip *chi=
-p,
->> > const u8 *buf, size_t len)
->> > =A0=A0=A0=A0=A0=A0=A0 }
->> > =A0=A0=A0=A0=A0=A0=A0 status =3D tpm_tis_status(chip);
->> > =A0=A0=A0=A0=A0=A0=A0 if (!itpm && (status & TPM_STS_DATA_EXPECT) =3D=
-=3D 0) {
->> > +=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0 rc =3D tpm_tis_read8(priv, TPM_ACCE=
-SS(priv->locality),
->> > &access);
->> > +=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0 if (rc < 0)
->> > +=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0 dev_info(&chip->dev, "T=
-PM_STS_DATA_EXPECT =3D=3D 0: read
->> > failure TPM_ACCESS(%d)\n", priv->locality);
->> > +=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0 else
->> > +=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0 dev_info(&chip->dev, "T=
-PM_STS_DATA_EXPECT =3D=3D 0:
->> > locality: %d status: %x access: %x\n", priv->locality, status, access);
->> > =A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0 rc =3D -EIO;
->> > =A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0 goto out_err;
->> > =A0=A0=A0=A0=A0=A0=A0 }
->> > @@ -309,6 +315,11 @@ static int tpm_tis_send_data(struct tpm_chip *chi=
-p,
->> > const u8 *buf, size_t len)
->> > =A0=A0=A0=A0}
->> > =A0=A0=A0=A0status =3D tpm_tis_status(chip);
->> > =A0=A0=A0=A0if (!itpm && (status & TPM_STS_DATA_EXPECT) !=3D 0) {
->> > +=A0=A0=A0=A0=A0=A0=A0 rc =3D tpm_tis_read8(priv, TPM_ACCESS(priv->loc=
-ality), &access);
->> > +=A0=A0=A0=A0=A0=A0=A0 if (rc < 0)
->> > +=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0 dev_info(&chip->dev, "TPM_STS_DATA_=
-EXPECT !=3D 0: read
->> > failure TPM_ACCESS(%d)\n", priv->locality);
->> > +=A0=A0=A0=A0=A0=A0=A0 else
->> > +=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0=A0 dev_info(&chip->dev, "TPM_STS_DATA_=
-EXPECT !=3D 0: locality:
->> > %d status: %x access: %x\n", priv->locality, status, access);
->> > =A0=A0=A0=A0=A0=A0=A0 rc =3D -EIO;
->> > =A0=A0=A0=A0=A0=A0=A0 goto out_err;
->> > =A0=A0=A0=A0}
->>
->> Please find here the dmesg output of the patched kernel
->
->At least 0xff is corrupted value in senseful way. CPU fills the read
->with ones for example for unaligned bus read. See table 19 in PC client
->spec. This can happen when you do unaligned read for example.
->
->Maybe TPM is unreachable i.e. powered off. Bit busy with stuff ATM but
->would probably make sense to compare that 0x81 to table 18 in the same
->spec.
->
->/Jarkko
-
-0x81 is saying the access register status is valid, and the locality
-is not active. That first bit means A Dynamic OS has not been previously
-established on the platform. Normally we would see 0xa1, which would
-mean valid register status, and the locality is active.
-
----------------------------------------------------------------------------=
----
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+TGUgMjMvMTAvMTcgw6AgMTU6NDUsIEplcnJ5IFNuaXRzZWxhYXIgYSDDqWNyaXTCoDoKPiBPbiBN
+b24gT2N0IDIzIDE3LCBKYXJra28gU2Fra2luZW4gd3JvdGU6Cj4+IE9uIFNhdCwgT2N0IDIxLCAy
+MDE3IGF0IDEwOjUzOjU1QU0gKzAyMDAsIExhdXJlbnQgQmlnb252aWxsZSB3cm90ZToKPj4+IExl
+IDE0LzEwLzE3IMOgIDEwOjEzLCBKZXJyeSBTbml0c2VsYWFyIGEgw6ljcml0wqA6Cj4+PiA+IE9u
+IFdlZCBTZXAgMDYgMTcsIEphcmtrbyBTYWtraW5lbiB3cm90ZToKPj4+ID4gPiBPbiBGcmksIFNl
+cCAwMSwgMjAxNyBhdCAwMjoxMDoxOFBNICswMjAwLCBMYXVyZW50IEJpZ29udmlsbGUgd3JvdGU6
+Cj4+PiA+ID4gPiBMZSAzMS8wOC8xNyDDoCAxODo0MCwgSmVycnkgU25pdHNlbGFhciBhIMOpY3Jp
+dMKgOgo+Pj4gPiA+ID4gPiBPbiBUaHUgQXVnIDMxIDE3LCBBbGV4YW5kZXIuU3RlZmZlbkBpbmZp
+bmVvbi5jb20gd3JvdGU6Cj4+PiA+ID4gPiA+ID4gPiBMZSAyOS8wOC8xNyDDoCAxODozNSwgTGF1
+cmVudCBCaWdvbnZpbGxlIGEgw6ljcml0wqA6Cj4+PiA+ID4gPiA+ID4gPiA+IExlIDI5LzA4LzE3
+IMOgIDE4OjAwLCBBbGV4YW5kZXIuU3RlZmZlbkBpbmZpbmVvbi5jb20gYSAKPj4+IMOpY3JpdMKg
+Ogo+Pj4gPiA+ID4gPiA+ID4gPj4+IEFuIGlkZWEgaG93IHRvIHRyb3VibGVzaG9vdCB0aGlzPwo+
+Pj4gPiA+ID4gPiA+ID4gPj4gQ2FuIHlvdSBydW4gZ2l0IGJpc2VjdCBvbiB0aGUgY2hhbmdlcyBi
+ZXR3ZWVuIDQuMTEgYW5kCj4+PiA+ID4gPiA0LjEyLCBzbyB0aGF0Cj4+PiA+ID4gPiA+ID4gPiA+
+PiB3ZSBmaW5kIHRoZSBvZmZlbmRpbmcgY29tbWl0PyBJdCBpcyBwcm9iYWJseSBzdWZmaWNpZW50
+Cj4+PiA+ID4gPiB0byBsaW1pdCB0aGUKPj4+ID4gPiA+ID4gPiA+ID4+IHNlYXJjaCB0byBjb21t
+aXRzIHRoYXQgdG91Y2ggc29tZXRoaW5nIGluIAo+Pj4gZHJpdmVycy9jaGFyL3RwbS4KPj4+ID4g
+PiA+ID4gPiA+ID4KPj4+ID4gPiA+ID4gPiA+ID4gSSdsbCB0cnkgYW5kIGtlZXAgeW91IHBvc3Rl
+ZC4KPj4+ID4gPiA+ID4gPiA+Cj4+PiA+ID4gPiA+ID4gPiBPSyBJJ3ZlIGJlZW4gYWJsZSB0byBi
+aXNlY3QgdGhlIHByb2JsZW0gYW5kIHRoZSBiYWQgCj4+PiBjb21taXQgaXM6Cj4+PiA+ID4gPiA+
+ID4gPgo+Pj4gPiA+ID4gPiA+ID4gZTZhZWYwNjliNmU5Nzc5MGNiMTI3ZDVlZWI4NmFlOWZmMGI3
+YjBlMyBpcyB0aGUgZmlyc3QgCj4+PiBiYWQgY29tbWl0Cj4+PiA+ID4gPiA+ID4gPiBjb21taXQg
+ZTZhZWYwNjliNmU5Nzc5MGNiMTI3ZDVlZWI4NmFlOWZmMGI3YjBlMwo+Pj4gPiA+ID4gPiA+ID4g
+QXV0aG9yOiBKZXJyeSBTbml0c2VsYWFyIDxqc25pdHNlbEByZWRoYXQuY29tPgo+Pj4gPiA+ID4g
+PiA+ID4gRGF0ZTrCoMKgIE1vbiBNYXIgMjcgMDg6NDY6MDQgMjAxNyAtMDcwMAo+Pj4gPiA+ID4g
+PiA+ID4KPj4+ID4gPiA+ID4gPiA+IMKgwqDCoMKgIHRwbV90aXM6IGNvbnZlcnQgdG8gdXNpbmcg
+bG9jYWxpdHkgY2FsbGJhY2tzCj4+PiA+ID4gPiA+ID4gPgo+Pj4gPiA+ID4gPiA+ID4gwqDCoMKg
+wqAgVGhpcyBwYXRjaCBjb252ZXJ0cyB0cG1fdGlzIHRvIHVzZSBvZiB0aGUgbmV3IHRwbSAKPj4+
+IGNsYXNzIG9wcwo+Pj4gPiA+ID4gPiA+ID4gwqDCoMKgwqAgcmVxdWVzdF9sb2NhbGl0eSwgYW5k
+IHJlbGlucXVpc2hfbG9jYWxpdHkuCj4+PiA+ID4gPiA+ID4gPgo+Pj4gPiA+ID4gPiA+ID4gwqDC
+oMKgwqAgV2l0aCB0aGUgbW92ZSB0byB1c2luZyB0aGUgY2FsbGJhY2tzLCAKPj4+IHJlbGVhc2Vf
+bG9jYWxpdHkgaXMKPj4+ID4gPiA+ID4gPiA+IGNoYW5nZWQgc28KPj4+ID4gPiA+ID4gPiA+IMKg
+wqDCoMKgIHRoYXQgd2Ugbm93IHJlbGVhc2UgdGhlIGxvY2FsaXR5IGV2ZW4gaWYgdGhlcmUgaXMg
+bm8KPj4+ID4gPiA+ID4gPiA+IHJlcXVlc3QgcGVuZGluZy4KPj4+ID4gPiA+ID4gPiA+Cj4+PiA+
+ID4gPiA+ID4gPiDCoMKgwqDCoCBUaGlzIHJlcXVpcmVkIHNvbWUgY2hhbmdlcyB0byB0aGUgdHBt
+X3Rpc19jb3JlX2luaXQKPj4+ID4gPiA+IGNvZGUgcGF0aCB0bwo+Pj4gPiA+ID4gPiA+ID4gwqDC
+oMKgwqAgbWFrZSBzdXJlIGxvY2FsaXR5IGlzIHJlcXVlc3RlZCB3aGVuIG5lZWRlZDoKPj4+ID4g
+PiA+ID4gPiA+Cj4+PiA+ID4gPiA+ID4gPiDCoMKgwqDCoMKgwqAgLSB0cG0yX3Byb2JlIGNvZGUg
+cGF0aCB3aWxsIGVuZCB1cCBjYWxsaW5nCj4+PiA+ID4gPiA+ID4gPiByZXF1ZXN0L3JlbGVhc2Ug
+dGhyb3VnaAo+Pj4gPiA+ID4gPiA+ID4gwqDCoMKgwqDCoMKgwqDCoCBjYWxsYmFja3MsIHNvIHJl
+cXVlc3RfbG9jYWxpdHkgcHJpb3IgdG8KPj4+ID4gPiA+IHRwbTJfcHJvYmUgbm90IG5lZWRlZC4K
+Pj4+ID4gPiA+ID4gPiA+Cj4+PiA+ID4gPiA+ID4gPiDCoMKgwqDCoMKgwqAgLSBwcm9iZV9pdHBt
+IG1ha2VzIGNhbGxzIHRvIHRwbV90aXNfc2VuZF9kYXRhIAo+Pj4gd2hpY2ggbm8KPj4+ID4gPiA+
+ID4gPiA+IGxvbmdlciBjYWxscwo+Pj4gPiA+ID4gPiA+ID4gwqDCoMKgwqDCoMKgwqDCoCByZXF1
+ZXN0X2xvY2FsaXR5LCBzbyBhZGQgcmVxdWVzdF9sb2NhbGl0eSBwcmlvciB0bwo+Pj4gPiA+ID4g
+PiA+ID4gdHBtX3Rpc19zZW5kX2RhdGEKPj4+ID4gPiA+ID4gPiA+IMKgwqDCoMKgwqDCoMKgwqAg
+Y2FsbHMuIEFsc28gZHJvcCByZWxlYXNlX2xvY2FsaXR5IGNhbGwgaW4gbWlkZGxlb2YKPj4+ID4g
+PiA+ID4gPiA+IHByb2JlX2l0cG0sIGFuZAo+Pj4gPiA+ID4gPiA+ID4gwqDCoMKgwqDCoMKgwqDC
+oCBrZWVwIGxvY2FsaXR5IHVudGlsIHJlbGVhc2VfbG9jYWxpdHkgY2FsbGVkIGF0IAo+Pj4gZW5k
+IG9mCj4+PiA+ID4gPiA+ID4gPiBwcm9iZV9pdHBtLgo+Pj4gPiA+ID4gPiA+ID4KPj4+ID4gPiA+
+ID4gPiA+IMKgwqDCoMKgIENjOiBQZXRlciBIdWV3ZSA8cGV0ZXJodWV3ZUBnbXguZGU+Cj4+PiA+
+ID4gPiA+ID4gPiDCoMKgwqDCoCBDYzogSmFya2tvIFNha2tpbmVuIDxqYXJra28uc2Fra2luZW5A
+bGludXguaW50ZWwuY29tPgo+Pj4gPiA+ID4gPiA+ID4gwqDCoMKgwqAgQ2M6IEphc29uIEd1bnRo
+b3JwZSA8amd1bnRob3JwZUBvYnNpZGlhbnJlc2VhcmNoLmNvbT4KPj4+ID4gPiA+ID4gPiA+IMKg
+wqDCoMKgIENjOiBNYXJjZWwgU2VsaG9yc3QgPHRwbWRkQHNlbGhvcnN0Lm5ldD4KPj4+ID4gPiA+
+ID4gPiA+IMKgwqDCoMKgIFNpZ25lZC1vZmYtYnk6IEplcnJ5IFNuaXRzZWxhYXIgPGpzbml0c2Vs
+QHJlZGhhdC5jb20+Cj4+PiA+ID4gPiA+ID4gPiDCoMKgwqDCoCBSZXZpZXdlZC1ieTogSmFya2tv
+IFNha2tpbmVuCj4+PiA+ID4gPiA8amFya2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbT4KPj4+
+ID4gPiA+ID4gPiA+IMKgwqDCoMKgIFRlc3RlZC1ieTogSmFya2tvIFNha2tpbmVuIAo+Pj4gPGph
+cmtrby5zYWtraW5lbkBsaW51eC5pbnRlbC5jb20+Cj4+PiA+ID4gPiA+ID4gPiDCoMKgwqDCoCBT
+aWduZWQtb2ZmLWJ5OiBKYXJra28gU2Fra2luZW4KPj4+ID4gPiA+IDxqYXJra28uc2Fra2luZW5A
+bGludXguaW50ZWwuY29tPgo+Pj4gPiA+ID4gPiA+ID4KPj4+ID4gPiA+ID4gPiA+IDowNDAwMDAg
+MDQwMDAwIDcwMjM0MzY1ZGE2OTk1OWQ0NzA3NmViYjQwYzhkMTdmNTIwYzNlNDQKPj4+ID4gPiA+
+ID4gPiA+IDcyZjIxYjQ0NmU0NWVhMTAwM2RlNzU5MDJiMDU1M2RlYjk5MTU3ZmQgTSBkcml2ZXJz
+Cj4+PiA+ID4gPiA+ID4gPgo+Pj4gPiA+ID4gPiA+Cj4+PiA+ID4gPiA+ID4gSSd2ZSBsb29rZWQg
+YWdhaW4gYXQgdGhlIGNvZGUgaW4gcXVlc3Rpb24sIGJ1dCBjb3VsZCBub3QgZmluZAo+Pj4gPiA+
+ID4gPiA+IGFueXRoaW5nIHRoYXQgaXMgb2J2aW91c2x5IHdyb25nIHRoZXJlLiBMb2NhbGl0eSBp
+cyBub3cKPj4+ID4gPiA+ID4gPiByZXF1ZXN0ZWQvcmVsZWFzZWQgYXQgc2xpZ2h0bHkgZGlmZmVy
+ZW50IHBvaW50cyBpbiB0aGUgCj4+PiBwcm9jZXNzIHRoYW4KPj4+ID4gPiA+ID4gPiBiZWZvcmUs
+IGJ1dCB0aGF0J3MgaXQuIEl0IGRvZXMgbm90IHNlZW0gdG8gY2F1c2UgcHJvYmxlbXMgCj4+PiB3
+aXRoIHRoZQo+Pj4gPiA+ID4gPiA+IG1ham9yaXR5IG9mIFRQTXMsIHNpbmNlIHlvdSBhcmUgdGhl
+IGZpcnN0IHRvIHJlcG9ydCBhbnksIHNvCj4+PiA+ID4gPiBtYXliZSBpdAo+Pj4gPiA+ID4gPiA+
+IGlzIGEgcXVpcmsgdGhhdCBvbmx5IGFmZmVjdHMgdGhpcyBkZXZpY2UuCj4+PiA+ID4gPiA+ID4K
+Pj4+ID4gPiA+ID4gPiBQZXJoYXBzIEplcnJ5IGNhbiBoZWxwLCBzaW5jZSB0aGlzIGlzIGhpcyBj
+aGFuZ2U/Cj4+PiA+ID4gPiA+ID4KPj4+ID4gPiA+ID4gPiBBbGV4YW5kZXIKPj4+ID4gPiA+ID4K
+Pj4+ID4gPiA+ID4gR2V0dGluZyBzb21lIGNhZmZlaW5lIGluIG1lLCBhbmQgc3RhcnRpbmcgdG8g
+dGFrZSBhIGxvb2suIAo+Pj4gQWRkaW5nCj4+PiA+ID4gPiA+IEphcmtrbyBhcyB3ZWxsIHNpbmNl
+IHRoaXMgbWlnaHQgaW52b2x2ZSB0aGUgZ2VuZXJhbCBsb2NhbGl0eSAKPj4+IGNoYW5nZXMuCj4+
+PiA+ID4gPiA+Cj4+PiA+ID4gPiA+IExhdXJlbnQsIGlmIEkgc2VuZCB5b3UgYSBwYXRjaCB3aXRo
+IHNvbWUgZGVidWdnaW5nIGNvZGUgCj4+PiBhZGRlZCwgd291bGQKPj4+ID4gPiA+ID4geW91IGJl
+IGFibGUgdG8gcnVuIGl0IG9uIHRoYXQgc3lzdGVtPyBJIHdhc24ndCBydW5uaW5nIGludG8gCj4+
+PiBpc3N1ZXMKPj4+ID4gPiA+ID4gb24gdGhlIHN5c3RlbSBJIGhhZCB3aXRoIGEgMS4yIGRldmlj
+ZSwgYnV0IEkgbm8gbG9uZ2VyIGhhdmUgCj4+PiBhY2Nlc3MKPj4+ID4gPiA+ID4gdG8gaXQuIEkn
+bGwgc2VlIGlmIEkgY2FuIGZpbmQgb25lIGluIG91ciBsYWJzIGFuZCByZXByb2R1Y2UgCj4+PiBp
+dCB0aGVyZS4KPj4+ID4gPiA+Cj4+PiA+ID4gPiBZZXMgSSBzaG91bGQgYmUgYWJsZSB0byBkbyB0
+aGF0Cj4+PiA+ID4KPj4+ID4gPiBBbnkgZmluZGluZ3M/Cj4+PiA+ID4KPj4+ID4gPiAvSmFya2tv
+Cj4+PiA+Cj4+PiA+IE9rYXksIGZpbmFsbHkgZ2V0dGluZyBiYWNrIHRvIHRoaXMuIExvb2tpbmcg
+YXQgdGhlIGNvZGUgaXQgaXNuJ3QgCj4+PiBjbGVhcgo+Pj4gPiB0byBtZQo+Pj4gPiB3aHkgdGhl
+IGNoYW5nZSBpcyBjYXVzaW5nIHRoaXMuIFNvIHdoaWxlIEkgc3RhcmUgYXQgdGhpcyBzb21lIG1v
+cmUKPj4+ID4gTGF1cmVudAo+Pj4gPiBjb3VsZCB5b3UgcmVwcm9kdWNlIGl0IHdpdGggdGhpcyBw
+YXRjaCBzbyBJIGNhbiBzZWUgd2hhdCB0aGUgCj4+PiBzdGF0dXMgYW5kCj4+PiA+IGFjY2VzcyBy
+ZWdpc3RlcnMgbG9vayBsaWtlPyBEb2VzIGFueW9uZSBlbHNlIG9uIGhlcmUgaGFwcGVuIHRvIGhh
+dmUgYQo+Pj4gPiBTaW5vc3VuCj4+PiA+IHRwbSBkZXZpY2U/IFRoZSBzeXN0ZW1zIEkgaGF2ZSBh
+Y2Nlc3MgdG8gd2l0aCBUUE0xLjIgZGV2aWNlcyBkb24ndCAKPj4+IGhhdmUKPj4+ID4gdGhpcwo+
+Pj4gPiBpc3N1ZS4KPj4+ID4KPj4+ID4gLS04PC0tCj4+PiA+Cj4+PiA+IGRpZmYgLS1naXQgYS9k
+cml2ZXJzL2NoYXIvdHBtL3RwbV90aXNfY29yZS5jCj4+PiA+IGIvZHJpdmVycy9jaGFyL3RwbS90
+cG1fdGlzX2NvcmUuYwo+Pj4gPiBpbmRleCBmZGRlOTcxYmM4MTAuLjdkNjBhN2U0YjUwYSAxMDA2
+NDQKPj4+ID4gLS0tIGEvZHJpdmVycy9jaGFyL3RwbS90cG1fdGlzX2NvcmUuYwo+Pj4gPiArKysg
+Yi9kcml2ZXJzL2NoYXIvdHBtL3RwbV90aXNfY29yZS5jCj4+PiA+IEBAIC0yNTgsNiArMjU4LDcg
+QEAgc3RhdGljIGludCB0cG1fdGlzX3NlbmRfZGF0YShzdHJ1Y3QgdHBtX2NoaXAgCj4+PiAqY2hp
+cCwKPj4+ID4gY29uc3QgdTggKmJ1Ziwgc2l6ZV90IGxlbikKPj4+ID4gwqDCoMKgwqBpbnQgcmMs
+IHN0YXR1cywgYnVyc3RjbnQ7Cj4+PiA+IMKgwqDCoMKgc2l6ZV90IGNvdW50ID0gMDsKPj4+ID4g
+wqDCoMKgwqBib29sIGl0cG0gPSBwcml2LT5mbGFncyAmIFRQTV9USVNfSVRQTV9XT1JLQVJPVU5E
+Owo+Pj4gPiArwqDCoMKgIHU4IGFjY2VzczsKPj4+ID4KPj4+ID4gwqDCoMKgwqBzdGF0dXMgPSB0
+cG1fdGlzX3N0YXR1cyhjaGlwKTsKPj4+ID4gwqDCoMKgwqBpZiAoKHN0YXR1cyAmIFRQTV9TVFNf
+Q09NTUFORF9SRUFEWSkgPT0gMCkgewo+Pj4gPiBAQCAtMjkyLDYgKzI5MywxMSBAQCBzdGF0aWMg
+aW50IHRwbV90aXNfc2VuZF9kYXRhKHN0cnVjdCB0cG1fY2hpcCAKPj4+ICpjaGlwLAo+Pj4gPiBj
+b25zdCB1OCAqYnVmLCBzaXplX3QgbGVuKQo+Pj4gPiDCoMKgwqDCoMKgwqDCoCB9Cj4+PiA+IMKg
+wqDCoMKgwqDCoMKgIHN0YXR1cyA9IHRwbV90aXNfc3RhdHVzKGNoaXApOwo+Pj4gPiDCoMKgwqDC
+oMKgwqDCoCBpZiAoIWl0cG0gJiYgKHN0YXR1cyAmIFRQTV9TVFNfREFUQV9FWFBFQ1QpID09IDAp
+IHsKPj4+ID4gK8KgwqDCoMKgwqDCoMKgwqDCoMKgwqAgcmMgPSB0cG1fdGlzX3JlYWQ4KHByaXYs
+IFRQTV9BQ0NFU1MocHJpdi0+bG9jYWxpdHkpLAo+Pj4gPiAmYWNjZXNzKTsKPj4+ID4gK8KgwqDC
+oMKgwqDCoMKgwqDCoMKgwqAgaWYgKHJjIDwgMCkKPj4+ID4gK8KgwqDCoMKgwqDCoMKgwqDCoMKg
+wqDCoMKgwqDCoCBkZXZfaW5mbygmY2hpcC0+ZGV2LCAiVFBNX1NUU19EQVRBX0VYUEVDVCA9PSAw
+OiByZWFkCj4+PiA+IGZhaWx1cmUgVFBNX0FDQ0VTUyglZClcbiIsIHByaXYtPmxvY2FsaXR5KTsK
+Pj4+ID4gK8KgwqDCoMKgwqDCoMKgwqDCoMKgwqAgZWxzZQo+Pj4gPiArwqDCoMKgwqDCoMKgwqDC
+oMKgwqDCoMKgwqDCoMKgIGRldl9pbmZvKCZjaGlwLT5kZXYsICJUUE1fU1RTX0RBVEFfRVhQRUNU
+ID09IDA6Cj4+PiA+IGxvY2FsaXR5OiAlZCBzdGF0dXM6ICV4IGFjY2VzczogJXhcbiIsIHByaXYt
+PmxvY2FsaXR5LCBzdGF0dXMsIAo+Pj4gYWNjZXNzKTsKPj4+ID4gwqDCoMKgwqDCoMKgwqDCoMKg
+wqDCoCByYyA9IC1FSU87Cj4+PiA+IMKgwqDCoMKgwqDCoMKgwqDCoMKgwqAgZ290byBvdXRfZXJy
+Owo+Pj4gPiDCoMKgwqDCoMKgwqDCoCB9Cj4+PiA+IEBAIC0zMDksNiArMzE1LDExIEBAIHN0YXRp
+YyBpbnQgdHBtX3Rpc19zZW5kX2RhdGEoc3RydWN0IHRwbV9jaGlwIAo+Pj4gKmNoaXAsCj4+PiA+
+IGNvbnN0IHU4ICpidWYsIHNpemVfdCBsZW4pCj4+PiA+IMKgwqDCoMKgfQo+Pj4gPiDCoMKgwqDC
+oHN0YXR1cyA9IHRwbV90aXNfc3RhdHVzKGNoaXApOwo+Pj4gPiDCoMKgwqDCoGlmICghaXRwbSAm
+JiAoc3RhdHVzICYgVFBNX1NUU19EQVRBX0VYUEVDVCkgIT0gMCkgewo+Pj4gPiArwqDCoMKgwqDC
+oMKgwqAgcmMgPSB0cG1fdGlzX3JlYWQ4KHByaXYsIFRQTV9BQ0NFU1MocHJpdi0+bG9jYWxpdHkp
+LCAKPj4+ICZhY2Nlc3MpOwo+Pj4gPiArwqDCoMKgwqDCoMKgwqAgaWYgKHJjIDwgMCkKPj4+ID4g
+K8KgwqDCoMKgwqDCoMKgwqDCoMKgwqAgZGV2X2luZm8oJmNoaXAtPmRldiwgIlRQTV9TVFNfREFU
+QV9FWFBFQ1QgIT0gMDogcmVhZAo+Pj4gPiBmYWlsdXJlIFRQTV9BQ0NFU1MoJWQpXG4iLCBwcml2
+LT5sb2NhbGl0eSk7Cj4+PiA+ICvCoMKgwqDCoMKgwqDCoCBlbHNlCj4+PiA+ICvCoMKgwqDCoMKg
+wqDCoMKgwqDCoMKgIGRldl9pbmZvKCZjaGlwLT5kZXYsICJUUE1fU1RTX0RBVEFfRVhQRUNUICE9
+IDA6IAo+Pj4gbG9jYWxpdHk6Cj4+PiA+ICVkIHN0YXR1czogJXggYWNjZXNzOiAleFxuIiwgcHJp
+di0+bG9jYWxpdHksIHN0YXR1cywgYWNjZXNzKTsKPj4+ID4gwqDCoMKgwqDCoMKgwqAgcmMgPSAt
+RUlPOwo+Pj4gPiDCoMKgwqDCoMKgwqDCoCBnb3RvIG91dF9lcnI7Cj4+PiA+IMKgwqDCoMKgfQo+
+Pj4KPj4+IFBsZWFzZSBmaW5kIGhlcmUgdGhlIGRtZXNnIG91dHB1dCBvZiB0aGUgcGF0Y2hlZCBr
+ZXJuZWwKPj4KPj4gQXQgbGVhc3QgMHhmZiBpcyBjb3JydXB0ZWQgdmFsdWUgaW4gc2Vuc2VmdWwg
+d2F5LiBDUFUgZmlsbHMgdGhlIHJlYWQKPj4gd2l0aCBvbmVzIGZvciBleGFtcGxlIGZvciB1bmFs
+aWduZWQgYnVzIHJlYWQuIFNlZSB0YWJsZSAxOSBpbiBQQyBjbGllbnQKPj4gc3BlYy4gVGhpcyBj
+YW4gaGFwcGVuIHdoZW4geW91IGRvIHVuYWxpZ25lZCByZWFkIGZvciBleGFtcGxlLgo+Pgo+PiBN
+YXliZSBUUE0gaXMgdW5yZWFjaGFibGUgaS5lLiBwb3dlcmVkIG9mZi4gQml0IGJ1c3kgd2l0aCBz
+dHVmZiBBVE0gYnV0Cj4+IHdvdWxkIHByb2JhYmx5IG1ha2Ugc2Vuc2UgdG8gY29tcGFyZSB0aGF0
+IDB4ODEgdG8gdGFibGUgMTggaW4gdGhlIHNhbWUKPj4gc3BlYy4KPj4KPj4gL0phcmtrbwo+Cj4g
+MHg4MSBpcyBzYXlpbmcgdGhlIGFjY2VzcyByZWdpc3RlciBzdGF0dXMgaXMgdmFsaWQsIGFuZCB0
+aGUgbG9jYWxpdHkKPiBpcyBub3QgYWN0aXZlLiBUaGF0IGZpcnN0IGJpdCBtZWFucyBBIER5bmFt
+aWMgT1MgaGFzIG5vdCBiZWVuIHByZXZpb3VzbHkKPiBlc3RhYmxpc2hlZCBvbiB0aGUgcGxhdGZv
+cm0uIE5vcm1hbGx5IHdlIHdvdWxkIHNlZSAweGExLCB3aGljaCB3b3VsZAo+IG1lYW4gdmFsaWQg
+cmVnaXN0ZXIgc3RhdHVzLCBhbmQgdGhlIGxvY2FsaXR5IGlzIGFjdGl2ZS4KCkZUUiwgdGhlIG93
+bmVyc2hpcCBoYXMgYmVlbiBjbGFpbWVkIHVzaW5nIHRwbS10b29scyBvbiBsaW51eCwgYnV0IEkg
+CmNvbmZpZ3VyZWQgd2luZG93cyAxMCAoZHVhbC1ib290KSBvbiB0aGUgbWFjaGluZSB0byBkbyBp
+dHMgbWFnaWMgdG8gCnJlY29nbml6ZSB0aGUgdHBtIGNoaXAgYnkgZW50ZXJpbmcgdGhlIG93bmVy
+IHBhc3N3b3JkIG1hbnVhbGx5IHRoZXJlLCAKbm90IHN1cmUgaWYgdGhhdCBtYXR0ZXJzLgoKLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tCkNoZWNrIG91dCB0aGUgdmlicmFudCB0ZWNoIGNvbW11bml0eSBv
+biBvbmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAplbmdhZ2luZyB0ZWNoIHNpdGVzLCBTbGFzaGRvdC5v
+cmchIGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdApfX19fX19fX19fX19fX19fX19fX19fX19fX19f
+X19fX19fX19fX19fX19fX19fXwp0cG1kZC1kZXZlbCBtYWlsaW5nIGxpc3QKdHBtZGQtZGV2ZWxA
+bGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0L2xpc3Rz
+L2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
