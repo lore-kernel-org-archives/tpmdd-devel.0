@@ -1,21 +1,23 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+From: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
 Subject: Re: [PATCH] tpm: remove chip_num parameter from
  in-kernel API
-Date: Tue, 24 Oct 2017 20:22:35 +0200
-Message-ID: <20171024182235.d7b3oajc5zcjs57v@linux.intel.com>
+Date: Tue, 24 Oct 2017 20:40:47 +0200
+Message-ID: <BE0E16D6-DEC9-4640-89D3-6609A877B8CD@gmx.de>
 References: <20171023123817.18559-1-jarkko.sakkinen@linux.intel.com>
  <cbcb78c6-fa36-32d3-891e-96544875d97c@linux.vnet.ibm.com>
  <20171023163139.GA17394@obsidianresearch.com>
  <20171024154440.3jeupmus43jcgbbz@linux.intel.com>
  <CANc+2y4TbkfPT3d_sBd0MbE7ZJ4F7Sfsfvdv9V6=63=tRpWn4A@mail.gmail.com>
- <20171024162359.tf5xulhlhokmuxh5@linux.intel.com>
- <CANc+2y4vtr+kbhC_7Rv=rHA2LgEVBHLFEu+DYYK1UmpU63PCgQ@mail.gmail.com>
+ <20171024155526.GA32250@obsidianresearch.com>
+ <CANc+2y6-P9MvjbL18h02SPwNMPyk4_cPFfL6LKHDXiKSHfv00A@mail.gmail.com>
+ <20171024161118.GA348@obsidianresearch.com>
+ <CAKdAkRT9sLux6S1qdd=j0nbXSBdnYGG_hvjny=ic0YJLVNnxzA@mail.gmail.com>
+ <20171024181512.iaxtzgxexhki7aqr@linux.intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <CANc+2y4vtr+kbhC_7Rv=rHA2LgEVBHLFEu+DYYK1UmpU63PCgQ-JsoAwUIsXosN+BqQ9rBEUg@public.gmane.org>
+In-Reply-To: <20171024181512.iaxtzgxexhki7aqr-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -24,65 +26,72 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: PrasannaKumar Muralidharan <prasannatsmkumar-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
-Cc: David Howells <dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, Herbert Xu <herbert-lOAM2aK0SrRLBo1qDEOMRrpzq4S04n8Q@public.gmane.org>, "open list:INTEGRITY MEASUREMENT ARCHITECTURE IMA" <linux-ima-user-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, Dmitry Kasatkin <dmitry.kasatkin-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, David Safford <safford-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "open list:KEYS-TRUSTED" <keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, James Morris <james.l.morris-QHcLZuEGTsvQT0dZR+AlfA@public.gmane.org>, Matt Mackall <mpm-VDJrAJ4Gl5ZBDgjK7y7TUQ@public.gmane.org>, "open list:INTEGRITY MEASUREMENT ARCHITECTURE IMA" <linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>, "Serge E. Hallyn" <serge-A9i7LUbDfNHQT0dZR+AlfA@public.gmane.org>
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Dmitry Torokhov <dmitry.torokhov-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>
+Cc: David Howells <dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, Herbert Xu <herbert-lOAM2aK0SrRLBo1qDEOMRrpzq4S04n8Q@public.gmane.org>, "open list:INTEGRITY MEASUREMENT ARCHITECTURE IMA" <linux-ima-user-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, PrasannaKumar Muralidharan <prasannatsmkumar-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, Matt Mackall <mpm-VDJrAJ4Gl5ZBDgjK7y7TUQ@public.gmane.org>, David Safford <safford-r/Jw6+rmf7HQT0dZR+AlfA@public.gmane.org>, open list <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, "open list:KEYS-TRUSTED" <keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, James Morris <james.l.morris-QHcLZuEGTsvQT0dZR+AlfA@public.gmane.org>, Dmitry Kasatkin <dmitry.kasatkin-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org>, "open list:INTEGRITY MEASUREMENT ARCHITECTURE IMA" <linux-ima-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>, linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Mimi Zohar <zohar-23VcF4HTsmIX0ybBhKVfKQ@public.gmane.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Oct 24, 2017 at 10:05:20PM +0530, PrasannaKumar Muralidharan wrote:
-> > 1. Every user in the kernel is using TPM_ANY_NUM, which means there are
-> >    no other users.
-> 
-> Completely agree that there is no in kernel users yet.
 
-And should never be. It's a bogus parameter that makes no sense.
 
-> > 2. Moving struct tpm_rng to the TPM client is architecturally
-> >    uacceptable.
-> 
-> As there was no response to the patch there is no way to know whether
-> it is acceptable or not.
+Am 24. Oktober 2017 20:15:12 MESZ schrieb Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>:
+>On Tue, Oct 24, 2017 at 10:02:00AM -0700, Dmitry Torokhov wrote:
+>> On Tue, Oct 24, 2017 at 9:11 AM, Jason Gunthorpe
+>> <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote:
+>> > On Tue, Oct 24, 2017 at 09:37:33PM +0530, PrasannaKumar
+>Muralidharan wrote:
+>> >> Hi Jason,
+>> >>
+>> >> On 24 October 2017 at 21:25, Jason Gunthorpe
+>> >> <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org> wrote:
+>> >> > On Tue, Oct 24, 2017 at 09:21:15PM +0530, PrasannaKumar
+>Muralidharan wrote:
+>> >> >
+>> >> >> Please check the RFC [1]. It does use chip id. The rfc has
+>issues and
+>> >> >> has to be fixed but still there could be users of the API.
+>> >> >>
+>> >> >> 1. https://www.spinics.net/lists/linux-crypto/msg28282.html
+>> >> >
+>> >> > That patch isn't safe at all. You need to store a kref to th
+>chip in
+>> >> > the hwrng, not parse a string.
+>> >>
+>> >> The drivers/char/hw_random/tpm-rng.c module does not store the
+>chip
+>> >> reference so I guess the usage is safe.
+>> >
+>> > It is using the default TPM, it is always safe to use the default
+>tpm.
+>> 
+>> tpm-rng is abomination that should be kicked out as soon as possible.
+>> It wrecks havoc with the power management (TPM chip drivers may go
+>> into suspend state, but tpm_rng does not do any power management and
+>> happily forwards requests to suspended hardware) and may be available
+>> when there is no TPM at all yet (the drivers have not been probed
+>yet,
+>> or have gotten a deferral, etc).
+>> 
+>> TPM core should register HWRNGs when chips are ready.
+>> 
+>> Thanks.
+>> 
+>> -- 
+>> Dmitry
+>
+>I'm fine to review a two patch set where:
+>
+>1. Patch 1 removes the existing TPM rng driver
+>2. Patch 2 makes the TPM driver as rng producer
 
-I like the idea of removing the tpm rng driver as discussed in other
-emails in this thread.
+Yes, but tpm must be kept a hwrng source.
+This is imho an important use case.
 
-> > 3. Using zero deos not give you any better guarantees on anything than
-> >    just using TPM_ANY_NUM.
-> 
-> Chip id is used, not zero.
+>
+>Unrelate to patch that I'm proposing now but this sounds sensible.
+>
+>/Jarkko
 
-Sorry I misread the patch first time. Anyway it's not any kind of ID to
-be trusted.
-
-> > Why this patch is not CC'd to linux-integrity? It modifies the TPM
-> > driver. And in the worst way.
-> 
-> TPM list is moderated and the moderator has not approved it yet.
-> get_maintainer script did not say about linux-integrity mailing list.
-> 
-> It could be doing things in worst way but it is not known until some
-> one says. If no one tells it is the case I don't think it is possible
-> to fix. Which is what happened.
-
-Understood. We've moved to linux-integrity-u79uwXL29TaiAVqoAR/hOA@public.gmane.org MAINTAINERS
-update is in the queue for the next kernel release.
-
-> > Implementing the ideas that Jason explained is the senseful way to
-> > get stable access. modules.dep makes sure that the modules are loaded
-> > in the correct order.
-> 
-> If that is sensible then it is the way to go.
-> 
-> There must be a reason to believe what is sensible and what is not.
-> Looks like this RFC has helped in judging that.
-> 
-> Regards,
-> PrasannaKumar
-
-Would you be interested to work on patch set that would remove the
-existing tpm rng driver and make the TPM driver the customer? It's not
-that far away from the work you've been doing already.
-
-/Jarkko
+-- 
+Sent from my mobile
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
