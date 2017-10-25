@@ -1,185 +1,604 @@
-From: Laurent Bigonville <bigon-8fiUuRrzOP0dnm+yROfE0A@public.gmane.org>
-Subject: Re: tpm device not showing up in /dev anymore
-Date: Wed, 25 Oct 2017 10:04:41 +0200
-Message-ID: <8533a8e4-8c31-20ed-9944-ec415e28ae53@debian.org>
-References: <47c4300b-8701-79a6-1c58-3a5853f4c5e3@debian.org>
- <595efb25-8d87-f39d-037f-9c9a98462339@debian.org>
- <857106e4bb864bb8a68b1381fffc8f50@MUCSE603.infineon.com>
- <20170831164015.3ajgwydgxtippwoz@rhwork>
- <0d9be244-ace0-030d-6ff9-c4e94c63b7e9@debian.org>
- <20170906040555.fqedhmo5277sd6fq@linux.intel.com>
- <20171014081318.busge2fhteusfjwx@rhwork>
- <b63b765d-2477-d9fe-9d80-c2ea7e582bce@debian.org>
- <20171023132346.jbqgokwv3ah2oqjo@linux.intel.com>
- <20171023134515.56siz3m6lhrhnovv@rhwork>
- <20171024135123.uqail7olnespun4k@linux.intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"; Format="flowed"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <20171024135123.uqail7olnespun4k-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Content-Language: en-US
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-Cc: linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH v2] tpm: use struct tpm_chip for tpm_chip_find_get()
+Date: Wed, 25 Oct 2017 13:55:04 +0200
+Message-ID: <20171025115508.5682-1-jarkko.sakkinen@linux.intel.com>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: linux-integrity@vger.kernel.org
+Cc: linux-security-module@vger.kernel.org, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Matt Mackall <mpm@selenic.com>, Herbert Xu <herbert@gondor.apana.org.au>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, David Safford <safford@us.ibm.com>, David Howells <dhowells@redhat.com>, Jerry Snitselaar <jsnitsel@redhat.com>, "open list:HARDWARE RANDOM NUMBER
+        GENERATOR CORE" <linux-crypto@vger.kernel.org>, open list <linux-kernel@vger.kernel.org>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>linux
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-CgpMZSAyNC8xMC8xNyDDoCAxNTo1MSwgSmFya2tvIFNha2tpbmVuIGEgw6ljcml0wqA6Cj4gT24g
-TW9uLCBPY3QgMjMsIDIwMTcgYXQgMDY6NDU6MTVBTSAtMDcwMCwgSmVycnkgU25pdHNlbGFhciB3
-cm90ZToKPj4gT24gTW9uIE9jdCAyMyAxNywgSmFya2tvIFNha2tpbmVuIHdyb3RlOgo+Pj4gT24g
-U2F0LCBPY3QgMjEsIDIwMTcgYXQgMTA6NTM6NTVBTSArMDIwMCwgTGF1cmVudCBCaWdvbnZpbGxl
-IHdyb3RlOgo+Pj4+IExlIDE0LzEwLzE3IMOgIDEwOjEzLCBKZXJyeSBTbml0c2VsYWFyIGEgw6lj
-cml0wqA6Cj4+Pj4+IE9uIFdlZCBTZXAgMDYgMTcsIEphcmtrbyBTYWtraW5lbiB3cm90ZToKPj4+
-Pj4+IE9uIEZyaSwgU2VwIDAxLCAyMDE3IGF0IDAyOjEwOjE4UE0gKzAyMDAsIExhdXJlbnQgQmln
-b252aWxsZSB3cm90ZToKPj4+Pj4+PiBMZSAzMS8wOC8xNyDDoCAxODo0MCwgSmVycnkgU25pdHNl
-bGFhciBhIMOpY3JpdMKgOgo+Pj4+Pj4+PiBPbiBUaHUgQXVnIDMxIDE3LCBBbGV4YW5kZXIuU3Rl
-ZmZlbkBpbmZpbmVvbi5jb20gd3JvdGU6Cj4+Pj4+Pj4+Pj4gTGUgMjkvMDgvMTcgw6AgMTg6MzUs
-IExhdXJlbnQgQmlnb252aWxsZSBhIMOpY3JpdMKgOgo+Pj4+Pj4+Pj4+PiBMZSAyOS8wOC8xNyDD
-oCAxODowMCwgQWxleGFuZGVyLlN0ZWZmZW5AaW5maW5lb24uY29tIGEgw6ljcml0wqA6Cj4+Pj4+
-Pj4+Pj4+Pj4gQW4gaWRlYSBob3cgdG8gdHJvdWJsZXNob290IHRoaXM/Cj4+Pj4+Pj4+Pj4+PiBD
-YW4geW91IHJ1biBnaXQgYmlzZWN0IG9uIHRoZSBjaGFuZ2VzIGJldHdlZW4gNC4xMSBhbmQKPj4+
-Pj4+PiA0LjEyLCBzbyB0aGF0Cj4+Pj4+Pj4+Pj4+PiB3ZSBmaW5kIHRoZSBvZmZlbmRpbmcgY29t
-bWl0PyBJdCBpcyBwcm9iYWJseSBzdWZmaWNpZW50Cj4+Pj4+Pj4gdG8gbGltaXQgdGhlCj4+Pj4+
-Pj4+Pj4+PiBzZWFyY2ggdG8gY29tbWl0cyB0aGF0IHRvdWNoIHNvbWV0aGluZyBpbiBkcml2ZXJz
-L2NoYXIvdHBtLgo+Pj4+Pj4+Pj4+PiBJJ2xsIHRyeSBhbmQga2VlcCB5b3UgcG9zdGVkLgo+Pj4+
-Pj4+Pj4+IE9LIEkndmUgYmVlbiBhYmxlIHRvIGJpc2VjdCB0aGUgcHJvYmxlbSBhbmQgdGhlIGJh
-ZCBjb21taXQgaXM6Cj4+Pj4+Pj4+Pj4KPj4+Pj4+Pj4+PiBlNmFlZjA2OWI2ZTk3NzkwY2IxMjdk
-NWVlYjg2YWU5ZmYwYjdiMGUzIGlzIHRoZSBmaXJzdCBiYWQgY29tbWl0Cj4+Pj4+Pj4+Pj4gY29t
-bWl0IGU2YWVmMDY5YjZlOTc3OTBjYjEyN2Q1ZWViODZhZTlmZjBiN2IwZTMKPj4+Pj4+Pj4+PiBB
-dXRob3I6IEplcnJ5IFNuaXRzZWxhYXIgPGpzbml0c2VsQHJlZGhhdC5jb20+Cj4+Pj4+Pj4+Pj4g
-RGF0ZTrCoMKgIE1vbiBNYXIgMjcgMDg6NDY6MDQgMjAxNyAtMDcwMAo+Pj4+Pj4+Pj4+Cj4+Pj4+
-Pj4+Pj4gIMKgwqDCoMKgIHRwbV90aXM6IGNvbnZlcnQgdG8gdXNpbmcgbG9jYWxpdHkgY2FsbGJh
-Y2tzCj4+Pj4+Pj4+Pj4KPj4+Pj4+Pj4+PiAgwqDCoMKgwqAgVGhpcyBwYXRjaCBjb252ZXJ0cyB0
-cG1fdGlzIHRvIHVzZSBvZiB0aGUgbmV3IHRwbSBjbGFzcyBvcHMKPj4+Pj4+Pj4+PiAgwqDCoMKg
-wqAgcmVxdWVzdF9sb2NhbGl0eSwgYW5kIHJlbGlucXVpc2hfbG9jYWxpdHkuCj4+Pj4+Pj4+Pj4K
-Pj4+Pj4+Pj4+PiAgwqDCoMKgwqAgV2l0aCB0aGUgbW92ZSB0byB1c2luZyB0aGUgY2FsbGJhY2tz
-LCByZWxlYXNlX2xvY2FsaXR5IGlzCj4+Pj4+Pj4+Pj4gY2hhbmdlZCBzbwo+Pj4+Pj4+Pj4+ICDC
-oMKgwqDCoCB0aGF0IHdlIG5vdyByZWxlYXNlIHRoZSBsb2NhbGl0eSBldmVuIGlmIHRoZXJlIGlz
-IG5vCj4+Pj4+Pj4+Pj4gcmVxdWVzdCBwZW5kaW5nLgo+Pj4+Pj4+Pj4+Cj4+Pj4+Pj4+Pj4gIMKg
-wqDCoMKgIFRoaXMgcmVxdWlyZWQgc29tZSBjaGFuZ2VzIHRvIHRoZSB0cG1fdGlzX2NvcmVfaW5p
-dAo+Pj4+Pj4+IGNvZGUgcGF0aCB0bwo+Pj4+Pj4+Pj4+ICDCoMKgwqDCoCBtYWtlIHN1cmUgbG9j
-YWxpdHkgaXMgcmVxdWVzdGVkIHdoZW4gbmVlZGVkOgo+Pj4+Pj4+Pj4+Cj4+Pj4+Pj4+Pj4gIMKg
-wqDCoMKgwqDCoCAtIHRwbTJfcHJvYmUgY29kZSBwYXRoIHdpbGwgZW5kIHVwIGNhbGxpbmcKPj4+
-Pj4+Pj4+PiByZXF1ZXN0L3JlbGVhc2UgdGhyb3VnaAo+Pj4+Pj4+Pj4+ICDCoMKgwqDCoMKgwqDC
-oMKgIGNhbGxiYWNrcywgc28gcmVxdWVzdF9sb2NhbGl0eSBwcmlvciB0bwo+Pj4+Pj4+IHRwbTJf
-cHJvYmUgbm90IG5lZWRlZC4KPj4+Pj4+Pj4+PiAgwqDCoMKgwqDCoMKgIC0gcHJvYmVfaXRwbSBt
-YWtlcyBjYWxscyB0byB0cG1fdGlzX3NlbmRfZGF0YSB3aGljaCBubwo+Pj4+Pj4+Pj4+IGxvbmdl
-ciBjYWxscwo+Pj4+Pj4+Pj4+ICDCoMKgwqDCoMKgwqDCoMKgIHJlcXVlc3RfbG9jYWxpdHksIHNv
-IGFkZCByZXF1ZXN0X2xvY2FsaXR5IHByaW9yIHRvCj4+Pj4+Pj4+Pj4gdHBtX3Rpc19zZW5kX2Rh
-dGEKPj4+Pj4+Pj4+PiAgwqDCoMKgwqDCoMKgwqDCoCBjYWxscy4gQWxzbyBkcm9wIHJlbGVhc2Vf
-bG9jYWxpdHkgY2FsbCBpbiBtaWRkbGVvZgo+Pj4+Pj4+Pj4+IHByb2JlX2l0cG0sIGFuZAo+Pj4+
-Pj4+Pj4+ICDCoMKgwqDCoMKgwqDCoMKgIGtlZXAgbG9jYWxpdHkgdW50aWwgcmVsZWFzZV9sb2Nh
-bGl0eSBjYWxsZWQgYXQgZW5kIG9mCj4+Pj4+Pj4+Pj4gcHJvYmVfaXRwbS4KPj4+Pj4+Pj4+Pgo+
-Pj4+Pj4+Pj4+ICDCoMKgwqDCoCBDYzogUGV0ZXIgSHVld2UgPHBldGVyaHVld2VAZ214LmRlPgo+
-Pj4+Pj4+Pj4+ICDCoMKgwqDCoCBDYzogSmFya2tvIFNha2tpbmVuIDxqYXJra28uc2Fra2luZW5A
-bGludXguaW50ZWwuY29tPgo+Pj4+Pj4+Pj4+ICDCoMKgwqDCoCBDYzogSmFzb24gR3VudGhvcnBl
-IDxqZ3VudGhvcnBlQG9ic2lkaWFucmVzZWFyY2guY29tPgo+Pj4+Pj4+Pj4+ICDCoMKgwqDCoCBD
-YzogTWFyY2VsIFNlbGhvcnN0IDx0cG1kZEBzZWxob3JzdC5uZXQ+Cj4+Pj4+Pj4+Pj4gIMKgwqDC
-oMKgIFNpZ25lZC1vZmYtYnk6IEplcnJ5IFNuaXRzZWxhYXIgPGpzbml0c2VsQHJlZGhhdC5jb20+
-Cj4+Pj4+Pj4+Pj4gIMKgwqDCoMKgIFJldmlld2VkLWJ5OiBKYXJra28gU2Fra2luZW4KPj4+Pj4+
-PiA8amFya2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbT4KPj4+Pj4+Pj4+PiAgwqDCoMKgwqAg
-VGVzdGVkLWJ5OiBKYXJra28gU2Fra2luZW4gPGphcmtrby5zYWtraW5lbkBsaW51eC5pbnRlbC5j
-b20+Cj4+Pj4+Pj4+Pj4gIMKgwqDCoMKgIFNpZ25lZC1vZmYtYnk6IEphcmtrbyBTYWtraW5lbgo+
-Pj4+Pj4+IDxqYXJra28uc2Fra2luZW5AbGludXguaW50ZWwuY29tPgo+Pj4+Pj4+Pj4+IDowNDAw
-MDAgMDQwMDAwIDcwMjM0MzY1ZGE2OTk1OWQ0NzA3NmViYjQwYzhkMTdmNTIwYzNlNDQKPj4+Pj4+
-Pj4+PiA3MmYyMWI0NDZlNDVlYTEwMDNkZTc1OTAyYjA1NTNkZWI5OTE1N2ZkIE0gZHJpdmVycwo+
-Pj4+Pj4+Pj4+Cj4+Pj4+Pj4+PiBJJ3ZlIGxvb2tlZCBhZ2FpbiBhdCB0aGUgY29kZSBpbiBxdWVz
-dGlvbiwgYnV0IGNvdWxkIG5vdCBmaW5kCj4+Pj4+Pj4+PiBhbnl0aGluZyB0aGF0IGlzIG9idmlv
-dXNseSB3cm9uZyB0aGVyZS4gTG9jYWxpdHkgaXMgbm93Cj4+Pj4+Pj4+PiByZXF1ZXN0ZWQvcmVs
-ZWFzZWQgYXQgc2xpZ2h0bHkgZGlmZmVyZW50IHBvaW50cyBpbiB0aGUgcHJvY2VzcyB0aGFuCj4+
-Pj4+Pj4+PiBiZWZvcmUsIGJ1dCB0aGF0J3MgaXQuIEl0IGRvZXMgbm90IHNlZW0gdG8gY2F1c2Ug
-cHJvYmxlbXMgd2l0aCB0aGUKPj4+Pj4+Pj4+IG1ham9yaXR5IG9mIFRQTXMsIHNpbmNlIHlvdSBh
-cmUgdGhlIGZpcnN0IHRvIHJlcG9ydCBhbnksIHNvCj4+Pj4+Pj4gbWF5YmUgaXQKPj4+Pj4+Pj4+
-IGlzIGEgcXVpcmsgdGhhdCBvbmx5IGFmZmVjdHMgdGhpcyBkZXZpY2UuCj4+Pj4+Pj4+Pgo+Pj4+
-Pj4+Pj4gUGVyaGFwcyBKZXJyeSBjYW4gaGVscCwgc2luY2UgdGhpcyBpcyBoaXMgY2hhbmdlPwo+
-Pj4+Pj4+Pj4KPj4+Pj4+Pj4+IEFsZXhhbmRlcgo+Pj4+Pj4+PiBHZXR0aW5nIHNvbWUgY2FmZmVp
-bmUgaW4gbWUsIGFuZCBzdGFydGluZyB0byB0YWtlIGEgbG9vay4gQWRkaW5nCj4+Pj4+Pj4+IEph
-cmtrbyBhcyB3ZWxsIHNpbmNlIHRoaXMgbWlnaHQgaW52b2x2ZSB0aGUgZ2VuZXJhbCBsb2NhbGl0
-eSBjaGFuZ2VzLgo+Pj4+Pj4+Pgo+Pj4+Pj4+PiBMYXVyZW50LCBpZiBJIHNlbmQgeW91IGEgcGF0
-Y2ggd2l0aCBzb21lIGRlYnVnZ2luZyBjb2RlIGFkZGVkLCB3b3VsZAo+Pj4+Pj4+PiB5b3UgYmUg
-YWJsZSB0byBydW4gaXQgb24gdGhhdCBzeXN0ZW0/IEkgd2Fzbid0IHJ1bm5pbmcgaW50byBpc3N1
-ZXMKPj4+Pj4+Pj4gb24gdGhlIHN5c3RlbSBJIGhhZCB3aXRoIGEgMS4yIGRldmljZSwgYnV0IEkg
-bm8gbG9uZ2VyIGhhdmUgYWNjZXNzCj4+Pj4+Pj4+IHRvIGl0LiBJJ2xsIHNlZSBpZiBJIGNhbiBm
-aW5kIG9uZSBpbiBvdXIgbGFicyBhbmQgcmVwcm9kdWNlIGl0IHRoZXJlLgo+Pj4+Pj4+IFllcyBJ
-IHNob3VsZCBiZSBhYmxlIHRvIGRvIHRoYXQKPj4+Pj4+IEFueSBmaW5kaW5ncz8KPj4+Pj4+Cj4+
-Pj4+PiAvSmFya2tvCj4+Pj4+IE9rYXksIGZpbmFsbHkgZ2V0dGluZyBiYWNrIHRvIHRoaXMuIExv
-b2tpbmcgYXQgdGhlIGNvZGUgaXQgaXNuJ3QgY2xlYXIKPj4+Pj4gdG8gbWUKPj4+Pj4gd2h5IHRo
-ZSBjaGFuZ2UgaXMgY2F1c2luZyB0aGlzLiBTbyB3aGlsZSBJIHN0YXJlIGF0IHRoaXMgc29tZSBt
-b3JlCj4+Pj4+IExhdXJlbnQKPj4+Pj4gY291bGQgeW91IHJlcHJvZHVjZSBpdCB3aXRoIHRoaXMg
-cGF0Y2ggc28gSSBjYW4gc2VlIHdoYXQgdGhlIHN0YXR1cyBhbmQKPj4+Pj4gYWNjZXNzIHJlZ2lz
-dGVycyBsb29rIGxpa2U/IERvZXMgYW55b25lIGVsc2Ugb24gaGVyZSBoYXBwZW4gdG8gaGF2ZSBh
-Cj4+Pj4+IFNpbm9zdW4KPj4+Pj4gdHBtIGRldmljZT8gVGhlIHN5c3RlbXMgSSBoYXZlIGFjY2Vz
-cyB0byB3aXRoIFRQTTEuMiBkZXZpY2VzIGRvbid0IGhhdmUKPj4+Pj4gdGhpcwo+Pj4+PiBpc3N1
-ZS4KPj4+Pj4KPj4+Pj4gLS04PC0tCj4+Pj4+Cj4+Pj4+IGRpZmYgLS1naXQgYS9kcml2ZXJzL2No
-YXIvdHBtL3RwbV90aXNfY29yZS5jCj4+Pj4+IGIvZHJpdmVycy9jaGFyL3RwbS90cG1fdGlzX2Nv
-cmUuYwo+Pj4+PiBpbmRleCBmZGRlOTcxYmM4MTAuLjdkNjBhN2U0YjUwYSAxMDA2NDQKPj4+Pj4g
-LS0tIGEvZHJpdmVycy9jaGFyL3RwbS90cG1fdGlzX2NvcmUuYwo+Pj4+PiArKysgYi9kcml2ZXJz
-L2NoYXIvdHBtL3RwbV90aXNfY29yZS5jCj4+Pj4+IEBAIC0yNTgsNiArMjU4LDcgQEAgc3RhdGlj
-IGludCB0cG1fdGlzX3NlbmRfZGF0YShzdHJ1Y3QgdHBtX2NoaXAgKmNoaXAsCj4+Pj4+IGNvbnN0
-IHU4ICpidWYsIHNpemVfdCBsZW4pCj4+Pj4+ICDCoMKgwqDCoGludCByYywgc3RhdHVzLCBidXJz
-dGNudDsKPj4+Pj4gIMKgwqDCoMKgc2l6ZV90IGNvdW50ID0gMDsKPj4+Pj4gIMKgwqDCoMKgYm9v
-bCBpdHBtID0gcHJpdi0+ZmxhZ3MgJiBUUE1fVElTX0lUUE1fV09SS0FST1VORDsKPj4+Pj4gK8Kg
-wqDCoCB1OCBhY2Nlc3M7Cj4+Pj4+Cj4+Pj4+ICDCoMKgwqDCoHN0YXR1cyA9IHRwbV90aXNfc3Rh
-dHVzKGNoaXApOwo+Pj4+PiAgwqDCoMKgwqBpZiAoKHN0YXR1cyAmIFRQTV9TVFNfQ09NTUFORF9S
-RUFEWSkgPT0gMCkgewo+Pj4+PiBAQCAtMjkyLDYgKzI5MywxMSBAQCBzdGF0aWMgaW50IHRwbV90
-aXNfc2VuZF9kYXRhKHN0cnVjdCB0cG1fY2hpcCAqY2hpcCwKPj4+Pj4gY29uc3QgdTggKmJ1Ziwg
-c2l6ZV90IGxlbikKPj4+Pj4gIMKgwqDCoMKgwqDCoMKgIH0KPj4+Pj4gIMKgwqDCoMKgwqDCoMKg
-IHN0YXR1cyA9IHRwbV90aXNfc3RhdHVzKGNoaXApOwo+Pj4+PiAgwqDCoMKgwqDCoMKgwqAgaWYg
-KCFpdHBtICYmIChzdGF0dXMgJiBUUE1fU1RTX0RBVEFfRVhQRUNUKSA9PSAwKSB7Cj4+Pj4+ICvC
-oMKgwqDCoMKgwqDCoMKgwqDCoMKgIHJjID0gdHBtX3Rpc19yZWFkOChwcml2LCBUUE1fQUNDRVNT
-KHByaXYtPmxvY2FsaXR5KSwKPj4+Pj4gJmFjY2Vzcyk7Cj4+Pj4+ICvCoMKgwqDCoMKgwqDCoMKg
-wqDCoMKgIGlmIChyYyA8IDApCj4+Pj4+ICvCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqAg
-ZGV2X2luZm8oJmNoaXAtPmRldiwgIlRQTV9TVFNfREFUQV9FWFBFQ1QgPT0gMDogcmVhZAo+Pj4+
-PiBmYWlsdXJlIFRQTV9BQ0NFU1MoJWQpXG4iLCBwcml2LT5sb2NhbGl0eSk7Cj4+Pj4+ICvCoMKg
-wqDCoMKgwqDCoMKgwqDCoMKgIGVsc2UKPj4+Pj4gK8KgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKg
-wqDCoCBkZXZfaW5mbygmY2hpcC0+ZGV2LCAiVFBNX1NUU19EQVRBX0VYUEVDVCA9PSAwOgo+Pj4+
-PiBsb2NhbGl0eTogJWQgc3RhdHVzOiAleCBhY2Nlc3M6ICV4XG4iLCBwcml2LT5sb2NhbGl0eSwg
-c3RhdHVzLCBhY2Nlc3MpOwo+Pj4+PiAgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoCByYyA9IC1FSU87
-Cj4+Pj4+ICDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgIGdvdG8gb3V0X2VycjsKPj4+Pj4gIMKgwqDC
-oMKgwqDCoMKgIH0KPj4+Pj4gQEAgLTMwOSw2ICszMTUsMTEgQEAgc3RhdGljIGludCB0cG1fdGlz
-X3NlbmRfZGF0YShzdHJ1Y3QgdHBtX2NoaXAgKmNoaXAsCj4+Pj4+IGNvbnN0IHU4ICpidWYsIHNp
-emVfdCBsZW4pCj4+Pj4+ICDCoMKgwqDCoH0KPj4+Pj4gIMKgwqDCoMKgc3RhdHVzID0gdHBtX3Rp
-c19zdGF0dXMoY2hpcCk7Cj4+Pj4+ICDCoMKgwqDCoGlmICghaXRwbSAmJiAoc3RhdHVzICYgVFBN
-X1NUU19EQVRBX0VYUEVDVCkgIT0gMCkgewo+Pj4+PiArwqDCoMKgwqDCoMKgwqAgcmMgPSB0cG1f
-dGlzX3JlYWQ4KHByaXYsIFRQTV9BQ0NFU1MocHJpdi0+bG9jYWxpdHkpLCAmYWNjZXNzKTsKPj4+
-Pj4gK8KgwqDCoMKgwqDCoMKgIGlmIChyYyA8IDApCj4+Pj4+ICvCoMKgwqDCoMKgwqDCoMKgwqDC
-oMKgIGRldl9pbmZvKCZjaGlwLT5kZXYsICJUUE1fU1RTX0RBVEFfRVhQRUNUICE9IDA6IHJlYWQK
-Pj4+Pj4gZmFpbHVyZSBUUE1fQUNDRVNTKCVkKVxuIiwgcHJpdi0+bG9jYWxpdHkpOwo+Pj4+PiAr
-wqDCoMKgwqDCoMKgwqAgZWxzZQo+Pj4+PiArwqDCoMKgwqDCoMKgwqDCoMKgwqDCoCBkZXZfaW5m
-bygmY2hpcC0+ZGV2LCAiVFBNX1NUU19EQVRBX0VYUEVDVCAhPSAwOiBsb2NhbGl0eToKPj4+Pj4g
-JWQgc3RhdHVzOiAleCBhY2Nlc3M6ICV4XG4iLCBwcml2LT5sb2NhbGl0eSwgc3RhdHVzLCBhY2Nl
-c3MpOwo+Pj4+PiAgwqDCoMKgwqDCoMKgwqAgcmMgPSAtRUlPOwo+Pj4+PiAgwqDCoMKgwqDCoMKg
-wqAgZ290byBvdXRfZXJyOwo+Pj4+PiAgwqDCoMKgwqB9Cj4+Pj4gUGxlYXNlIGZpbmQgaGVyZSB0
-aGUgZG1lc2cgb3V0cHV0IG9mIHRoZSBwYXRjaGVkIGtlcm5lbAo+Pj4gQXQgbGVhc3QgMHhmZiBp
-cyBjb3JydXB0ZWQgdmFsdWUgaW4gc2Vuc2VmdWwgd2F5LiBDUFUgZmlsbHMgdGhlIHJlYWQKPj4+
-IHdpdGggb25lcyBmb3IgZXhhbXBsZSBmb3IgdW5hbGlnbmVkIGJ1cyByZWFkLiBTZWUgdGFibGUg
-MTkgaW4gUEMgY2xpZW50Cj4+PiBzcGVjLiBUaGlzIGNhbiBoYXBwZW4gd2hlbiB5b3UgZG8gdW5h
-bGlnbmVkIHJlYWQgZm9yIGV4YW1wbGUuCj4+Pgo+Pj4gTWF5YmUgVFBNIGlzIHVucmVhY2hhYmxl
-IGkuZS4gcG93ZXJlZCBvZmYuIEJpdCBidXN5IHdpdGggc3R1ZmYgQVRNIGJ1dAo+Pj4gd291bGQg
-cHJvYmFibHkgbWFrZSBzZW5zZSB0byBjb21wYXJlIHRoYXQgMHg4MSB0byB0YWJsZSAxOCBpbiB0
-aGUgc2FtZQo+Pj4gc3BlYy4KPj4+Cj4+PiAvSmFya2tvCj4+IDB4ODEgaXMgc2F5aW5nIHRoZSBh
-Y2Nlc3MgcmVnaXN0ZXIgc3RhdHVzIGlzIHZhbGlkLCBhbmQgdGhlIGxvY2FsaXR5Cj4+IGlzIG5v
-dCBhY3RpdmUuIFRoYXQgZmlyc3QgYml0IG1lYW5zIEEgRHluYW1pYyBPUyBoYXMgbm90IGJlZW4g
-cHJldmlvdXNseQo+PiBlc3RhYmxpc2hlZCBvbiB0aGUgcGxhdGZvcm0uIE5vcm1hbGx5IHdlIHdv
-dWxkIHNlZSAweGExLCB3aGljaCB3b3VsZAo+PiBtZWFuIHZhbGlkIHJlZ2lzdGVyIHN0YXR1cywg
-YW5kIHRoZSBsb2NhbGl0eSBpcyBhY3RpdmUuCj4gSSB0aGluayB0aGUgaW1wb3J0YW50IHRoaW5n
-IHRvIG5vdGUgaGVyZSBpcyB0aGF0IFNUUyBoYXMgYml0cyBzZXQgdGhhdAo+IHNob3VsZCBuZXZl
-ciBiZSBzZXQuIFNvIHdlIGNhbiBjb25jbHVkZSB0aGF0IFRQTSBtaWdodCBiZSBlaXRoZXIKPgo+
-IDEuIFBvd2VyZWQgb2ZmCj4gMi4gSW4gc29tZSB0cmFuc2l0aW9uIHN0YXRlPwpNTWhoaGggSXQn
-cyBhY3R1YWxseSBwb3NzaWJsZSB0aGF0IHdpbmRvd3MgaGFzIGJsb2NrZWQgdGhlIGNoaXAgYWZ0
-ZXIgCnRyeWluZyB0byBlbnRlciBhdXRvbWF0aWNhbGx5IGEgd3Jvbmcgb3duZXIgcGFzc3BocmFz
-ZS4gQnV0IHRoYXQgZG9lc24ndCAKZXhwbGFpbiBkZXZpY2Ugd2FzIHNob3dpbmcgdXAgd2l0aCBw
-cmV2aW91cyBrZXJuZWwgdmVyc2lvbnMKCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpDaGVjayBvdXQg
-dGhlIHZpYnJhbnQgdGVjaCBjb21tdW5pdHkgb24gb25lIG9mIHRoZSB3b3JsZCdzIG1vc3QKZW5n
-YWdpbmcgdGVjaCBzaXRlcywgU2xhc2hkb3Qub3JnISBodHRwOi8vc2RtLmxpbmsvc2xhc2hkb3QK
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KdHBtZGQtZGV2
-ZWwgbWFpbGluZyBsaXN0CnRwbWRkLWRldmVsQGxpc3RzLnNvdXJjZWZvcmdlLm5ldApodHRwczov
-L2xpc3RzLnNvdXJjZWZvcmdlLm5ldC9saXN0cy9saXN0aW5mby90cG1kZC1kZXZlbAo=
+Device number (the character device index) is not a stable identifier
+for a TPM chip. That is the reason why every call site passes
+TPM_ANY_NUM to tpm_chip_find_get().
+
+This commit changes the API in a way that instead a struct tpm_chip
+instance is given and NULL means the default chip. In addition, this
+commit refines the documentation to be up to date with the
+implementation.
+
+Suggested-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com> (@chip_num -> @chip)
+Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+---
+v2:
+* Further defined function documentation.
+* Changed @chip_num to @chip instead of removing the parameter as suggested by
+  Jason Gunthorpe.
+ drivers/char/hw_random/tpm-rng.c    |   2 +-
+ drivers/char/tpm/tpm-chip.c         |  21 +++---
+ drivers/char/tpm/tpm-interface.c    | 135 +++++++++++++++++++-----------------
+ drivers/char/tpm/tpm.h              |   2 +-
+ include/linux/tpm.h                 |  38 +++++-----
+ security/integrity/ima/ima_crypto.c |   2 +-
+ security/integrity/ima/ima_init.c   |   2 +-
+ security/integrity/ima/ima_queue.c  |   2 +-
+ security/keys/trusted.c             |  35 +++++-----
+ 9 files changed, 125 insertions(+), 114 deletions(-)
+
+diff --git a/drivers/char/hw_random/tpm-rng.c b/drivers/char/hw_random/tpm-rng.c
+index d6d448266f07..c5e363825af0 100644
+--- a/drivers/char/hw_random/tpm-rng.c
++++ b/drivers/char/hw_random/tpm-rng.c
+@@ -25,7 +25,7 @@
+ 
+ static int tpm_rng_read(struct hwrng *rng, void *data, size_t max, bool wait)
+ {
+-	return tpm_get_random(TPM_ANY_NUM, data, max);
++	return tpm_get_random(NULL, data, max);
+ }
+ 
+ static struct hwrng tpm_rng = {
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index a114e8f7fb90..c7a4e7fb424d 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -81,21 +81,26 @@ void tpm_put_ops(struct tpm_chip *chip)
+ EXPORT_SYMBOL_GPL(tpm_put_ops);
+ 
+ /**
+- * tpm_chip_find_get() - return tpm_chip for a given chip number
+- * @chip_num: id to find
++ * tpm_chip_find_get() - find and reserve a TPM chip
++ * @chip:	a &struct tpm_chip instance, %NULL for the default chip
+  *
+- * The return'd chip has been tpm_try_get_ops'd and must be released via
+- * tpm_put_ops
++ * Finds a TPM chip and reserves its class device and operations. The chip must
++ * be released with tpm_chip_put_ops() after use.
++ *
++ * Return:
++ * A reserved &struct tpm_chip instance.
++ * %NULL if a chip is not found.
++ * %NULL if the chip is not available.
+  */
+-struct tpm_chip *tpm_chip_find_get(int chip_num)
++struct tpm_chip *tpm_chip_find_get(struct tpm_chip *chip)
+ {
+-	struct tpm_chip *chip, *res = NULL;
++	struct tpm_chip *res = NULL;
++	int chip_num = 0;
+ 	int chip_prev;
+ 
+ 	mutex_lock(&idr_lock);
+ 
+-	if (chip_num == TPM_ANY_NUM) {
+-		chip_num = 0;
++	if (!chip) {
+ 		do {
+ 			chip_prev = chip_num;
+ 			chip = idr_get_next(&dev_nums_idr, &chip_num);
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index ebe0a1d36d8c..19f820f775b5 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -809,19 +809,20 @@ int tpm_pcr_read_dev(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
+ }
+ 
+ /**
+- * tpm_is_tpm2 - is the chip a TPM2 chip?
+- * @chip_num:	tpm idx # or ANY
++ * tpm_is_tpm2 - do we a have a TPM2 chip?
++ * @chip:	a &struct tpm_chip instance, %NULL for the default chip
+  *
+- * Returns < 0 on error, and 1 or 0 on success depending whether the chip
+- * is a TPM2 chip.
++ * Return:
++ * 1 if we have a TPM2 chip.
++ * 0 if we don't have a TPM2 chip.
++ * A negative number for system errors (errno).
+  */
+-int tpm_is_tpm2(u32 chip_num)
++int tpm_is_tpm2(struct tpm_chip *chip)
+ {
+-	struct tpm_chip *chip;
+ 	int rc;
+ 
+-	chip = tpm_chip_find_get(chip_num);
+-	if (chip == NULL)
++	chip = tpm_chip_find_get(chip);
++	if (!chip)
+ 		return -ENODEV;
+ 
+ 	rc = (chip->flags & TPM_CHIP_FLAG_TPM2) != 0;
+@@ -833,23 +834,19 @@ int tpm_is_tpm2(u32 chip_num)
+ EXPORT_SYMBOL_GPL(tpm_is_tpm2);
+ 
+ /**
+- * tpm_pcr_read - read a pcr value
+- * @chip_num:	tpm idx # or ANY
+- * @pcr_idx:	pcr idx to retrieve
+- * @res_buf:	TPM_PCR value
+- *		size of res_buf is 20 bytes (or NULL if you don't care)
++ * tpm_pcr_read - read a PCR value from SHA1 bank
++ * @chip:	a &struct tpm_chip instance, %NULL for the default chip
++ * @pcr_idx:	the PCR to be retrieved
++ * @res_buf:	the value of the PCR
+  *
+- * The TPM driver should be built-in, but for whatever reason it
+- * isn't, protect against the chip disappearing, by incrementing
+- * the module usage count.
++ * Return: same as with tpm_transmit_cmd()
+  */
+-int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf)
++int tpm_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
+ {
+-	struct tpm_chip *chip;
+ 	int rc;
+ 
+-	chip = tpm_chip_find_get(chip_num);
+-	if (chip == NULL)
++	chip = tpm_chip_find_get(chip);
++	if (!chip)
+ 		return -ENODEV;
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+ 		rc = tpm2_pcr_read(chip, pcr_idx, res_buf);
+@@ -889,25 +886,26 @@ static int tpm1_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash,
+ }
+ 
+ /**
+- * tpm_pcr_extend - extend pcr value with hash
+- * @chip_num:	tpm idx # or AN&
+- * @pcr_idx:	pcr idx to extend
+- * @hash:	hash value used to extend pcr value
++ * tpm_pcr_extend - extend a PCR value in SHA1 bank.
++ * @chip:	a &struct tpm_chip instance, %NULL for the default chip
++ * @pcr_idx:	the PCR to be retrieved
++ * @hash:	the hash value used to extend the PCR value
+  *
+- * The TPM driver should be built-in, but for whatever reason it
+- * isn't, protect against the chip disappearing, by incrementing
+- * the module usage count.
++ * Note: with TPM 2.0 extends also those banks with a known digest size to the
++ * cryto subsystem in order to prevent malicious use of those PCR banks. In the
++ * future we should dynamically determine digest sizes.
++ *
++ * Return: same as with tpm_transmit_cmd()
+  */
+-int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
++int tpm_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash)
+ {
+ 	int rc;
+-	struct tpm_chip *chip;
+ 	struct tpm2_digest digest_list[ARRAY_SIZE(chip->active_banks)];
+ 	u32 count = 0;
+ 	int i;
+ 
+-	chip = tpm_chip_find_get(chip_num);
+-	if (chip == NULL)
++	chip = tpm_chip_find_get(chip);
++	if (!chip)
+ 		return -ENODEV;
+ 
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+@@ -1019,17 +1017,24 @@ int tpm1_auto_startup(struct tpm_chip *chip)
+ 	return rc;
+ }
+ 
+-int tpm_send(u32 chip_num, void *cmd, size_t buflen)
++/**
++ * tpm_send - send a TPM command
++ * @chip:	a &struct tpm_chip instance, %NULL for the default chip
++ * @cmd:	a TPM command buffer
++ * @buflen:	the length of the TPM command buffer
++ *
++ * Return: same as with tpm_transmit_cmd()
++ */
++int tpm_send(struct tpm_chip *chip, void *cmd, size_t buflen)
+ {
+-	struct tpm_chip *chip;
+ 	int rc;
+ 
+-	chip = tpm_chip_find_get(chip_num);
+-	if (chip == NULL)
++	chip = tpm_chip_find_get(chip);
++	if (!chip)
+ 		return -ENODEV;
+ 
+ 	rc = tpm_transmit_cmd(chip, NULL, cmd, buflen, 0, 0,
+-			      "attempting tpm_cmd");
++			      "attempting to a send a command");
+ 	tpm_put_ops(chip);
+ 	return rc;
+ }
+@@ -1127,16 +1132,15 @@ static const struct tpm_input_header tpm_getrandom_header = {
+ };
+ 
+ /**
+- * tpm_get_random() - Get random bytes from the tpm's RNG
+- * @chip_num: A specific chip number for the request or TPM_ANY_NUM
+- * @out: destination buffer for the random bytes
+- * @max: the max number of bytes to write to @out
++ * tpm_get_random() - get random bytes from the TPM's RNG
++ * @chip:	a &struct tpm_chip instance, %NULL for the default chip
++ * @out:	destination buffer for the random bytes
++ * @max:	the max number of bytes to write to @out
+  *
+- * Returns < 0 on error and the number of bytes read on success
++ * Return: same as with tpm_transmit_cmd()
+  */
+-int tpm_get_random(u32 chip_num, u8 *out, size_t max)
++int tpm_get_random(struct tpm_chip *chip, u8 *out, size_t max)
+ {
+-	struct tpm_chip *chip;
+ 	struct tpm_cmd_t tpm_cmd;
+ 	u32 recd, num_bytes = min_t(u32, max, TPM_MAX_RNG_DATA), rlength;
+ 	int err, total = 0, retries = 5;
+@@ -1145,8 +1149,8 @@ int tpm_get_random(u32 chip_num, u8 *out, size_t max)
+ 	if (!out || !num_bytes || max > TPM_MAX_RNG_DATA)
+ 		return -EINVAL;
+ 
+-	chip = tpm_chip_find_get(chip_num);
+-	if (chip == NULL)
++	chip = tpm_chip_find_get(chip);
++	if (!chip)
+ 		return -ENODEV;
+ 
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+@@ -1188,22 +1192,23 @@ int tpm_get_random(u32 chip_num, u8 *out, size_t max)
+ EXPORT_SYMBOL_GPL(tpm_get_random);
+ 
+ /**
+- * tpm_seal_trusted() - seal a trusted key
+- * @chip_num: A specific chip number for the request or TPM_ANY_NUM
+- * @options: authentication values and other options
+- * @payload: the key data in clear and encrypted form
++ * tpm_seal_trusted() - seal a trusted key payload
++ * @chip:	a &struct tpm_chip instance, %NULL for the default chip
++ * @options:	authentication values and other options
++ * @payload:	the key data in clear and encrypted form
++ *
++ * Note: only TPM 2.0 chip are supported. TPM 1.x implementation is located in
++ * the keyring subsystem.
+  *
+- * Returns < 0 on error and 0 on success. At the moment, only TPM 2.0 chips
+- * are supported.
++ * Return: same as with tpm_transmit_cmd()
+  */
+-int tpm_seal_trusted(u32 chip_num, struct trusted_key_payload *payload,
++int tpm_seal_trusted(struct tpm_chip *chip, struct trusted_key_payload *payload,
+ 		     struct trusted_key_options *options)
+ {
+-	struct tpm_chip *chip;
+ 	int rc;
+ 
+-	chip = tpm_chip_find_get(chip_num);
+-	if (chip == NULL || !(chip->flags & TPM_CHIP_FLAG_TPM2))
++	chip = tpm_chip_find_get(chip);
++	if (!chip || !(chip->flags & TPM_CHIP_FLAG_TPM2))
+ 		return -ENODEV;
+ 
+ 	rc = tpm2_seal_trusted(chip, payload, options);
+@@ -1215,21 +1220,23 @@ EXPORT_SYMBOL_GPL(tpm_seal_trusted);
+ 
+ /**
+  * tpm_unseal_trusted() - unseal a trusted key
+- * @chip_num: A specific chip number for the request or TPM_ANY_NUM
+- * @options: authentication values and other options
+- * @payload: the key data in clear and encrypted form
++ * @chip:	a &struct tpm_chip instance, %NULL for the default chip
++ * @options:	authentication values and other options
++ * @payload:	the key data in clear and encrypted form
++ *
++ * Note: only TPM 2.0 chip are supported. TPM 1.x implementation is located in
++ * the keyring subsystem.
+  *
+- * Returns < 0 on error and 0 on success. At the moment, only TPM 2.0 chips
+- * are supported.
++ * Return: same as with tpm_transmit_cmd()
+  */
+-int tpm_unseal_trusted(u32 chip_num, struct trusted_key_payload *payload,
++int tpm_unseal_trusted(struct tpm_chip *chip,
++		       struct trusted_key_payload *payload,
+ 		       struct trusted_key_options *options)
+ {
+-	struct tpm_chip *chip;
+ 	int rc;
+ 
+-	chip = tpm_chip_find_get(chip_num);
+-	if (chip == NULL || !(chip->flags & TPM_CHIP_FLAG_TPM2))
++	chip = tpm_chip_find_get(chip);
++	if (!chip || !(chip->flags & TPM_CHIP_FLAG_TPM2))
+ 		return -ENODEV;
+ 
+ 	rc = tpm2_unseal_trusted(chip, payload, options);
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index c1866cc02e30..6c189174c0d3 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -516,7 +516,7 @@ static inline void tpm_msleep(unsigned int delay_msec)
+ 		     delay_msec * 1000);
+ };
+ 
+-struct tpm_chip *tpm_chip_find_get(int chip_num);
++struct tpm_chip *tpm_chip_find_get(struct tpm_chip *chip);
+ __must_check int tpm_try_get_ops(struct tpm_chip *chip);
+ void tpm_put_ops(struct tpm_chip *chip);
+ 
+diff --git a/include/linux/tpm.h b/include/linux/tpm.h
+index 5a090f5ab335..ddc9b88ff6d3 100644
+--- a/include/linux/tpm.h
++++ b/include/linux/tpm.h
+@@ -24,11 +24,6 @@
+ 
+ #define TPM_DIGEST_SIZE 20	/* Max TPM v1.2 PCR size */
+ 
+-/*
+- * Chip num is this value or a valid tpm idx
+- */
+-#define	TPM_ANY_NUM 0xFFFF
+-
+ struct tpm_chip;
+ struct trusted_key_payload;
+ struct trusted_key_options;
+@@ -54,42 +49,47 @@ struct tpm_class_ops {
+ 
+ #if defined(CONFIG_TCG_TPM) || defined(CONFIG_TCG_TPM_MODULE)
+ 
+-extern int tpm_is_tpm2(u32 chip_num);
+-extern int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf);
+-extern int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash);
+-extern int tpm_send(u32 chip_num, void *cmd, size_t buflen);
+-extern int tpm_get_random(u32 chip_num, u8 *data, size_t max);
+-extern int tpm_seal_trusted(u32 chip_num,
++extern int tpm_is_tpm2(struct tpm_chip *chip);
++extern int tpm_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf);
++extern int tpm_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash);
++extern int tpm_send(struct tpm_chip *chip, void *cmd, size_t buflen);
++extern int tpm_get_random(struct tpm_chip *chip, u8 *data, size_t max);
++extern int tpm_seal_trusted(struct tpm_chip *chip,
+ 			    struct trusted_key_payload *payload,
+ 			    struct trusted_key_options *options);
+-extern int tpm_unseal_trusted(u32 chip_num,
++extern int tpm_unseal_trusted(struct tpm_chip *chip,
+ 			      struct trusted_key_payload *payload,
+ 			      struct trusted_key_options *options);
+ #else
+-static inline int tpm_is_tpm2(u32 chip_num)
++static inline int tpm_is_tpm2(struct tpm_chip *chip)
+ {
+ 	return -ENODEV;
+ }
+-static inline int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf) {
++static inline int tpm_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
++{
+ 	return -ENODEV;
+ }
+-static inline int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash) {
++static inline int tpm_pcr_extend(struct tpm_chip *chip, int pcr_idx,
++				 const u8 *hash)
++{
+ 	return -ENODEV;
+ }
+-static inline int tpm_send(u32 chip_num, void *cmd, size_t buflen) {
++static inline int tpm_send(struct tpm_chip *chip, void *cmd, size_t buflen)
++{
+ 	return -ENODEV;
+ }
+-static inline int tpm_get_random(u32 chip_num, u8 *data, size_t max) {
++static inline int tpm_get_random(struct tpm_chip *chip, u8 *data, size_t max)
++{
+ 	return -ENODEV;
+ }
+ 
+-static inline int tpm_seal_trusted(u32 chip_num,
++static inline int tpm_seal_trusted(struct tpm_chip *chip,
+ 				   struct trusted_key_payload *payload,
+ 				   struct trusted_key_options *options)
+ {
+ 	return -ENODEV;
+ }
+-static inline int tpm_unseal_trusted(u32 chip_num,
++static inline int tpm_unseal_trusted(struct tpm_chip *chip,
+ 				     struct trusted_key_payload *payload,
+ 				     struct trusted_key_options *options)
+ {
+diff --git a/security/integrity/ima/ima_crypto.c b/security/integrity/ima/ima_crypto.c
+index 802d5d20f36f..3371d134ee62 100644
+--- a/security/integrity/ima/ima_crypto.c
++++ b/security/integrity/ima/ima_crypto.c
+@@ -644,7 +644,7 @@ static void __init ima_pcrread(int idx, u8 *pcr)
+ 	if (!ima_used_chip)
+ 		return;
+ 
+-	if (tpm_pcr_read(TPM_ANY_NUM, idx, pcr) != 0)
++	if (tpm_pcr_read(NULL, idx, pcr) != 0)
+ 		pr_err("Error Communicating to TPM chip\n");
+ }
+ 
+diff --git a/security/integrity/ima/ima_init.c b/security/integrity/ima/ima_init.c
+index 2967d497a665..29b72cd2502e 100644
+--- a/security/integrity/ima/ima_init.c
++++ b/security/integrity/ima/ima_init.c
+@@ -110,7 +110,7 @@ int __init ima_init(void)
+ 	int rc;
+ 
+ 	ima_used_chip = 0;
+-	rc = tpm_pcr_read(TPM_ANY_NUM, 0, pcr_i);
++	rc = tpm_pcr_read(NULL, 0, pcr_i);
+ 	if (rc == 0)
+ 		ima_used_chip = 1;
+ 
+diff --git a/security/integrity/ima/ima_queue.c b/security/integrity/ima/ima_queue.c
+index a02a86d51102..418f35e38015 100644
+--- a/security/integrity/ima/ima_queue.c
++++ b/security/integrity/ima/ima_queue.c
+@@ -145,7 +145,7 @@ static int ima_pcr_extend(const u8 *hash, int pcr)
+ 	if (!ima_used_chip)
+ 		return result;
+ 
+-	result = tpm_pcr_extend(TPM_ANY_NUM, pcr, hash);
++	result = tpm_pcr_extend(NULL, pcr, hash);
+ 	if (result != 0)
+ 		pr_err("Error Communicating to TPM chip, result: %d\n", result);
+ 	return result;
+diff --git a/security/keys/trusted.c b/security/keys/trusted.c
+index ddfaebf60fc8..d2b20b1cc2f1 100644
+--- a/security/keys/trusted.c
++++ b/security/keys/trusted.c
+@@ -355,13 +355,12 @@ static int TSS_checkhmac2(unsigned char *buffer,
+  * For key specific tpm requests, we will generate and send our
+  * own TPM command packets using the drivers send function.
+  */
+-static int trusted_tpm_send(const u32 chip_num, unsigned char *cmd,
+-			    size_t buflen)
++static int trusted_tpm_send(unsigned char *cmd, size_t buflen)
+ {
+ 	int rc;
+ 
+ 	dump_tpm_buf(cmd);
+-	rc = tpm_send(chip_num, cmd, buflen);
++	rc = tpm_send(NULL, cmd, buflen);
+ 	dump_tpm_buf(cmd);
+ 	if (rc > 0)
+ 		/* Can't return positive return codes values to keyctl */
+@@ -382,10 +381,10 @@ static int pcrlock(const int pcrnum)
+ 
+ 	if (!capable(CAP_SYS_ADMIN))
+ 		return -EPERM;
+-	ret = tpm_get_random(TPM_ANY_NUM, hash, SHA1_DIGEST_SIZE);
++	ret = tpm_get_random(NULL, hash, SHA1_DIGEST_SIZE);
+ 	if (ret != SHA1_DIGEST_SIZE)
+ 		return ret;
+-	return tpm_pcr_extend(TPM_ANY_NUM, pcrnum, hash) ? -EINVAL : 0;
++	return tpm_pcr_extend(NULL, pcrnum, hash) ? -EINVAL : 0;
+ }
+ 
+ /*
+@@ -398,7 +397,7 @@ static int osap(struct tpm_buf *tb, struct osapsess *s,
+ 	unsigned char ononce[TPM_NONCE_SIZE];
+ 	int ret;
+ 
+-	ret = tpm_get_random(TPM_ANY_NUM, ononce, TPM_NONCE_SIZE);
++	ret = tpm_get_random(NULL, ononce, TPM_NONCE_SIZE);
+ 	if (ret != TPM_NONCE_SIZE)
+ 		return ret;
+ 
+@@ -410,7 +409,7 @@ static int osap(struct tpm_buf *tb, struct osapsess *s,
+ 	store32(tb, handle);
+ 	storebytes(tb, ononce, TPM_NONCE_SIZE);
+ 
+-	ret = trusted_tpm_send(TPM_ANY_NUM, tb->data, MAX_BUF_SIZE);
++	ret = trusted_tpm_send(tb->data, MAX_BUF_SIZE);
+ 	if (ret < 0)
+ 		return ret;
+ 
+@@ -434,7 +433,7 @@ static int oiap(struct tpm_buf *tb, uint32_t *handle, unsigned char *nonce)
+ 	store16(tb, TPM_TAG_RQU_COMMAND);
+ 	store32(tb, TPM_OIAP_SIZE);
+ 	store32(tb, TPM_ORD_OIAP);
+-	ret = trusted_tpm_send(TPM_ANY_NUM, tb->data, MAX_BUF_SIZE);
++	ret = trusted_tpm_send(tb->data, MAX_BUF_SIZE);
+ 	if (ret < 0)
+ 		return ret;
+ 
+@@ -493,7 +492,7 @@ static int tpm_seal(struct tpm_buf *tb, uint16_t keytype,
+ 	if (ret < 0)
+ 		goto out;
+ 
+-	ret = tpm_get_random(TPM_ANY_NUM, td->nonceodd, TPM_NONCE_SIZE);
++	ret = tpm_get_random(NULL, td->nonceodd, TPM_NONCE_SIZE);
+ 	if (ret != TPM_NONCE_SIZE)
+ 		goto out;
+ 	ordinal = htonl(TPM_ORD_SEAL);
+@@ -542,7 +541,7 @@ static int tpm_seal(struct tpm_buf *tb, uint16_t keytype,
+ 	store8(tb, cont);
+ 	storebytes(tb, td->pubauth, SHA1_DIGEST_SIZE);
+ 
+-	ret = trusted_tpm_send(TPM_ANY_NUM, tb->data, MAX_BUF_SIZE);
++	ret = trusted_tpm_send(tb->data, MAX_BUF_SIZE);
+ 	if (ret < 0)
+ 		goto out;
+ 
+@@ -603,7 +602,7 @@ static int tpm_unseal(struct tpm_buf *tb,
+ 
+ 	ordinal = htonl(TPM_ORD_UNSEAL);
+ 	keyhndl = htonl(SRKHANDLE);
+-	ret = tpm_get_random(TPM_ANY_NUM, nonceodd, TPM_NONCE_SIZE);
++	ret = tpm_get_random(NULL, nonceodd, TPM_NONCE_SIZE);
+ 	if (ret != TPM_NONCE_SIZE) {
+ 		pr_info("trusted_key: tpm_get_random failed (%d)\n", ret);
+ 		return ret;
+@@ -635,7 +634,7 @@ static int tpm_unseal(struct tpm_buf *tb,
+ 	store8(tb, cont);
+ 	storebytes(tb, authdata2, SHA1_DIGEST_SIZE);
+ 
+-	ret = trusted_tpm_send(TPM_ANY_NUM, tb->data, MAX_BUF_SIZE);
++	ret = trusted_tpm_send(tb->data, MAX_BUF_SIZE);
+ 	if (ret < 0) {
+ 		pr_info("trusted_key: authhmac failed (%d)\n", ret);
+ 		return ret;
+@@ -748,7 +747,7 @@ static int getoptions(char *c, struct trusted_key_payload *pay,
+ 	int i;
+ 	int tpm2;
+ 
+-	tpm2 = tpm_is_tpm2(TPM_ANY_NUM);
++	tpm2 = tpm_is_tpm2(NULL);
+ 	if (tpm2 < 0)
+ 		return tpm2;
+ 
+@@ -917,7 +916,7 @@ static struct trusted_key_options *trusted_options_alloc(void)
+ 	struct trusted_key_options *options;
+ 	int tpm2;
+ 
+-	tpm2 = tpm_is_tpm2(TPM_ANY_NUM);
++	tpm2 = tpm_is_tpm2(NULL);
+ 	if (tpm2 < 0)
+ 		return NULL;
+ 
+@@ -967,7 +966,7 @@ static int trusted_instantiate(struct key *key,
+ 	size_t key_len;
+ 	int tpm2;
+ 
+-	tpm2 = tpm_is_tpm2(TPM_ANY_NUM);
++	tpm2 = tpm_is_tpm2(NULL);
+ 	if (tpm2 < 0)
+ 		return tpm2;
+ 
+@@ -1008,7 +1007,7 @@ static int trusted_instantiate(struct key *key,
+ 	switch (key_cmd) {
+ 	case Opt_load:
+ 		if (tpm2)
+-			ret = tpm_unseal_trusted(TPM_ANY_NUM, payload, options);
++			ret = tpm_unseal_trusted(NULL, payload, options);
+ 		else
+ 			ret = key_unseal(payload, options);
+ 		dump_payload(payload);
+@@ -1018,13 +1017,13 @@ static int trusted_instantiate(struct key *key,
+ 		break;
+ 	case Opt_new:
+ 		key_len = payload->key_len;
+-		ret = tpm_get_random(TPM_ANY_NUM, payload->key, key_len);
++		ret = tpm_get_random(NULL, payload->key, key_len);
+ 		if (ret != key_len) {
+ 			pr_info("trusted_key: key_create failed (%d)\n", ret);
+ 			goto out;
+ 		}
+ 		if (tpm2)
+-			ret = tpm_seal_trusted(TPM_ANY_NUM, payload, options);
++			ret = tpm_seal_trusted(NULL, payload, options);
+ 		else
+ 			ret = key_seal(payload, options);
+ 		if (ret < 0)
+-- 
+2.14.1
