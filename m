@@ -1,49 +1,82 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [tpmdd-devel] [PATCH] tpm: remove chip_num parameter from
- in-kernel API
-Date: Wed, 25 Oct 2017 21:11:23 +0200
-Message-ID: <20171025191123.4uqh6epwhak6hqp5@linux.intel.com>
-References: <20171023123817.18559-1-jarkko.sakkinen@linux.intel.com>
- <cbcb78c6-fa36-32d3-891e-96544875d97c@linux.vnet.ibm.com>
- <20171023163139.GA17394@obsidianresearch.com>
- <20171024154440.3jeupmus43jcgbbz@linux.intel.com>
- <CANc+2y4TbkfPT3d_sBd0MbE7ZJ4F7Sfsfvdv9V6=63=tRpWn4A@mail.gmail.com>
- <20171024162359.tf5xulhlhokmuxh5@linux.intel.com>
- <CANc+2y4vtr+kbhC_7Rv=rHA2LgEVBHLFEu+DYYK1UmpU63PCgQ@mail.gmail.com>
- <20171024182235.d7b3oajc5zcjs57v@linux.intel.com>
- <CANc+2y4BtQGqtC8RJL1Srrz_kWwhyveV3HBpfO1kikFj+0mHaA@mail.gmail.com>
+Subject: Re: [PATCH v2] tpm: use struct tpm_chip for tpm_chip_find_get()
+Date: Wed, 25 Oct 2017 21:34:52 +0200
+Message-ID: <20171025193452.d4qa4dhacfgqejk7@linux.intel.com>
+References: <20171025115508.5682-1-jarkko.sakkinen@linux.intel.com>
+ <CANc+2y46q85+G1=9cXKW0R8FpGBqCuzkLnJzvSYFQ1S=ztKGew@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <CANc+2y4BtQGqtC8RJL1Srrz_kWwhyveV3HBpfO1kikFj+0mHaA@mail.gmail.com>
-Sender: owner-linux-security-module@vger.kernel.org
+In-Reply-To: <CANc+2y46q85+G1=9cXKW0R8FpGBqCuzkLnJzvSYFQ1S=ztKGew@mail.gmail.com>
+Sender: linux-kernel-owner@vger.kernel.org
 To: PrasannaKumar Muralidharan <prasannatsmkumar@gmail.com>
-Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Stefan Berger <stefanb@linux.vnet.ibm.com>, linux-integrity@vger.kernel.org, David Howells <dhowells@redhat.com>, Herbert Xu <herbert@gondor.apana.org.au>, "open list:INTEGRITY MEASUREMENT ARCHITECTURE IMA" <linux-ima-user@lists.sourceforge.net>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, open list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, "open list:KEYS-TRUSTED" <keyrings@vger.kernel.org>, "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>, James Morris <james.l.morris@oracle.com>, Matt Mackall <mpm@selenic.com>open list:INTEGRITY MEASUREMENT ARCHITECTURE IMA
+Cc: linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, Matt Mackall <mpm@selenic.com>, Herbert Xu <herbert@gondor.apana.org.au>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, David Safford <safford@us.ibm.com>, David Howells <dhowells@redhat.com>, Jerry Snitselaar <jsnitsel@redhat.com>, "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>, open list <linux-kernel@vger.kernel.org>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Oct 25, 2017 at 08:21:16PM +0530, PrasannaKumar Muralidharan wrote:
-> >> > 2. Moving struct tpm_rng to the TPM client is architecturally
-> >> >    uacceptable.
-> >>
-> >> As there was no response to the patch there is no way to know whether
-> >> it is acceptable or not.
+On Wed, Oct 25, 2017 at 08:40:26PM +0530, PrasannaKumar Muralidharan wrote:
+> > -struct tpm_chip *tpm_chip_find_get(int chip_num)
+> > +struct tpm_chip *tpm_chip_find_get(struct tpm_chip *chip)
+> >  {
+> > -       struct tpm_chip *chip, *res = NULL;
+> > +       struct tpm_chip *res = NULL;
+> > +       int chip_num = 0;
+> >         int chip_prev;
 > >
-> > I like the idea of removing the tpm rng driver as discussed in other
-> > emails in this thread.
+> >         mutex_lock(&idr_lock);
+> >
+> > -       if (chip_num == TPM_ANY_NUM) {
+> > -               chip_num = 0;
+> > +       if (!chip) {
+> >                 do {
+> >                         chip_prev = chip_num;
+> >                         chip = idr_get_next(&dev_nums_idr, &chip_num);
 > 
-> Thank you.
+> When chip is not NULL just do tpm_try_get_ops(chip). Current code does
+> more things which are not required.
 
-No, thank you.
+Your observation is right that there is something wrong but conclusions
+are incorrect.
 
-I didn't first understand the big idea and only looked at the code
-change per se. I apologize for that.
+It's actually a regression.
 
-The problem that you went to solve was real and it led to a properly
-implemented solution. You were not late from the party. Jason's code
-change is derivative work of your code change. That's why his code
-change has also your signed-off-by.
+If @chip has a value, the code does one iteration of what it is doing in
+the first branch of the condition. That is completely bogus semantics to
+say the least.
 
-Thanks for doing awesome work :-)
+To sort that out I'll introduce a new field to struct tpm_chip:
+
+  u64 id;
+
+This gets a value from a global count every time a chip is created.
+
+The function will become then:
+
+struct tpm_chip *tpm_chip_find_get(u64 id)
+{
+	struct tpm_chup *chip;
+	struct tpm_chip *res = NULL;
+	int chip_num = 0;
+	int chip_prev;
+
+	mutex_lock(&idr_lock);
+
+	do {
+		chip_prev = chip_num;
+
+		chip = idr_get_next(&dev_nums_idr, &chip_num);
+
+		if (chip && (!id || id == chip->id) && !tpm_try_get_ops(chip)) {
+			res = chip;
+			break;
+		}
+	} while (chip_prev != chip_num);
+
+	mutex_unlock(&idr_lock);
+
+	return res;
+}
+
+Thanks for spotting this out. I'll refine the patch.
 
 /Jarkko
