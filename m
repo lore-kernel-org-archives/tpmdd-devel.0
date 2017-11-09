@@ -1,73 +1,200 @@
-From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH v2 0/3] Call GetEventLog before ExitBootServices
-Date: Fri, 3 Nov 2017 17:27:03 +0200
-Message-ID: <20171103152703.f224mvtg3luubqa3@linux.intel.com>
-References: <20170911100022.7251-1-tweek@google.com>
+From: Laurent Bigonville <bigon-8fiUuRrzOP0dnm+yROfE0A@public.gmane.org>
+Subject: Re: tpm device not showing up in /dev anymore
+Date: Thu, 9 Nov 2017 01:04:56 +0100
+Message-ID: <8f4df9a9-c8cd-832f-4c3f-5305fabab7a8@debian.org>
+References: <857106e4bb864bb8a68b1381fffc8f50@MUCSE603.infineon.com>
+ <20170831164015.3ajgwydgxtippwoz@rhwork>
+ <0d9be244-ace0-030d-6ff9-c4e94c63b7e9@debian.org>
+ <20170906040555.fqedhmo5277sd6fq@linux.intel.com>
+ <20171014081318.busge2fhteusfjwx@rhwork>
+ <b63b765d-2477-d9fe-9d80-c2ea7e582bce@debian.org>
+ <20171023132346.jbqgokwv3ah2oqjo@linux.intel.com>
+ <20171023134515.56siz3m6lhrhnovv@rhwork>
+ <20171024135123.uqail7olnespun4k@linux.intel.com>
+ <20171024145706.na56ff34w5agzo2t@rhwork>
+ <20171024160725.r6kj452jdzpkbb6o@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
-Content-Disposition: inline
-In-Reply-To: <20170911100022.7251-1-tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Sender: linux-efi-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-To: Thiebaud Weksteen <tweek-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
-Cc: linux-efi-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, ard.biesheuvel-QSEj5FYQhm4dnm+yROfE0A@public.gmane.org, matt-mF/unelCI9GS6iBeEJttW/XRex20P6io@public.gmane.org, linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, mjg59-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, peterhuewe-Mmb7MZpHnFY@public.gmane.org, jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org, tpmdd-yWjUBOtONefk1uMJSBkQmQ@public.gmane.org
+Content-Type: text/plain; charset="utf-8"; Format="flowed"
+Content-Transfer-Encoding: base64
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <20171024160725.r6kj452jdzpkbb6o-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
+Content-Language: en-US
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>, Jerry Snitselaar <jsnitsel-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Cc: linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Mon, Sep 11, 2017 at 12:00:19PM +0200, Thiebaud Weksteen wrote:
-> With TPM 1.2, the ACPI table ("TCPA") has two fields to recover the Event Log
-> Area (LAML and LASA). These logs are useful to understand and rebuild the
-> final values of PCRs.
-> 
-> With TPM 2.0, the ACPI table ("TPM2") does not contain these fields anymore.
-> The recommended method is now to call the GetEventLog EFI protocol before
-> ExitBootServices.
-> 
-> Implement this method within the EFI stub and create copy of the logs for the
-> TPM device. This will create /sys/kernel/security/tpm0/binary_bios_measurements
-> for TPM 2.0 devices (similarly to the current behaviour for TPM 1.2 devices).
-> 
-> -------------------------------------------------------------------------------
-> 
-> Patchset Changelog:
-> 
-> Version 2:
-> - Move tpm_eventlog.h to top include directory, add commit for this.
-> - Use EFI_LOADER_DATA to store the configuration table
-> - Whitespace and new lines fixes
-> 
-> 
-> Thiebaud Weksteen (3):
->   tpm: move tpm_eventlog.h outside of drivers folder
->   efi: call get_event_log before ExitBootServices
->   tpm: parse TPM event logs based on EFI table
-> 
->  arch/x86/boot/compressed/eboot.c                   |  1 +
->  drivers/char/tpm/Makefile                          |  2 +-
->  drivers/char/tpm/tpm-chip.c                        |  3 +-
->  drivers/char/tpm/tpm-interface.c                   |  2 +-
->  drivers/char/tpm/tpm.h                             | 35 ++++++++--
->  drivers/char/tpm/tpm1_eventlog.c                   | 17 +++--
->  drivers/char/tpm/tpm2_eventlog.c                   |  2 +-
->  drivers/char/tpm/tpm_acpi.c                        |  2 +-
->  drivers/char/tpm/tpm_efi.c                         | 66 ++++++++++++++++++
->  drivers/char/tpm/tpm_of.c                          |  2 +-
->  drivers/firmware/efi/Makefile                      |  2 +-
->  drivers/firmware/efi/efi.c                         |  4 ++
->  drivers/firmware/efi/libstub/Makefile              |  3 +-
->  drivers/firmware/efi/libstub/tpm.c                 | 81 ++++++++++++++++++++++
->  drivers/firmware/efi/tpm.c                         | 39 +++++++++++
->  include/linux/efi.h                                | 50 +++++++++++++
->  {drivers/char/tpm => include/linux}/tpm_eventlog.h | 32 ++-------
->  17 files changed, 301 insertions(+), 42 deletions(-)
->  create mode 100644 drivers/char/tpm/tpm_efi.c
->  create mode 100644 drivers/firmware/efi/tpm.c
->  rename {drivers/char/tpm => include/linux}/tpm_eventlog.h (77%)
-> 
-> -- 
-> 2.14.1.581.gf28d330327-goog
-> 
-
-Tested-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1560T/Km9Ha9FPA@public.gmane.org>
-
-/Jarkko
+CgpMZSAyNC8xMC8xNyDDoCAxODowNywgSmFya2tvIFNha2tpbmVuIGEgw6ljcml0wqA6Cj4gT24g
+VHVlLCBPY3QgMjQsIDIwMTcgYXQgMDc6NTc6MDZBTSAtMDcwMCwgSmVycnkgU25pdHNlbGFhciB3
+cm90ZToKPj4gT24gVHVlIE9jdCAyNCAxNywgSmFya2tvIFNha2tpbmVuIHdyb3RlOgo+Pj4gT24g
+TW9uLCBPY3QgMjMsIDIwMTcgYXQgMDY6NDU6MTVBTSAtMDcwMCwgSmVycnkgU25pdHNlbGFhciB3
+cm90ZToKPj4+PiBPbiBNb24gT2N0IDIzIDE3LCBKYXJra28gU2Fra2luZW4gd3JvdGU6Cj4+Pj4+
+IE9uIFNhdCwgT2N0IDIxLCAyMDE3IGF0IDEwOjUzOjU1QU0gKzAyMDAsIExhdXJlbnQgQmlnb252
+aWxsZSB3cm90ZToKPj4+Pj4+IExlIDE0LzEwLzE3IMOgIDEwOjEzLCBKZXJyeSBTbml0c2VsYWFy
+IGEgw6ljcml0wqA6Cj4+Pj4+Pj4gT24gV2VkIFNlcCAwNiAxNywgSmFya2tvIFNha2tpbmVuIHdy
+b3RlOgo+Pj4+Pj4+PiBPbiBGcmksIFNlcCAwMSwgMjAxNyBhdCAwMjoxMDoxOFBNICswMjAwLCBM
+YXVyZW50IEJpZ29udmlsbGUgd3JvdGU6Cj4+Pj4+Pj4+PiBMZSAzMS8wOC8xNyDDoCAxODo0MCwg
+SmVycnkgU25pdHNlbGFhciBhIMOpY3JpdMKgOgo+Pj4+Pj4+Pj4+IE9uIFRodSBBdWcgMzEgMTcs
+IEFsZXhhbmRlci5TdGVmZmVuQGluZmluZW9uLmNvbSB3cm90ZToKPj4+Pj4+Pj4+Pj4+IExlIDI5
+LzA4LzE3IMOgIDE4OjM1LCBMYXVyZW50IEJpZ29udmlsbGUgYSDDqWNyaXTCoDoKPj4+Pj4+Pj4+
+Pj4+PiBMZSAyOS8wOC8xNyDDoCAxODowMCwgQWxleGFuZGVyLlN0ZWZmZW5AaW5maW5lb24uY29t
+IGEgw6ljcml0wqA6Cj4+Pj4+Pj4+Pj4+Pj4+PiBBbiBpZGVhIGhvdyB0byB0cm91Ymxlc2hvb3Qg
+dGhpcz8KPj4+Pj4+Pj4+Pj4+Pj4gQ2FuIHlvdSBydW4gZ2l0IGJpc2VjdCBvbiB0aGUgY2hhbmdl
+cyBiZXR3ZWVuIDQuMTEgYW5kCj4+Pj4+Pj4+PiA0LjEyLCBzbyB0aGF0Cj4+Pj4+Pj4+Pj4+Pj4+
+IHdlIGZpbmQgdGhlIG9mZmVuZGluZyBjb21taXQ/IEl0IGlzIHByb2JhYmx5IHN1ZmZpY2llbnQK
+Pj4+Pj4+Pj4+IHRvIGxpbWl0IHRoZQo+Pj4+Pj4+Pj4+Pj4+PiBzZWFyY2ggdG8gY29tbWl0cyB0
+aGF0IHRvdWNoIHNvbWV0aGluZyBpbiBkcml2ZXJzL2NoYXIvdHBtLgo+Pj4+Pj4+Pj4+Pj4+IEkn
+bGwgdHJ5IGFuZCBrZWVwIHlvdSBwb3N0ZWQuCj4+Pj4+Pj4+Pj4+PiBPSyBJJ3ZlIGJlZW4gYWJs
+ZSB0byBiaXNlY3QgdGhlIHByb2JsZW0gYW5kIHRoZSBiYWQgY29tbWl0IGlzOgo+Pj4+Pj4+Pj4+
+Pj4KPj4+Pj4+Pj4+Pj4+IGU2YWVmMDY5YjZlOTc3OTBjYjEyN2Q1ZWViODZhZTlmZjBiN2IwZTMg
+aXMgdGhlIGZpcnN0IGJhZCBjb21taXQKPj4+Pj4+Pj4+Pj4+IGNvbW1pdCBlNmFlZjA2OWI2ZTk3
+NzkwY2IxMjdkNWVlYjg2YWU5ZmYwYjdiMGUzCj4+Pj4+Pj4+Pj4+PiBBdXRob3I6IEplcnJ5IFNu
+aXRzZWxhYXIgPGpzbml0c2VsQHJlZGhhdC5jb20+Cj4+Pj4+Pj4+Pj4+PiBEYXRlOsKgwqAgTW9u
+IE1hciAyNyAwODo0NjowNCAyMDE3IC0wNzAwCj4+Pj4+Pj4+Pj4+Pgo+Pj4+Pj4+Pj4+Pj4gIMKg
+wqDCoMKgIHRwbV90aXM6IGNvbnZlcnQgdG8gdXNpbmcgbG9jYWxpdHkgY2FsbGJhY2tzCj4+Pj4+
+Pj4+Pj4+Pgo+Pj4+Pj4+Pj4+Pj4gIMKgwqDCoMKgIFRoaXMgcGF0Y2ggY29udmVydHMgdHBtX3Rp
+cyB0byB1c2Ugb2YgdGhlIG5ldyB0cG0gY2xhc3Mgb3BzCj4+Pj4+Pj4+Pj4+PiAgwqDCoMKgwqAg
+cmVxdWVzdF9sb2NhbGl0eSwgYW5kIHJlbGlucXVpc2hfbG9jYWxpdHkuCj4+Pj4+Pj4+Pj4+Pgo+
+Pj4+Pj4+Pj4+Pj4gIMKgwqDCoMKgIFdpdGggdGhlIG1vdmUgdG8gdXNpbmcgdGhlIGNhbGxiYWNr
+cywgcmVsZWFzZV9sb2NhbGl0eSBpcwo+Pj4+Pj4+Pj4+Pj4gY2hhbmdlZCBzbwo+Pj4+Pj4+Pj4+
+Pj4gIMKgwqDCoMKgIHRoYXQgd2Ugbm93IHJlbGVhc2UgdGhlIGxvY2FsaXR5IGV2ZW4gaWYgdGhl
+cmUgaXMgbm8KPj4+Pj4+Pj4+Pj4+IHJlcXVlc3QgcGVuZGluZy4KPj4+Pj4+Pj4+Pj4+Cj4+Pj4+
+Pj4+Pj4+PiAgwqDCoMKgwqAgVGhpcyByZXF1aXJlZCBzb21lIGNoYW5nZXMgdG8gdGhlIHRwbV90
+aXNfY29yZV9pbml0Cj4+Pj4+Pj4+PiBjb2RlIHBhdGggdG8KPj4+Pj4+Pj4+Pj4+ICDCoMKgwqDC
+oCBtYWtlIHN1cmUgbG9jYWxpdHkgaXMgcmVxdWVzdGVkIHdoZW4gbmVlZGVkOgo+Pj4+Pj4+Pj4+
+Pj4KPj4+Pj4+Pj4+Pj4+ICDCoMKgwqDCoMKgwqAgLSB0cG0yX3Byb2JlIGNvZGUgcGF0aCB3aWxs
+IGVuZCB1cCBjYWxsaW5nCj4+Pj4+Pj4+Pj4+PiByZXF1ZXN0L3JlbGVhc2UgdGhyb3VnaAo+Pj4+
+Pj4+Pj4+Pj4gIMKgwqDCoMKgwqDCoMKgwqAgY2FsbGJhY2tzLCBzbyByZXF1ZXN0X2xvY2FsaXR5
+IHByaW9yIHRvCj4+Pj4+Pj4+PiB0cG0yX3Byb2JlIG5vdCBuZWVkZWQuCj4+Pj4+Pj4+Pj4+PiAg
+wqDCoMKgwqDCoMKgIC0gcHJvYmVfaXRwbSBtYWtlcyBjYWxscyB0byB0cG1fdGlzX3NlbmRfZGF0
+YSB3aGljaCBubwo+Pj4+Pj4+Pj4+Pj4gbG9uZ2VyIGNhbGxzCj4+Pj4+Pj4+Pj4+PiAgwqDCoMKg
+wqDCoMKgwqDCoCByZXF1ZXN0X2xvY2FsaXR5LCBzbyBhZGQgcmVxdWVzdF9sb2NhbGl0eSBwcmlv
+ciB0bwo+Pj4+Pj4+Pj4+Pj4gdHBtX3Rpc19zZW5kX2RhdGEKPj4+Pj4+Pj4+Pj4+ICDCoMKgwqDC
+oMKgwqDCoMKgIGNhbGxzLiBBbHNvIGRyb3AgcmVsZWFzZV9sb2NhbGl0eSBjYWxsIGluIG1pZGRs
+ZW9mCj4+Pj4+Pj4+Pj4+PiBwcm9iZV9pdHBtLCBhbmQKPj4+Pj4+Pj4+Pj4+ICDCoMKgwqDCoMKg
+wqDCoMKgIGtlZXAgbG9jYWxpdHkgdW50aWwgcmVsZWFzZV9sb2NhbGl0eSBjYWxsZWQgYXQgZW5k
+IG9mCj4+Pj4+Pj4+Pj4+PiBwcm9iZV9pdHBtLgo+Pj4+Pj4+Pj4+Pj4KPj4+Pj4+Pj4+Pj4+ICDC
+oMKgwqDCoCBDYzogUGV0ZXIgSHVld2UgPHBldGVyaHVld2VAZ214LmRlPgo+Pj4+Pj4+Pj4+Pj4g
+IMKgwqDCoMKgIENjOiBKYXJra28gU2Fra2luZW4gPGphcmtrby5zYWtraW5lbkBsaW51eC5pbnRl
+bC5jb20+Cj4+Pj4+Pj4+Pj4+PiAgwqDCoMKgwqAgQ2M6IEphc29uIEd1bnRob3JwZSA8amd1bnRo
+b3JwZUBvYnNpZGlhbnJlc2VhcmNoLmNvbT4KPj4+Pj4+Pj4+Pj4+ICDCoMKgwqDCoCBDYzogTWFy
+Y2VsIFNlbGhvcnN0IDx0cG1kZEBzZWxob3JzdC5uZXQ+Cj4+Pj4+Pj4+Pj4+PiAgwqDCoMKgwqAg
+U2lnbmVkLW9mZi1ieTogSmVycnkgU25pdHNlbGFhciA8anNuaXRzZWxAcmVkaGF0LmNvbT4KPj4+
+Pj4+Pj4+Pj4+ICDCoMKgwqDCoCBSZXZpZXdlZC1ieTogSmFya2tvIFNha2tpbmVuCj4+Pj4+Pj4+
+PiA8amFya2tvLnNha2tpbmVuQGxpbnV4LmludGVsLmNvbT4KPj4+Pj4+Pj4+Pj4+ICDCoMKgwqDC
+oCBUZXN0ZWQtYnk6IEphcmtrbyBTYWtraW5lbiA8amFya2tvLnNha2tpbmVuQGxpbnV4LmludGVs
+LmNvbT4KPj4+Pj4+Pj4+Pj4+ICDCoMKgwqDCoCBTaWduZWQtb2ZmLWJ5OiBKYXJra28gU2Fra2lu
+ZW4KPj4+Pj4+Pj4+IDxqYXJra28uc2Fra2luZW5AbGludXguaW50ZWwuY29tPgo+Pj4+Pj4+Pj4+
+Pj4gOjA0MDAwMCAwNDAwMDAgNzAyMzQzNjVkYTY5OTU5ZDQ3MDc2ZWJiNDBjOGQxN2Y1MjBjM2U0
+NAo+Pj4+Pj4+Pj4+Pj4gNzJmMjFiNDQ2ZTQ1ZWExMDAzZGU3NTkwMmIwNTUzZGViOTkxNTdmZCBN
+IGRyaXZlcnMKPj4+Pj4+Pj4+Pj4+Cj4+Pj4+Pj4+Pj4+IEkndmUgbG9va2VkIGFnYWluIGF0IHRo
+ZSBjb2RlIGluIHF1ZXN0aW9uLCBidXQgY291bGQgbm90IGZpbmQKPj4+Pj4+Pj4+Pj4gYW55dGhp
+bmcgdGhhdCBpcyBvYnZpb3VzbHkgd3JvbmcgdGhlcmUuIExvY2FsaXR5IGlzIG5vdwo+Pj4+Pj4+
+Pj4+PiByZXF1ZXN0ZWQvcmVsZWFzZWQgYXQgc2xpZ2h0bHkgZGlmZmVyZW50IHBvaW50cyBpbiB0
+aGUgcHJvY2VzcyB0aGFuCj4+Pj4+Pj4+Pj4+IGJlZm9yZSwgYnV0IHRoYXQncyBpdC4gSXQgZG9l
+cyBub3Qgc2VlbSB0byBjYXVzZSBwcm9ibGVtcyB3aXRoIHRoZQo+Pj4+Pj4+Pj4+PiBtYWpvcml0
+eSBvZiBUUE1zLCBzaW5jZSB5b3UgYXJlIHRoZSBmaXJzdCB0byByZXBvcnQgYW55LCBzbwo+Pj4+
+Pj4+Pj4gbWF5YmUgaXQKPj4+Pj4+Pj4+Pj4gaXMgYSBxdWlyayB0aGF0IG9ubHkgYWZmZWN0cyB0
+aGlzIGRldmljZS4KPj4+Pj4+Pj4+Pj4KPj4+Pj4+Pj4+Pj4gUGVyaGFwcyBKZXJyeSBjYW4gaGVs
+cCwgc2luY2UgdGhpcyBpcyBoaXMgY2hhbmdlPwo+Pj4+Pj4+Pj4+Pgo+Pj4+Pj4+Pj4+PiBBbGV4
+YW5kZXIKPj4+Pj4+Pj4+PiBHZXR0aW5nIHNvbWUgY2FmZmVpbmUgaW4gbWUsIGFuZCBzdGFydGlu
+ZyB0byB0YWtlIGEgbG9vay4gQWRkaW5nCj4+Pj4+Pj4+Pj4gSmFya2tvIGFzIHdlbGwgc2luY2Ug
+dGhpcyBtaWdodCBpbnZvbHZlIHRoZSBnZW5lcmFsIGxvY2FsaXR5IGNoYW5nZXMuCj4+Pj4+Pj4+
+Pj4KPj4+Pj4+Pj4+PiBMYXVyZW50LCBpZiBJIHNlbmQgeW91IGEgcGF0Y2ggd2l0aCBzb21lIGRl
+YnVnZ2luZyBjb2RlIGFkZGVkLCB3b3VsZAo+Pj4+Pj4+Pj4+IHlvdSBiZSBhYmxlIHRvIHJ1biBp
+dCBvbiB0aGF0IHN5c3RlbT8gSSB3YXNuJ3QgcnVubmluZyBpbnRvIGlzc3Vlcwo+Pj4+Pj4+Pj4+
+IG9uIHRoZSBzeXN0ZW0gSSBoYWQgd2l0aCBhIDEuMiBkZXZpY2UsIGJ1dCBJIG5vIGxvbmdlciBo
+YXZlIGFjY2Vzcwo+Pj4+Pj4+Pj4+IHRvIGl0LiBJJ2xsIHNlZSBpZiBJIGNhbiBmaW5kIG9uZSBp
+biBvdXIgbGFicyBhbmQgcmVwcm9kdWNlIGl0IHRoZXJlLgo+Pj4+Pj4+Pj4gWWVzIEkgc2hvdWxk
+IGJlIGFibGUgdG8gZG8gdGhhdAo+Pj4+Pj4+PiBBbnkgZmluZGluZ3M/Cj4+Pj4+Pj4+Cj4+Pj4+
+Pj4+IC9KYXJra28KPj4+Pj4+PiBPa2F5LCBmaW5hbGx5IGdldHRpbmcgYmFjayB0byB0aGlzLiBM
+b29raW5nIGF0IHRoZSBjb2RlIGl0IGlzbid0IGNsZWFyCj4+Pj4+Pj4gdG8gbWUKPj4+Pj4+PiB3
+aHkgdGhlIGNoYW5nZSBpcyBjYXVzaW5nIHRoaXMuIFNvIHdoaWxlIEkgc3RhcmUgYXQgdGhpcyBz
+b21lIG1vcmUKPj4+Pj4+PiBMYXVyZW50Cj4+Pj4+Pj4gY291bGQgeW91IHJlcHJvZHVjZSBpdCB3
+aXRoIHRoaXMgcGF0Y2ggc28gSSBjYW4gc2VlIHdoYXQgdGhlIHN0YXR1cyBhbmQKPj4+Pj4+PiBh
+Y2Nlc3MgcmVnaXN0ZXJzIGxvb2sgbGlrZT8gRG9lcyBhbnlvbmUgZWxzZSBvbiBoZXJlIGhhcHBl
+biB0byBoYXZlIGEKPj4+Pj4+PiBTaW5vc3VuCj4+Pj4+Pj4gdHBtIGRldmljZT8gVGhlIHN5c3Rl
+bXMgSSBoYXZlIGFjY2VzcyB0byB3aXRoIFRQTTEuMiBkZXZpY2VzIGRvbid0IGhhdmUKPj4+Pj4+
+PiB0aGlzCj4+Pj4+Pj4gaXNzdWUuCj4+Pj4+Pj4KPj4+Pj4+PiAtLTg8LS0KPj4+Pj4+Pgo+Pj4+
+Pj4+IGRpZmYgLS1naXQgYS9kcml2ZXJzL2NoYXIvdHBtL3RwbV90aXNfY29yZS5jCj4+Pj4+Pj4g
+Yi9kcml2ZXJzL2NoYXIvdHBtL3RwbV90aXNfY29yZS5jCj4+Pj4+Pj4gaW5kZXggZmRkZTk3MWJj
+ODEwLi43ZDYwYTdlNGI1MGEgMTAwNjQ0Cj4+Pj4+Pj4gLS0tIGEvZHJpdmVycy9jaGFyL3RwbS90
+cG1fdGlzX2NvcmUuYwo+Pj4+Pj4+ICsrKyBiL2RyaXZlcnMvY2hhci90cG0vdHBtX3Rpc19jb3Jl
+LmMKPj4+Pj4+PiBAQCAtMjU4LDYgKzI1OCw3IEBAIHN0YXRpYyBpbnQgdHBtX3Rpc19zZW5kX2Rh
+dGEoc3RydWN0IHRwbV9jaGlwICpjaGlwLAo+Pj4+Pj4+IGNvbnN0IHU4ICpidWYsIHNpemVfdCBs
+ZW4pCj4+Pj4+Pj4gIMKgwqDCoMKgaW50IHJjLCBzdGF0dXMsIGJ1cnN0Y250Owo+Pj4+Pj4+ICDC
+oMKgwqDCoHNpemVfdCBjb3VudCA9IDA7Cj4+Pj4+Pj4gIMKgwqDCoMKgYm9vbCBpdHBtID0gcHJp
+di0+ZmxhZ3MgJiBUUE1fVElTX0lUUE1fV09SS0FST1VORDsKPj4+Pj4+PiArwqDCoMKgIHU4IGFj
+Y2VzczsKPj4+Pj4+Pgo+Pj4+Pj4+ICDCoMKgwqDCoHN0YXR1cyA9IHRwbV90aXNfc3RhdHVzKGNo
+aXApOwo+Pj4+Pj4+ICDCoMKgwqDCoGlmICgoc3RhdHVzICYgVFBNX1NUU19DT01NQU5EX1JFQURZ
+KSA9PSAwKSB7Cj4+Pj4+Pj4gQEAgLTI5Miw2ICsyOTMsMTEgQEAgc3RhdGljIGludCB0cG1fdGlz
+X3NlbmRfZGF0YShzdHJ1Y3QgdHBtX2NoaXAgKmNoaXAsCj4+Pj4+Pj4gY29uc3QgdTggKmJ1Ziwg
+c2l6ZV90IGxlbikKPj4+Pj4+PiAgwqDCoMKgwqDCoMKgwqAgfQo+Pj4+Pj4+ICDCoMKgwqDCoMKg
+wqDCoCBzdGF0dXMgPSB0cG1fdGlzX3N0YXR1cyhjaGlwKTsKPj4+Pj4+PiAgwqDCoMKgwqDCoMKg
+wqAgaWYgKCFpdHBtICYmIChzdGF0dXMgJiBUUE1fU1RTX0RBVEFfRVhQRUNUKSA9PSAwKSB7Cj4+
+Pj4+Pj4gK8KgwqDCoMKgwqDCoMKgwqDCoMKgwqAgcmMgPSB0cG1fdGlzX3JlYWQ4KHByaXYsIFRQ
+TV9BQ0NFU1MocHJpdi0+bG9jYWxpdHkpLAo+Pj4+Pj4+ICZhY2Nlc3MpOwo+Pj4+Pj4+ICvCoMKg
+wqDCoMKgwqDCoMKgwqDCoMKgIGlmIChyYyA8IDApCj4+Pj4+Pj4gK8KgwqDCoMKgwqDCoMKgwqDC
+oMKgwqDCoMKgwqDCoCBkZXZfaW5mbygmY2hpcC0+ZGV2LCAiVFBNX1NUU19EQVRBX0VYUEVDVCA9
+PSAwOiByZWFkCj4+Pj4+Pj4gZmFpbHVyZSBUUE1fQUNDRVNTKCVkKVxuIiwgcHJpdi0+bG9jYWxp
+dHkpOwo+Pj4+Pj4+ICvCoMKgwqDCoMKgwqDCoMKgwqDCoMKgIGVsc2UKPj4+Pj4+PiArwqDCoMKg
+wqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgIGRldl9pbmZvKCZjaGlwLT5kZXYsICJUUE1fU1RTX0RB
+VEFfRVhQRUNUID09IDA6Cj4+Pj4+Pj4gbG9jYWxpdHk6ICVkIHN0YXR1czogJXggYWNjZXNzOiAl
+eFxuIiwgcHJpdi0+bG9jYWxpdHksIHN0YXR1cywgYWNjZXNzKTsKPj4+Pj4+PiAgwqDCoMKgwqDC
+oMKgwqDCoMKgwqDCoCByYyA9IC1FSU87Cj4+Pj4+Pj4gIMKgwqDCoMKgwqDCoMKgwqDCoMKgwqAg
+Z290byBvdXRfZXJyOwo+Pj4+Pj4+ICDCoMKgwqDCoMKgwqDCoCB9Cj4+Pj4+Pj4gQEAgLTMwOSw2
+ICszMTUsMTEgQEAgc3RhdGljIGludCB0cG1fdGlzX3NlbmRfZGF0YShzdHJ1Y3QgdHBtX2NoaXAg
+KmNoaXAsCj4+Pj4+Pj4gY29uc3QgdTggKmJ1Ziwgc2l6ZV90IGxlbikKPj4+Pj4+PiAgwqDCoMKg
+wqB9Cj4+Pj4+Pj4gIMKgwqDCoMKgc3RhdHVzID0gdHBtX3Rpc19zdGF0dXMoY2hpcCk7Cj4+Pj4+
+Pj4gIMKgwqDCoMKgaWYgKCFpdHBtICYmIChzdGF0dXMgJiBUUE1fU1RTX0RBVEFfRVhQRUNUKSAh
+PSAwKSB7Cj4+Pj4+Pj4gK8KgwqDCoMKgwqDCoMKgIHJjID0gdHBtX3Rpc19yZWFkOChwcml2LCBU
+UE1fQUNDRVNTKHByaXYtPmxvY2FsaXR5KSwgJmFjY2Vzcyk7Cj4+Pj4+Pj4gK8KgwqDCoMKgwqDC
+oMKgIGlmIChyYyA8IDApCj4+Pj4+Pj4gK8KgwqDCoMKgwqDCoMKgwqDCoMKgwqAgZGV2X2luZm8o
+JmNoaXAtPmRldiwgIlRQTV9TVFNfREFUQV9FWFBFQ1QgIT0gMDogcmVhZAo+Pj4+Pj4+IGZhaWx1
+cmUgVFBNX0FDQ0VTUyglZClcbiIsIHByaXYtPmxvY2FsaXR5KTsKPj4+Pj4+PiArwqDCoMKgwqDC
+oMKgwqAgZWxzZQo+Pj4+Pj4+ICvCoMKgwqDCoMKgwqDCoMKgwqDCoMKgIGRldl9pbmZvKCZjaGlw
+LT5kZXYsICJUUE1fU1RTX0RBVEFfRVhQRUNUICE9IDA6IGxvY2FsaXR5Ogo+Pj4+Pj4+ICVkIHN0
+YXR1czogJXggYWNjZXNzOiAleFxuIiwgcHJpdi0+bG9jYWxpdHksIHN0YXR1cywgYWNjZXNzKTsK
+Pj4+Pj4+PiAgwqDCoMKgwqDCoMKgwqAgcmMgPSAtRUlPOwo+Pj4+Pj4+ICDCoMKgwqDCoMKgwqDC
+oCBnb3RvIG91dF9lcnI7Cj4+Pj4+Pj4gIMKgwqDCoMKgfQo+Pj4+Pj4gUGxlYXNlIGZpbmQgaGVy
+ZSB0aGUgZG1lc2cgb3V0cHV0IG9mIHRoZSBwYXRjaGVkIGtlcm5lbAo+Pj4+PiBBdCBsZWFzdCAw
+eGZmIGlzIGNvcnJ1cHRlZCB2YWx1ZSBpbiBzZW5zZWZ1bCB3YXkuIENQVSBmaWxscyB0aGUgcmVh
+ZAo+Pj4+PiB3aXRoIG9uZXMgZm9yIGV4YW1wbGUgZm9yIHVuYWxpZ25lZCBidXMgcmVhZC4gU2Vl
+IHRhYmxlIDE5IGluIFBDIGNsaWVudAo+Pj4+PiBzcGVjLiBUaGlzIGNhbiBoYXBwZW4gd2hlbiB5
+b3UgZG8gdW5hbGlnbmVkIHJlYWQgZm9yIGV4YW1wbGUuCj4+Pj4+Cj4+Pj4+IE1heWJlIFRQTSBp
+cyB1bnJlYWNoYWJsZSBpLmUuIHBvd2VyZWQgb2ZmLiBCaXQgYnVzeSB3aXRoIHN0dWZmIEFUTSBi
+dXQKPj4+Pj4gd291bGQgcHJvYmFibHkgbWFrZSBzZW5zZSB0byBjb21wYXJlIHRoYXQgMHg4MSB0
+byB0YWJsZSAxOCBpbiB0aGUgc2FtZQo+Pj4+PiBzcGVjLgo+Pj4+Pgo+Pj4+PiAvSmFya2tvCj4+
+Pj4gMHg4MSBpcyBzYXlpbmcgdGhlIGFjY2VzcyByZWdpc3RlciBzdGF0dXMgaXMgdmFsaWQsIGFu
+ZCB0aGUgbG9jYWxpdHkKPj4+PiBpcyBub3QgYWN0aXZlLiBUaGF0IGZpcnN0IGJpdCBtZWFucyBB
+IER5bmFtaWMgT1MgaGFzIG5vdCBiZWVuIHByZXZpb3VzbHkKPj4+PiBlc3RhYmxpc2hlZCBvbiB0
+aGUgcGxhdGZvcm0uIE5vcm1hbGx5IHdlIHdvdWxkIHNlZSAweGExLCB3aGljaCB3b3VsZAo+Pj4+
+IG1lYW4gdmFsaWQgcmVnaXN0ZXIgc3RhdHVzLCBhbmQgdGhlIGxvY2FsaXR5IGlzIGFjdGl2ZS4K
+Pj4+IEkgdGhpbmsgdGhlIGltcG9ydGFudCB0aGluZyB0byBub3RlIGhlcmUgaXMgdGhhdCBTVFMg
+aGFzIGJpdHMgc2V0IHRoYXQKPj4+IHNob3VsZCBuZXZlciBiZSBzZXQuIFNvIHdlIGNhbiBjb25j
+bHVkZSB0aGF0IFRQTSBtaWdodCBiZSBlaXRoZXIKPj4+Cj4+PiAxLiBQb3dlcmVkIG9mZgo+Pj4g
+Mi4gSW4gc29tZSB0cmFuc2l0aW9uIHN0YXRlPwo+Pj4KPj4+IC9KYXJra28KPj4gSWYgaXQgd2Fz
+IHBvd2VyZWQgb2ZmIHdvdWxkIHdlIGJlIGdldHRpbmcgYSB2YWxpZCByZWFkIGZyb20gdGhlIGFj
+Y2Vzcwo+PiByZWdpc3Rlcj8KPiBJIHRoaW5rIHRoZXJlIGlzIG5vIHVuaXZlcnNhbCBhbnN3ZXIg
+dG8gdGhhdCA6LSkKPgo+IE1heWJlIGFkZGluZyBhIGV4dHJhIGRlbGF5IHdvdWxkIGJlIG5leHQg
+dGVzdCB0byBtYWtlPyBJZiBmb3IgcmFuZG9tCj4gcmVhc29uIGl0IGlzIGluLWJldHdlZW4gc3Rh
+dGVzLi4uCkFueSBtb3JlIGlkZWFzPwoKVGhlIGNoaXAgaXMgZGVmaW5pdGVseSBpbiBhIHdlaXJk
+IHN0YXRlIDovIEkgdHJpZWQgc2V2ZXJhbCB3YXlzIHRvIHJlc2V0IAp0aGUgY2hpcCAod2luZG93
+cywgdHBtLXRvb2xzLC4uLikuCgpJJ3ZlIGJlZW4gYWJsZSB0byByZXNldCB0aGUgY2hpcCB2aWEg
+dGhlIGJpb3MgKHdoaWNoIG5vdyBzaG93cyB1bm93bmVkKSAKYnV0IGNoaXAgaXMgc3RpbGwgbG9j
+a2VkIGFwcGFyZW50bHkuCgpCdXQgc3RpbGwgd2l0aCA8IDQuMTIgSSdtIGFibGUgdG8gZ2V0IC9z
+b21lLyBpbmZvcm1hdGlvbiBQdWJsaWMgRUssIApQQ1IsLi4uIG91dCBvZiB0aGUgY2hpcCBzbyBp
+dCdzIG5vdCBjb21wbGV0ZWx5IGJyb2tlbi4uLgoKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCkNoZWNr
+IG91dCB0aGUgdmlicmFudCB0ZWNoIGNvbW11bml0eSBvbiBvbmUgb2YgdGhlIHdvcmxkJ3MgbW9z
+dAplbmdhZ2luZyB0ZWNoIHNpdGVzLCBTbGFzaGRvdC5vcmchIGh0dHA6Ly9zZG0ubGluay9zbGFz
+aGRvdApfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwp0cG1k
+ZC1kZXZlbCBtYWlsaW5nIGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0
+dHBzOi8vbGlzdHMuc291cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
