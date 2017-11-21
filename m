@@ -1,7 +1,7 @@
 From: Azhar Shaikh <azhar.shaikh@intel.com>
-Subject: [PATCH v4 2/2] tpm_tis: Move ilb_base_addr to tpm_tis_tcg_phy
-Date: Tue, 21 Nov 2017 14:39:24 -0800
-Message-ID: <1511303964-56294-3-git-send-email-azhar.shaikh@intel.com>
+Subject: [PATCH v4 1/2] tpm: Keep CLKRUN enabled throughout the duration of transmit_cmd()
+Date: Tue, 21 Nov 2017 14:39:23 -0800
+Message-ID: <1511303964-56294-2-git-send-email-azhar.shaikh@intel.com>
 References: <1511303964-56294-1-git-send-email-azhar.shaikh@intel.com>
 Return-path: <linux-kernel-owner@vger.kernel.org>
 In-Reply-To: <1511303964-56294-1-git-send-email-azhar.shaikh@intel.com>
@@ -10,190 +10,262 @@ To: jarkko.sakkinen@linux.intel.com, jgunthorpe@obsidianresearch.com, peterhuewe
 Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, azhar.shaikh@intel.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Move the static variable ilb_base_addr to tpm_tis_tcg_phy.
+Commit 5e572cab92f0bb5 ("tpm: Enable CLKRUN protocol for Braswell
+systems") disabled CLKRUN protocol during TPM transactions and re-enabled
+once the transaction is completed. But there were still some corner cases
+observed where, reading of TPM header failed for savestate command
+while going to suspend, which resulted in suspend failure.
+To fix this issue keep the CLKRUN protocol disabled for the entire
+duration of a single TPM command and not disabling and re-enabling
+again for every TPM transaction. For the other TPM accesses outside
+the flow of TPM command processing, disable and re-enable CLKRUN protocol
+for every TPM access.
+
+Fixes: 5e572cab92f0bb5 ("tpm: Enable CLKRUN protocol for Braswell systems")
 
 Signed-off-by: Azhar Shaikh <azhar.shaikh@intel.com>
+Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 ---
- drivers/char/tpm/tpm_tis.c | 67 ++++++++++++++++++++++++++--------------------
- 1 file changed, 38 insertions(+), 29 deletions(-)
+ drivers/char/tpm/tpm-interface.c |  6 ++++++
+ drivers/char/tpm/tpm_tis.c       | 44 ++++++++++++++++++++++++----------------
+ drivers/char/tpm/tpm_tis_core.c  | 21 +++++++++++++++++++
+ drivers/char/tpm/tpm_tis_core.h  |  1 +
+ include/linux/tpm.h              |  1 +
+ 5 files changed, 55 insertions(+), 18 deletions(-)
 
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index 1d6729be4cd6..4661a810eab7 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -413,6 +413,9 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+ 	if (chip->dev.parent)
+ 		pm_runtime_get_sync(chip->dev.parent);
+ 
++	if (chip->ops->clk_enable != NULL)
++		chip->ops->clk_enable(chip, true);
++
+ 	/* Store the decision as chip->locality will be changed. */
+ 	need_locality = chip->locality == -1;
+ 
+@@ -489,6 +492,9 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+ 		chip->locality = -1;
+ 	}
+ out_no_locality:
++	if (chip->ops->clk_enable != NULL)
++		chip->ops->clk_enable(chip, false);
++
+ 	if (chip->dev.parent)
+ 		pm_runtime_put_sync(chip->dev.parent);
+ 
 diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
-index 76a7b64195c8..d87b37c5404b 100644
+index e2d1055fb814..76a7b64195c8 100644
 --- a/drivers/char/tpm/tpm_tis.c
 +++ b/drivers/char/tpm/tpm_tis.c
 @@ -46,6 +46,7 @@ struct tpm_info {
  struct tpm_tis_tcg_phy {
  	struct tpm_tis_data priv;
  	void __iomem *iobase;
-+	void __iomem *ilb_base_addr;
- 	bool begin_xfer_done;
++	bool begin_xfer_done;
  };
  
-@@ -134,19 +135,22 @@ static int check_acpi_tpm2(struct device *dev)
- }
- #endif
+ static inline struct tpm_tis_tcg_phy *to_tpm_tis_tcg_phy(struct tpm_tis_data *data)
+@@ -148,12 +149,15 @@ static inline bool is_bsw(void)
  
-+static inline bool is_bsw(void)
-+{
- #ifdef CONFIG_X86
-+	return ((boot_cpu_data.x86_model == INTEL_FAM6_ATOM_AIRMONT) ? 1 : 0);
-+#else
-+	return false;
-+#endif
-+}
-+
- #define INTEL_LEGACY_BLK_BASE_ADDR      0xFED08000
- #define ILB_REMAP_SIZE			0x100
-+
-+#ifdef CONFIG_X86
- #define LPC_CNTRL_REG_OFFSET            0x84
- #define LPC_CLKRUN_EN                   (1 << 2)
- 
--static void __iomem *ilb_base_addr;
--
--static inline bool is_bsw(void)
--{
--	return ((boot_cpu_data.x86_model == INTEL_FAM6_ATOM_AIRMONT) ? 1 : 0);
--}
--
  /**
   * tpm_platform_begin_xfer() - clear LPC CLKRUN_EN i.e. clocks will be running
-  * @data:	struct tpm_tis_data instance
-@@ -160,11 +164,11 @@ static void tpm_platform_begin_xfer(struct tpm_tis_data *data)
- 					phy->begin_xfer_done))
- 		return;
- 
--	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-+	clkrun_val = ioread32(phy->ilb_base_addr + LPC_CNTRL_REG_OFFSET);
- 
- 	/* Disable LPC CLKRUN# */
- 	clkrun_val &= ~LPC_CLKRUN_EN;
--	iowrite32(clkrun_val, ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-+	iowrite32(clkrun_val, phy->ilb_base_addr + LPC_CNTRL_REG_OFFSET);
- 
- 	/*
- 	 * Write any random value on port 0x80 which is on LPC, to make
-@@ -185,15 +189,16 @@ static void tpm_platform_begin_xfer(struct tpm_tis_data *data)
- static void tpm_platform_end_xfer(struct tpm_tis_data *data)
++ * @data:	struct tpm_tis_data instance
+  */
+-static void tpm_platform_begin_xfer(void)
++static void tpm_platform_begin_xfer(struct tpm_tis_data *data)
  {
  	u32 clkrun_val;
 +	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
  
- 	if (!is_bsw() || (data->flags & TPM_TIS_CLK_ENABLE))
+-	if (!is_bsw())
++	if (!is_bsw() || ((data->flags & TPM_TIS_CLK_ENABLE) &&
++					phy->begin_xfer_done))
  		return;
  
--	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-+	clkrun_val = ioread32(phy->ilb_base_addr + LPC_CNTRL_REG_OFFSET);
+ 	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
+@@ -168,16 +172,21 @@ static void tpm_platform_begin_xfer(void)
+ 	 */
+ 	outb(0xCC, 0x80);
  
- 	/* Enable LPC CLKRUN# */
- 	clkrun_val |= LPC_CLKRUN_EN;
--	iowrite32(clkrun_val, ilb_base_addr + LPC_CNTRL_REG_OFFSET);
-+	iowrite32(clkrun_val, phy->ilb_base_addr + LPC_CNTRL_REG_OFFSET);
- 
- 	/*
- 	 * Write any random value on port 0x80 which is on LPC, to make
-@@ -204,10 +209,6 @@ static void tpm_platform_end_xfer(struct tpm_tis_data *data)
++	if (!(data->flags & TPM_TIS_CLK_ENABLE))
++		phy->begin_xfer_done = false;
++	else
++		phy->begin_xfer_done = true;
  }
  
+ /**
+  * tpm_platform_end_xfer() - set LPC CLKRUN_EN i.e. clocks can be turned off
++ * @data:	struct tpm_tis_data instance
+  */
+-static void tpm_platform_end_xfer(void)
++static void tpm_platform_end_xfer(struct tpm_tis_data *data)
+ {
+ 	u32 clkrun_val;
+ 
+-	if (!is_bsw())
++	if (!is_bsw() || (data->flags & TPM_TIS_CLK_ENABLE))
+ 		return;
+ 
+ 	clkrun_val = ioread32(ilb_base_addr + LPC_CNTRL_REG_OFFSET);
+@@ -193,17 +202,16 @@ static void tpm_platform_end_xfer(void)
+ 	outb(0xCC, 0x80);
+ 
+ }
++
  #else
--static inline bool is_bsw(void)
--{
--	return false;
--}
- static void tpm_platform_begin_xfer(struct tpm_tis_data *data)
+ static inline bool is_bsw(void)
+ {
+ 	return false;
+ }
+-
+-static void tpm_platform_begin_xfer(void)
++static void tpm_platform_begin_xfer(struct tpm_tis_data *data)
  {
  }
-@@ -311,14 +312,25 @@ static int tpm_tis_init(struct device *dev, struct tpm_info *tpm_info)
- 	if (IS_ERR(phy->iobase))
- 		return PTR_ERR(phy->iobase);
- 
-+	if (is_bsw()) {
-+		phy->ilb_base_addr = ioremap(INTEL_LEGACY_BLK_BASE_ADDR,
-+					ILB_REMAP_SIZE);
-+		if (!phy->ilb_base_addr)
-+			return -ENOMEM;
-+	}
-+
- 	if (interrupts)
- 		irq = tpm_info->irq;
- 
- 	if (itpm || is_itpm(ACPI_COMPANION(dev)))
- 		phy->priv.flags |= TPM_TIS_ITPM_WORKAROUND;
- 
--	return tpm_tis_core_init(dev, &phy->priv, irq, &tpm_tcg,
-+	rc = tpm_tis_core_init(dev, &phy->priv, irq, &tpm_tcg,
- 				 ACPI_HANDLE(dev));
-+	if (rc && is_bsw())
-+		iounmap(phy->ilb_base_addr);
-+
-+	return rc;
- }
- 
- static SIMPLE_DEV_PM_OPS(tpm_tis_pm, tpm_pm_suspend, tpm_tis_resume);
-@@ -359,9 +371,14 @@ static int tpm_tis_pnp_init(struct pnp_dev *pnp_dev,
- static void tpm_tis_pnp_remove(struct pnp_dev *dev)
+-
+-static void tpm_platform_end_xfer(void)
++static void tpm_platform_end_xfer(struct tpm_tis_data *data)
  {
- 	struct tpm_chip *chip = pnp_get_drvdata(dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
- 
- 	tpm_chip_unregister(chip);
- 	tpm_tis_remove(chip);
-+
-+	if (is_bsw())
-+		iounmap(phy->ilb_base_addr);
  }
- 
- static struct pnp_driver tis_pnp_driver = {
-@@ -408,10 +425,15 @@ static int tpm_tis_plat_probe(struct platform_device *pdev)
- static int tpm_tis_plat_remove(struct platform_device *pdev)
+ #endif
+@@ -213,12 +221,12 @@ static int tpm_tcg_read_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
  {
- 	struct tpm_chip *chip = dev_get_drvdata(&pdev->dev);
-+	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
-+	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(priv);
+ 	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
  
- 	tpm_chip_unregister(chip);
- 	tpm_tis_remove(chip);
+-	tpm_platform_begin_xfer();
++	tpm_platform_begin_xfer(data);
  
-+	if (is_bsw())
-+		iounmap(phy->ilb_base_addr);
-+
+ 	while (len--)
+ 		*result++ = ioread8(phy->iobase + addr);
+ 
+-	tpm_platform_end_xfer();
++	tpm_platform_end_xfer(data);
+ 
  	return 0;
  }
+@@ -228,12 +236,12 @@ static int tpm_tcg_write_bytes(struct tpm_tis_data *data, u32 addr, u16 len,
+ {
+ 	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
  
-@@ -469,11 +491,6 @@ static int __init init_tis(void)
- 	if (rc)
- 		goto err_force;
+-	tpm_platform_begin_xfer();
++	tpm_platform_begin_xfer(data);
  
--#ifdef CONFIG_X86
--	if (is_bsw())
--		ilb_base_addr = ioremap(INTEL_LEGACY_BLK_BASE_ADDR,
--					ILB_REMAP_SIZE);
--#endif
- 	rc = platform_driver_register(&tis_drv);
- 	if (rc)
- 		goto err_platform;
-@@ -492,10 +509,6 @@ static int __init init_tis(void)
- err_platform:
- 	if (force_pdev)
- 		platform_device_unregister(force_pdev);
--#ifdef CONFIG_X86
--	if (is_bsw())
--		iounmap(ilb_base_addr);
--#endif
- err_force:
- 	return rc;
+ 	while (len--)
+ 		iowrite8(*value++, phy->iobase + addr);
+ 
+-	tpm_platform_end_xfer();
++	tpm_platform_end_xfer(data);
+ 
+ 	return 0;
  }
-@@ -505,10 +518,6 @@ static void __exit cleanup_tis(void)
- 	pnp_unregister_driver(&tis_pnp_driver);
- 	platform_driver_unregister(&tis_drv);
+@@ -242,11 +250,11 @@ static int tpm_tcg_read16(struct tpm_tis_data *data, u32 addr, u16 *result)
+ {
+ 	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
  
--#ifdef CONFIG_X86
--	if (is_bsw())
--		iounmap(ilb_base_addr);
--#endif
- 	if (force_pdev)
- 		platform_device_unregister(force_pdev);
+-	tpm_platform_begin_xfer();
++	tpm_platform_begin_xfer(data);
+ 
+ 	*result = ioread16(phy->iobase + addr);
+ 
+-	tpm_platform_end_xfer();
++	tpm_platform_end_xfer(data);
+ 
+ 	return 0;
  }
+@@ -255,11 +263,11 @@ static int tpm_tcg_read32(struct tpm_tis_data *data, u32 addr, u32 *result)
+ {
+ 	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+ 
+-	tpm_platform_begin_xfer();
++	tpm_platform_begin_xfer(data);
+ 
+ 	*result = ioread32(phy->iobase + addr);
+ 
+-	tpm_platform_end_xfer();
++	tpm_platform_end_xfer(data);
+ 
+ 	return 0;
+ }
+@@ -268,11 +276,11 @@ static int tpm_tcg_write32(struct tpm_tis_data *data, u32 addr, u32 value)
+ {
+ 	struct tpm_tis_tcg_phy *phy = to_tpm_tis_tcg_phy(data);
+ 
+-	tpm_platform_begin_xfer();
++	tpm_platform_begin_xfer(data);
+ 
+ 	iowrite32(value, phy->iobase + addr);
+ 
+-	tpm_platform_end_xfer();
++	tpm_platform_end_xfer(data);
+ 
+ 	return 0;
+ }
+diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+index fdde971bc810..64f5b46f5bf2 100644
+--- a/drivers/char/tpm/tpm_tis_core.c
++++ b/drivers/char/tpm/tpm_tis_core.c
+@@ -661,6 +661,26 @@ void tpm_tis_remove(struct tpm_chip *chip)
+ }
+ EXPORT_SYMBOL_GPL(tpm_tis_remove);
+ 
++/**
++ * tpm_tis_clkrun_enable() - Keep clkrun protocol disabled for entire duration
++ *                           of a single TPM command
++ * @chip:	TPM chip to use
++ * @value:	1 - Disable CLKRUN protocol, so that clocks are free running
++ *		0 - Enable CLKRUN protocol
++ */
++static void tpm_tis_clkrun_enable(struct tpm_chip *chip, bool value)
++{
++	struct tpm_tis_data *data = dev_get_drvdata(&chip->dev);
++
++	if (!IS_ENABLED(CONFIG_X86))
++		return;
++
++	if (value)
++		data->flags |= TPM_TIS_CLK_ENABLE;
++	else
++		data->flags &= ~TPM_TIS_CLK_ENABLE;
++}
++
+ static const struct tpm_class_ops tpm_tis = {
+ 	.flags = TPM_OPS_AUTO_STARTUP,
+ 	.status = tpm_tis_status,
+@@ -673,6 +693,7 @@ void tpm_tis_remove(struct tpm_chip *chip)
+ 	.req_canceled = tpm_tis_req_canceled,
+ 	.request_locality = request_locality,
+ 	.relinquish_locality = release_locality,
++	.clk_enable = tpm_tis_clkrun_enable,
+ };
+ 
+ int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
+diff --git a/drivers/char/tpm/tpm_tis_core.h b/drivers/char/tpm/tpm_tis_core.h
+index 6bbac319ff3b..281f744a1a44 100644
+--- a/drivers/char/tpm/tpm_tis_core.h
++++ b/drivers/char/tpm/tpm_tis_core.h
+@@ -81,6 +81,7 @@ enum tis_defaults {
+ 
+ enum tpm_tis_flags {
+ 	TPM_TIS_ITPM_WORKAROUND		= BIT(0),
++	TPM_TIS_CLK_ENABLE		= BIT(1),
+ };
+ 
+ struct tpm_tis_data {
+diff --git a/include/linux/tpm.h b/include/linux/tpm.h
+index 5a090f5ab335..881312d85574 100644
+--- a/include/linux/tpm.h
++++ b/include/linux/tpm.h
+@@ -50,6 +50,7 @@ struct tpm_class_ops {
+ 				unsigned long *timeout_cap);
+ 	int (*request_locality)(struct tpm_chip *chip, int loc);
+ 	void (*relinquish_locality)(struct tpm_chip *chip, int loc);
++	void (*clk_enable)(struct tpm_chip *chip, bool value);
+ };
+ 
+ #if defined(CONFIG_TCG_TPM) || defined(CONFIG_TCG_TPM_MODULE)
 -- 
 1.9.1
