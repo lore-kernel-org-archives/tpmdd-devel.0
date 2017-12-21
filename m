@@ -1,87 +1,158 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH v6 0/2] Fix corner cases with disabling CLKRUN in tpm_tis
-Date: Fri, 8 Dec 2017 12:51:26 +0200
-Message-ID: <20171208105126.i4cfdn2kih7ddwbw@linux.intel.com>
-References: <1512610690-59953-1-git-send-email-azhar.shaikh@intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <1512610690-59953-1-git-send-email-azhar.shaikh@intel.com>
-Sender: owner-linux-security-module@vger.kernel.org
-To: Azhar Shaikh <azhar.shaikh@intel.com>
-Cc: jgunthorpe@obsidianresearch.com, peterhuewe@gmx.de, linux-security-module@vger.kernel.org, linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net
+From: Azhar Shaikh <azhar.shaikh@intel.com>
+Subject: [PATCH] tpm: Fix the driver cleanup code
+Date: Thu, 21 Dec 2017 12:17:02 -0800
+Message-ID: <1513887422-123222-1-git-send-email-azhar.shaikh@intel.com>
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Sender: linux-kernel-owner@vger.kernel.org
+To: jarkko.sakkinen@linux.intel.com, jgg@ziepe.ca, javierm@redhat.com, peterhuewe@gmx.de
+Cc: linux-security-module@vger.kernel.org, linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, azhar.shaikh@intel.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Wed, Dec 06, 2017 at 05:38:08PM -0800, Azhar Shaikh wrote:
-> Changes from v1:
-> - Patch 1: "tpm: Keep CLKRUN enabled throughout the duration of transmit_cmd()"
->   - Add NULL checks before calling clk_toggle callback
->   - Use IS_ENABLED instead of ifdef in tpm_tis_clkrun_toggle()
->   - Do not call tpm_platform_begin_xfer() and tpm_platform_end_xfer()
->     from tpm_tis_clkrun_toggle(). Make them static again.
-> 
-> - Patch 2: "tpm_tis: Move ilb_base_addr to tpm_tis_tcg_phy"
->   - This is a new patch in this series as per suggestion from Jason.
->   - Is the current implementation ok or I should move the code in tpm_tis_pnp_remove()
->     and tpm_tis_plat_remove() inside tpm_tis_remove(). That way all the unmapping
->     can be done in one place, instead of 3 different places now. Also the unmapping
->     in tpm_tis_init() can be moved to tpm_tis_remove(), since in case of error
->     tpm_tis_core_init() calls tpm_tis_remove(). Kindly suggest.
-> 
-> Changes from v2:
-> - Patch 1: "tpm: Keep CLKRUN enabled throughout the duration of transmit_cmd()"
->   - No changes
-> 
-> - Patch 2: "tpm_tis: Move ilb_base_addr to tpm_tis_tcg_phy"
->   - Updated is_bsw() function to have the #ifdef CONFIG_X86 check within the function
->     itself. Also removed the #ifdef CONFIG_X86 from all other places around is_bsw()
-> 
-> Changes from v3:
-> - Patch 1: "tpm: Keep CLKRUN enabled throughout the duration of transmit_cmd()"
->   - Change function name from clk_toggle to clk_enable
->   - Update the commit message.
-> 
-> - Patch 2: "tpm_tis: Move ilb_base_addr to tpm_tis_tcg_phy"
->   - No changes
-> 
-> Changes from v4:
-> - The numbering of patches is now interchanged.
-> 
-> - Patch 1: "tpm_tis: Move ilb_base_addr to tpm_tis_data"
->   - Had to move ilb_base_addr to tpm_tis_data, from tpm_tis_tcg_phy.
->     Since the ioremapping of ilb_base_addr had to be done before any TPM access,
->     hence moved the variable to tpm_tis_data.
->   - Also move the ioremapping of ilb_base_addr from tpm_tis_init() to
->     tpm_tis_core_init() i.e. before any TPM access is done.
->   - Rename marco LPC_CNTRL_REG_OFFSET to LPC_CNTRL_OFFSET
->   - Update the commit message.
-> 
-> - Patch 2: "tpm: Keep CLKRUN enabled throughout the duration of transmit_cmd()"
->   - Remove the functions tpm_platform_begin_xfer() and tpm_platform_end_xfer()
->   - Move the code from these functions to tpm_tis_clkrun_enable().
-> 
-> Changes from v5:
-> - Patch 1: "tpm_tis: Move ilb_base_addr to tpm_tis_data"
->   - No changes
-> 
-> - Patch 2: "tpm: Keep CLKRUN enabled throughout the duration of transmit_cmd()"
->   - Update the commit message.
-> 
-> Azhar Shaikh (2):
->   tpm_tis: Move ilb_base_addr to tpm_tis_data
->   tpm: Keep CLKRUN enabled throughout the duration of transmit_cmd()
-> 
->  drivers/char/tpm/tpm-interface.c |   6 ++
->  drivers/char/tpm/tpm_tis.c       | 121 ++++++---------------------------------
->  drivers/char/tpm/tpm_tis_core.c  | 111 +++++++++++++++++++++++++++++++++--
->  drivers/char/tpm/tpm_tis_core.h  |  17 ++++++
->  include/linux/tpm.h              |   1 +
->  5 files changed, 147 insertions(+), 109 deletions(-)
-> 
-> -- 
-> 1.9.1
+Commit 3c1701339284353c41 ("tpm: Keep CLKRUN enabled throughout
+the duration of transmit_cmd()") added code which accessed
+chip->ops, even after it was set to NULL in tpm_del_char_device(),
+called from tpm_chip_unregister() in error / driver exit paths.
+So fix this code.
 
-Applied.
+Fixes: 3c1701339284353c41 ("tpm: Keep CLKRUN enabled throughout
+the duration of transmit_cmd()")
 
-/Jarkko
+Suggested-by: Javier Martinez Canillas <javierm@redhat.com>
+Suggested-by: Jason Gunthorpe <jgg@ziepe.ca>
+Signed-off-by: Azhar Shaikh <azhar.shaikh@intel.com>
+---
+ drivers/char/tpm/tpm-chip.c     |  5 +++++
+ drivers/char/tpm/tpm.h          |  1 +
+ drivers/char/tpm/tpm_tis.c      |  8 ++------
+ drivers/char/tpm/tpm_tis_core.c | 23 +++++++++++++++--------
+ drivers/char/tpm/tpm_tis_spi.c  |  1 +
+ 5 files changed, 24 insertions(+), 14 deletions(-)
+
+diff --git a/drivers/char/tpm/tpm-chip.c b/drivers/char/tpm/tpm-chip.c
+index 0a62c19937b6..c88ec9a32a7e 100644
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -346,6 +346,10 @@ static void tpm_del_char_device(struct tpm_chip *chip)
+ 	down_write(&chip->ops_sem);
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
+ 		tpm2_shutdown(chip, TPM2_SU_CLEAR);
++	if (chip->flags & TPM_CHIP_FLAG_DO_NOT_CLEAR_OPS) {
++		up_write(&chip->ops_sem);
++		return;
++	}
+ 	chip->ops = NULL;
+ 	up_write(&chip->ops_sem);
+ }
+@@ -454,6 +458,7 @@ int tpm_chip_register(struct tpm_chip *chip)
+ 
+ 	rc = tpm_add_legacy_sysfs(chip);
+ 	if (rc) {
++		chip->flags |= TPM_CHIP_FLAG_DO_NOT_CLEAR_OPS;
+ 		tpm_chip_unregister(chip);
+ 		return rc;
+ 	}
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index f895fba4e20d..dc2a532649e0 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -183,6 +183,7 @@ enum tpm_chip_flags {
+ 	TPM_CHIP_FLAG_VIRTUAL		= BIT(3),
+ 	TPM_CHIP_FLAG_HAVE_TIMEOUTS	= BIT(4),
+ 	TPM_CHIP_FLAG_ALWAYS_POWERED	= BIT(5),
++	TPM_CHIP_FLAG_DO_NOT_CLEAR_OPS	= BIT(6),
+ };
+ 
+ struct tpm_bios_log {
+diff --git a/drivers/char/tpm/tpm_tis.c b/drivers/char/tpm/tpm_tis.c
+index d29add49b033..a146ef4e499b 100644
+--- a/drivers/char/tpm/tpm_tis.c
++++ b/drivers/char/tpm/tpm_tis.c
+@@ -273,11 +273,9 @@ static void tpm_tis_pnp_remove(struct pnp_dev *dev)
+ 	struct tpm_chip *chip = pnp_get_drvdata(dev);
+ 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+ 
++	chip->flags |= TPM_CHIP_FLAG_DO_NOT_CLEAR_OPS;
+ 	tpm_chip_unregister(chip);
+ 	tpm_tis_remove(chip);
+-	if (is_bsw())
+-		iounmap(priv->ilb_base_addr);
+-
+ }
+ 
+ static struct pnp_driver tis_pnp_driver = {
+@@ -326,12 +324,10 @@ static int tpm_tis_plat_remove(struct platform_device *pdev)
+ 	struct tpm_chip *chip = dev_get_drvdata(&pdev->dev);
+ 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
+ 
++	chip->flags |= TPM_CHIP_FLAG_DO_NOT_CLEAR_OPS;
+ 	tpm_chip_unregister(chip);
+ 	tpm_tis_remove(chip);
+ 
+-	if (is_bsw())
+-		iounmap(priv->ilb_base_addr);
+-
+ 	return 0;
+ }
+ 
+diff --git a/drivers/char/tpm/tpm_tis_core.c b/drivers/char/tpm/tpm_tis_core.c
+index c2227983ed88..d9099281fc2e 100644
+--- a/drivers/char/tpm/tpm_tis_core.c
++++ b/drivers/char/tpm/tpm_tis_core.c
+@@ -727,6 +727,14 @@ void tpm_tis_remove(struct tpm_chip *chip)
+ 
+ 	if (chip->ops->clk_enable != NULL)
+ 		chip->ops->clk_enable(chip, false);
++
++	if (chip->flags & TPM_CHIP_FLAG_DO_NOT_CLEAR_OPS) {
++		down_write(&chip->ops_sem);
++		chip->ops = NULL;
++		up_write(&chip->ops_sem);
++	}
++	if (priv->ilb_base_addr)
++		iounmap(priv->ilb_base_addr);
+ }
+ EXPORT_SYMBOL_GPL(tpm_tis_remove);
+ 
+@@ -922,21 +930,20 @@ int tpm_tis_core_init(struct device *dev, struct tpm_tis_data *priv, int irq,
+ 	}
+ 
+ 	rc = tpm_chip_register(chip);
+-	if (rc && is_bsw())
+-		iounmap(priv->ilb_base_addr);
++	if (rc)
++		goto out_err;
+ 
+ 	if (chip->ops->clk_enable != NULL)
+ 		chip->ops->clk_enable(chip, false);
+ 
+-	return rc;
+-out_err:
+-	tpm_tis_remove(chip);
+-	if (is_bsw())
+-		iounmap(priv->ilb_base_addr);
++	return 0;
+ 
+-	if (chip->ops->clk_enable != NULL)
++out_err:
++	if ((chip->ops != NULL) && (chip->ops->clk_enable != NULL))
+ 		chip->ops->clk_enable(chip, false);
+ 
++	tpm_tis_remove(chip);
++
+ 	return rc;
+ }
+ EXPORT_SYMBOL_GPL(tpm_tis_core_init);
+diff --git a/drivers/char/tpm/tpm_tis_spi.c b/drivers/char/tpm/tpm_tis_spi.c
+index 424ff2fde1f2..79c18cfc6519 100644
+--- a/drivers/char/tpm/tpm_tis_spi.c
++++ b/drivers/char/tpm/tpm_tis_spi.c
+@@ -221,6 +221,7 @@ static int tpm_tis_spi_remove(struct spi_device *dev)
+ {
+ 	struct tpm_chip *chip = spi_get_drvdata(dev);
+ 
++	chip->flags |= TPM_CHIP_FLAG_DO_NOT_CLEAR_OPS;
+ 	tpm_chip_unregister(chip);
+ 	tpm_tis_remove(chip);
+ 	return 0;
+-- 
+1.9.1
