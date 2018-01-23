@@ -1,7 +1,7 @@
 From: Tomas Winkler <tomas.winkler@intel.com>
-Subject: [PATCH 2/3] tpm: separate cmd_ready/go_idle from runtime_pm
-Date: Tue, 23 Jan 2018 13:27:30 +0200
-Message-ID: <20180123112731.3687-2-tomas.winkler@intel.com>
+Subject: [PATCH 3/3] tpm: add longer timeouts for creation commands.
+Date: Tue, 23 Jan 2018 13:27:31 +0200
+Message-ID: <20180123112731.3687-3-tomas.winkler@intel.com>
 References: <20180123112731.3687-1-tomas.winkler@intel.com>
 Return-path: <linux-kernel-owner@vger.kernel.org>
 In-Reply-To: <20180123112731.3687-1-tomas.winkler@intel.com>
@@ -10,246 +10,130 @@ To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Jason Gunthorpe <jgunthor
 Cc: Alexander Usyskin <alexander.usyskin@intel.com>, tpmdd-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Tomas Winkler <tomas.winkler@intel.com>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-We cannot use go_idle cmd_ready commands via runtime_pm handles
-as with the introduction of localities this is no longer an optional
-feature, while runtime pm can be not enabled.
-Though cmd_ready/go_idle provides power saving feature, it's also part of
-TPM2 protocol and should be called explicitly.
-This patch exposes cmd_read/go_idle via tpm class ops and removes
-runtime pm support as it is not used by any driver.
+TPM2_CC_Create(0x153) and TPM2_CC_CreatePrimary (0x131) involve generation
+of crypto keys which can be a computationally intensive task.
+The timeout is set to 3min.
 
 Signed-off-by: Tomas Winkler <tomas.winkler@intel.com>
 ---
- drivers/char/tpm/tpm-interface.c | 15 ++++++---
- drivers/char/tpm/tpm_crb.c       | 69 +++++++++++++++++-----------------------
- include/linux/tpm.h              |  2 ++
- 3 files changed, 42 insertions(+), 44 deletions(-)
+ drivers/char/tpm/tpm-interface.c |  4 ++++
+ drivers/char/tpm/tpm.h           | 27 ++++++++++++++++-----------
+ drivers/char/tpm/tpm2-cmd.c      |  8 +++++---
+ 3 files changed, 25 insertions(+), 14 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 197fda39aab5..e4d0291e22f6 100644
+index e4d0291e22f6..4c6334f0f9ad 100644
 --- a/drivers/char/tpm/tpm-interface.c
 +++ b/drivers/char/tpm/tpm-interface.c
-@@ -29,7 +29,6 @@
- #include <linux/mutex.h>
- #include <linux/spinlock.h>
- #include <linux/freezer.h>
--#include <linux/pm_runtime.h>
- #include <linux/tpm_eventlog.h>
+@@ -673,6 +673,10 @@ int tpm_get_timeouts(struct tpm_chip *chip)
+ 		    msecs_to_jiffies(TPM2_DURATION_MEDIUM);
+ 		chip->duration[TPM_LONG] =
+ 		    msecs_to_jiffies(TPM2_DURATION_LONG);
++		chip->duration[TPM_LONG_LONG] =
++		    msecs_to_jiffies(TPM2_DURATION_LONG_LONG);
++		chip->duration[TPM_UNDEFINED] =
++		    msecs_to_jiffies(TPM2_DURATION_DEFAULT);
  
- #include "tpm.h"
-@@ -437,8 +436,11 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
- 		chip->locality = rc;
- 	}
- 
--	if (chip->dev.parent)
--		pm_runtime_get_sync(chip->dev.parent);
-+	if (chip->ops->cmd_ready) {
-+		rc = chip->ops->cmd_ready(chip);
-+		if (rc)
-+			goto out;
-+	}
- 
- 	rc = tpm2_prepare_space(chip, space, ordinal, buf);
- 	if (rc)
-@@ -500,8 +502,11 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
- 	rc = tpm2_commit_space(chip, space, ordinal, buf, &len);
- 
- out:
--	if (chip->dev.parent)
--		pm_runtime_put_sync(chip->dev.parent);
-+	if (chip->ops->go_idle) {
-+		rc = chip->ops->go_idle(chip);
-+		if (rc)
-+			goto out;
-+	}
- 
- 	if (need_locality && chip->ops->relinquish_locality) {
- 		chip->ops->relinquish_locality(chip, chip->locality);
-diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
-index d174919c446d..4b480f80cecc 100644
---- a/drivers/char/tpm/tpm_crb.c
-+++ b/drivers/char/tpm/tpm_crb.c
-@@ -132,7 +132,7 @@ static bool crb_wait_for_reg_32(u32 __iomem *reg, u32 mask, u32 value,
- }
- 
- /**
-- * crb_go_idle - request tpm crb device to go the idle state
-+ * __crb_go_idle - request tpm crb device to go the idle state
-  *
-  * @dev:  crb device
-  * @priv: crb private data
-@@ -147,7 +147,7 @@ static bool crb_wait_for_reg_32(u32 __iomem *reg, u32 mask, u32 value,
-  *
-  * Return: 0 always
-  */
--static int crb_go_idle(struct device *dev, struct crb_priv *priv)
-+static int __crb_go_idle(struct device *dev, struct crb_priv *priv)
- {
- 	if ((priv->sm == ACPI_TPM2_START_METHOD) ||
- 	    (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD) ||
-@@ -166,8 +166,16 @@ static int crb_go_idle(struct device *dev, struct crb_priv *priv)
- 	return 0;
- }
- 
-+static int crb_go_idle(struct tpm_chip *chip)
-+{
-+	struct device *dev = &chip->dev;
-+	struct crb_priv *priv = dev_get_drvdata(dev);
-+
-+	return __crb_go_idle(dev, priv);
-+}
-+
- /**
-- * crb_cmd_ready - request tpm crb device to enter ready state
-+ * __crb_cmd_ready - request tpm crb device to enter ready state
-  *
-  * @dev:  crb device
-  * @priv: crb private data
-@@ -181,7 +189,7 @@ static int crb_go_idle(struct device *dev, struct crb_priv *priv)
-  *
-  * Return: 0 on success -ETIME on timeout;
-  */
--static int crb_cmd_ready(struct device *dev, struct crb_priv *priv)
-+static int __crb_cmd_ready(struct device *dev, struct crb_priv *priv)
- {
- 	if ((priv->sm == ACPI_TPM2_START_METHOD) ||
- 	    (priv->sm == ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD) ||
-@@ -200,6 +208,14 @@ static int crb_cmd_ready(struct device *dev, struct crb_priv *priv)
- 	return 0;
- }
- 
-+static int crb_cmd_ready(struct tpm_chip *chip)
-+{
-+	struct device *dev = &chip->dev;
-+	struct crb_priv *priv = dev_get_drvdata(dev);
-+
-+	return __crb_cmd_ready(dev, priv);
-+}
-+
- static int __crb_request_locality(struct device *dev,
- 				  struct crb_priv *priv, int loc)
- {
-@@ -390,6 +406,8 @@ static const struct tpm_class_ops tpm_crb = {
- 	.send = crb_send,
- 	.cancel = crb_cancel,
- 	.req_canceled = crb_req_canceled,
-+	.go_idle  = crb_go_idle,
-+	.cmd_ready = crb_cmd_ready,
- 	.request_locality = crb_request_locality,
- 	.relinquish_locality = crb_relinquish_locality,
- 	.req_complete_mask = CRB_DRV_STS_COMPLETE,
-@@ -506,7 +524,7 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
- 	 * PTT HW bug w/a: wake up the device to access
- 	 * possibly not retained registers.
- 	 */
--	ret = crb_cmd_ready(dev, priv);
-+	ret = __crb_cmd_ready(dev, priv);
- 	if (ret)
- 		return ret;
- 
-@@ -551,7 +569,7 @@ static int crb_map_io(struct acpi_device *device, struct crb_priv *priv,
- 	if (!ret)
- 		priv->cmd_size = cmd_size;
- 
--	crb_go_idle(dev, priv);
-+	__crb_go_idle(dev, priv);
- 
- 	__crb_relinquish_locality(dev, priv, 0);
- 
-@@ -616,23 +634,13 @@ static int crb_acpi_add(struct acpi_device *device)
- 	if (rc)
- 		return rc;
- 
--	rc  = crb_cmd_ready(dev, priv);
-+	rc  = __crb_cmd_ready(dev, priv);
- 	if (rc)
- 		goto out;
- 
--	pm_runtime_get_noresume(dev);
--	pm_runtime_set_active(dev);
--	pm_runtime_enable(dev);
--
- 	rc = tpm_chip_register(chip);
--	if (rc) {
--		crb_go_idle(dev, priv);
--		pm_runtime_put_noidle(dev);
--		pm_runtime_disable(dev);
--		goto out;
--	}
- 
--	pm_runtime_put_sync(dev);
-+	__crb_go_idle(dev, priv);
- 
- out:
- 	__crb_relinquish_locality(dev, priv, 0);
-@@ -647,43 +655,27 @@ static int crb_acpi_remove(struct acpi_device *device)
- 
- 	tpm_chip_unregister(chip);
- 
--	pm_runtime_disable(dev);
--
- 	return 0;
- }
- 
--static int __maybe_unused crb_pm_runtime_suspend(struct device *dev)
--{
--	struct tpm_chip *chip = dev_get_drvdata(dev);
--	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
--
--	return crb_go_idle(dev, priv);
--}
--
--static int __maybe_unused crb_pm_runtime_resume(struct device *dev)
--{
--	struct tpm_chip *chip = dev_get_drvdata(dev);
--	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
--
--	return crb_cmd_ready(dev, priv);
--}
--
- static int __maybe_unused crb_pm_suspend(struct device *dev)
- {
-+	struct tpm_chip *chip = dev_get_drvdata(dev);
- 	int ret;
- 
- 	ret = tpm_pm_suspend(dev);
- 	if (ret)
- 		return ret;
- 
--	return crb_pm_runtime_suspend(dev);
-+	return crb_go_idle(chip);
- }
- 
- static int __maybe_unused crb_pm_resume(struct device *dev)
- {
-+	struct tpm_chip *chip = dev_get_drvdata(dev);
- 	int ret;
- 
--	ret = crb_pm_runtime_resume(dev);
-+	ret = crb_cmd_ready(chip);
- 	if (ret)
- 		return ret;
- 
-@@ -692,7 +684,6 @@ static int __maybe_unused crb_pm_resume(struct device *dev)
- 
- static const struct dev_pm_ops crb_pm = {
- 	SET_SYSTEM_SLEEP_PM_OPS(crb_pm_suspend, crb_pm_resume)
--	SET_RUNTIME_PM_OPS(crb_pm_runtime_suspend, crb_pm_runtime_resume, NULL)
+ 		chip->flags |= TPM_CHIP_FLAG_HAVE_TIMEOUTS;
+ 		return 0;
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index f895fba4e20d..192ba68b39c2 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -67,7 +67,9 @@ enum tpm_duration {
+ 	TPM_SHORT = 0,
+ 	TPM_MEDIUM = 1,
+ 	TPM_LONG = 2,
+-	TPM_UNDEFINED,
++	TPM_LONG_LONG = 3,
++	TPM_UNDEFINED = 4,
++	TPM_DURATION_MAX,
  };
  
- static const struct acpi_device_id crb_device_ids[] = {
-diff --git a/include/linux/tpm.h b/include/linux/tpm.h
-index bcdd3790e94d..5c9c5a106350 100644
---- a/include/linux/tpm.h
-+++ b/include/linux/tpm.h
-@@ -43,6 +43,8 @@ struct tpm_class_ops {
- 	u8 (*status) (struct tpm_chip *chip);
- 	bool (*update_timeouts)(struct tpm_chip *chip,
- 				unsigned long *timeout_cap);
-+	int (*go_idle)(struct tpm_chip *chip);
-+	int (*cmd_ready)(struct tpm_chip *chip);
- 	int (*request_locality)(struct tpm_chip *chip, int loc);
- 	void (*relinquish_locality)(struct tpm_chip *chip, int loc);
- 	void (*clk_enable)(struct tpm_chip *chip, bool value);
+ #define TPM_WARN_RETRY          0x800
+@@ -79,15 +81,17 @@ enum tpm_duration {
+ #define TPM_HEADER_SIZE		10
+ 
+ enum tpm2_const {
+-	TPM2_PLATFORM_PCR	= 24,
+-	TPM2_PCR_SELECT_MIN	= ((TPM2_PLATFORM_PCR + 7) / 8),
+-	TPM2_TIMEOUT_A		= 750,
+-	TPM2_TIMEOUT_B		= 2000,
+-	TPM2_TIMEOUT_C		= 200,
+-	TPM2_TIMEOUT_D		= 30,
+-	TPM2_DURATION_SHORT	= 20,
+-	TPM2_DURATION_MEDIUM	= 750,
+-	TPM2_DURATION_LONG	= 2000,
++	TPM2_PLATFORM_PCR       =     24,
++	TPM2_PCR_SELECT_MIN     = ((TPM2_PLATFORM_PCR + 7) / 8),
++	TPM2_TIMEOUT_A          =    750,
++	TPM2_TIMEOUT_B          =   2000,
++	TPM2_TIMEOUT_C          =    200,
++	TPM2_TIMEOUT_D          =     30,
++	TPM2_DURATION_SHORT     =     20,
++	TPM2_DURATION_MEDIUM    =    750,
++	TPM2_DURATION_LONG      =   2000,
++	TPM2_DURATION_LONG_LONG = 300000,
++	TPM2_DURATION_DEFAULT   = 120000,
+ };
+ 
+ enum tpm2_structures {
+@@ -123,6 +127,7 @@ enum tpm2_algorithms {
+ 
+ enum tpm2_command_codes {
+ 	TPM2_CC_FIRST		= 0x011F,
++	TPM2_CC_CREATE_PRIMARY  = 0x0131,
+ 	TPM2_CC_SELF_TEST	= 0x0143,
+ 	TPM2_CC_STARTUP		= 0x0144,
+ 	TPM2_CC_SHUTDOWN	= 0x0145,
+@@ -227,7 +232,7 @@ struct tpm_chip {
+ 	unsigned long timeout_c; /* jiffies */
+ 	unsigned long timeout_d; /* jiffies */
+ 	bool timeout_adjusted;
+-	unsigned long duration[3]; /* jiffies */
++	unsigned long duration[TPM_DURATION_MAX]; /* jiffies */
+ 	bool duration_adjusted;
+ 
+ 	struct dentry *bios_dir[TPM_NUM_EVENT_LOG_FILES];
+diff --git a/drivers/char/tpm/tpm2-cmd.c b/drivers/char/tpm/tpm2-cmd.c
+index c17e75348a99..aaa17e982b37 100644
+--- a/drivers/char/tpm/tpm2-cmd.c
++++ b/drivers/char/tpm/tpm2-cmd.c
+@@ -90,6 +90,8 @@ static struct tpm2_hash tpm2_hash_map[] = {
+  * of time the chip could take to return the result. The values
+  * of the SHORT, MEDIUM, and LONG durations are taken from the
+  * PC Client Profile (PTP) specification.
++ * LONG_LONG is for commands that generates keys which empirically
++ * takes longer time on some systems.
+  */
+ static const u8 tpm2_ordinal_duration[TPM2_CC_LAST - TPM2_CC_FIRST + 1] = {
+ 	TPM_UNDEFINED,		/* 11F */
+@@ -110,7 +112,7 @@ static const u8 tpm2_ordinal_duration[TPM2_CC_LAST - TPM2_CC_FIRST + 1] = {
+ 	TPM_UNDEFINED,		/* 12e */
+ 	TPM_UNDEFINED,		/* 12f */
+ 	TPM_UNDEFINED,		/* 130 */
+-	TPM_UNDEFINED,		/* 131 */
++	TPM_LONG_LONG,		/* 131 */
+ 	TPM_UNDEFINED,		/* 132 */
+ 	TPM_UNDEFINED,		/* 133 */
+ 	TPM_UNDEFINED,		/* 134 */
+@@ -144,7 +146,7 @@ static const u8 tpm2_ordinal_duration[TPM2_CC_LAST - TPM2_CC_FIRST + 1] = {
+ 	TPM_UNDEFINED,		/* 150 */
+ 	TPM_UNDEFINED,		/* 151 */
+ 	TPM_UNDEFINED,		/* 152 */
+-	TPM_UNDEFINED,		/* 153 */
++	TPM_LONG_LONG,		/* 153 */
+ 	TPM_UNDEFINED,		/* 154 */
+ 	TPM_UNDEFINED,		/* 155 */
+ 	TPM_UNDEFINED,		/* 156 */
+@@ -817,7 +819,7 @@ unsigned long tpm2_calc_ordinal_duration(struct tpm_chip *chip, u32 ordinal)
+ 		duration = chip->duration[index];
+ 
+ 	if (duration <= 0)
+-		duration = 2 * 60 * HZ;
++		duration = msecs_to_jiffies(TPM2_DURATION_DEFAULT);
+ 
+ 	return duration;
+ }
 -- 
 2.14.3
