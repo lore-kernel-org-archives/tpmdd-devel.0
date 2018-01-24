@@ -1,39 +1,310 @@
-From: Jason Gunthorpe <jgg@ziepe.ca>
-Subject: Re: [PATCH 2/3] tpm: separate cmd_ready/go_idle from runtime_pm
-Date: Tue, 23 Jan 2018 08:33:22 -0700
-Message-ID: <20180123153322.GB30670@ziepe.ca>
+From: "Winkler, Tomas" <tomas.winkler@intel.com>
+Subject: RE: [PATCH 1/3] tpm: cmd_ready command can be issued only after
+ granting locality
+Date: Wed, 24 Jan 2018 18:33:53 +0000
+Message-ID: <5B8DA87D05A7694D9FA63FD143655C1B94203771@hasmsx108.ger.corp.intel.com>
 References: <20180123112731.3687-1-tomas.winkler@intel.com>
- <20180123112731.3687-2-tomas.winkler@intel.com>
- <20180123130841.ub2amxalgr2oapu6@linux.intel.com>
+ <20180123125426.t6xjgrqcfbkmvkdl@linux.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 8BIT
 Return-path: <linux-security-module-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20180123130841.ub2amxalgr2oapu6@linux.intel.com>
+In-Reply-To: <20180123125426.t6xjgrqcfbkmvkdl@linux.intel.com>
+Content-Language: en-US
 Sender: owner-linux-security-module@vger.kernel.org
 To: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc: Tomas Winkler <tomas.winkler@intel.com>, Alexander Usyskin <alexander.usyskin@intel.com>, tpmdd-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+Cc: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "Usyskin, Alexander" <alexander.usyskin@intel.com>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "linux-integrity@vger.kernel.org" <linux-integrity@vger.kernel.org>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Jan 23, 2018 at 03:08:41PM +0200, Jarkko Sakkinen wrote:
-> On Tue, Jan 23, 2018 at 01:27:30PM +0200, Tomas Winkler wrote:
-> > We cannot use go_idle cmd_ready commands via runtime_pm handles
-> > as with the introduction of localities this is no longer an optional
-> > feature, while runtime pm can be not enabled.
-> > Though cmd_ready/go_idle provides power saving feature, it's also part of
-> > TPM2 protocol and should be called explicitly.
-> > This patch exposes cmd_read/go_idle via tpm class ops and removes
-> > runtime pm support as it is not used by any driver.
-> > 
+
+> > The correct sequence is to first request locality and only after that
+> > perform cmd_ready  handshake, otherwise the hardware will drop the
+> > subsequent message as from the device point of view the cmd_ready
+> > handshake wasn't performed. Symmetrically locality has to be
+> > relinquished only after going idle handshake has completed, this
+> > requires that go_idle has to poll for the completion.
+> >
+> > The issue is only visible on devices that support multiple localities.
+> >
 > > Signed-off-by: Tomas Winkler <tomas.winkler@intel.com>
 > 
-> Thank you.
+> Thank you!
 > 
-> LGTM
+> > ---
+> >  drivers/char/tpm/tpm-interface.c | 12 ++---
+> >  drivers/char/tpm/tpm_crb.c       | 95 ++++++++++++++++++++++++++---------
+> -----
+> >  2 files changed, 70 insertions(+), 37 deletions(-)
+> >
+> > diff --git a/drivers/char/tpm/tpm-interface.c
+> > b/drivers/char/tpm/tpm-interface.c
+> > index 76df4fbcf089..197fda39aab5 100644
+> > --- a/drivers/char/tpm/tpm-interface.c
+> > +++ b/drivers/char/tpm/tpm-interface.c
+> > @@ -422,8 +422,6 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct
+> tpm_space *space,
+> >  	if (!(flags & TPM_TRANSMIT_UNLOCKED))
+> >  		mutex_lock(&chip->tpm_mutex);
+> >
+> > -	if (chip->dev.parent)
+> > -		pm_runtime_get_sync(chip->dev.parent);
+> >
+> >  	if (chip->ops->clk_enable != NULL)
+> >  		chip->ops->clk_enable(chip, true);
+> > @@ -439,6 +437,9 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct
+> tpm_space *space,
+> >  		chip->locality = rc;
+> >  	}
+> >
+> > +	if (chip->dev.parent)
+> > +		pm_runtime_get_sync(chip->dev.parent);
+> > +
+> >  	rc = tpm2_prepare_space(chip, space, ordinal, buf);
+> >  	if (rc)
+> >  		goto out;
+> > @@ -499,17 +500,18 @@ ssize_t tpm_transmit(struct tpm_chip *chip,
+> struct tpm_space *space,
+> >  	rc = tpm2_commit_space(chip, space, ordinal, buf, &len);
+> >
+> >  out:
+> > +	if (chip->dev.parent)
+> > +		pm_runtime_put_sync(chip->dev.parent);
+> > +
+> >  	if (need_locality && chip->ops->relinquish_locality) {
+> >  		chip->ops->relinquish_locality(chip, chip->locality);
+> >  		chip->locality = -1;
+> >  	}
+> > +
+> >  out_no_locality:
+> >  	if (chip->ops->clk_enable != NULL)
+> >  		chip->ops->clk_enable(chip, false);
+> >
+> > -	if (chip->dev.parent)
+> > -		pm_runtime_put_sync(chip->dev.parent);
+> > -
+> >  	if (!(flags & TPM_TRANSMIT_UNLOCKED))
+> >  		mutex_unlock(&chip->tpm_mutex);
+> >  	return rc ? rc : len;
+> > diff --git a/drivers/char/tpm/tpm_crb.c b/drivers/char/tpm/tpm_crb.c
+> > index 7b3c2a8aa9de..d174919c446d 100644
+> > --- a/drivers/char/tpm/tpm_crb.c
+> > +++ b/drivers/char/tpm/tpm_crb.c
+> > @@ -112,6 +112,25 @@ struct tpm2_crb_smc {
+> >  	u32 smc_func_id;
+> >  };
+> >
+> > +static bool crb_wait_for_reg_32(u32 __iomem *reg, u32 mask, u32 value,
+> > +				unsigned long timeout)
+> > +{
+> > +	ktime_t start;
+> > +	ktime_t stop;
+> > +
+> > +	start = ktime_get();
+> > +	stop = ktime_add(start, ms_to_ktime(timeout));
+> > +
+> > +	do {
+> > +		if ((ioread32(reg) & mask) == value)
+> > +			return true;
+> > +
+> > +		usleep_range(50, 100);
+> > +	} while (ktime_before(ktime_get(), stop));
+> > +
+> > +	return ((ioread32(reg) & mask) == value);
 > 
-> Jason, what do you think?
+> Not sure about the change of return statement. Is this worth of doing?
+The sleep statement is followed directly by loop time comparison. It should take care
+for case when the change in the value happens in that time windows on the edge of the timeout.
+When I look at the traces I think we should maybe make that sleep  little longer to reduce number of 
+register access, but some more tests need to be done on multiple platforms. 
 
-The PM stuff has been the source of confusion for a while, seems
-reasonable to get rid of it.
 
-Jason
+> 
+> > +}
+> > +
+> >  /**
+> >   * crb_go_idle - request tpm crb device to go the idle state
+> >   *
+> > @@ -128,7 +147,7 @@ struct tpm2_crb_smc {
+> >   *
+> >   * Return: 0 always
+> >   */
+> > -static int __maybe_unused crb_go_idle(struct device *dev, struct
+> > crb_priv *priv)
+> > +static int crb_go_idle(struct device *dev, struct crb_priv *priv)
+> >  {
+> >  	if ((priv->sm == ACPI_TPM2_START_METHOD) ||
+> >  	    (priv->sm ==
+> ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD) || @@
+> > -136,30 +155,17 @@ static int __maybe_unused crb_go_idle(struct device
+> *dev, struct crb_priv *priv)
+> >  		return 0;
+> >
+> >  	iowrite32(CRB_CTRL_REQ_GO_IDLE, &priv->regs_t->ctrl_req);
+> > -	/* we don't really care when this settles */
+> >
+> > +	if (!crb_wait_for_reg_32(&priv->regs_t->ctrl_req,
+> > +				 CRB_CTRL_REQ_GO_IDLE/* mask */,
+> > +				 0, /* value */
+> > +				 TPM2_TIMEOUT_C)) {
+> > +		dev_warn(dev, "goIdle timed out\n");
+> > +		return -ETIME;
+> > +	}
+> >  	return 0;
+> >  }
+> >
+> > -static bool crb_wait_for_reg_32(u32 __iomem *reg, u32 mask, u32 value,
+> > -				unsigned long timeout)
+> > -{
+> > -	ktime_t start;
+> > -	ktime_t stop;
+> > -
+> > -	start = ktime_get();
+> > -	stop = ktime_add(start, ms_to_ktime(timeout));
+> > -
+> > -	do {
+> > -		if ((ioread32(reg) & mask) == value)
+> > -			return true;
+> > -
+> > -		usleep_range(50, 100);
+> > -	} while (ktime_before(ktime_get(), stop));
+> > -
+> > -	return false;
+> > -}
+> > -
+> >  /**
+> >   * crb_cmd_ready - request tpm crb device to enter ready state
+> >   *
+> > @@ -175,8 +181,7 @@ static bool crb_wait_for_reg_32(u32 __iomem *reg,
+> u32 mask, u32 value,
+> >   *
+> >   * Return: 0 on success -ETIME on timeout;
+> >   */
+> > -static int __maybe_unused crb_cmd_ready(struct device *dev,
+> > -					struct crb_priv *priv)
+> > +static int crb_cmd_ready(struct device *dev, struct crb_priv *priv)
+> >  {
+> >  	if ((priv->sm == ACPI_TPM2_START_METHOD) ||
+> >  	    (priv->sm ==
+> ACPI_TPM2_COMMAND_BUFFER_WITH_START_METHOD) || @@
+> > -195,11 +200,11 @@ static int __maybe_unused crb_cmd_ready(struct
+> device *dev,
+> >  	return 0;
+> >  }
+> >
+> > -static int crb_request_locality(struct tpm_chip *chip, int loc)
+> > +static int __crb_request_locality(struct device *dev,
+> > +				  struct crb_priv *priv, int loc)
+> >  {
+> > -	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+> >  	u32 value = CRB_LOC_STATE_LOC_ASSIGNED |
+> > -		CRB_LOC_STATE_TPM_REG_VALID_STS;
+> > +		    CRB_LOC_STATE_TPM_REG_VALID_STS;
+> >
+> >  	if (!priv->regs_h)
+> >  		return 0;
+> > @@ -207,23 +212,36 @@ static int crb_request_locality(struct tpm_chip
+> *chip, int loc)
+> >  	iowrite32(CRB_LOC_CTRL_REQUEST_ACCESS, &priv->regs_h-
+> >loc_ctrl);
+> >  	if (!crb_wait_for_reg_32(&priv->regs_h->loc_state, value, value,
+> >  				 TPM2_TIMEOUT_C)) {
+> > -		dev_warn(&chip->dev, "TPM_LOC_STATE_x.requestAccess
+> timed out\n");
+> > +		dev_warn(dev, "TPM_LOC_STATE_x.requestAccess timed
+> out\n");
+> >  		return -ETIME;
+> >  	}
+> >
+> >  	return 0;
+> >  }
+> >
+> > -static void crb_relinquish_locality(struct tpm_chip *chip, int loc)
+> > +static int crb_request_locality(struct tpm_chip *chip, int loc)
+> >  {
+> >  	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+> >
+> > +	return __crb_request_locality(&chip->dev, priv, loc); }
+> > +
+> > +static void __crb_relinquish_locality(struct device *dev,
+> > +				      struct crb_priv *priv, int loc) {
+> >  	if (!priv->regs_h)
+> >  		return;
+> >
+> >  	iowrite32(CRB_LOC_CTRL_RELINQUISH, &priv->regs_h->loc_ctrl);  }
+> >
+> > +static void crb_relinquish_locality(struct tpm_chip *chip, int loc) {
+> > +	struct crb_priv *priv = dev_get_drvdata(&chip->dev);
+> > +
+> > +	__crb_relinquish_locality(&chip->dev, priv, loc); }
+> > +
+> >  static u8 crb_status(struct tpm_chip *chip)  {
+> >  	struct crb_priv *priv = dev_get_drvdata(&chip->dev); @@ -475,6
+> > +493,10 @@ static int crb_map_io(struct acpi_device *device, struct
+> crb_priv *priv,
+> >  			dev_warn(dev, FW_BUG "Bad ACPI memory layout");
+> >  	}
+> >
+> > +	ret = __crb_request_locality(dev, priv, 0);
+> > +	if (ret)
+> > +		return ret;
+> > +
+> >  	priv->regs_t = crb_map_res(dev, priv, &io_res, buf->control_address,
+> >  				   sizeof(struct crb_regs_tail));
+> >  	if (IS_ERR(priv->regs_t))
+> > @@ -531,6 +553,8 @@ static int crb_map_io(struct acpi_device *device,
+> > struct crb_priv *priv,
+> >
+> >  	crb_go_idle(dev, priv);
+> >
+> > +	__crb_relinquish_locality(dev, priv, 0);
+> > +
+> >  	return ret;
+> >  }
+> >
+> > @@ -588,10 +612,14 @@ static int crb_acpi_add(struct acpi_device
+> *device)
+> >  	chip->acpi_dev_handle = device->handle;
+> >  	chip->flags = TPM_CHIP_FLAG_TPM2;
+> >
+> > -	rc  = crb_cmd_ready(dev, priv);
+> > +	rc = __crb_request_locality(dev, priv, 0);
+> >  	if (rc)
+> >  		return rc;
+> >
+> > +	rc  = crb_cmd_ready(dev, priv);
+> > +	if (rc)
+> > +		goto out;
+> > +
+> >  	pm_runtime_get_noresume(dev);
+> >  	pm_runtime_set_active(dev);
+> >  	pm_runtime_enable(dev);
+> > @@ -601,12 +629,15 @@ static int crb_acpi_add(struct acpi_device
+> *device)
+> >  		crb_go_idle(dev, priv);
+> >  		pm_runtime_put_noidle(dev);
+> >  		pm_runtime_disable(dev);
+> > -		return rc;
+> > +		goto out;
+> >  	}
+> >
+> > -	pm_runtime_put(dev);
+> > +	pm_runtime_put_sync(dev);
+> 
+> Change to put_sync is needed so that the idle handshake gets completed?
+
+Right.
+ 
+> >
+> > -	return 0;
+> > +out:
+> > +	__crb_relinquish_locality(dev, priv, 0);
+> > +
+> > +	return rc;
+> >  }
+> >
+> >  static int crb_acpi_remove(struct acpi_device *device)
+> > --
+> > 2.14.3
+> >
+> 
+> /Jarkko
