@@ -1,84 +1,48 @@
 From: Jeremy Cline <jeremy@jcline.org>
 Subject: Re: Regression from efi: call get_event_log before ExitBootServices
-Date: Thu, 8 Mar 2018 17:26:40 +0000
-Message-ID: <0100016206a68850-bd5c96b3-f275-46ea-98b1-1317e02a5d6e-000000@email.amazonses.com>
+Date: Thu, 8 Mar 2018 18:20:05 +0000
+Message-ID: <0100016206d770c7-11c5bffc-70e7-41bf-a62a-d8aad8209f7e-000000@email.amazonses.com>
 References: <01000161fc0b4755-df0621f4-ab5d-479a-b425-adf98427a308-000000@email.amazonses.com>
- <e7c2be5c-cf21-fc2d-efda-d9222d93ffad@redhat.com>
- <b32f335c-0d77-1749-f7fe-65f512280255@redhat.com>
- <ade378f6-c997-1d48-a30d-cceee6435fc8@redhat.com>
- <a3b5f822-f8f4-e2f5-46da-e23e13174f28@redhat.com>
- <cec36124-0950-6ad9-58a8-9bd69e63aa04@redhat.com>
+ <CA+zpnLdSyuyKjJEH3Oowmha2mF0B-j5b4A7CLuXXY7RH47SiFQ@mail.gmail.com>
+ <0100016201863c0f-70600bd6-12d3-461d-9173-e4d61e8d09d5-000000@email.amazonses.com>
+ <CA+zpnLf1WNxYY-FaoFbas480GmkUW6kw_L7zi5mES3EPhL7egA@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 8bit
 Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <cec36124-0950-6ad9-58a8-9bd69e63aa04@redhat.com>
+In-Reply-To: <CA+zpnLf1WNxYY-FaoFbas480GmkUW6kw_L7zi5mES3EPhL7egA@mail.gmail.com>
 Content-Language: en-US
 Sender: linux-kernel-owner@vger.kernel.org
-To: Hans de Goede <hdegoede@redhat.com>, Javier Martinez Canillas <javierm@redhat.com>, Thiebaud Weksteen <tweek@google.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, linux-efi@vger.kernel.org, linux-integrity@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+To: Thiebaud Weksteen <tweek@google.com>
+Cc: Javier Martinez Canillas <javierm@redhat.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, hdegoede@redhat.com, linux-efi@vger.kernel.org, linux-integrity@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On 03/08/2018 11:50 AM, Hans de Goede wrote:
-> <somehow this part of the thread was missing some email addresses, I've
-> added these now>
-> 
-> Hi,
-> 
-> On 07-03-18 12:34, Javier Martinez Canillas wrote:
+On 03/08/2018 03:45 AM, Thiebaud Weksteen wrote:
+> Jeremy, Hans, could you both describe precisely how your boot is
+> configured? This feature is only triggered when booting the EFI stub of the
+> kernel so this may be not executed if you are using something else in
+> between.
 
-<snip>
+I put everything I know in the other sub-thread.
+> Jeremy, would you be able to modify the efi_retrieve_tpm2_eventlog_1_2
+> function to add multiple efi_printk(sys_table_arg,  "message\n"); to test:
+> if you get the output on your screen; and isolate which call might be the
+> cause of the hang?
+> I can forward a debug patch if that helps.
 
->> Are you also able to read the TPM event logs?
->>
->> $ hexdump /sys/kernel/security/tpm0/binary_bios_measurements
-> 
-> Yes for me that outputs a lot of hex :)
+Thanks for the patch, here's the output:
 
-For me, /sys/kernel/security/tmp0 doesn't exist on 4.15.6 or 4.16 with
-the patch reverted.
+Locating the TCG2Protocol
+Calling GetEventLog on TCG2Protocol
+Log returned
+log_location is not empty
+log_size != 0
+Allocating memory for storing the logs
+Returned from memory allocation
+Copying log to new location
 
->> The UEFI firmware does some measurements and so does shim. So you should
->> have some event logs. What version of shim are you using? And also would
->> be good to know if it's the same shim version that Jeremy is using.
-> 
-> That is a very good question, I'm using: shim-ia32-13-0.7.x86_64, which is
-> the last version for F27 AFAICT.
+At this point it hangs.
 
-All my tablet has installed is shim-0.8-10.x86_64, no shim-ia32.
-
-> 
-> But Jeremy's tablet might very well be not using the shim at all, as
-> I manually installed Fedora 25 on the tablet he now has, before Fedora
-> supported
-> machines with 32 bit EFI. I then later did a "dnf distro-sync" to
-> Fedora-27.
-> 
-> Jeremy might also very well still be booting using a grub binary I build
-> manually back then, without any shim being involved.
-> 
-> Jeremy what does efibootmgr -v output on your device ?
-
-# efibootmgr -v
-BootCurrent: 0003
-Timeout: 4 seconds
-BootOrder: 0003,0000,0001,2001,2002,2003
-Boot0000* Android X64 OS
-HD(1,GPT,215e6cf3-e97d-4735-9c4e-7338c8f5a645,0x800,0x32000)/File(\EFI\BOOT\bootx64.efi)RC
-Boot0001* Internal EFI Shell
-FvVol(a881d567-6cb0-4eee-8435-2e72d33e45b5)/FvFile(c57ad6b7-0515-40a8-9d21-551652854e37)RCM&".
-Boot0003* Fedora
-HD(1,GPT,215e6cf3-e97d-4735-9c4e-7338c8f5a645,0x800,0x32000)/File(\EFI\fedora\grubx64.efi)
-Boot2001* EFI USB Device	RC
-Boot2002* EFI DVD/CDROM	RC
-Boot2003* EFI Network	RC
-Boot8087* Udm
-FvVol(a881d567-6cb0-4eee-8435-2e72d33e45b5)/FvFile(9a9ab4c1-ee1b-488b-b300-24544a7bd418)
-
-I think you're right about it using the old grub binary. I'm
-embarrassingly unfamiliar with both UEFI and grub, but I'm guessing you
-set the location of grub.cfg at compile time? When I boot
-\EFI\fedora\grubx64.efi, it's pulling the grub.cfg from
-\EFI\redhat\grub.cfg.
 
 Regards,
 Jeremy
