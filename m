@@ -1,7 +1,7 @@
-From: Thiebaud Weksteen <tweek@google.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 Subject: Re: Regression from efi: call get_event_log before ExitBootServices
-Date: Tue, 13 Mar 2018 10:23:28 +0000
-Message-ID: <CA+zpnLeyu4MQA2mgdLkEscTx9cfUp4Qcw-0cgfRa4cdLCRVwkg@mail.gmail.com>
+Date: Tue, 13 Mar 2018 10:30:47 +0000
+Message-ID: <CAKv+Gu_EN2djoJQQ_QAxUQenD5=kKtyS8TFKg7cZaz+6xsbDRg@mail.gmail.com>
 References: <01000161fc0b4755-df0621f4-ab5d-479a-b425-adf98427a308-000000@email.amazonses.com>
  <29c1640a-cf19-ca19-7de9-96f202edfb5a@redhat.com> <CA+zpnLebtbjbA-Jg+RvMOqwDE5R--9V3hTwMk95Br4vM1LgBjQ@mail.gmail.com>
  <010001620bafa06b-41525407-603e-40a9-ba11-6033b2f5dcc7-000000@email.amazonses.com>
@@ -15,69 +15,45 @@ References: <01000161fc0b4755-df0621f4-ab5d-479a-b425-adf98427a308-000000@email.
  <010001621b7ce5a3-b80c55b8-be68-4b44-ab52-4949e8ddb8d0-000000@email.amazonses.com>
  <CA+zpnLf=JDUxyorH7yP=08FD_u=+UoQ6ubsKyVLD+4w9raYAKQ@mail.gmail.com>
  <bf12c497-db2a-f1f0-efc3-07e6a6ee9daa@redhat.com> <CAKv+Gu9_rYv_XocRwTLdH+P7dVq+3=CQRJ9O9kKyry_=Ekz0aQ@mail.gmail.com>
+ <CA+zpnLeyu4MQA2mgdLkEscTx9cfUp4Qcw-0cgfRa4cdLCRVwkg@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="UTF-8"
 Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <CAKv+Gu9_rYv_XocRwTLdH+P7dVq+3=CQRJ9O9kKyry_=Ekz0aQ@mail.gmail.com>
+In-Reply-To: <CA+zpnLeyu4MQA2mgdLkEscTx9cfUp4Qcw-0cgfRa4cdLCRVwkg@mail.gmail.com>
 Sender: linux-kernel-owner@vger.kernel.org
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: hdegoede@redhat.com, Jeremy Cline <jeremy@jcline.org>, Javier Martinez Canillas <javierm@redhat.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, linux-efi@vger.kernel.org, linux-integrity@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
+To: Thiebaud Weksteen <tweek@google.com>
+Cc: Hans de Goede <hdegoede@redhat.com>, Jeremy Cline <jeremy@jcline.org>, Javier Martinez Canillas <javierm@redhat.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, linux-efi@vger.kernel.org, linux-integrity@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Mar 13, 2018 at 8:59 AM Ard Biesheuvel <ard.biesheuvel@linaro.org>
-wrote:
+On 13 March 2018 at 10:23, Thiebaud Weksteen <tweek@google.com> wrote:
+> On Tue, Mar 13, 2018 at 8:59 AM Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> wrote:
+>
+>> On 13 March 2018 at 07:47, Hans de Goede <hdegoede@redhat.com> wrote:
+...
+>> > Could the problem perhaps be that the new code for the TPM event-log is
+>> > missing some handling to deal with running on a 32 bit firmware? I know
+> the
+>> > rest of the kernel has special code to deal with this.
+>> >
+>
+> Yes, that was my guess as well.
+>
+>> That is a very good point, and I missed that this is a 64-bit kernel
+>> running on 32-bit UEFI.
+>
+>> The TPM code does use efi_call_proto() directly, and now I am thinking
+>> it is perhaps the allocate_pages() call that simply only initializes
+>> the low 32-bits of log_tbl.
+>
+> That make sense. Would you know what happens to the arguments of the
+> function in this case? (I'm thinking &log_location ?)
 
-> On 13 March 2018 at 07:47, Hans de Goede <hdegoede@redhat.com> wrote:
-> > Hi,
-> >
-> >
-> > On 12-03-18 20:55, Thiebaud Weksteen wrote:
-> >>
-> ...
-> >>
-> >> Hans, you said you configured the tablet to use the 32-bit version of
-grub
-> >> instead
-> >> of 64. Why's that?
-> >
-> >
-> > Because this tablet, like (almost?) all Bay Trail hardware has a 32 bit
-> > UEFI,
-> > even though the processor is 64 bit capable (AFAIK 64 bit Windows
-drivers
-> > were
-> > not ready in time so all Bay Trail devices shipped with a 32 bit
-Windows).
-> >
-> > So this is running a 32 bit grub which boots a 64 bit kernel.
-> >
-> >> Jeremy, could you confirm if you are building the kernel in 64bit
-mode? Is
-> >> your Android install working? (that is, what happens if you boot
-> >> Boot0000)?
-> >
-> >
-> > AFAIK the kernel on Jeremy's tablet (which I initially installed) is 64
-bit.
-> >
-> > Could the problem perhaps be that the new code for the TPM event-log is
-> > missing some handling to deal with running on a 32 bit firmware? I know
-the
-> > rest of the kernel has special code to deal with this.
-> >
+log_location and log_last_entry are always 64-bit quantities, and
+efi_bool_t is always u8, so that shouldn't matter.
 
-Yes, that was my guess as well.
+> Would it be safer to skip the code completely on EFI_MIXED systems?
+>
 
-> That is a very good point, and I missed that this is a 64-bit kernel
-> running on 32-bit UEFI.
-
-> The TPM code does use efi_call_proto() directly, and now I am thinking
-> it is perhaps the allocate_pages() call that simply only initializes
-> the low 32-bits of log_tbl.
-
-That make sense. Would you know what happens to the arguments of the
-function in this case? (I'm thinking &log_location ?)
-Would it be safer to skip the code completely on EFI_MIXED systems?
-
-> Jeremy, could you please try initializing tcg2_protocol and log_tbl to
-> NULL at the start of the function?
+Obviously, but I would like to avoid that if possible. Let's see first
+if we've pinpointed it now.
