@@ -1,55 +1,221 @@
-From: James Bottomley <jejb-23VcF4HTsmIX0ybBhKVfKdBPR1lH4CV8@public.gmane.org>
-Subject: Re: in-kernel user of ecdsa
-Date: Mon, 12 Mar 2018 14:55:35 -0700
-Message-ID: <1520891735.4522.45.camel@linux.vnet.ibm.com>
-References: <0f698592-8ade-14d4-7891-1c35501c6285@microchip.com>
- <1520878158.4522.31.camel@linux.vnet.ibm.com>
- <31045526.HZb3ddfbbg@tauon.chronox.de>
+From: Jeremy Cline <jeremy@jcline.org>
+Subject: Re: Regression from efi: call get_event_log before ExitBootServices
+Date: Tue, 13 Mar 2018 01:50:59 +0000
+Message-ID: <010001621d0db0f5-a514b097-9f94-4a25-8d2c-ad22c0ae1a96-000000@email.amazonses.com>
+References: <01000161fc0b4755-df0621f4-ab5d-479a-b425-adf98427a308-000000@email.amazonses.com>
+ <29c1640a-cf19-ca19-7de9-96f202edfb5a@redhat.com>
+ <CA+zpnLebtbjbA-Jg+RvMOqwDE5R--9V3hTwMk95Br4vM1LgBjQ@mail.gmail.com>
+ <010001620bafa06b-41525407-603e-40a9-ba11-6033b2f5dcc7-000000@email.amazonses.com>
+ <CA+zpnLdmg30Beg+uUJNgBQ5gbjXuJ0uVhyzCgf6m7xbx2yARBg@mail.gmail.com>
+ <CAKv+Gu-KPU+kQ0z3jJ+CcgNPq3PuqjF_CCB_2LR_5VoYaynTJw@mail.gmail.com>
+ <010001621a9e5069-0b1a6328-97e4-4396-9438-b90f5b8c82a4-000000@email.amazonses.com>
+ <CAKv+Gu8+x=5nU9MmYQKKc=3fhMXoUYjGSjYYfhjaFtdGG2NkaA@mail.gmail.com>
+ <010001621b287e42-58955302-cc14-4212-b7b0-e6e358633dab-000000@email.amazonses.com>
+ <CAKv+Gu_hLR3YNZF=taLM++LdfqmPpGG+vR1O8NfKNP00PNeiYA@mail.gmail.com>
+ <CA+zpnLdxGT08citakzZwZsSQAFeTJw-j6S7udHk6-sEJ9R3xpA@mail.gmail.com>
+ <010001621b7ce5a3-b80c55b8-be68-4b44-ab52-4949e8ddb8d0-000000@email.amazonses.com>
+ <CA+zpnLf=JDUxyorH7yP=08FD_u=+UoQ6ubsKyVLD+4w9raYAKQ@mail.gmail.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <31045526.HZb3ddfbbg-b2PLbiJbNv8ftSvlWXw0+g@public.gmane.org>
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Stephan Mueller <smueller-T9tCv8IpfcWELgA04lAiVw@public.gmane.org>
-Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, David Howells <dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, "bluez mailin list (linux-bluetooth-u79uwXL29TY76Z2rM5mHXA@public.gmane.org)" <linux-bluetooth-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, Linux Crypto Mailing List <linux-crypto-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <CA+zpnLf=JDUxyorH7yP=08FD_u=+UoQ6ubsKyVLD+4w9raYAKQ@mail.gmail.com>
+Content-Language: en-US
+Sender: linux-kernel-owner@vger.kernel.org
+To: Thiebaud Weksteen <tweek@google.com>, hdegoede@redhat.com
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Javier Martinez Canillas <javierm@redhat.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, linux-efi@vger.kernel.org, linux-integrity@vger.kernel.org, tpmdd-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-T24gTW9uLCAyMDE4LTAzLTEyIGF0IDIwOjU2ICswMTAwLCBTdGVwaGFuIE11ZWxsZXIgd3JvdGU6
-Cj4gQW0gTW9udGFnLCAxMi4gTcOkcnogMjAxOCwgMTk6MDk6MTggQ0VUIHNjaHJpZWIgSmFtZXMg
-Qm90dG9tbGV5Ogo+IAo+IEhpIEphbWVzLAo+IAo+ID4gCj4gPiBPbiBNb24sIDIwMTgtMDMtMTIg
-YXQgMTk6MDcgKzAyMDAsIFR1ZG9yIEFtYmFydXMgd3JvdGU6Cj4gPiA+IAo+ID4gPiBIaSwKPiA+
-ID4gCj4gPiA+IFdvdWxkIHlvdSBjb25zaWRlciB1c2luZyBFQ0RTQSBpbiB0aGUga2VybmVsIG1v
-ZHVsZSBzaWduaW5nCj4gPiA+IGZhY2lsaXR5PyBXaGVuIGNvbXBhcmVkIHdpdGggUlNBLCBFQ0RT
-QSBoYXMgc2hvcnRlciBrZXlzLCB0aGUga2V5Cj4gPiA+IGdlbmVyYXRpb24gcHJvY2VzcyBpcyBm
-YXN0ZXIsIHRoZSBzaWduIG9wZXJhdGlvbiBpcyBmYXN0ZXIsIGJ1dAo+ID4gPiB0aGUgdmVyaWZ5
-IG9wZXJhdGlvbiBpcyBzbG93ZXIgdGhhbiB3aXRoIFJTQS4KPiA+IAo+ID4gWW91IG1pc3NlZCB0
-aGUga2V5cmluZ3MgbGlzdCwgd2hpY2ggaXMgd2hlcmUgdGhlIG1vZHVsZSBzaWduaW5nCj4gPiB1
-dGlsaXR5IGlzIGRpc2N1c3NlZC4KPiA+IAo+ID4gRmlyc3QgcXVlc3Rpb24gaXMsIGhhdmUgeW91
-IGFjdHVhbGx5IHRyaWVkP8KgwqBJdCBsb29rcyBsaWtlIHNpZ24tCj4gPiBmaWxlIGRvZXNuJ3Qg
-ZG8gYW55dGhpbmcgUlNBIHNwZWNpZmljIHNvIGlmIHlvdSBnaXZlIGl0IGFuIEVDIFguNTA5Cj4g
-PiBjZXJ0aWZpY2F0ZSBpdCB3aWxsIHByb2R1Y2UgYW4gRUNEU0Egc2lnbmF0dXJlLgo+ID4gCj4g
-PiBJIHRoaW5rIG91ciBrZXJuZWwgaW50ZXJuYWwgeDUwOSBwYXJzZXJzIGRvbid0IGhhdmUgdGhl
-IEVDIE9JRHMsIHNvCj4gPiBzaWduYXR1cmUgdmVyaWZpY2F0aW9uIHdpbGwgZmFpbDsgYnV0LCBl
-c3BlY2lhbGx5IHNpbmNlIHdlIGhhdmUgdGhlCj4gPiByZXN0IG9mIHRoZSBFQyBtYWNoaW5lcnkg
-aW4gdGhlIGNyeXB0byBzdWJzeXN0ZW0sIHRoYXQgbG9va3MgdG8gYmUKPiA+IHNpbXBseSBmaXhh
-YmxlLgo+IAo+IEVDRFNBIGlzIG5vdCBpbXBsZW1lbnRlZCBjdXJyZW50bHkgaW4gdGhlIGtlcm5l
-bCBjcnlwdG8gQVBJLgoKYW4gRUNEU0Egc2lnbmF0dXJlIGlzIHByb2R1Y2VkIGFzIGEgRUNESCBv
-cGVyYXRpb24gdXNpbmcgdGhlIERTQQphbGdvcml0aG0gaW5zdGVhZCBvZiBLREZlLCBzbyBpdCdz
-IHRyaXZpYWwgd2l0aCB3aGF0IHdlIGhhdmU7IHNpZ25hdHVyZQp2ZXJpZmljYXRpb24gaW52b2x2
-ZXMgYSBzZXBhcmF0ZSBwb2ludCBhZGRpdGlvbiBidXQgd2UgaGF2ZSBhbGwgdGhlCnByaW1pdGl2
-ZXMgZm9yIHRoaXMgaW4gY3J5cHRvL2VjYy5jIHNvIGFkZGluZyBpdCBpc24ndCByZWFsbHkKZGlm
-ZmljdWx0LCBpcyBpdD8KCkphbWVzCgoKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCkNoZWNrIG91dCB0
-aGUgdmlicmFudCB0ZWNoIGNvbW11bml0eSBvbiBvbmUgb2YgdGhlIHdvcmxkJ3MgbW9zdAplbmdh
-Z2luZyB0ZWNoIHNpdGVzLCBTbGFzaGRvdC5vcmchIGh0dHA6Ly9zZG0ubGluay9zbGFzaGRvdApf
-X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwp0cG1kZC1kZXZl
-bCBtYWlsaW5nIGxpc3QKdHBtZGQtZGV2ZWxAbGlzdHMuc291cmNlZm9yZ2UubmV0Cmh0dHBzOi8v
-bGlzdHMuc291cmNlZm9yZ2UubmV0L2xpc3RzL2xpc3RpbmZvL3RwbWRkLWRldmVsCg==
+On 03/12/2018 03:55 PM, Thiebaud Weksteen wrote:
+> On Mon, Mar 12, 2018 at 7:33 PM Jeremy Cline <jeremy@jcline.org> wrote:
+> 
+>> On 03/12/2018 02:29 PM, Thiebaud Weksteen wrote:
+>>> On Mon, Mar 12, 2018 at 6:30 PM Ard Biesheuvel <
+> ard.biesheuvel@linaro.org>
+>>> wrote:
+>>>
+>>>> On 12 March 2018 at 17:01, Jeremy Cline <jeremy@jcline.org> wrote:
+>>>>> On 03/12/2018 10:56 AM, Ard Biesheuvel wrote:
+>>>>>> On 12 March 2018 at 14:30, Jeremy Cline <jeremy@jcline.org> wrote:
+>>>>>>> On 03/12/2018 07:08 AM, Ard Biesheuvel wrote:
+>>>>>>>> On 10 March 2018 at 10:45, Thiebaud Weksteen <tweek@google.com>
+>>> wrote:
+>>>>>>>>> On Fri, Mar 9, 2018 at 5:54 PM Jeremy Cline <jeremy@jcline.org>
+>>> wrote:
+>>>>>>>>>
+>>>>>>>>>> On Fri, Mar 09, 2018 at 10:43:50AM +0000, Thiebaud Weksteen
+> wrote:
+>>>>>>>>>>> Thanks a lot for trying out the patch!
+>>>>>>>>>>>
+>>>>>>>>>>> Please don't modify your install at this stage, I think we are
+>>> hitting a
+>>>>>>>>>>> firmware bug and that would be awesome if we can fix how we are
+>>>>>>>>> handling it.
+>>>>>>>>>>> So, if we reach that stage in the function it could either be
+>>> that:
+>>>>>>>>>>> * The allocation did not succeed, somehow, but the firmware
+> still
+>>>>>>>>> returned
+>>>>>>>>>>> EFI_SUCCEED.
+>>>>>>>>>>> * The size requested is incorrect (I'm thinking something like a
+>>> 1G of
+>>>>>>>>>>> log). This would be due to either a miscalculation of log_size
+>>>>>>>>> (possible)
+>>>>>>>>>>> or; the returned values of GetEventLog are not correct.
+>>>>>>>>>>> I'm sending a patch to add checks for these. Could you please
+>>> apply and
+>>>>>>>>>>> retest?
+>>>>>>>>>>> Again, thanks for helping debugging this.
+>>>>>>>>>
+>>>>>>>>>> No problem, thanks for the help :)
+>>>>>>>>>
+>>>>>>>>>> With the new patch:
+>>>>>>>>>
+>>>>>>>>>> Locating the TCG2Protocol
+>>>>>>>>>> Calling GetEventLog on TCG2Protocol
+>>>>>>>>>> Log returned
+>>>>>>>>>> log_location is not empty
+>>>>>>>>>> log_size != 0
+>>>>>>>>>> log_size < 1M
+>>>>>>>>>> Allocating memory for storing the logs
+>>>>>>>>>> Returned from memory allocation
+>>>>>>>>>> Copying log to new location
+>>>>>>>>>
+>>>>>>>>>> And then it hangs. I added a couple more print statements:
+>>>>>>>>>
+>>>>>>>>>> diff --git a/drivers/firmware/efi/libstub/tpm.c
+>>>>>>>>> b/drivers/firmware/efi/libstub/tpm.c
+>>>>>>>>>> index ee3fac109078..1ab5638bc50e 100644
+>>>>>>>>>> --- a/drivers/firmware/efi/libstub/tpm.c
+>>>>>>>>>> +++ b/drivers/firmware/efi/libstub/tpm.c
+>>>>>>>>>> @@ -148,8 +148,11 @@ void
+>>>>>>>>> efi_retrieve_tpm2_eventlog_1_2(efi_system_table_t *sys_table_arg)
+>>>>>>>>>>          efi_printk(sys_table_arg, "Copying log to new
+>>> location\n");
+>>>>>>>>>
+>>>>>>>>>>          memset(log_tbl, 0, sizeof(*log_tbl) + log_size);
+>>>>>>>>>> +       efi_printk(sys_table_arg, "Successfully memset log_tbl to
+>>> 0\n");
+>>>>>>>>>>          log_tbl->size = log_size;
+>>>>>>>>>> +       efi_printk(sys_table_arg, "Set log_tbl->size\n");
+>>>>>>>>>>          log_tbl->version = EFI_TCG2_EVENT_LOG_FORMAT_TCG_1_2;
+>>>>>>>>>> +       efi_printk(sys_table_arg, "Set log_tbl-version\n");
+>>>>>>>>>>          memcpy(log_tbl->log, (void *) first_entry_addr,
+> log_size);
+>>>>>>>>>
+>>>>>>>>>>          efi_printk(sys_table_arg, "Installing the log into the
+>>>>>>>>> configuration table\n");
+>>>>>>>>>
+>>>>>>>>>> and it's hanging at "memset(log_tbl, 0, sizeof(*log_tbl) +
+>>> log_size);"
+>>>>>>>>>
+>>>>>>>>> Thanks. Well, it looks like the memory that is supposedly
+> allocated
+>>> is not
+>>>>>>>>> usable. I'm thinking this is a firmware bug.
+>>>>>>>>> Ard, would you agree on this assumption? Thoughts on how to
+> proceed?
+>>>>>>>>>
+>>>>>>>>
+>>>>>>>> I am rather puzzled why the allocate_pool() should succeed and the
+>>>>>>>> subsequent memset() should fail. This does not look like an issue
+>>> that
+>>>>>>>> is intimately related to TPM2 support, rather an issue in the
+>>> firmware
+>>>>>>>> that happens to get tickled after the change.
+>>>>>>>>
+>>>>>>>> Would you mind trying replacing EFI_LOADER_DATA with
+>>>>>>>> EFI_BOOT_SERVICES_DATA in the allocate_pool() call?
+>>>>>>>
+>>>>>>> Replacing EFI_LOADER_DATA with EFI_BOOT_SERVICES_DATA still hangs at
+>>> the
+>>>>>>> memset() call.
+>>>>>>>
+>>>>>>
+>>>>>> Could you try the following please? (attached as well in case gmail
+>>> mangles it)
+>>>>>>
+>>>>>> diff --git a/drivers/firmware/efi/libstub/tpm.c
+>>>>>> b/drivers/firmware/efi/libstub/tpm.c
+>>>>>> index 2298560cea72..30d960a344b7 100644
+>>>>>> --- a/drivers/firmware/efi/libstub/tpm.c
+>>>>>> +++ b/drivers/firmware/efi/libstub/tpm.c
+>>>>>> @@ -70,6 +70,8 @@ void
+>>>>>> efi_retrieve_tpm2_eventlog_1_2(efi_system_table_t *sys_table_arg)
+>>>>>>         size_t log_size, last_entry_size;
+>>>>>>         efi_bool_t truncated;
+>>>>>>         void *tcg2_protocol;
+>>>>>> +       unsigned long num_pages;
+>>>>>> +       efi_physical_addr_t log_tbl_alloc;
+>>>>>>
+>>>>>>         status = efi_call_early(locate_protocol, &tcg2_guid, NULL,
+>>>>>>                                 &tcg2_protocol);
+>>>>>> @@ -104,9 +106,12 @@ void
+>>>>>> efi_retrieve_tpm2_eventlog_1_2(efi_system_table_t *sys_table_arg)
+>>>>>>         }
+>>>>>>
+>>>>>>         /* Allocate space for the logs and copy them. */
+>>>>>> -       status = efi_call_early(allocate_pool, EFI_LOADER_DATA,
+>>>>>> -                               sizeof(*log_tbl) + log_size,
+>>>>>> -                               (void **) &log_tbl);
+>>>>>> +       num_pages = DIV_ROUND_UP(sizeof(*log_tbl) + log_size,
+>>> EFI_PAGE_SIZE);
+>>>>>> +       status = efi_call_early(allocate_pages,
+>>>>>> +                               EFI_ALLOCATE_ANY_PAGES,
+>>>>>> +                               EFI_LOADER_DATA,
+>>>>>> +                               num_pages,
+>>>>>> +                               &log_tbl_alloc);
+>>>>>>
+>>>>>>         if (status != EFI_SUCCESS) {
+>>>>>>                 efi_printk(sys_table_arg,
+>>>>>> @@ -114,6 +119,7 @@ void
+>>>>>> efi_retrieve_tpm2_eventlog_1_2(efi_system_table_t *sys_table_arg)
+>>>>>>                 return;
+>>>>>>         }
+>>>>>>
+>>>>>> +       log_tbl = (struct linux_efi_tpm_eventlog *)(unsigned
+>>> long)log_tbl_alloc;
+>>>>>>         memset(log_tbl, 0, sizeof(*log_tbl) + log_size);
+>>>>>>         log_tbl->size = log_size;
+>>>>>>         log_tbl->version = EFI_TCG2_EVENT_LOG_FORMAT_TCG_1_2;
+>>>>>> @@ -126,7 +132,7 @@ void
+>>>>>> efi_retrieve_tpm2_eventlog_1_2(efi_system_table_t *sys_table_arg)
+>>>>>>         return;
+>>>>>>
+>>>>>>  err_free:
+>>>>>> -       efi_call_early(free_pool, log_tbl);
+>>>>>> +       efi_call_early(free_pages, log_tbl_alloc, num_pages);
+>>>>>>  }
+>>>>>>
+>>>>>>  void efi_retrieve_tpm2_eventlog(efi_system_table_t *sys_table_arg)
+>>>>>>
+>>>>>
+>>>>> Hi Ard,
+>>>>>
+>>>>> When I apply this, it starts hanging at
+>>>>>
+>>>>> status = efi_call_proto(efi_tcg2_protocol, get_event_log,
+> tcg2_protocol,
+>>>>>                         EFI_TCG2_EVENT_LOG_FORMAT_TCG_1_2,
+>>>>>                         &log_location, &log_last_entry, &truncated);
+>>>>>
+>>>>> rather than at the memset() call.
+>>>>>
+>>>
+>>>> That is *very* surprising, given that the change only affects code
+>>>> that executes after that.
+>>>
+> 
+> Hans, you said you configured the tablet to use the 32-bit version of grub
+> instead
+> of 64. Why's that?
+> 
+> Jeremy, could you confirm if you are building the kernel in 64bit mode? Is
+> your Android install working? (that is, what happens if you boot Boot0000)?
+
+It's definitely being built in 64bit mode. The Android install entry is
+a remnant from Hans, but it appears to be a Red Hat grub so it just
+boots to Fedora.
+
+Regards,
+Jeremy
