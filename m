@@ -1,88 +1,129 @@
-From: Tudor Ambarus <tudor.ambarus-UWL1GkI3JZL3oGB3hsPCZA@public.gmane.org>
-Subject: Re: in-kernel user of ecdsa
-Date: Mon, 26 Mar 2018 17:59:09 +0300
-Message-ID: <4ce3391f-aa02-a157-bce1-754a6a87c8ed@microchip.com>
-References: <0f698592-8ade-14d4-7891-1c35501c6285@microchip.com>
+From: James Morris <jmorris@namei.org>
+Subject: [ANNOUNCE] Linux Security Summit North America 2018 - CFP
+Date: Tue, 10 Apr 2018 09:14:19 +1000 (AEST)
+Message-ID: <alpine.LRH.2.21.1804100911160.11121@namei.org>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"; Format="flowed"
-Content-Transfer-Encoding: 7bit
-Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-In-Reply-To: <0f698592-8ade-14d4-7891-1c35501c6285-UWL1GkI3JZL3oGB3hsPCZA@public.gmane.org>
-Content-Language: en-US
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
-List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
-List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
- <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
-Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: David Howells <dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, dwmw2-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-Cc: "bluez mailin list
- (linux-bluetooth-u79uwXL29TY76Z2rM5mHXA@public.gmane.org)" <linux-bluetooth-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, Linux Crypto Mailing List <linux-crypto-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-arm-kernel <linux-arm-kernel-IAPFreCvJWM7uuMidbF8XUB+6BGkLq7r@public.gmane.org>
+Content-Type: multipart/mixed; BOUNDARY="1665246916-1034505349-1523315591=:11121"
+Return-path: <kernel-hardening-return-12943-glkh-kernel-hardening=m.gmane.org@lists.openwall.com>
+List-Post: <mailto:kernel-hardening@lists.openwall.com>
+List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
+List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
+List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
+Content-ID: <alpine.LRH.2.21.1804100913240.11121@namei.org>
+To: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+Cc: lwn@lwn.net, fedora-selinux-list@redhat.com, selinux@tycho.nsa.gov, Linux Security Summit Program Committee <lss-pc@lists.linuxfoundation.org>, linux-crypto@vger.kernel.org, Audit-ML <linux-audit@redhat.com>, gentoo-hardened@gentoo.org, keyrings@linux-nfs.org, tpmdd-devel@lists.sourceforge.net, kernel-hardening@lists.openwall.com
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+  This message is in MIME format.  The first part should be readable text,
+  while the remaining parts are likely unreadable without MIME-aware tools.
+
+--1665246916-1034505349-1523315591=:11121
+Content-Type: text/plain; CHARSET=ISO-8859-7
+Content-Transfer-Encoding: 8BIT
+Content-ID: <alpine.LRH.2.21.1804100913241.11121@namei.org>
+
+==============================================================================
+		   ANNOUNCEMENT AND CALL FOR PARTICIPATION
+
+		   LINUX SECURITY SUMMIT NORTH AMERICA 2018
+                             
+			         27-28 August
+			       VANCOUVER, CANADA
+==============================================================================
 
 
-On 03/12/2018 07:07 PM, Tudor Ambarus wrote:
+DESCRIPTION
 
-> Would you consider using ECDSA in the kernel module signing facility?
+  The Linux Security Summit (LSS) is a technical forum for collaboration
+  between Linux developers, researchers, and end users. Its primary aim is to
+  foster community efforts in analyzing and solving Linux security challenges.
 
-Any feedback is good. I can invest some time to make this happen, if
-needed.
+  LSS will be held this year as two separate events, one in North America
+  (LSS-NA), and one in Europe (LSS-EU), to facilitate broader participation in
+  Linux Security development. Note that this CFP is for LSS-NA; a separate CFP
+  will be announced for LSS-EU in May. We encourage everyone to attend both
+  events.
 
-> When compared with RSA, ECDSA has shorter keys, the key generation
-> process is faster, the sign operation is faster, but the verify
-> operation is slower than with RSA.
-> 
-> Smaller key sizes imply reduced memory footprint and bandwidth that are
-> especially attractive for memory constrained devices. I'm working with
-> such a device, capable of generating ecc keys, secure key storage and
-> ecdsa/ecdh crypto acceleration. I'm trying to find an in-kernel user of
-> ecdsa.
-> 
-> 
-> ECDSA and RSA comparison
-> ------------------------
-> -> ECDSA requires a much smaller key length in order to provide the same
-> security strength as RSA [1]:
-> 
-> Security Strength    RSA (bits)        ECDSA (bits)
-> 112                   2048             224 - 255
-> 128                   3072             256 - 383
-> 192                   7680             384 - 511
-> 256                  15360             512+
-> 
-> 7680 and 15360  keys are not included in the NIST standards for
-> interoperability and efficiency reasons, the keys are just too big.
-> 
-> -> key generation: ECC key generation is faster than IFC (Integer -
-> Factorization Cryptography). RSA private key is based on large prime
-> numbers, while for ECDSA any positive integer less than n is a valid
-> private key.
-> 
-> -> ECDSA sign operations are faster than RSA, but verify operations are
-> slower. Here's an openssl speed test that I've run on my computer:
-> 
->                    sign    verify    sign/s verify/s
-> rsa 2048 bits 0.000604s 0.000018s   1656.3  56813.7
-> rsa 4096 bits 0.004027s 0.000062s    248.3  16052.5
-> 
->                               sign    verify    sign/s verify/s
-> 256 bit ecdsa (nistp256)   0.0000s   0.0001s  28986.4  13516.3
-> 384 bit ecdsa (nistp384)   0.0002s   0.0008s   5541.0   1322.2
-> 521 bit ecdsa (nistp521)   0.0003s   0.0006s   3104.2   1756.2
-> 
-> Best,
-> ta
-> 
-> [1] NIST SP 800-57 Pt. 1 Rev. 4, Recommendation for key management
-> -- 
-> To unsubscribe from this list: send the line "unsubscribe keyrings" in
-> the body of a message to majordomo-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
-> More majordomo info at  http://vger.kernel.org/majordomo-info.html
-> 
+  The program committee currently seeks proposals for:
 
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+    * Refereed Presentations:
+      45 minutes in length.
+
+    * Panel Discussion Topics:
+      45 minutes in length.
+
+    * Short Topics:
+      30 minutes in total, including at least 10 minutes discussion.
+
+    * BoF Sessions.
+
+  Topic areas include, but are not limited to:
+
+    * Kernel self-protection
+    * Access control
+    * Cryptography and key management
+    * Integrity control
+    * Hardware Security
+    * Iot and embedded security
+    * Virtualization and containers
+    * System-specific system hardening
+    * Case studies
+    * Security tools
+    * Security UX
+    * Emerging technologies, threats & techniques 
+
+  Proposals should be submitted via:
+    https://events.linuxfoundation.org/events/linux-security-summit-north-america-2018/program/cfp/
+
+
+DATES
+
+  * CFP Close: June 3, 2018
+  * CFP Notifications: June 11, 2018
+  * Schedule Announced: June 25, 2018
+  * Event: August 27-28, 2018
+
+
+WHO SHOULD ATTEND
+
+  We're seeking a diverse range of attendees, and welcome participation by
+  people involved in Linux security development, operations, and research.
+
+  The LSS is a unique global event which provides the opportunity to present
+  and discuss your work or research with key Linux security community members
+  and maintainers. It¢s also useful for those who wish to keep up with the
+  latest in Linux security development, and to provide input to the
+  development process.
+
+
+WEB SITE
+
+  https://events.linuxfoundation.org/events/linux-security-summit-north-america-2018/
+
+
+TWITTER
+
+  For event updates and announcements, follow:
+
+    https://twitter.com/LinuxSecSummit
+  
+
+PROGRAM COMMITTEE
+
+  The program committee for LSS 2018 is:
+
+    * James Morris, Microsoft
+    * Serge Hallyn, Cisco
+    * Paul Moore, Red Hat
+    * Stephen Smalley, NSA
+    * Elena Reshetova, Intel
+    * John Johansen, Canonical
+    * Kees Cook, Google
+    * Casey Schaufler, Intel
+    * Mimi Zohar, IBM
+    * David A. Wheeler, Institute for Defense Analyses
+
+  The program committee may be contacted as a group via email:
+    lss-pc () lists.linuxfoundation.org
+
+--1665246916-1034505349-1523315591=:11121--
