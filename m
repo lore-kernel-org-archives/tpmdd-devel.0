@@ -1,69 +1,75 @@
 From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [PATCH 2/2] tpm: self test failure should not cause suspend to fail
-Date: Wed,  2 May 2018 17:38:29 +0300
-Message-ID: <20180502143830.3534-3-jarkko.sakkinen@linux.intel.com>
+Subject: [PATCH 1/2] tpm: do not suspend/resume if power stays on
+Date: Wed,  2 May 2018 17:38:28 +0300
+Message-ID: <20180502143830.3534-2-jarkko.sakkinen@linux.intel.com>
 References: <20180502143830.3534-1-jarkko.sakkinen@linux.intel.com>
-Return-path: <stable-owner@vger.kernel.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
 In-Reply-To: <20180502143830.3534-1-jarkko.sakkinen@linux.intel.com>
-Sender: stable-owner@vger.kernel.org
+Sender: linux-kernel-owner@vger.kernel.org
 To: stable@vger.kernel.org
-Cc: Chris Chiu <chiu@endlessm.com>, Daniel Drake <drake@endlessm.com>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+Cc: Enric Balletbo i Serra <enric.balletbo@collabora.com>, Sonny Rao <sonnyrao@chromium.org>, Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>, James Morris <james.l.morris@oracle.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-From: Chris Chiu <chiu@endlessm.com>
+From: Enric Balletbo i Serra <enric.balletbo@collabora.com>
 
-commit 0803d7befa15cab5717d667a97a66214d2a4c083 upstream
+commit b5d0ebc99bf5d0801a5ecbe958caa3d68b8eaee8 upstream
 
-The Acer Acer Veriton X4110G has a TPM device detected as:
-  tpm_tis 00:0b: 1.2 TPM (device-id 0xFE, rev-id 71)
+The suspend/resume behavior of the TPM can be controlled by setting
+"powered-while-suspended" in the DTS. This is useful for the cases
+when hardware does not power-off the TPM.
 
-After the first S3 suspend, the following error appears during resume:
-  tpm tpm0: A TPM error(38) occurred continue selftest
-
-Any following S3 suspend attempts will now fail with this error:
-  tpm tpm0: Error (38) sending savestate before suspend
-  PM: Device 00:0b failed to suspend: error 38
-
-Error 38 is TPM_ERR_INVALID_POSTINIT which means the TPM is
-not in the correct state. This indicates that the platform BIOS
-is not sending the usual TPM_Startup command during S3 resume.
->From this point onwards, all TPM commands will fail.
-
-The same issue was previously reported on Foxconn 6150BK8MC and
-Sony Vaio TX3.
-
-The platform behaviour seems broken here, but we should not break
-suspend/resume because of this.
-
-When the unexpected TPM state is encountered, set a flag to skip the
-affected TPM_SaveState command on later suspends.
-
-Cc: stable@vger.kernel.org
-Signed-off-by: Chris Chiu <chiu@endlessm.com>
-Signed-off-by: Daniel Drake <drake@endlessm.com>
-Link: http://lkml.kernel.org/r/CAB4CAwfSCvj1cudi+MWaB5g2Z67d9DwY1o475YOZD64ma23UiQ@mail.gmail.com
-Link: https://lkml.org/lkml/2011/3/28/192
-Link: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=591031
+Signed-off-by: Sonny Rao <sonnyrao@chromium.org>
+Signed-off-by: Enric Balletbo i Serra <enric.balletbo@collabora.com>
+Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
 Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
 Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Signed-off-by: James Morris <james.l.morris@oracle.com>
 ---
- drivers/char/tpm/tpm-interface.c | 4 ++++
- 1 file changed, 4 insertions(+)
+ drivers/char/tpm/tpm-interface.c | 3 +++
+ drivers/char/tpm/tpm.h           | 2 ++
+ drivers/char/tpm/tpm_of.c        | 3 +++
+ 3 files changed, 8 insertions(+)
 
 diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index 5463b649bdf1..faf2db122ab9 100644
+index 830d7e30e508..5463b649bdf1 100644
 --- a/drivers/char/tpm/tpm-interface.c
 +++ b/drivers/char/tpm/tpm-interface.c
-@@ -803,6 +803,10 @@ int tpm_do_selftest(struct tpm_chip *chip)
- 	loops = jiffies_to_msecs(duration) / delay_msec;
+@@ -969,6 +969,9 @@ int tpm_pm_suspend(struct device *dev)
+ 	if (chip == NULL)
+ 		return -ENODEV;
  
- 	rc = tpm_continue_selftest(chip);
-+	if (rc == TPM_ERR_INVALID_POSTINIT) {
++	if (chip->flags & TPM_CHIP_FLAG_ALWAYS_POWERED)
++		return 0;
++
+ 	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
+ 		tpm2_shutdown(chip, TPM2_SU_STATE);
+ 		return 0;
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index aa4299cf7e5a..41756a9e9ad8 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -143,6 +143,8 @@ enum tpm_chip_flags {
+ 	TPM_CHIP_FLAG_TPM2		= BIT(1),
+ 	TPM_CHIP_FLAG_IRQ		= BIT(2),
+ 	TPM_CHIP_FLAG_VIRTUAL		= BIT(3),
++	TPM_CHIP_FLAG_HAVE_TIMEOUTS	= BIT(4),
++	TPM_CHIP_FLAG_ALWAYS_POWERED	= BIT(5),
+ };
+ 
+ struct tpm_chip {
+diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
+index 570f30c5c5f4..669f4a046398 100644
+--- a/drivers/char/tpm/tpm_of.c
++++ b/drivers/char/tpm/tpm_of.c
+@@ -37,6 +37,9 @@ int read_log(struct tpm_bios_log *log)
+ 		return -ENODEV;
+ 	}
+ 
++	if (of_property_read_bool(np, "powered-while-suspended"))
 +		chip->flags |= TPM_CHIP_FLAG_ALWAYS_POWERED;
-+		dev_info(&chip->dev, "TPM not ready (%d)\n", rc);
-+	}
- 	/* This may fail if there was no TPM driver during a suspend/resume
- 	 * cycle; some may return 10 (BAD_ORDINAL), others 28 (FAILEDSELFTEST)
- 	 */
++
+ 	sizep = of_get_property(np, "linux,sml-size", NULL);
+ 	if (sizep == NULL) {
+ 		pr_err("%s: ERROR - SML size not found\n", __func__);
 -- 
 2.17.0
