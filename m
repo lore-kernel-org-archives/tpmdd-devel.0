@@ -1,97 +1,51 @@
-From: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: Re: [PATCH 1/2] tpm: do not suspend/resume if power stays on
-Date: Wed, 9 May 2018 14:52:43 +0300
-Message-ID: <20180509115243.GA4062@linux.intel.com>
-References: <20180502143830.3534-1-jarkko.sakkinen@linux.intel.com>
- <20180502143830.3534-2-jarkko.sakkinen@linux.intel.com>
- <20180505022713.GA29590@kroah.com>
- <20180508105614.GC6132@linux.intel.com>
+From: Tadeusz Struk <tadeusz.struk-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+Subject: [PATCH] tpm: fix use after free in tpm2_load_context
+Date: Wed, 09 May 2018 11:55:35 -0700
+Message-ID: <152589213590.23382.13567986597921947843.stgit@tstruk-mobl1.jf.intel.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20180508105614.GC6132@linux.intel.com>
-Sender: linux-kernel-owner@vger.kernel.org
-To: Greg KH <gregkh@linuxfoundation.org>
-Cc: stable@vger.kernel.org, Enric Balletbo i Serra <enric.balletbo@collabora.com>, Sonny Rao <sonnyrao@chromium.org>, James Morris <james.l.morris@oracle.com>, Peter Huewe <peterhuewe@gmx.de>, Marcel Selhorst <tpmdd@selhorst.net>, Jason Gunthorpe <jgunthorpe@obsidianresearch.com>, "moderated list:TPM DEVICE DRIVER" <tpmdd-devel@lists.sourceforge.net>, open list <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
+List-Post: <mailto:tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
+ <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
+Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
+To: jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org
+Cc: jgg-uk2M96/98Pc@public.gmane.org, linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, May 08, 2018 at 01:56:14PM +0300, Jarkko Sakkinen wrote:
-> On Fri, May 04, 2018 at 07:27:13PM -0700, Greg KH wrote:
-> > On Wed, May 02, 2018 at 05:38:28PM +0300, Jarkko Sakkinen wrote:
-> > > From: Enric Balletbo i Serra <enric.balletbo@collabora.com>
-> > > 
-> > > commit b5d0ebc99bf5d0801a5ecbe958caa3d68b8eaee8 upstream
-> > > 
-> > > The suspend/resume behavior of the TPM can be controlled by setting
-> > > "powered-while-suspended" in the DTS. This is useful for the cases
-> > > when hardware does not power-off the TPM.
-> > > 
-> > > Signed-off-by: Sonny Rao <sonnyrao@chromium.org>
-> > > Signed-off-by: Enric Balletbo i Serra <enric.balletbo@collabora.com>
-> > > Reviewed-by: Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
-> > > Reviewed-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-> > > Signed-off-by: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-> > > Signed-off-by: James Morris <james.l.morris@oracle.com>
-> > > ---
-> > >  drivers/char/tpm/tpm-interface.c | 3 +++
-> > >  drivers/char/tpm/tpm.h           | 2 ++
-> > >  drivers/char/tpm/tpm_of.c        | 3 +++
-> > >  3 files changed, 8 insertions(+)
-> > > 
-> > > diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-> > > index 830d7e30e508..5463b649bdf1 100644
-> > > --- a/drivers/char/tpm/tpm-interface.c
-> > > +++ b/drivers/char/tpm/tpm-interface.c
-> > > @@ -969,6 +969,9 @@ int tpm_pm_suspend(struct device *dev)
-> > >  	if (chip == NULL)
-> > >  		return -ENODEV;
-> > >  
-> > > +	if (chip->flags & TPM_CHIP_FLAG_ALWAYS_POWERED)
-> > > +		return 0;
-> > > +
-> > >  	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
-> > >  		tpm2_shutdown(chip, TPM2_SU_STATE);
-> > >  		return 0;
-> > > diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
-> > > index aa4299cf7e5a..41756a9e9ad8 100644
-> > > --- a/drivers/char/tpm/tpm.h
-> > > +++ b/drivers/char/tpm/tpm.h
-> > > @@ -143,6 +143,8 @@ enum tpm_chip_flags {
-> > >  	TPM_CHIP_FLAG_TPM2		= BIT(1),
-> > >  	TPM_CHIP_FLAG_IRQ		= BIT(2),
-> > >  	TPM_CHIP_FLAG_VIRTUAL		= BIT(3),
-> > > +	TPM_CHIP_FLAG_HAVE_TIMEOUTS	= BIT(4),
-> > > +	TPM_CHIP_FLAG_ALWAYS_POWERED	= BIT(5),
-> > >  };
-> > >  
-> > >  struct tpm_chip {
-> > > diff --git a/drivers/char/tpm/tpm_of.c b/drivers/char/tpm/tpm_of.c
-> > > index 570f30c5c5f4..669f4a046398 100644
-> > > --- a/drivers/char/tpm/tpm_of.c
-> > > +++ b/drivers/char/tpm/tpm_of.c
-> > > @@ -37,6 +37,9 @@ int read_log(struct tpm_bios_log *log)
-> > >  		return -ENODEV;
-> > >  	}
-> > >  
-> > > +	if (of_property_read_bool(np, "powered-while-suspended"))
-> > > +		chip->flags |= TPM_CHIP_FLAG_ALWAYS_POWERED;
-> > > +
-> > 
-> > This last line here blows up the build, there is no chip variable
-> > defined in this function :(
-> > 
-> > So I have to drop both of these patches, from both 4.4.y and 4.9.y
-> > queues right now.  Can you fix this up and resend them?
-> > 
-> > thanks,
-> > 
-> > greg k-h
-> 
-> Yes. Sorry. I'll do that.
-> 
-> /Jarkko
+If load context command returns with TPM2_RC_HANDLE or
+TPM2_RC_REFERENCE_H0 then we have use after free in
+line 114 and double free in 117.
 
-... obviously should have compiled PPC kernel :-/
+Fixes: 4d57856a21ed2 ("tpm2: add session handle context saving and restoring to the space code")
 
-/Jarkko
+Signed-off-by: Tadeusz Struk <tadeusz.struk-ral2JQCrhuEAvxtiuMwx3w@public.gmane.org>
+---
+ drivers/char/tpm/tpm2-space.c |    3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/char/tpm/tpm2-space.c b/drivers/char/tpm/tpm2-space.c
+index 4e4014eabdb9..6122d3276f72 100644
+--- a/drivers/char/tpm/tpm2-space.c
++++ b/drivers/char/tpm/tpm2-space.c
+@@ -102,8 +102,9 @@ static int tpm2_load_context(struct tpm_chip *chip, u8 *buf,
+ 		 * TPM_RC_REFERENCE_H0 means the session has been
+ 		 * flushed outside the space
+ 		 */
+-		rc = -ENOENT;
++		*handle = 0;
+ 		tpm_buf_destroy(&tbuf);
++		return -ENOENT;
+ 	} else if (rc > 0) {
+ 		dev_warn(&chip->dev, "%s: failed with a TPM error 0x%04X\n",
+ 			 __func__, rc);
+
+
+------------------------------------------------------------------------------
+Check out the vibrant tech community on one of the world's most
+engaging tech sites, Slashdot.org! http://sdm.link/slashdot
