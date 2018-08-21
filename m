@@ -1,8 +1,8 @@
 From: David Howells <dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-Subject: [PATCH 05/23] TPM: Use struct tpm_chip rather than
- chip number as interface parameter
-Date: Tue, 21 Aug 2018 16:57:22 +0100
-Message-ID: <153486704294.13066.8818198038331415342.stgit@warthog.procyon.org.uk>
+Subject: [PATCH 06/23] TPM: Move ordinal values from interface
+ file to header with other ordinals
+Date: Tue, 21 Aug 2018 16:57:29 +0100
+Message-ID: <153486704975.13066.1880897540173112691.stgit@warthog.procyon.org.uk>
 References: <153486700916.13066.12870860668352070081.stgit@warthog.procyon.org.uk>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
@@ -21,623 +21,240 @@ To: denkenz-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, jarkko.sakkinen-VuQAYsv1563
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-Use struct tpm_chip rather than chip number as interface parameter for most
-interface functions.  This allows the client to be sure about the consistency
-of what device it uses.
+Move the ordinal values (command IDs) from the tpm-interface.c file to the
+tpm_command.h header where the other ordinal values are declared.  Use
+cpu_to_be32() when the ordinal values are used, and not in their declarations.
+
+The TPM_TAG_RQU_COMMAND definition in the internal tpm.h has to be removed
+because it is a differently-defined duplicate label to avoid a clash.
+cpu_to_be16() is then used in the places where it was used.
+
+This allows the infineon TPM driver to use the constants directly in
+tpm_inf_pnp_suspend().  The savestate buffer there can also be made static and
+const.
 
 Signed-off-by: David Howells <dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
 ---
 
- drivers/char/tpm/tpm-interface.c    |   76 ++++++++-------------------------
- drivers/char/tpm/tpm-sysfs.c        |    2 -
- include/linux/tpm.h                 |   16 ++++---
- security/integrity/ima/ima.h        |    2 -
- security/integrity/ima/ima_crypto.c |    4 +-
- security/integrity/ima/ima_init.c   |   19 +++++---
- security/integrity/ima/ima_queue.c  |    4 +-
- security/keys/trusted.c             |   80 ++++++++++++++++++++++-------------
- 8 files changed, 96 insertions(+), 107 deletions(-)
+ drivers/char/tpm/tpm-interface.c |   48 +++++++++++++++++---------------------
+ drivers/char/tpm/tpm-sysfs.c     |    8 +++---
+ drivers/char/tpm/tpm.h           |    2 --
+ drivers/char/tpm/tpm_infineon.c  |    6 ++---
+ include/linux/tpm_command.h      |   19 +++++++++++----
+ 5 files changed, 42 insertions(+), 41 deletions(-)
 
 diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
-index b8f1df5b64fe..29c2ce5cfc69 100644
+index 29c2ce5cfc69..9add6034c252 100644
 --- a/drivers/char/tpm/tpm-interface.c
 +++ b/drivers/char/tpm/tpm-interface.c
-@@ -678,25 +678,9 @@ static struct tpm_input_header pcrread_header = {
- 	.ordinal = TPM_ORDINAL_PCRREAD
+@@ -28,6 +28,7 @@
+ #include <linux/mutex.h>
+ #include <linux/spinlock.h>
+ #include <linux/freezer.h>
++#include <linux/tpm_command.h>
+ 
+ #include "tpm.h"
+ #include "tpm_eventlog.h"
+@@ -417,13 +418,11 @@ static ssize_t transmit_cmd(struct tpm_chip *chip, struct tpm_cmd_t *cmd,
+ }
+ 
+ #define TPM_INTERNAL_RESULT_SIZE 200
+-#define TPM_ORD_GET_CAP cpu_to_be32(101)
+-#define TPM_ORD_GET_RANDOM cpu_to_be32(70)
+ 
+ static const struct tpm_input_header tpm_getcap_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
+-	.length = cpu_to_be32(22),
+-	.ordinal = TPM_ORD_GET_CAP
++	.tag	 = cpu_to_be16(TPM_TAG_RQU_COMMAND),
++	.length	 = cpu_to_be32(22),
++	.ordinal = cpu_to_be32(TPM_ORD_GET_CAP),
  };
  
--int tpm_pcr_read_dev(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
--{
--	int rc;
--	struct tpm_cmd_t cmd;
--
--	cmd.header.in = pcrread_header;
--	cmd.params.pcrread_in.pcr_idx = cpu_to_be32(pcr_idx);
--	rc = transmit_cmd(chip, &cmd, READ_PCR_RESULT_SIZE,
--			  "attempting to read a pcr value");
--
--	if (rc == 0)
--		memcpy(res_buf, cmd.params.pcrread_out.pcr_result,
--		       TPM_DIGEST_SIZE);
--	return rc;
--}
--
+ ssize_t tpm_getcap(struct device *dev, __be32 subcap_id, cap_t *cap,
+@@ -469,14 +468,13 @@ void tpm_gen_interrupt(struct tpm_chip *chip)
+ }
+ EXPORT_SYMBOL_GPL(tpm_gen_interrupt);
+ 
+-#define TPM_ORD_STARTUP cpu_to_be32(153)
+ #define TPM_ST_CLEAR cpu_to_be16(1)
+ #define TPM_ST_STATE cpu_to_be16(2)
+ #define TPM_ST_DEACTIVATED cpu_to_be16(3)
+ static const struct tpm_input_header tpm_startup_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
+-	.length = cpu_to_be32(12),
+-	.ordinal = TPM_ORD_STARTUP
++	.tag	 = cpu_to_be16(TPM_TAG_RQU_COMMAND),
++	.length	 = cpu_to_be32(12),
++	.ordinal = cpu_to_be32(TPM_ORD_STARTUP),
+ };
+ 
+ static int tpm_startup(struct tpm_chip *chip, __be16 startup_type)
+@@ -609,12 +607,11 @@ duration:
+ }
+ EXPORT_SYMBOL_GPL(tpm_get_timeouts);
+ 
+-#define TPM_ORD_CONTINUE_SELFTEST 83
+ #define CONTINUE_SELFTEST_RESULT_SIZE 10
+ 
+ static struct tpm_input_header continue_selftest_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
+-	.length = cpu_to_be32(10),
++	.tag	 = cpu_to_be16(TPM_TAG_RQU_COMMAND),
++	.length	 = cpu_to_be32(10),
+ 	.ordinal = cpu_to_be32(TPM_ORD_CONTINUE_SELFTEST),
+ };
+ 
+@@ -670,12 +667,11 @@ void tpm_chip_put(struct tpm_chip *chip)
+ }
+ EXPORT_SYMBOL_GPL(tpm_chip_put);
+ 
+-#define TPM_ORDINAL_PCRREAD cpu_to_be32(21)
+ #define READ_PCR_RESULT_SIZE 30
+ static struct tpm_input_header pcrread_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
+-	.length = cpu_to_be32(14),
+-	.ordinal = TPM_ORDINAL_PCRREAD
++	.tag	 = cpu_to_be16(TPM_TAG_RQU_COMMAND),
++	.length	 = cpu_to_be32(14),
++	.ordinal = cpu_to_be32(TPM_ORD_PCR_READ),
+ };
+ 
  /**
-  * tpm_pcr_read - read a pcr value
-- * @chip_num:	tpm idx # or ANY
-+ * @chip:	The chip to pass the request to
-  * @pcr_idx:	pcr idx to retrieve
-  * @res_buf:	TPM_PCR value
-  *		size of res_buf is 20 bytes (or NULL if you don't care)
-@@ -705,23 +689,26 @@ int tpm_pcr_read_dev(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
+@@ -716,12 +712,11 @@ EXPORT_SYMBOL_GPL(tpm_pcr_read);
   * isn't, protect against the chip disappearing, by incrementing
   * the module usage count.
   */
--int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf)
-+int tpm_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf)
- {
--	struct tpm_chip *chip;
- 	int rc;
-+	struct tpm_cmd_t cmd;
- 
--	chip = tpm_chip_find_get(chip_num);
--	if (chip == NULL)
--		return -ENODEV;
--	rc = tpm_pcr_read_dev(chip, pcr_idx, res_buf);
--	tpm_chip_put(chip);
-+	cmd.header.in = pcrread_header;
-+	cmd.params.pcrread_in.pcr_idx = cpu_to_be32(pcr_idx);
-+	rc = transmit_cmd(chip, &cmd, READ_PCR_RESULT_SIZE,
-+			  "attempting to read a pcr value");
-+
-+	if (rc == 0)
-+		memcpy(res_buf, cmd.params.pcrread_out.pcr_result,
-+		       TPM_DIGEST_SIZE);
- 	return rc;
- }
- EXPORT_SYMBOL_GPL(tpm_pcr_read);
- 
- /**
-  * tpm_pcr_extend - extend pcr value with hash
-- * @chip_num:	tpm idx # or AN&
-+ * @chip:	The chip to pass the request to
-  * @pcr_idx:	pcr idx to extend
-  * @hash:	hash value used to extend pcr value
-  *
-@@ -737,24 +724,15 @@ static struct tpm_input_header pcrextend_header = {
- 	.ordinal = TPM_ORD_PCR_EXTEND
+-#define TPM_ORD_PCR_EXTEND cpu_to_be32(20)
+ #define EXTEND_PCR_RESULT_SIZE 34
+ static struct tpm_input_header pcrextend_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
+-	.length = cpu_to_be32(34),
+-	.ordinal = TPM_ORD_PCR_EXTEND
++	.tag	 = cpu_to_be16(TPM_TAG_RQU_COMMAND),
++	.length	 = cpu_to_be32(34),
++	.ordinal = cpu_to_be32(TPM_ORD_PCR_EXTEND)
  };
  
--int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash)
-+int tpm_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash)
- {
- 	struct tpm_cmd_t cmd;
--	int rc;
--	struct tpm_chip *chip;
--
--	chip = tpm_chip_find_get(chip_num);
--	if (chip == NULL)
--		return -ENODEV;
- 
- 	cmd.header.in = pcrextend_header;
- 	cmd.params.pcrextend_in.pcr_idx = cpu_to_be32(pcr_idx);
- 	memcpy(cmd.params.pcrextend_in.hash, hash, TPM_DIGEST_SIZE);
--	rc = transmit_cmd(chip, &cmd, EXTEND_PCR_RESULT_SIZE,
--			  "attempting extend a PCR value");
--
--	tpm_chip_put(chip);
--	return rc;
-+	return transmit_cmd(chip, &cmd, EXTEND_PCR_RESULT_SIZE,
-+			    "attempting extend a PCR value");
+ int tpm_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash)
+@@ -889,13 +884,12 @@ void tpm_remove_hardware(struct device *dev)
  }
- EXPORT_SYMBOL_GPL(tpm_pcr_extend);
+ EXPORT_SYMBOL_GPL(tpm_remove_hardware);
  
-@@ -821,19 +799,9 @@ int tpm_do_selftest(struct tpm_chip *chip)
- }
- EXPORT_SYMBOL_GPL(tpm_do_selftest);
+-#define TPM_ORD_SAVESTATE cpu_to_be32(152)
+ #define SAVESTATE_RESULT_SIZE 10
  
--int tpm_send(u32 chip_num, void *cmd, size_t buflen)
-+int tpm_send(struct tpm_chip *chip, void *cmd, size_t buflen)
- {
--	struct tpm_chip *chip;
--	int rc;
--
--	chip = tpm_chip_find_get(chip_num);
--	if (chip == NULL)
--		return -ENODEV;
--
--	rc = transmit_cmd(chip, cmd, buflen, "attempting tpm_cmd");
--
--	tpm_chip_put(chip);
--	return rc;
-+	return transmit_cmd(chip, cmd, buflen, "attempting tpm_cmd");
- }
- EXPORT_SYMBOL_GPL(tpm_send);
+ static struct tpm_input_header savestate_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
+-	.length = cpu_to_be32(10),
+-	.ordinal = TPM_ORD_SAVESTATE
++	.tag	 = cpu_to_be16(TPM_TAG_RQU_COMMAND),
++	.length	 = cpu_to_be32(10),
++	.ordinal = cpu_to_be32(TPM_ORD_SAVESTATE),
+ };
  
-@@ -1010,15 +978,14 @@ static struct tpm_input_header tpm_getrandom_header = {
+ /*
+@@ -971,9 +965,9 @@ EXPORT_SYMBOL_GPL(tpm_pm_resume);
+ 
+ #define TPM_GETRANDOM_RESULT_SIZE	18
+ static struct tpm_input_header tpm_getrandom_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
+-	.length = cpu_to_be32(14),
+-	.ordinal = TPM_ORD_GET_RANDOM
++	.tag	 = cpu_to_be16(TPM_TAG_RQU_COMMAND),
++	.length	 = cpu_to_be32(14),
++	.ordinal = cpu_to_be32(TPM_ORD_GET_RANDOM),
+ };
  
  /**
-  * tpm_get_random() - Get random bytes from the tpm's RNG
-- * @chip_num: A specific chip number for the request or TPM_ANY_NUM
-+ * @chip: The chip to pass the request to
-  * @out: destination buffer for the random bytes
-  * @max: the max number of bytes to write to @out
-  *
-  * Returns < 0 on error and the number of bytes read on success
-  */
--int tpm_get_random(u32 chip_num, u8 *out, size_t max)
-+int tpm_get_random(struct tpm_chip *chip, u8 *out, size_t max)
- {
--	struct tpm_chip *chip;
- 	struct tpm_cmd_t tpm_cmd;
- 	u32 recd, num_bytes = min_t(u32, max, TPM_MAX_RNG_DATA);
- 	int err, total = 0, retries = 5;
-@@ -1027,10 +994,6 @@ int tpm_get_random(u32 chip_num, u8 *out, size_t max)
- 	if (!out || !num_bytes || max > TPM_MAX_RNG_DATA)
- 		return -EINVAL;
- 
--	chip = tpm_chip_find_get(chip_num);
--	if (chip == NULL)
--		return -ENODEV;
--
- 	do {
- 		tpm_cmd.header.in = tpm_getrandom_header;
- 		tpm_cmd.params.getrandom_in.num_bytes = cpu_to_be32(num_bytes);
-@@ -1049,7 +1012,6 @@ int tpm_get_random(u32 chip_num, u8 *out, size_t max)
- 		num_bytes -= recd;
- 	} while (retries-- && total < max);
- 
--	tpm_chip_put(chip);
- 	return total ? total : -EIO;
- }
- EXPORT_SYMBOL_GPL(tpm_get_random);
 diff --git a/drivers/char/tpm/tpm-sysfs.c b/drivers/char/tpm/tpm-sysfs.c
-index 01730a27ae07..507d8ab37ef1 100644
+index 507d8ab37ef1..d8da83a1d11c 100644
 --- a/drivers/char/tpm/tpm-sysfs.c
 +++ b/drivers/char/tpm/tpm-sysfs.c
-@@ -120,7 +120,7 @@ static ssize_t pcrs_show(struct device *dev, struct device_attribute *attr,
+@@ -18,6 +18,7 @@
+  *
+  */
+ #include <linux/device.h>
++#include <linux/tpm_command.h>
+ #include "tpm.h"
  
- 	num_pcrs = be32_to_cpu(cap.num_pcrs);
- 	for (i = 0; i < num_pcrs; i++) {
--		rc = tpm_pcr_read_dev(chip, i, digest);
-+		rc = tpm_pcr_read(chip, i, digest);
- 		if (rc)
- 			break;
- 		str += sprintf(str, "PCR-%02d: ", i);
-diff --git a/include/linux/tpm.h b/include/linux/tpm.h
-index 44c8cad7132d..c213e09b7d81 100644
---- a/include/linux/tpm.h
-+++ b/include/linux/tpm.h
-@@ -49,10 +49,10 @@ struct tpm_class_ops {
- extern struct tpm_chip *tpm_chip_find_get(int chip_num);
- extern void tpm_chip_put(struct tpm_chip *chip);
- 
--extern int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf);
--extern int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash);
--extern int tpm_send(u32 chip_num, void *cmd, size_t buflen);
--extern int tpm_get_random(u32 chip_num, u8 *data, size_t max);
-+extern int tpm_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf);
-+extern int tpm_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash);
-+extern int tpm_send(struct tpm_chip *chip, void *cmd, size_t buflen);
-+extern int tpm_get_random(struct tpm_chip *chip, u8 *data, size_t max);
- #else
- static inline struct tpm_chip *tpm_chip_find_get(int chip_num)
- {
-@@ -61,16 +61,16 @@ static inline struct tpm_chip *tpm_chip_find_get(int chip_num)
- static inline void tpm_chip_put(struct tpm_chip *chip)
- {
- }
--static inline int tpm_pcr_read(u32 chip_num, int pcr_idx, u8 *res_buf) {
-+static inline int tpm_pcr_read(struct tpm_chip *chip, int pcr_idx, u8 *res_buf) {
- 	return -ENODEV;
- }
--static inline int tpm_pcr_extend(u32 chip_num, int pcr_idx, const u8 *hash) {
-+static inline int tpm_pcr_extend(struct tpm_chip *chip, int pcr_idx, const u8 *hash) {
- 	return -ENODEV;
- }
--static inline int tpm_send(u32 chip_num, void *cmd, size_t buflen) {
-+static inline int tpm_send(struct tpm_chip *chip, void *cmd, size_t buflen) {
- 	return -ENODEV;
- }
--static inline int tpm_get_random(u32 chip_num, u8 *data, size_t max) {
-+static inline int tpm_get_random(struct tpm_chip *chip, u8 *data, size_t max) {
- 	return -ENODEV;
- }
- #endif
-diff --git a/security/integrity/ima/ima.h b/security/integrity/ima/ima.h
-index 8e4bb883fc13..8f932e53a449 100644
---- a/security/integrity/ima/ima.h
-+++ b/security/integrity/ima/ima.h
-@@ -44,8 +44,8 @@ enum tpm_pcrs { TPM_PCR0 = 0, TPM_PCR8 = 8 };
- #define IMA_TEMPLATE_IMA_FMT "d|n"
- 
- /* set during initialization */
-+extern struct tpm_chip *ima_tpm;
- extern int ima_initialized;
--extern int ima_used_chip;
- extern int ima_hash_algo;
- extern int ima_appraise;
- 
-diff --git a/security/integrity/ima/ima_crypto.c b/security/integrity/ima/ima_crypto.c
-index d34e7dfc1118..c4631e5bac5a 100644
---- a/security/integrity/ima/ima_crypto.c
-+++ b/security/integrity/ima/ima_crypto.c
-@@ -556,10 +556,10 @@ int ima_calc_field_array_hash(struct ima_field_data *field_data,
- 
- static void __init ima_pcrread(int idx, u8 *pcr)
- {
--	if (!ima_used_chip)
-+	if (!ima_tpm)
- 		return;
- 
--	if (tpm_pcr_read(TPM_ANY_NUM, idx, pcr) != 0)
-+	if (tpm_pcr_read(ima_tpm, idx, pcr) != 0)
- 		pr_err("Error Communicating to TPM chip\n");
+ /* XXX for now this helper is duplicated in tpm-interface.c */
+@@ -40,11 +41,10 @@ static ssize_t transmit_cmd(struct tpm_chip *chip, struct tpm_cmd_t *cmd,
  }
  
-diff --git a/security/integrity/ima/ima_init.c b/security/integrity/ima/ima_init.c
-index e8f9d70a465d..bcad4da9e663 100644
---- a/security/integrity/ima/ima_init.c
-+++ b/security/integrity/ima/ima_init.c
-@@ -26,7 +26,7 @@
+ #define READ_PUBEK_RESULT_SIZE 314
+-#define TPM_ORD_READPUBEK cpu_to_be32(124)
+ static struct tpm_input_header tpm_readpubek_header = {
+-	.tag = TPM_TAG_RQU_COMMAND,
+-	.length = cpu_to_be32(30),
+-	.ordinal = TPM_ORD_READPUBEK
++	.tag	 = cpu_to_be16(TPM_TAG_RQU_COMMAND),
++	.length	 = cpu_to_be32(30),
++	.ordinal = cpu_to_be32(TPM_ORD_READPUBEK),
+ };
+ static ssize_t pubek_show(struct device *dev, struct device_attribute *attr,
+ 			  char *buf)
+diff --git a/drivers/char/tpm/tpm.h b/drivers/char/tpm/tpm.h
+index df6ffceb3429..2a1be0ec2fbd 100644
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -138,8 +138,6 @@ struct tpm_output_header {
+ 	__be32	return_code;
+ } __packed;
  
- /* name for boot aggregate entry */
- static const char *boot_aggregate_name = "boot_aggregate";
--int ima_used_chip;
-+struct tpm_chip *ima_tpm;
- 
- /* Add the boot aggregate to the IMA measurement list and extend
-  * the PCR register.
-@@ -62,7 +62,7 @@ static void __init ima_add_boot_aggregate(void)
- 	iint->ima_hash->algo = HASH_ALGO_SHA1;
- 	iint->ima_hash->length = SHA1_DIGEST_SIZE;
- 
--	if (ima_used_chip) {
-+	if (ima_tpm) {
- 		result = ima_calc_boot_aggregate(&hash.hdr);
- 		if (result < 0) {
- 			audit_cause = "hashing_error";
-@@ -90,12 +90,17 @@ int __init ima_init(void)
- 	u8 pcr_i[TPM_DIGEST_SIZE];
+-#define TPM_TAG_RQU_COMMAND cpu_to_be16(193)
+-
+ struct	stclear_flags_t {
+ 	__be16	tag;
+ 	u8	deactivated;
+diff --git a/drivers/char/tpm/tpm_infineon.c b/drivers/char/tpm/tpm_infineon.c
+index dc0a2554034e..7daa3317e18d 100644
+--- a/drivers/char/tpm/tpm_infineon.c
++++ b/drivers/char/tpm/tpm_infineon.c
+@@ -591,10 +591,10 @@ static int tpm_inf_pnp_suspend(struct pnp_dev *dev, pm_message_t pm_state)
+ 	struct tpm_chip *chip = pnp_get_drvdata(dev);
  	int rc;
+ 	if (chip) {
+-		u8 savestate[] = {
+-			0, 193,	/* TPM_TAG_RQU_COMMAND */
++		static const u8 savestate[] = {
++			0, TPM_TAG_RQU_COMMAND,
+ 			0, 0, 0, 10,	/* blob length (in bytes) */
+-			0, 0, 0, 152	/* TPM_ORD_SaveState */
++			0, 0, 0, TPM_ORD_SAVESTATE,
+ 		};
+ 		dev_info(&dev->dev, "saving TPM state\n");
+ 		rc = tpm_inf_send(chip, savestate, sizeof(savestate));
+diff --git a/include/linux/tpm_command.h b/include/linux/tpm_command.h
+index 727512e249b5..a3e0bb670e62 100644
+--- a/include/linux/tpm_command.h
++++ b/include/linux/tpm_command.h
+@@ -15,11 +15,20 @@
+ #define TPM_TAG_RSP_AUTH2_COMMAND       198
  
--	ima_used_chip = 0;
--	rc = tpm_pcr_read(TPM_ANY_NUM, 0, pcr_i);
--	if (rc == 0)
--		ima_used_chip = 1;
-+	ima_tpm = tpm_chip_find_get(TPM_ANY_NUM);
+ /* Command Ordinals */
+-#define TPM_ORD_GETRANDOM               70
+-#define TPM_ORD_OSAP                    11
+-#define TPM_ORD_OIAP                    10
+-#define TPM_ORD_SEAL                    23
+-#define TPM_ORD_UNSEAL                  24
++enum tpm_ordinal {
++	TPM_ORD_OSAP			= 11,
++	TPM_ORD_OIAP			= 10,
++	TPM_ORD_PCR_EXTEND		= 20,
++	TPM_ORD_PCR_READ		= 21,
++	TPM_ORD_SEAL			= 23,
++	TPM_ORD_UNSEAL			= 24,
++	TPM_ORD_GET_RANDOM		= 70,
++	TPM_ORD_CONTINUE_SELFTEST	= 83,
++	TPM_ORD_GET_CAP			= 101,
++	TPM_ORD_READPUBEK		= 124,
++	TPM_ORD_SAVESTATE		= 152,
++	TPM_ORD_STARTUP			= 153,
++};
  
--	if (!ima_used_chip)
-+	if (ima_tpm) {
-+		rc = tpm_pcr_read(ima_tpm, 0, pcr_i);
-+		if (rc != 0) {
-+			tpm_chip_put(ima_tpm);
-+			ima_tpm = NULL;
-+		}
-+	}
-+
-+	if (!ima_tpm)
- 		pr_info("No TPM chip found, activating TPM-bypass!\n");
- 
- 	rc = ima_init_crypto();
-diff --git a/security/integrity/ima/ima_queue.c b/security/integrity/ima/ima_queue.c
-index 552705d5a78d..83629075375c 100644
---- a/security/integrity/ima/ima_queue.c
-+++ b/security/integrity/ima/ima_queue.c
-@@ -93,10 +93,10 @@ static int ima_pcr_extend(const u8 *hash)
- {
- 	int result = 0;
- 
--	if (!ima_used_chip)
-+	if (!ima_tpm)
- 		return result;
- 
--	result = tpm_pcr_extend(TPM_ANY_NUM, CONFIG_IMA_MEASURE_PCR_IDX, hash);
-+	result = tpm_pcr_extend(ima_tpm, CONFIG_IMA_MEASURE_PCR_IDX, hash);
- 	if (result != 0)
- 		pr_err("Error Communicating to TPM chip, result: %d\n", result);
- 	return result;
-diff --git a/security/keys/trusted.c b/security/keys/trusted.c
-index c0594cb07ada..adb0caa5c38d 100644
---- a/security/keys/trusted.c
-+++ b/security/keys/trusted.c
-@@ -354,13 +354,13 @@ out:
-  * For key specific tpm requests, we will generate and send our
-  * own TPM command packets using the drivers send function.
-  */
--static int trusted_tpm_send(const u32 chip_num, unsigned char *cmd,
-+static int trusted_tpm_send(struct tpm_chip *chip, unsigned char *cmd,
- 			    size_t buflen)
- {
- 	int rc;
- 
- 	dump_tpm_buf(cmd);
--	rc = tpm_send(chip_num, cmd, buflen);
-+	rc = tpm_send(chip, cmd, buflen);
- 	dump_tpm_buf(cmd);
- 	if (rc > 0)
- 		/* Can't return positive return codes values to keyctl */
-@@ -374,30 +374,31 @@ static int trusted_tpm_send(const u32 chip_num, unsigned char *cmd,
-  * Prevents a trusted key that is sealed to PCRs from being accessed.
-  * This uses the tpm driver's extend function.
-  */
--static int pcrlock(const int pcrnum)
-+static int pcrlock(struct tpm_chip *chip, const int pcrnum)
- {
- 	unsigned char hash[SHA1_DIGEST_SIZE];
- 	int ret;
- 
- 	if (!capable(CAP_SYS_ADMIN))
- 		return -EPERM;
--	ret = tpm_get_random(TPM_ANY_NUM, hash, SHA1_DIGEST_SIZE);
-+	ret = tpm_get_random(chip, hash, SHA1_DIGEST_SIZE);
- 	if (ret != SHA1_DIGEST_SIZE)
- 		return ret;
--	return tpm_pcr_extend(TPM_ANY_NUM, pcrnum, hash) ? -EINVAL : 0;
-+	return tpm_pcr_extend(chip, pcrnum, hash) ? -EINVAL : 0;
- }
- 
- /*
-  * Create an object specific authorisation protocol (OSAP) session
-  */
--static int osap(struct tpm_buf *tb, struct osapsess *s,
-+static int osap(struct tpm_chip *chip,
-+		struct tpm_buf *tb, struct osapsess *s,
- 		const unsigned char *key, uint16_t type, uint32_t handle)
- {
- 	unsigned char enonce[TPM_NONCE_SIZE];
- 	unsigned char ononce[TPM_NONCE_SIZE];
- 	int ret;
- 
--	ret = tpm_get_random(TPM_ANY_NUM, ononce, TPM_NONCE_SIZE);
-+	ret = tpm_get_random(chip, ononce, TPM_NONCE_SIZE);
- 	if (ret != TPM_NONCE_SIZE)
- 		return ret;
- 
-@@ -409,7 +410,7 @@ static int osap(struct tpm_buf *tb, struct osapsess *s,
- 	store32(tb, handle);
- 	storebytes(tb, ononce, TPM_NONCE_SIZE);
- 
--	ret = trusted_tpm_send(TPM_ANY_NUM, tb->data, MAX_BUF_SIZE);
-+	ret = trusted_tpm_send(chip, tb->data, MAX_BUF_SIZE);
- 	if (ret < 0)
- 		return ret;
- 
-@@ -425,7 +426,8 @@ static int osap(struct tpm_buf *tb, struct osapsess *s,
- /*
-  * Create an object independent authorisation protocol (oiap) session
-  */
--static int oiap(struct tpm_buf *tb, uint32_t *handle, unsigned char *nonce)
-+static int oiap(struct tpm_chip *chip, struct tpm_buf *tb, uint32_t *handle,
-+		unsigned char *nonce)
- {
- 	int ret;
- 
-@@ -433,7 +435,7 @@ static int oiap(struct tpm_buf *tb, uint32_t *handle, unsigned char *nonce)
- 	store16(tb, TPM_TAG_RQU_COMMAND);
- 	store32(tb, TPM_OIAP_SIZE);
- 	store32(tb, TPM_ORD_OIAP);
--	ret = trusted_tpm_send(TPM_ANY_NUM, tb->data, MAX_BUF_SIZE);
-+	ret = trusted_tpm_send(chip, tb->data, MAX_BUF_SIZE);
- 	if (ret < 0)
- 		return ret;
- 
-@@ -455,7 +457,8 @@ struct tpm_digests {
-  * Have the TPM seal(encrypt) the trusted key, possibly based on
-  * Platform Configuration Registers (PCRs). AUTH1 for sealing key.
-  */
--static int tpm_seal(struct tpm_buf *tb, uint16_t keytype,
-+static int tpm_seal(struct tpm_chip *chip,
-+		    struct tpm_buf *tb, uint16_t keytype,
- 		    uint32_t keyhandle, const unsigned char *keyauth,
- 		    const unsigned char *data, uint32_t datalen,
- 		    unsigned char *blob, uint32_t *bloblen,
-@@ -480,7 +483,7 @@ static int tpm_seal(struct tpm_buf *tb, uint16_t keytype,
- 		return -ENOMEM;
- 
- 	/* get session for sealing key */
--	ret = osap(tb, &sess, keyauth, keytype, keyhandle);
-+	ret = osap(chip, tb, &sess, keyauth, keytype, keyhandle);
- 	if (ret < 0)
- 		goto out;
- 	dump_sess(&sess);
-@@ -492,7 +495,7 @@ static int tpm_seal(struct tpm_buf *tb, uint16_t keytype,
- 	if (ret < 0)
- 		goto out;
- 
--	ret = tpm_get_random(TPM_ANY_NUM, td->nonceodd, TPM_NONCE_SIZE);
-+	ret = tpm_get_random(chip, td->nonceodd, TPM_NONCE_SIZE);
- 	if (ret != TPM_NONCE_SIZE)
- 		goto out;
- 	ordinal = htonl(TPM_ORD_SEAL);
-@@ -541,7 +544,7 @@ static int tpm_seal(struct tpm_buf *tb, uint16_t keytype,
- 	store8(tb, cont);
- 	storebytes(tb, td->pubauth, SHA1_DIGEST_SIZE);
- 
--	ret = trusted_tpm_send(TPM_ANY_NUM, tb->data, MAX_BUF_SIZE);
-+	ret = trusted_tpm_send(chip, tb->data, MAX_BUF_SIZE);
- 	if (ret < 0)
- 		goto out;
- 
-@@ -570,7 +573,7 @@ out:
- /*
-  * use the AUTH2_COMMAND form of unseal, to authorize both key and blob
-  */
--static int tpm_unseal(struct tpm_buf *tb,
-+static int tpm_unseal(struct tpm_chip *chip, struct tpm_buf *tb,
- 		      uint32_t keyhandle, const unsigned char *keyauth,
- 		      const unsigned char *blob, int bloblen,
- 		      const unsigned char *blobauth,
-@@ -589,12 +592,12 @@ static int tpm_unseal(struct tpm_buf *tb,
- 	int ret;
- 
- 	/* sessions for unsealing key and data */
--	ret = oiap(tb, &authhandle1, enonce1);
-+	ret = oiap(chip, tb, &authhandle1, enonce1);
- 	if (ret < 0) {
- 		pr_info("trusted_key: oiap failed (%d)\n", ret);
- 		return ret;
- 	}
--	ret = oiap(tb, &authhandle2, enonce2);
-+	ret = oiap(chip, tb, &authhandle2, enonce2);
- 	if (ret < 0) {
- 		pr_info("trusted_key: oiap failed (%d)\n", ret);
- 		return ret;
-@@ -602,7 +605,7 @@ static int tpm_unseal(struct tpm_buf *tb,
- 
- 	ordinal = htonl(TPM_ORD_UNSEAL);
- 	keyhndl = htonl(SRKHANDLE);
--	ret = tpm_get_random(TPM_ANY_NUM, nonceodd, TPM_NONCE_SIZE);
-+	ret = tpm_get_random(chip, nonceodd, TPM_NONCE_SIZE);
- 	if (ret != TPM_NONCE_SIZE) {
- 		pr_info("trusted_key: tpm_get_random failed (%d)\n", ret);
- 		return ret;
-@@ -634,7 +637,7 @@ static int tpm_unseal(struct tpm_buf *tb,
- 	store8(tb, cont);
- 	storebytes(tb, authdata2, SHA1_DIGEST_SIZE);
- 
--	ret = trusted_tpm_send(TPM_ANY_NUM, tb->data, MAX_BUF_SIZE);
-+	ret = trusted_tpm_send(chip, tb->data, MAX_BUF_SIZE);
- 	if (ret < 0) {
- 		pr_info("trusted_key: authhmac failed (%d)\n", ret);
- 		return ret;
-@@ -658,7 +661,8 @@ static int tpm_unseal(struct tpm_buf *tb,
- /*
-  * Have the TPM seal(encrypt) the symmetric key
-  */
--static int key_seal(struct trusted_key_payload *p,
-+static int key_seal(struct tpm_chip *chip,
-+		    struct trusted_key_payload *p,
- 		    struct trusted_key_options *o)
- {
- 	struct tpm_buf *tb;
-@@ -671,7 +675,7 @@ static int key_seal(struct trusted_key_payload *p,
- 	/* include migratable flag at end of sealed key */
- 	p->key[p->key_len] = p->migratable;
- 
--	ret = tpm_seal(tb, o->keytype, o->keyhandle, o->keyauth,
-+	ret = tpm_seal(chip, tb, o->keytype, o->keyhandle, o->keyauth,
- 		       p->key, p->key_len + 1, p->blob, &p->blob_len,
- 		       o->blobauth, o->pcrinfo, o->pcrinfo_len);
- 	if (ret < 0)
-@@ -684,7 +688,8 @@ static int key_seal(struct trusted_key_payload *p,
- /*
-  * Have the TPM unseal(decrypt) the symmetric key
-  */
--static int key_unseal(struct trusted_key_payload *p,
-+static int key_unseal(struct tpm_chip *chip,
-+		      struct trusted_key_payload *p,
- 		      struct trusted_key_options *o)
- {
- 	struct tpm_buf *tb;
-@@ -694,7 +699,8 @@ static int key_unseal(struct trusted_key_payload *p,
- 	if (!tb)
- 		return -ENOMEM;
- 
--	ret = tpm_unseal(tb, o->keyhandle, o->keyauth, p->blob, p->blob_len,
-+	ret = tpm_unseal(chip, tb, o->keyhandle, o->keyauth,
-+			 p->blob, p->blob_len,
- 			 o->blobauth, p->key, &p->key_len);
- 	if (ret < 0)
- 		pr_info("trusted_key: srkunseal failed (%d)\n", ret);
-@@ -900,6 +906,7 @@ static int trusted_instantiate(struct key *key,
- {
- 	struct trusted_key_payload *payload = NULL;
- 	struct trusted_key_options *options = NULL;
-+	struct tpm_chip *chip = NULL;
- 	size_t datalen = prep->datalen;
- 	char *datablob;
- 	int ret = 0;
-@@ -935,9 +942,14 @@ static int trusted_instantiate(struct key *key,
- 	dump_payload(payload);
- 	dump_options(options);
- 
-+	ret = -ENODEV;
-+	chip = tpm_chip_find_get(TPM_ANY_NUM);
-+	if (!chip)
-+		goto out;
-+
- 	switch (key_cmd) {
- 	case Opt_load:
--		ret = key_unseal(payload, options);
-+		ret = key_unseal(chip, payload, options);
- 		dump_payload(payload);
- 		dump_options(options);
- 		if (ret < 0)
-@@ -945,12 +957,12 @@ static int trusted_instantiate(struct key *key,
- 		break;
- 	case Opt_new:
- 		key_len = payload->key_len;
--		ret = tpm_get_random(TPM_ANY_NUM, payload->key, key_len);
-+		ret = tpm_get_random(chip, payload->key, key_len);
- 		if (ret != key_len) {
- 			pr_info("trusted_key: key_create failed (%d)\n", ret);
- 			goto out;
- 		}
--		ret = key_seal(payload, options);
-+		ret = key_seal(chip, payload, options);
- 		if (ret < 0)
- 			pr_info("trusted_key: key_seal failed (%d)\n", ret);
- 		break;
-@@ -958,9 +970,11 @@ static int trusted_instantiate(struct key *key,
- 		ret = -EINVAL;
- 		goto out;
- 	}
-+
- 	if (!ret && options->pcrlock)
--		ret = pcrlock(options->pcrlock);
-+		ret = pcrlock(chip, options->pcrlock);
- out:
-+	tpm_chip_put(chip);
- 	kfree(datablob);
- 	kfree(options);
- 	if (!ret)
-@@ -987,6 +1001,7 @@ static int trusted_update(struct key *key, struct key_preparsed_payload *prep)
- 	struct trusted_key_payload *p = key->payload.data;
- 	struct trusted_key_payload *new_p;
- 	struct trusted_key_options *new_o;
-+	struct tpm_chip *chip = NULL;
- 	size_t datalen = prep->datalen;
- 	char *datablob;
- 	int ret = 0;
-@@ -1018,6 +1033,7 @@ static int trusted_update(struct key *key, struct key_preparsed_payload *prep)
- 		kfree(new_p);
- 		goto out;
- 	}
-+
- 	/* copy old key values, and reseal with new pcrs */
- 	new_p->migratable = p->migratable;
- 	new_p->key_len = p->key_len;
-@@ -1025,14 +1041,19 @@ static int trusted_update(struct key *key, struct key_preparsed_payload *prep)
- 	dump_payload(p);
- 	dump_payload(new_p);
- 
--	ret = key_seal(new_p, new_o);
-+	ret = -ENODEV;
-+	chip = tpm_chip_find_get(TPM_ANY_NUM);
-+	if (!chip)
-+		goto out;
-+
-+	ret = key_seal(chip, new_p, new_o);
- 	if (ret < 0) {
- 		pr_info("trusted_key: key_seal failed (%d)\n", ret);
- 		kfree(new_p);
- 		goto out;
- 	}
- 	if (new_o->pcrlock) {
--		ret = pcrlock(new_o->pcrlock);
-+		ret = pcrlock(chip, new_o->pcrlock);
- 		if (ret < 0) {
- 			pr_info("trusted_key: pcrlock failed (%d)\n", ret);
- 			kfree(new_p);
-@@ -1042,6 +1063,7 @@ static int trusted_update(struct key *key, struct key_preparsed_payload *prep)
- 	rcu_assign_keypointer(key, new_p);
- 	call_rcu(&p->rcu, trusted_rcu_free);
- out:
-+	tpm_chip_put(chip);
- 	kfree(datablob);
- 	kfree(new_o);
- 	return ret;
+ /* Other constants */
+ #define SRKHANDLE                       0x40000000
 
 
 ------------------------------------------------------------------------------
