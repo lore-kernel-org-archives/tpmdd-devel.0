@@ -1,11 +1,14 @@
 From: David Howells <dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-Subject: tpm: Provide a TPM access library
-Date: Tue, 21 Aug 2018 16:56:49 +0100
-Message-ID: <153486700916.13066.12870860668352070081.stgit@warthog.procyon.org.uk>
+Subject: [PATCH 01/23] TPM: Add new TPMs to the tail of the
+ list to prevent inadvertent change of dev
+Date: Tue, 21 Aug 2018 16:56:56 +0100
+Message-ID: <153486701644.13066.13372706238885253812.stgit@warthog.procyon.org.uk>
+References: <153486700916.13066.12870860668352070081.stgit@warthog.procyon.org.uk>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
+In-Reply-To: <153486700916.13066.12870860668352070081.stgit-S6HVgzuS8uM4Awkfq6JHfwNdhmdF6hFW@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -18,83 +21,33 @@ To: denkenz-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org, jarkko.sakkinen-VuQAYsv1563
 Cc: tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
+Add newly registered TPMs to the tail of the list, not the beginning, so that
+things that are specifying TPM_ANY_NUM don't find that the device they're
+using has inadvertently changed.  Adding a second device would break IMA, for
+instance.
 
-Hi Denis, Jarkko, James,
-
-I managed to recover the TPM library patchset that I was working on about four
-years ago in the process of trying to write an asymmetric key subtype that
-could use the TPM.
-
-Here it is in it's original glory for reference.  I ended up leaving it
-because Jarkko's tpm-2 stuff broke it and I had other things to work on.  If
-it's deemed worthwhile, I can try to forward port it to current Linus/mastet.
-
-Note that one or two of the preliminary patches may be upstream.
-
-The patches can also be found here:
-
-	http://git.kernel.org/cgit/linux/kernel/git/dhowells/linux-fs.git/log/?h=tpm-lib
-
-Thanks,
-David
+Signed-off-by: David Howells <dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Reviewed-by: Jason Gunthorpe <jgunthorpe-ePGOBjL8dl3ta4EC/59zMFaTQe2KTcn/@public.gmane.org>
+Signed-off-by: Peter Huewe <peterhuewe-Mmb7MZpHnFY@public.gmane.org>
+cc: stable-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 ---
-David Howells (23):
-      TPM: Add new TPMs to the tail of the list to prevent inadvertent change of dev
-      TPM: Provide a facility for a userspace TPM emulator
-      TPM: Provide a platform driver for the user emulator driver
-      TPM: Expose struct tpm_chip and related find_get and put functions
-      TPM: Use struct tpm_chip rather than chip number as interface parameter
-      TPM: Move ordinal values from interface file to header with other ordinals
-      TPM: Consolidate tpm_send(), transmit_cmd() and tpm_transmit()
-      TPMLIB: Break TPM bits out of security/keys/trusted.c
-      TPMLIB: Do some source cleanups
-      TPMLIB: Better format calls to TSS_*hmac*()
-      TPMLIB: Put banner comments on public TPM library functions
-      TPMLIB: Create tpm_{even,odd}_nonce structs to represent nonces
-      TPMLIB: Rename store8() and storebytes()
-      TPMLIB: Make store_s() take a void* data argument, not unsigned char*
-      TPMLIB: Use __be32 rather than int32_t and use cpu_to_beX() and co.
-      TPMLIB: Put more comments into the HMAC generation functions
-      TPMLIB: Provide a wrapper to load bytes out of the reply
-      TPMLIB: Encapsulate XOR-based encryption with authkey derivative
-      TPMLIB: Add some debugging code
-      TPMLIB: Implement call to TPM_CreateWrapKey
-      TPMLIB: Implement call to TPM_LoadKey2
-      TPMLIB: Provide call for TPM_FlushSpecific
-      TPM: Add an asymmetric key subtype for handling TPM-based keys
 
+ drivers/char/tpm/tpm-interface.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
- crypto/asymmetric_keys/Kconfig          |    7 
- crypto/asymmetric_keys/Makefile         |    1 
- crypto/asymmetric_keys/tpm_key.c        |   73 ++
- crypto/asymmetric_keys/tpm_key.h        |   19 
- crypto/asymmetric_keys/tpm_key_parser.c |  212 +++++
- drivers/char/tpm/Kconfig                |   13 
- drivers/char/tpm/Makefile               |    3 
- drivers/char/tpm/tpm-dev.c              |   17 
- drivers/char/tpm/tpm-interface.c        |  304 ++++----
- drivers/char/tpm/tpm-library.c          | 1216 +++++++++++++++++++++++++++++++
- drivers/char/tpm/tpm-library.h          |  119 +++
- drivers/char/tpm/tpm-sysfs.c            |   33 -
- drivers/char/tpm/tpm.h                  |   15 
- drivers/char/tpm/tpm_infineon.c         |    6 
- drivers/char/tpm/tpm_user_emul.c        |  694 ++++++++++++++++++
- include/linux/tpm.h                     |  123 +++
- include/linux/tpm_command.h             |   22 -
- include/linux/wait.h                    |   11 
- security/integrity/ima/ima.h            |    2 
- security/integrity/ima/ima_crypto.c     |    4 
- security/integrity/ima/ima_init.c       |   19 
- security/integrity/ima/ima_queue.c      |    4 
- security/keys/trusted.c                 |  690 +-----------------
- security/keys/trusted.h                 |   80 --
- 24 files changed, 2712 insertions(+), 975 deletions(-)
- create mode 100644 crypto/asymmetric_keys/tpm_key.c
- create mode 100644 crypto/asymmetric_keys/tpm_key.h
- create mode 100644 crypto/asymmetric_keys/tpm_key_parser.c
- create mode 100644 drivers/char/tpm/tpm-library.c
- create mode 100644 drivers/char/tpm/tpm-library.h
- create mode 100644 drivers/char/tpm/tpm_user_emul.c
+diff --git a/drivers/char/tpm/tpm-interface.c b/drivers/char/tpm/tpm-interface.c
+index 6af17002a115..cfb9089887bd 100644
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -1122,7 +1122,7 @@ struct tpm_chip *tpm_register_hardware(struct device *dev,
+ 
+ 	/* Make chip available */
+ 	spin_lock(&driver_lock);
+-	list_add_rcu(&chip->list, &tpm_chip_list);
++	list_add_tail_rcu(&chip->list, &tpm_chip_list);
+ 	spin_unlock(&driver_lock);
+ 
+ 	return chip;
 
 
 ------------------------------------------------------------------------------
