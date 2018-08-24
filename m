@@ -1,17 +1,16 @@
 From: Jarkko Sakkinen <jarkko.sakkinen-VuQAYsv1563Yd54FQh9/CA@public.gmane.org>
-Subject: Re: [PATCH 02/23] TPM: Provide a facility for a
- userspace TPM emulator
-Date: Fri, 24 Aug 2018 09:29:14 +0300
-Message-ID: <20180824062914.GD3584@linux.intel.com>
+Subject: Re: [PATCH 03/23] TPM: Provide a platform driver for
+ the user emulator driver
+Date: Fri, 24 Aug 2018 09:30:15 +0300
+Message-ID: <20180824063015.GE3584@linux.intel.com>
 References: <153486700916.13066.12870860668352070081.stgit@warthog.procyon.org.uk>
- <153486702302.13066.15889029286852815542.stgit@warthog.procyon.org.uk>
- <20180821183140.GD25543@ziepe.ca>
+ <153486702979.13066.16900998092976336647.stgit@warthog.procyon.org.uk>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org>
 Content-Disposition: inline
-In-Reply-To: <20180821183140.GD25543-uk2M96/98Pc@public.gmane.org>
+In-Reply-To: <153486702979.13066.16900998092976336647.stgit-S6HVgzuS8uM4Awkfq6JHfwNdhmdF6hFW@public.gmane.org>
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=tpmdd-devel>
@@ -20,60 +19,26 @@ List-Help: <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.g
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/tpmdd-devel>,
  <mailto:tpmdd-devel-request-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org?subject=subscribe>
 Errors-To: tpmdd-devel-bounces-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org
-To: Jason Gunthorpe <jgg-uk2M96/98Pc@public.gmane.org>
-Cc: David Howells <dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>, linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, denkenz-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
+To: David Howells <dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+Cc: linux-security-module-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, tpmdd-devel-5NWGOfrQmneRv+LV9MX5uipxlwaOVQ5f@public.gmane.org, keyrings-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, linux-integrity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, denkenz-Re5JQEeQqe8AvxtiuMwx3w@public.gmane.org
 List-Id: tpmdd-devel@lists.sourceforge.net
 
-On Tue, Aug 21, 2018 at 12:31:40PM -0600, Jason Gunthorpe wrote:
-> On Tue, Aug 21, 2018 at 04:57:03PM +0100, David Howells wrote:
-> > Provide a misc device file (/dev/tpm_emul) by which a userspace TPM emulator
-> > can set up a virtual TPM device under the control of the TPM frontend.  The
-> > way this works is:
-> > 
-> >  (1) The emulator opens /dev/tpm_emul which is provided by the tpm_user
-> >      driver.
-> > 
-> >  (2) tpm_user registers a TPM device and the tpm driver creates a /dev/tpmN
-> >      misc device for the trousers package and suchlike to access.
-> > 
-> >  (3) The emulator sits in read() on the emulator device waiting for a command
-> >      to come through.
-> > 
-> >  (4) tpm_user passes requests from /dev/tpmN to the emulator's read() call.
-> > 
-> >  (5) The emulator processes the request.
-> > 
-> >  (6) The emulator either write()'s the reply or calls ioctl(fd,0,0) to cancel
-> >      the command.
-> > 
-> >  (7) The emulator goes back to read() to wait for the next command.
-> > 
-> >  (8) tpm_user passes the reply back to the tpm driver which passes it back to
-> >      /dev/tpmN.
-> > 
-> > When the emulator closes /dev/tpm_emul, the TPM driver is unregistered and the
-> > /dev/tpmN misc device is then removed.  Any outstanding requests are aborted
-> > and -EIO will be returned from then on.  Multiple TPMs can be registered.
-> > 
-> > Signed-off-by: David Howells <dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
-> > ---
-> > 
-> >  drivers/char/tpm/Kconfig         |   13 +
-> >  drivers/char/tpm/Makefile        |    1 
-> >  drivers/char/tpm/tpm_user_emul.c |  672 ++++++++++++++++++++++++++++++++++++++
-> >  include/linux/wait.h             |   11 +
-> >  4 files changed, 697 insertions(+)
-> >  create mode 100644 drivers/char/tpm/tpm_user_emul.c
+On Tue, Aug 21, 2018 at 04:57:09PM +0100, David Howells wrote:
+> Provide a platform driver for the user emulator driver.  This seems to be
+> necessary to stop tpm_chip_find_get() from blowing up because it assumes
+> unconditionally that any device will have a driver attached:
 > 
-> This looks to duplicate the vtpm stuff...
-
-Yeah, this is a duplicate to tpm_vtpm_proxy.
-
+> 		if (try_module_get(pos->dev->driver->owner)) {
 > 
-> Jason
+> However, this doesn't then work right because if I remove the TPM device and
+> re-add it, the tpm ID isn't recycled (ie, /dev/tpm0 becomes unavailable and
+> the new TPM is /dev/tpm1).
+> 
+> Signed-off-by: David Howells <dhowells-H+wXaHxf7aLQT0dZR+AlfA@public.gmane.org>
+
+Again, a duplicate.
 
 /Jarkko
-
 
 ------------------------------------------------------------------------------
 Check out the vibrant tech community on one of the world's most
