@@ -1,39 +1,39 @@
-Return-Path: <SRS0=XMiu=LQ=lists.sourceforge.net=tpmdd-devel-bounces@kernel.org>
+Return-Path: <SRS0=OMdi=OE=lists.sourceforge.net=tpmdd-devel-bounces@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-3.5 required=3.0 tests=BAYES_00,DKIM_INVALID,
 	DKIM_SIGNED,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8298CC4743C
-	for <tpmdd-devel@archiver.kernel.org>; Tue, 22 Jun 2021 02:53:11 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CE22EC433EF
+	for <tpmdd-devel@archiver.kernel.org>; Tue, 14 Sep 2021 03:11:41 +0000 (UTC)
 Received: from lists.sourceforge.net (lists.sourceforge.net [216.105.38.7])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by mail.kernel.org (Postfix) with ESMTPS id 3A4F061026
-	for <tpmdd-devel@archiver.kernel.org>; Tue, 22 Jun 2021 02:53:11 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 3A4F061026
+	by mail.kernel.org (Postfix) with ESMTPS id 98E2460FDA
+	for <tpmdd-devel@archiver.kernel.org>; Tue, 14 Sep 2021 03:11:41 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.1 mail.kernel.org 98E2460FDA
 Authentication-Results: mail.kernel.org; dmarc=none (p=none dis=none) header.from=namei.org
-Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=tpmdd-devel-bounces@lists.sourceforge.net
-Received: from [127.0.0.1] (helo=sfs-ml-4.v29.lw.sourceforge.com)
-	by sfs-ml-4.v29.lw.sourceforge.com with esmtp (Exim 4.90_1)
+Authentication-Results: mail.kernel.org; spf=pass smtp.mailfrom=lists.sourceforge.net
+Received: from [127.0.0.1] (helo=sfs-ml-1.v29.lw.sourceforge.com)
+	by sfs-ml-1.v29.lw.sourceforge.com with esmtp (Exim 4.90_1)
 	(envelope-from <tpmdd-devel-bounces@lists.sourceforge.net>)
-	id 1lvWX3-0000id-0j; Tue, 22 Jun 2021 02:52:57 +0000
+	id 1mPyr8-0002Zx-Ri; Tue, 14 Sep 2021 03:11:34 +0000
 Received: from [172.30.20.202] (helo=mx.sourceforge.net)
- by sfs-ml-4.v29.lw.sourceforge.com with esmtps
+ by sfs-ml-1.v29.lw.sourceforge.com with esmtps
  (TLSv1.2:ECDHE-RSA-AES256-GCM-SHA384:256) (Exim 4.90_1)
- (envelope-from <jmorris@namei.org>) id 1lvWX1-0000iQ-FY
- for tpmdd-devel@lists.sourceforge.net; Tue, 22 Jun 2021 02:52:55 +0000
+ (envelope-from <jmorris@namei.org>) id 1mPyr7-0002Zk-DY
+ for tpmdd-devel@lists.sourceforge.net; Tue, 14 Sep 2021 03:11:33 +0000
 DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
  d=sourceforge.net; s=x; h=Content-Type:MIME-Version:References:Message-ID:
  In-Reply-To:Subject:cc:To:From:Date:Sender:Reply-To:Content-Transfer-Encoding
  :Content-ID:Content-Description:Resent-Date:Resent-From:Resent-Sender:
  Resent-To:Resent-Cc:Resent-Message-ID:List-Id:List-Help:List-Unsubscribe:
  List-Subscribe:List-Post:List-Owner:List-Archive;
- bh=iZbDpT8eqqh6fD6BIPkOc03gLM9z/p+2Sgx+f0pQb+w=; b=ew0OWbAu5stocPeAv++yw4IiOD
- 69pQAsbtnKTeBPqX+hSStKB8OLo56N0n/AomawJi0ZwFjCdZu+373M4IrH4A2/3ujLLwVrJixVtqU
- H3nK4sFua/7ZLxzuJgeDFUX6CYIRwjDbd/NqzU22K3cAuWV62RFfNsOKlQEXJwFW+Jls=;
+ bh=U7JBhDMH9ievC0SX9kmvA4/Nk8Q5WSRUdZREf6oN2yg=; b=WRlMf0lqttsyIb7o7EAXyIDjdO
+ /Mapa+trI9TuPxHQY58Gvs9Fk9fbwUVtN7aEQH/A5r2ltmAtBo4Aade1wK2ffjP6/62J6dJTnUjac
+ a4pNPuj6sz4LWPYh6Qk8aMbtiuBMGGy2d5Cfs13hZAzAQ8IfRpLGRCOz/3tY5hmD3sag=;
 DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed; d=sf.net; s=x
  ;
  h=Content-Type:MIME-Version:References:Message-ID:In-Reply-To:Subject:cc:To
@@ -41,26 +41,27 @@ DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed; d=sf.net; s=x
  Content-Description:Resent-Date:Resent-From:Resent-Sender:Resent-To:Resent-Cc
  :Resent-Message-ID:List-Id:List-Help:List-Unsubscribe:List-Subscribe:
  List-Post:List-Owner:List-Archive;
- bh=iZbDpT8eqqh6fD6BIPkOc03gLM9z/p+2Sgx+f0pQb+w=; b=X9PNu8DjEmusgRHWLYP2Rf1RCt
- PQ8fNpMpaA1yQXULUmXx2TG91Vv/snsViKMe8kuJZl+dRDuU71jv1tQO15N3kJKlfhRWQMPXZotvt
- o/hdo2lBbKctRLG0Bnw59hPJcM2GXDUQNYQ4qfQwYKOOAQkx/6FS/s7JlJDinNRbxdfI=;
+ bh=U7JBhDMH9ievC0SX9kmvA4/Nk8Q5WSRUdZREf6oN2yg=; b=Ok90qi8r9RseXVerIzIn9m3NPM
+ UUJ+6SllhsQc3Y7zhIHVEzPTVHBbe7C77FDFBOUg8CJVUvNQOk+tyO7903uEr/+PDAG+Bj06BeV4D
+ t60O5agD9OfAnZgyGazjS6fCKOYqsVOqKzn2qxlgNy+c6/q3jz5T7cGaLG6l6ysMA4jU=;
 Received: from namei.org ([65.99.196.166] helo=mail.namei.org)
- by sfi-mx-1.v28.lw.sourceforge.com with esmtps
+ by sfi-mx-2.v28.lw.sourceforge.com with esmtps
  (TLSv1.2:ECDHE-RSA-AES256-GCM-SHA384:256) (Exim 4.92.3)
- id 1lvWWw-006Vcu-0K
- for tpmdd-devel@lists.sourceforge.net; Tue, 22 Jun 2021 02:52:59 +0000
+ id 1mPyr6-0003S2-G5
+ for tpmdd-devel@lists.sourceforge.net; Tue, 14 Sep 2021 03:11:33 +0000
 Received: from localhost (localhost [127.0.0.1])
- by mail.namei.org (Postfix) with ESMTPS id AAD9054D;
- Tue, 22 Jun 2021 02:46:43 +0000 (UTC)
-Date: Tue, 22 Jun 2021 12:46:43 +1000 (AEST)
+ by mail.namei.org (Postfix) with ESMTPS id 5473196E;
+ Tue, 14 Sep 2021 02:44:46 +0000 (UTC)
+Date: Tue, 14 Sep 2021 12:44:46 +1000 (AEST)
 From: James Morris <jmorris@namei.org>
 To: linux-security-module@vger.kernel.org
-In-Reply-To: <5b3a0bf-226d-6ee-d0b-d6673eff32b2@namei.org>
-Message-ID: <2db579ee-1d1c-102c-c2d4-c268d89aae8c@namei.org>
+In-Reply-To: <2db579ee-1d1c-102c-c2d4-c268d89aae8c@namei.org>
+Message-ID: <8c864314-e0b9-e394-2271-5fab5e9cd11a@namei.org>
 References: <c244f77-56a1-c089-521d-2e670488c10@namei.org>
  <5b3a0bf-226d-6ee-d0b-d6673eff32b2@namei.org>
+ <2db579ee-1d1c-102c-c2d4-c268d89aae8c@namei.org>
 MIME-Version: 1.0
-X-Headers-End: 1lvWWw-006Vcu-0K
+X-Headers-End: 1mPyr6-0003S2-G5
 Subject: Re: [tpmdd-devel] [ANNOUNCE][CFP] Linux Security Summit 2021
 X-BeenThere: tpmdd-devel@lists.sourceforge.net
 X-Mailman-Version: 2.1.21
@@ -77,149 +78,18 @@ Cc: Linux Security Summit Program Committee <lss-pc@lists.linuxfoundation.org>,
  keyrings@linux-nfs.org, gentoo-hardened@gentoo.org,
  kernel-hardening@lists.openwall.com, selinux@vger.kernel.org,
  linux-kernel@vger.kernel.org, tpmdd-devel@lists.sourceforge.net,
- Audit-ML <linux-audit@redhat.com>, linux-crypto@vger.kernel.org, lwn@lwn.net,
+ Audit-ML <linux-audit@redhat.com>, linux-crypto@vger.kernel.org,
  linux-integrity@vger.kernel.org, fedora-selinux-list@redhat.com
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Errors-To: tpmdd-devel-bounces@lists.sourceforge.net
 
-Two further (and hopefully final) changes:
+For folks presenting remotely, the deadline for video talks is extended to 
+20th September, 2021.
 
-  - LSS 2021 will now be a hybrid event, catering to both in-person and 
-    remote attendees and presenters
+Reminder: you can keep track LSS event information via: 
+https://twitter.com/LinuxSecSummit
 
-  - The CFP is extended to July 11th.
-
-
-
-On Wed, 26 May 2021, James Morris wrote:
-
-> Note that the venue of LSS 2021 has now changed to Seattle, USA.
-> 
-> See https://events.linuxfoundation.org/linux-security-summit-north-america/
-> 
-> The new event dates are 29 September to 01 October.
-> 
-> The CFP closes on June 27th.
-> 
-> 
-> 
-> 
-> 
-> On Tue, 9 Feb 2021, James Morris wrote:
-> 
-> > ==============================================================================
-> >                    ANNOUNCEMENT AND CALL FOR PARTICIPATION
-> > 
-> >                          LINUX SECURITY SUMMIT 2021
-> >                              
-> >                               27-29 September
-> >                               Dublin, Ireland
-> > ==============================================================================
-> > 
-> > DESCRIPTION
-> >  
-> > Linux Security Summit (LSS) is a technical forum for collaboration between
-> > Linux developers, researchers, and end-users.  Its primary aim is to foster
-> > community efforts in analyzing and solving Linux security challenges.
-> > 
-> >  The program committee currently seeks proposals for:
-> >  
-> >    * Refereed Presentations:
-> >      45 minutes in length.
-> >  
-> >    * Panel Discussion Topics:
-> >      45 minutes in length.
-> >  
-> >    * Short Topics:
-> >      30 minutes in total, including at least 10 minutes discussion.
-> >  
-> >    * Tutorials
-> >      90 minutes in length.
-> >  
-> > Tutorial sessions should be focused on advanced Linux security defense
-> > topics within areas such as the kernel, compiler, and security-related
-> > libraries.  Priority will be given to tutorials created for this conference,
-> > and those where the presenter a leading subject matter expert on the topic.
-> >  
-> > Topic areas include, but are not limited to:
-> >  
-> >    * Kernel self-protection
-> >    * Access control
-> >    * Cryptography and key management
-> >    * Integrity policy and enforcement
-> >    * Hardware Security
-> >    * IoT and embedded security
-> >    * Virtualization and containers
-> >    * System-specific system hardening
-> >    * Case studies
-> >    * Security tools
-> >    * Security UX
-> >    * Emerging technologies, threats & techniques
-> > 
-> >   Proposals should be submitted via:
-> >     https://events.linuxfoundation.org/linux-security-summit-europe/program/cfp/
-> > 
-> > 
-> > ** Note that for 2021, the North American and European events are combined into
-> > a single event planned for Dublin, Ireland. **
-> >  
-> > 
-> > DATES
-> >  
-> >   * CFP close:            June 27
-> >   * CFP notifications:    July 20
-> >   * Schedule announced:   July 22
-> >   * Event:                September 27-29
-> > 
-> > WHO SHOULD ATTEND
-> >  
-> > We're seeking a diverse range of attendees and welcome participation by
-> > people involved in Linux security development, operations, and research.
-> >  
-> > LSS is a unique global event that provides the opportunity to present and
-> > discuss your work or research with key Linux security community members and
-> > maintainers.  It's also useful for those who wish to keep up with the latest
-> > in Linux security development and to provide input to the development
-> > process.
-> > 
-> > WEB SITE
-> > 
-> >     https://events.linuxfoundation.org/linux-security-summit-europe/
-> > 
-> > TWITTER
-> > 
-> >   For event updates and announcements, follow:
-> > 
-> >     https://twitter.com/LinuxSecSummit
-> >   
-> >     #linuxsecuritysummit
-> > 
-> > PROGRAM COMMITTEE
-> > 
-> >   The program committee for LSS 2021 is:
-> > 
-> >     * James Morris, Microsoft
-> >     * Serge Hallyn, Cisco
-> >     * Paul Moore, Cisco
-> >     * Stephen Smalley, NSA
-> >     * Elena Reshetova, Intel
-> >     * John Johansen, Canonical
-> >     * Kees Cook, Google
-> >     * Casey Schaufler, Intel
-> >     * Mimi Zohar, IBM
-> >     * David A. Wheeler, Institute for Defense Analyses
-> > 
-> >   The program committee may be contacted as a group via email:
-> >     lss-pc () lists.linuxfoundation.org
-> > 
-> > 
-> 
-> -- 
-> James Morris
-> <jmorris@namei.org>
-> 
-> 
 
 -- 
 James Morris
